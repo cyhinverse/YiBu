@@ -1,10 +1,10 @@
 import React from "react";
-import { ContentMessage } from "../../components/UserComponents";
+import { MainMessage } from "../../components/UserComponents";
 
 const Message = () => {
   return (
     <>
-      <ContentMessage />
+      <MainMessage />
     </>
   );
 };

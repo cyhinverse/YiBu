@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { Ellipsis, Search } from "lucide-react";
+import MessageOptions from "../Messages/MessageOptions";
+import MessageContents from "../Messages/MessageContents";
 
-const ContentMessage = () => {
+const MainMessage = () => {
   const [search, setSearch] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
 
   const users = [
     {
@@ -97,7 +100,13 @@ const ContentMessage = () => {
       <div className="w-[25%] h-full bg-white shadow-xl border border-gray-300 rounded-xl p-4 flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <span className="text-2xl font-semibold">Messages</span>
-          <Ellipsis className="cursor-pointer hover:opacity-70" />
+          <div
+            onClick={() => setShowOptions(!showOptions)}
+            className="relative"
+          >
+            <Ellipsis className="cursor-pointer hover:opacity-70 " />
+            <MessageOptions showOptions={showOptions} />
+          </div>
         </div>
 
         {/* Search */}
@@ -152,10 +161,12 @@ const ContentMessage = () => {
       </div>
 
       {/* Chat content */}
-      <div className="w-[40%] h-full bg-violet-400 rounded-xl"></div>
+      <div className="w-[40%] h-full  rounded-xl ">
+        <MessageContents />
+      </div>
       <div className="w-[25%] h-full bg-green-300 rounded-xl"></div>
     </div>
   );
 };
 
-export default ContentMessage;
+export default MainMessage;

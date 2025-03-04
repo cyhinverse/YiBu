@@ -4,4 +4,5 @@ export * from "./Posts";
 export * from "./TrendingVideo";
 export * from "./TrendingTopics";
 export * from "./TopUser";
-export * from "./ContentMessage";
+export * from "./MainMessage";
+export * from "./Messages";
