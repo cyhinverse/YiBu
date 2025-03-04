@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Ellipsis, Search } from "lucide-react";
 import MessageOptions from "../Messages/MessageOptions";
 import MessageContents from "../Messages/MessageContents";
+import { MiniPlayerMess } from "../Messages";
 
 const MainMessage = () => {
   const [search, setSearch] = useState(false);
@@ -164,7 +165,9 @@ const MainMessage = () => {
       <div className="w-[40%] h-full  rounded-xl ">
         <MessageContents />
       </div>
-      <div className="w-[25%] h-full bg-green-300 rounded-xl"></div>
+      <div className="w-[25%] h-full rounded-xl">
+        <MiniPlayerMess />
+      </div>
     </div>
   );
 };

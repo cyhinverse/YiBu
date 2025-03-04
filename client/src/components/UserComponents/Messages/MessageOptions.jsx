@@ -2,30 +2,19 @@ import React from "react";
 
 const MessageOptions = ({ showOptions }) => {
   const MessageOp = [
-    {
-      id: 1,
-      name: "Disable messages",
-    },
-    {
-      id: 2,
-      name: "Message security",
-    },
-    {
-      id: 3,
-      name: "Store messages",
-    },
-    {
-      id: 4,
-      name: "Exit",
-    },
+    { id: 1, name: "Disable messages" },
+    { id: 2, name: "Message security" },
+    { id: 3, name: "Store messages" },
+    { id: 4, name: "Exit" },
   ];
+
   return (
     showOptions && (
-      <div className="z-20 flex flex-col gap-1 w-fit p-4 rounded-md border border-gray-300 h-fit bg-purple-500 absolute top-5 ">
+      <div className="z-20 absolute top-8 right-0 w-48 bg-white shadow-lg border border-gray-200 rounded-xl p-2 flex flex-col gap-1 animate-fadeIn">
         {MessageOp.map((option) => (
           <div
-            className="text-white font-medium  w-full text-nowrap bg-white/20 hover:opacity-60 cursor-pointer p-2 rounded-md outline-none"
             key={option.id}
+            className="px-4 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-purple-100 hover:text-purple-700 cursor-pointer transition-colors"
           >
             {option.name}
           </div>
