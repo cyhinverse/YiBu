@@ -1,36 +1,72 @@
-import React, { useContext } from "react";
-import { Bell, Home, MessageCircle, MonitorPlay, Search } from "lucide-react";
+import React, { useContext, useState } from "react";
+import { NavLink } from "react-router-dom"; // <-- Thêm dòng này
+import {
+  Bell,
+  Home,
+  MessageCircle,
+  MonitorPlay,
+  Moon,
+  Search,
+  Sun,
+} from "lucide-react";
 import { DataContext } from "../../../DataProvider";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
+  const [sunMoon, setSunMoon] = useState(true);
+
+  const navItems = [
+    { icon: Home, path: "/" },
+    { icon: MessageCircle, path: "/messages" },
+    { icon: MonitorPlay, path: "/videos" },
+  ];
 
   return (
     <>
-      <div className="flex min-w-[250px] items-center px-3 h-full shadow-xl  rounded-xl bg-amber-50 ">
-        {hideSearch && <Search size={20} />}
+      {/* Search Box */}
+      <div className="flex w-[250px] h-[50px] items-center px-4 shadow-xl rounded-xl bg-purple-100">
+        {hideSearch && <Search />}
         <input
           onClick={() => setHideSearch(!hideSearch)}
-          className="indent-2 h-[35px] outline-none cursor-pointer"
+          className="indent-2 h-full flex-1 outline-none cursor-pointer bg-transparent"
           type="text"
           placeholder="Search event..."
         />
       </div>
-      <div className="flex max-w-[250px] justify-between shadow-xl rounded-xl h-full items-center px-7 bg-amber-50">
-        <div className="w-[50px] h-[50px] flex items-center justify-center rounded-xl hover:opacity-25 transition-all ease-out cursor-pointer">
-          <Home />
-        </div>
-        <div className="w-[50px] h-[50px] flex items-center justify-center rounded-xl hover:opacity-25 transition-all ease-out cursor-pointer">
-          <MessageCircle />
-        </div>
-        <div className="w-[50px] h-[50px] flex items-center justify-center rounded-xl hover:opacity-25 transition-all ease-out cursor-pointer">
-          <MonitorPlay />
-        </div>
+
+      {/* Navigation Icons */}
+      <div className="flex w-[250px] h-[50px] justify-between items-center px-6 shadow-xl rounded-xl bg-purple-100">
+        {navItems.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={i}
+              to={item.path}
+              className={({ isActive }) =>
+                `w-[40px] h-[40px] flex items-center justify-center rounded-lg hover:opacity-50 transition-all ease-out cursor-pointer ${
+                  isActive ? "text-red-300" : ""
+                }`
+              }
+            >
+              <Icon />
+            </NavLink>
+          );
+        })}
       </div>
-      <div className="flex max-w-[200px] justify-end items-center gap-3 bg-amber-50 h-full px-5 shadow-xl rounded-xl">
-        <Bell className="cursor-pointer" size={25} />
+
+      {/* Bell & Avatar */}
+      <div className="flex w-[200px] h-[50px] justify-center items-center gap-4 px-6 shadow-xl rounded-xl bg-purple-100">
+        <div
+          onClick={() => setSunMoon(!sunMoon)}
+          className="cursor-pointer w-[40px] h-[40px] items-center justify-center flex"
+        >
+          {sunMoon ? <Sun /> : <Moon />}
+        </div>
+        <div className="w-[40px] h-[40px] items-center justify-center flex">
+          <Bell className="cursor-pointer " />
+        </div>
         <img
-          className="h-[40px] w-[40px] rounded-full object-cover cursor-pointer"
+          className="w-[40px] h-[40px] rounded-full object-cover cursor-pointer"
           src="https://plus.unsplash.com/premium_photo-1671656349322-41de944d259b?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt=""
         />

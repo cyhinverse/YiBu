@@ -6,22 +6,28 @@ import {
   Save,
 } from "lucide-react";
 import React, { useState } from "react";
+import PostOption from "./PostOption";
 
 const Post = () => {
   const [liked, setLiked] = useState(false);
+  const [postOption, setPostOption] = useState(false);
 
   return (
-    <div className="w-full h-[80%] bg-white border-b border-gray-300 flex flex-col justify-start gap-5">
+    <div className="w-full h-[80%] bg-white border-b border-t border-gray-300 flex flex-col justify-start gap-5">
       <div className="flex justify-between px-4 pt-2">
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 relative">
           <img
-            className="h-[40px] w-[40px] object-cover rounded-full"
+            className="h-[40px] w-[40px] object-cover rounded-full cursor-pointer"
             src="https://images.unsplash.com/photo-1639149888905-fb39731f2e6c?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             alt=""
           />
+
           <span>John</span>
         </div>
-        <Ellipsis />
+        <div onClick={() => setPostOption(!postOption)} className="relative">
+          <Ellipsis className="cursor-pointer" />
+          {postOption && <PostOption />}
+        </div>
       </div>
       <p className="px-4">
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
