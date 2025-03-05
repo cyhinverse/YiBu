@@ -4,9 +4,10 @@ export const DataContext = createContext();
 
 const DataProvider = ({ children }) => {
   const [hideSearch, setHideSearch] = useState(false);
+  const [showHideMusic,setShowHideMusic] = useState(false)
 
   return (
-    <DataContext.Provider value={{ hideSearch, setHideSearch }}>
+    <DataContext.Provider value={{ hideSearch, setHideSearch,showHideMusic,setShowHideMusic }}>
       {children}
     </DataContext.Provider>
   );

@@ -13,7 +13,7 @@ const Post = () => {
   const [postOption, setPostOption] = useState(false);
 
   return (
-    <div className="w-full h-[80%] bg-white border-b border-t border-gray-300 flex flex-col justify-start gap-5">
+    <div className="w-full h-[80%] bg-white border-b border-t border-gray-300 flex flex-col justify-start gap-2">
       <div className="flex justify-between px-4 pt-2">
         <div className="flex space-x-2 relative">
           <img
@@ -32,7 +32,7 @@ const Post = () => {
       <p className="px-4">
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
       </p>
-      <div className="w-[350px] h-[300px] mx-4  rounded-xl overflow-hidden">
+      <div className="w-[350px] h-auto mx-4  rounded-xl overflow-hidden">
         <img
           className="w-full h-full object-cover bg-center"
           src="https://images.unsplash.com/photo-1727466943994-911d391dddb1?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
@@ -40,7 +40,7 @@ const Post = () => {
         />
       </div>
 
-      <div className="flex justify-between items-center w-[350px] ">
+      <div className="flex justify-between items-center w-[350px] mb-2 ">
         <div className="flex px-4 space-x-6">
           <Heart
             onClick={() => setLiked(!liked)}

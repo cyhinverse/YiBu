@@ -162,10 +162,10 @@ const MainMessage = () => {
       </div>
 
       {/* Chat content */}
-      <div className="w-[40%] h-full  rounded-xl ">
+      <div className="w-full h-full flex-1  rounded-xl ">
         <MessageContents />
       </div>
-      <div className="w-[25%] h-full rounded-xl">
+      <div className="  h-full rounded-xl">
         <MiniPlayerMess />
       </div>
     </div>

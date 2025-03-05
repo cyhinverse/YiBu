@@ -12,7 +12,7 @@ const FooterMessageContent = () => {
       <div className="w-[70%] h-full flex justify-center rounded-xl shadow-md outline-none border border-gray-300">
         <input
           type="text"
-          className="w-full h-full px-3 font-normal text-black/20 border-none outline-none"
+          className="w-full h-full px-3 font-normal text-black border-none outline-none"
           placeholder="Aa"
         />
       </div>
