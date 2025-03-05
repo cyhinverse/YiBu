@@ -1,5 +1,2 @@
-export { default as Videos } from "./Videos"
-export { default as MainVideos } from "./MainVideos"
-export { default as SidebarVideos } from "./SidebarVideos"
-export { default as MainContentVideos } from "./MainContentVideos"
-export { default as SearchVideos } from "./SearchVideos"
+export { default as MainVideos } from "./MainVideos";
+export { default as SideBarVideos } from "./SideBarVideos";

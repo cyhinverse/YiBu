@@ -3,7 +3,7 @@ import React from "react";
 
 const FooterMessageContent = () => {
   return (
-    <div className="w-auto  h-[9%] items-center mx-1  rounded-xl  justify-between  flex  gap-2">
+    <div className="w-auto  h-[9%] items-center mx-1 bg-white  rounded-xl  justify-between  flex  gap-2">
       <div className="w-[20%] h-full flex justify-center rounded-xl shadow-md border border-gray-300 items-center gap-2 ">
         <SquarePlus size={20} />
         <Image size={20} />

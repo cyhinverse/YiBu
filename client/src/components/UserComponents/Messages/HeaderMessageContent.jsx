@@ -3,11 +3,10 @@ import React from "react";
 import { useContext } from "react";
 import { DataContext } from "../../../DataProvider";
 
-
 const HeaderMessageContent = () => {
-  const {showHideMusic,setShowHideMusic} = useContext(DataContext)
+  const { showHideMusic, setShowHideMusic } = useContext(DataContext);
   return (
-    <div className="w-auto  h-[9%]  rounded-xl shadow-md justify-between mx-1 px-5 flex border border-gray-300">
+    <div className="w-auto bg-white  h-[9%]  rounded-xl shadow-md justify-between mx-1 px-5 flex border border-gray-300">
       <div className="flex items-center gap-2 w-[200px] h-full hover:bg-violet-200  rounded-xl px-2 transition-all ease-in-out duration-300 cursor-pointer ">
         <img
           className="h-[40px] w-[40px] rounded-full object-cover"
@@ -23,7 +22,10 @@ const HeaderMessageContent = () => {
       <div className="flex gap-4 h-full items-center">
         <Phone className="cursor-pointer" />
         <Video className="cursor-pointer" />
-        <Music onClick={() => setShowHideMusic(!showHideMusic)} className="cursor-pointer"  />
+        <Music
+          onClick={() => setShowHideMusic(!showHideMusic)}
+          className="cursor-pointer"
+        />
       </div>
     </div>
   );

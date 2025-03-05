@@ -6,10 +6,10 @@ import { DataContext } from "../../../DataProvider";
 const MiniPlayerMess = () => {
   const [playPause, setPlayPause] = useState(false);
   const { showHideMusic } = useContext(DataContext);
-  
+
   return (
     showHideMusic && (
-      <div className="w-[400px] h-full bg-white border border-gray-300 outline-2 outline-violet-400 rounded-xl p-4 flex flex-col justify-between shadow-xl">
+      <div className="w-[400px] h-full bg-white border border-gray-300  rounded-xl p-4 flex flex-col justify-between shadow-xl">
         <div className="text-xl font-bold text-center">🎶 Now Playing</div>
 
         <div className="w-full aspect-square rounded-xl overflow-hidden mt-4">
