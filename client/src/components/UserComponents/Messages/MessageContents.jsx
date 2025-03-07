@@ -5,7 +5,7 @@ import FooterMessageContent from "./FooterMessageContent";
 
 const MessageContents = () => {
   return (
-    <div className="w-full h-full flex flex-col gap-3 flex-1">
+    <div className="w-full h-full flex flex-col gap-3 flex-1 p-2">
       <HeaderMessageContent />
       <MainMessageContent />
       <FooterMessageContent />

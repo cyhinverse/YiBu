@@ -75,9 +75,12 @@ const Navigate = () => {
         <div className="w-[40px] h-[40px] items-center justify-center flex">
           <Bell className="cursor-pointer" />
         </div>
-        <div className="w-[40px] h-[40px] items-center justify-center flex">
+        <NavLink
+          to="/settings"
+          className="w-[40px] h-[40px] items-center justify-center flex"
+        >
           <Settings className="cursor-pointer" />
-        </div>
+        </NavLink>
       </div>
     </>
   );

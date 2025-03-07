@@ -7,3 +7,5 @@ export * from "./TopUser";
 export * from "./MainMessage";
 export * from "./Messages";
 export * from "./Videos";
+export * from "./Profiles";
+export * from "./Settings";

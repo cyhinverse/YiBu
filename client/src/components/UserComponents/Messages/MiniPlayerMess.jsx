@@ -8,7 +8,7 @@ const MiniPlayerMess = () => {
   const { showHideMusic } = useContext(DataContext);
 
   return (
-    showHideMusic && (
+    !showHideMusic && (
       <div className="w-[400px] h-full bg-white border border-gray-300  rounded-xl p-4 flex flex-col justify-between shadow-xl">
         <div className="text-xl font-bold text-center">🎶 Now Playing</div>
 

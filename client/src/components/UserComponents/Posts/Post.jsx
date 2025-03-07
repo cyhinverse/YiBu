@@ -13,7 +13,7 @@ const Post = () => {
   const [postOption, setPostOption] = useState(false);
 
   return (
-    <div className="w-full h-[80%] bg-white border-b border-t border-gray-300 flex flex-col justify-start gap-2">
+    <div className="w-full h-[80%] bg-white border-b  border-gray-300 flex flex-col justify-start gap-2">
       <div className="flex justify-between px-4 pt-2">
         <div className="flex space-x-2 relative">
           <img
