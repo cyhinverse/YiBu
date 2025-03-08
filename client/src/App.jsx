@@ -25,12 +25,13 @@ import {
   SupportSettings,
   ThemeSettings,
 } from "./components/UserComponents/Settings";
+import { ROUTES } from "./constants/routes";
 
 function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<UserLayout />}>
+        <Route path={`${ROUTES.HOME}`} element={<UserLayout />}>
           <Route index element={<Home />} />
           <Route path="messages" element={<Message />} />
 
@@ -47,7 +48,7 @@ function App() {
           </Route>
 
           {/* Router settings */}
-          <Route path="settings" element={<SettingsLayout />}>
+          <Route path={`${ROUTES.SETTINGS}`} element={<SettingsLayout />}>
             <Route index element={<AccountSettings />} />
             <Route path="account" element={<AccountSettings />} />
             <Route path="profile" element={<ProfileSettings />} />
@@ -59,7 +60,7 @@ function App() {
             <Route path="support" element={<SupportSettings />} />
           </Route>
 
-          <Route path="profile" element={<ProfileLayout />}>
+          <Route path={`${ROUTES.PROFILE}`} element={<ProfileLayout />}>
             <Route index element={<HomeProfile />} />
             <Route path="home" element={<HomeProfile />} />
             <Route path="following" element={<FollowingUser />} />
@@ -70,8 +71,8 @@ function App() {
 
         <Route path="auth" element={<Authlayout />}>
           <Route index element={<Login />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
+          <Route path={`${ROUTES.LOGIN}`} element={<Login />} />
+          <Route path={`${ROUTES.REGISTER}`} element={<Register />} />
         </Route>
 
         <Route

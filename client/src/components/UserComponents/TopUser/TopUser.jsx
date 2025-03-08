@@ -9,7 +9,7 @@ const TopUser = ({ topUsers }) => {
       </h1>
 
       {/* Search box */}
-      <div className="relative mb-5">
+      <div className="relative mb-5"> 
         <input
           type="text"
           placeholder="Search user..."
