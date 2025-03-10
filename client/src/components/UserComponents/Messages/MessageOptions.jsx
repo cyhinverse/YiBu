@@ -4,8 +4,9 @@ const MessageOptions = ({ showOptions }) => {
   const MessageOp = [
     { id: 1, name: "Disable messages" },
     { id: 2, name: "Message security" },
-    { id: 3, name: "Store messages" },
-    { id: 4, name: "Exit" },
+    { id: 3, name: "Save messages" },
+    { id: 4, name: "Add users" },
+    { id: 5, name: "Exit" },
   ];
 
   return (

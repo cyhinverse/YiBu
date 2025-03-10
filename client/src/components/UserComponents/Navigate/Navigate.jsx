@@ -24,8 +24,7 @@ const Navigate = () => {
 
   return (
     <>
-      {/* Search Box */}
-      <div className="flex w-[250px] h-[50px] items-center px-4 shadow-xl rounded-xl bg-purple-100">
+      <div className="hidden md:flex w-[250px] h-[50px] items-center px-4 shadow-xl rounded-xl bg-purple-100">
         {hideSearch && <Search />}
         <input
           onClick={() => setHideSearch(!hideSearch)}
@@ -35,51 +34,49 @@ const Navigate = () => {
         />
       </div>
 
-      {/* Navigation Icons */}
-      <div className="flex w-[250px] h-[50px] justify-between items-center px-6 shadow-xl rounded-xl bg-purple-100">
+      <div className="flex w-[200px] md:w-[250px] h-[50px] justify-between items-center px-3 md:px-6 shadow-xl rounded-xl bg-purple-100">
         {navItems.map((item, i) => (
           <NavLink
             key={i}
             to={item.path}
             className={({ isActive }) =>
-              `w-[40px] h-[40px] flex items-center justify-center rounded-lg hover:opacity-50 transition-all ease-out cursor-pointer ${
+              `w-[35px] md:w-[40px] h-[35px] md:h-[40px] flex items-center justify-center rounded-lg hover:opacity-50 transition-all ease-out cursor-pointer ${
                 isActive ? "text-red-300" : ""
               }`
             }
           >
-            <item.icon />
+            <item.icon size={20} />
           </NavLink>
         ))}
 
-        {/* Avatar ở ngoài cùng bên phải */}
+        {/* Avatar */}
         <NavLink
           to="/profile"
-          className="w-[40px] h-[40px] flex items-center justify-center rounded-full hover:opacity-50 transition-all ease-out cursor-pointer"
+          className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] flex items-center justify-center rounded-full hover:opacity-50 transition-all ease-out cursor-pointer"
         >
           <img
             src="https://plus.unsplash.com/premium_photo-1671656349322-41de944d259b?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             alt="Profile"
-            className="w-[40px] h-[40px] rounded-full object-cover"
+            className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] rounded-full object-cover"
           />
         </NavLink>
       </div>
 
-      {/* Bell & Avatar */}
-      <div className="flex w-[200px] h-[50px] justify-center items-center gap-4 px-6 shadow-xl rounded-xl bg-purple-100">
+      <div className="flex w-[150px] md:w-[200px] h-[50px] justify-center items-center gap-2 md:gap-4 px-3 md:px-6 shadow-xl rounded-xl bg-purple-100">
         <div
           onClick={() => setSunMoon(!sunMoon)}
-          className="cursor-pointer w-[40px] h-[40px] items-center justify-center flex"
+          className="cursor-pointer w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex"
         >
-          {sunMoon ? <Sun /> : <Moon />}
+          {sunMoon ? <Sun size={20} /> : <Moon size={20} />}
         </div>
-        <div className="w-[40px] h-[40px] items-center justify-center flex">
-          <Bell className="cursor-pointer" />
+        <div className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex">
+          <Bell className="cursor-pointer" size={20} />
         </div>
         <NavLink
           to="/settings"
-          className="w-[40px] h-[40px] items-center justify-center flex"
+          className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex"
         >
-          <Settings className="cursor-pointer" />
+          <Settings className="cursor-pointer" size={20} />
         </NavLink>
       </div>
     </>

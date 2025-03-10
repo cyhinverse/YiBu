@@ -1,5 +1,5 @@
-import CheckComparePassword from "../configs/CheckComparePassword.js";
-import HashPasswordForUser from "../configs/HashPassword.js";
+import checkComparePassword from "../helpers/CheckComparePassword.js";
+import HashPasswordForUser from "../helpers/HashPassword.js";
 import Users from "../models/Users.js";
 import UserService from "../services/User.Service.js";
 
@@ -43,29 +43,51 @@ const UserController = {
   Login: async (req, res) => {
     try {
       const { email, password } = req.body;
+
       if (!email || !password) {
         return res.status(400).json({
           code: 0,
-          message: "Please fill all filed !",
+          message: "Please fill all fields",
         });
       }
-      const result = await CheckComparePassword(password, email);
-      if (!result) {
+
+      const user = await Users.findOne({ email });
+      if (!user) {
         return res.status(400).json({
-          code: 1,
-          message: "Password not match ! Plz try again.",
+          code: 0,
+          message: "Invalid email or password",
         });
       }
+
+      const isPasswordValid = await checkComparePassword(
+        password,
+        user.password
+      );
+
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          code: 0,
+          message: "Invalid email or password",
+        });
+      }
+
       return res.status(200).json({
-        code: 0,
-        message: "Login successfully !",
-      });
-    } catch (e) {
-      return res.status(500).json({
         code: 1,
-        message: e.message,
+        message: "Login successful",
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      return res.status(500).json({
+        code: 0,
+        message: "An error occurred during login",
       });
     }
+  },
+  RefreshToken: async (req, res) => {
+    return res.status(200).json({
+      code: 0,
+      message: "Refresh token successfully !",
+    });
   },
 };
 

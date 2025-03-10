@@ -10,14 +10,18 @@ const SideBarProfile = () => {
   ];
   return (
     <div className="w-[350px] h-full outline-2 outline-purple-400 rounded-xl p-4">
-      <h1 className="text-purple-400 font-bold text-2xl mb-6">Profile Person</h1>
+      <h1 className="text-purple-400 font-bold text-2xl mb-6">
+        Profile Person
+      </h1>
       <div className="flex flex-col gap-4">
         {profileOptions.map((item) => (
           <NavLink
             key={item.id}
             to={item.link}
             className={({ isActive }) =>
-              isActive ? "text-purple-500 font-semibold" : "text-black hover:text-purple-400"
+              isActive
+                ? "text-purple-500 font-semibold"
+                : "text-black hover:text-purple-400"
             }
           >
             {item.name}

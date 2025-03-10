@@ -3,11 +3,15 @@ import "./index.css";
 import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import DataProvider from "./DataProvider.jsx";
+import { store } from "./app/store";
+import { Provider } from "react-redux";
 
 createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <DataProvider>
-      <App />
-    </DataProvider>
-  </BrowserRouter>
+  <Provider store={store}>
+    <BrowserRouter>
+      <DataProvider>
+        <App />
+      </DataProvider>
+    </BrowserRouter>
+  </Provider>
 );

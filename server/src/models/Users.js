@@ -9,13 +9,17 @@ const UserSchema = new Schema(
     password: {
       type: String,
       required: true,
-      select: false,
     },
     email: {
       type: String,
       required: true,
       unique: true,
       match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
+    },
+    role: {
+      type: String,
+      enum: ["admin", "user"],
+      default: "user",
     },
   },
   {

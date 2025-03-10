@@ -21,21 +21,22 @@ const Contents = () => {
     { name: "Hoàng Văn F", score: "7k🎉" },
   ];
   return (
-    <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-2xl rounded-xl m-auto flex gap-2">
-      <div className="w-[100%] h-full rounded-xl flex justify-between ">
-        {/* Top users */}
-        <TopUser topUsers={topUsers} />
-        {/* List post all users */}
-        <div className="w-[45%] h-full overflow-y-scroll content-post  rounded-t-xl border border-gray-300 ">
+    <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6 ">
+      <div className="w-full md:w-[100%] h-full rounded-xl flex flex-col md:flex-row justify-between gap-6">
+        <div className="hidden md:block md:w-1/4 h-full">
+          <TopUser topUsers={topUsers} />
+        </div>
+        <div className="w-full md:w-1/2 h-full overflow-y-scroll content-post rounded-t-xl border border-gray-300">
           <CreatePost />
           <Post />
           <Post />
           <Post />
         </div>
-        <TrendingTopics trendingTopics={trendingTopics} />
-      </div>
 
-      {/* Trendings Topic */}
+        <div className="hidden md:block md:w-1/4">
+          <TrendingTopics trendingTopics={trendingTopics} />
+        </div>
+      </div>
     </div>
   );
 };

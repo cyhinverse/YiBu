@@ -2,6 +2,10 @@
   scrollbar-width: none;
 }
 
-.scroll-pr { 
+.scroll-pr {
+  scrollbar-width: none;
+}
+
+.config-scroll {
   scrollbar-width: none;
 }

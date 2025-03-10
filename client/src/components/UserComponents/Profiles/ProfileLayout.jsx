@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 
 const ProfileLayout = () => {
   return (
-    <div className="w-[95vw] h-[86vh] bg-purple-50 m-auto rounded-xl mt-5 shadow-2xl flex gap-4">
+    <div className="w-[95vw] h-[86vh] bg-purple-50 m-auto rounded-xl mt-5 shadow-xl flex gap-4 justify-between">
       <SideBarProfile />
       <Outlet />
     </div>
