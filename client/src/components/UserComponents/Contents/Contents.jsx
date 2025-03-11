@@ -28,9 +28,9 @@ const Contents = () => {
         </div>
         <div className="w-full md:w-1/2 h-full overflow-y-scroll content-post rounded-t-xl border border-gray-300">
           <CreatePost />
+          {/* <Post />
           <Post />
-          <Post />
-          <Post />
+          <Post /> */}
         </div>
 
         <div className="hidden md:block md:w-1/4">

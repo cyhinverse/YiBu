@@ -3,15 +3,18 @@ import "./index.css";
 import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import DataProvider from "./DataProvider.jsx";
-import { store } from "./app/store";
 import { Provider } from "react-redux";
+import { store, persistor } from "./utils/configureStore.js";
+import { PersistGate } from "redux-persist/integration/react";
 
 createRoot(document.getElementById("root")).render(
   <Provider store={store}>
-    <BrowserRouter>
-      <DataProvider>
-        <App />
-      </DataProvider>
-    </BrowserRouter>
+    <PersistGate loading={null} persistor={persistor}>
+      <BrowserRouter>
+        <DataProvider>
+          <App />
+        </DataProvider>
+      </BrowserRouter>
+    </PersistGate>
   </Provider>
 );

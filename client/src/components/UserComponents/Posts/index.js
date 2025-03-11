@@ -1,5 +1,4 @@
 export { default as Post } from "./Post";
-export { default as ModelCreatePost } from "./ModelCreatePost";
 export { default as PostOption } from "./PostOption";
 export { default as PostList } from "./PostList";
 export { default as CreatePost } from "./CreatePost";

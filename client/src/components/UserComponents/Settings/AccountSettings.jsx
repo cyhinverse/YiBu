@@ -1,6 +1,25 @@
 import React from "react";
-
+import Auth from "../../../services/authService";
+import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { logout } from "../../../slices/AuthSlice";
 const AccountSettings = () => {
+  const dispatch = useDispatch();
+  const handleLogout = async () => {
+    try {
+      const res = await Auth.logout();
+      if (res.code === 1) {
+        toast.success(res.message);
+        dispatch(logout());
+      } else {
+        toast.error("Logout failed !");
+      }
+    } catch (error) {
+      console.log(`Error ${error}`);
+      toast.error("Something went wrong!");
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto p-8 space-y-10 bg-neutral-50 border border-neutral-200 rounded-xl">
       <h1 className="text-2xl font-semibold text-neutral-800">
@@ -101,9 +120,15 @@ const AccountSettings = () => {
         <p className="text-sm text-neutral-500">
           This action is irreversible. Your data will be permanently removed.
         </p>
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-2">
           <button className="px-5 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition">
             Delete Account
+          </button>
+          <button
+            onClick={handleLogout}
+            className="px-5 py-2 bg-black text-white rounded-md text-sm hover:bg-red-700 transition"
+          >
+            Logout Account
           </button>
         </div>
       </section>

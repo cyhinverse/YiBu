@@ -1,0 +1,23 @@
+import { POST_API_ENDPOINTS } from "../axios/apiEndpoint";
+import api from "../axios/axiosConfig";
+import { handleRequest } from "../customs/HandleErrorReq";
+
+const POST = {
+  CREATE_POST: (data) => {
+    return handleRequest(
+      () =>
+        api.post(POST_API_ENDPOINTS.CREATE_POST, data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        }),
+      "Create post failed!"
+    );
+  },
+  GET_POST_USER_BY_ID: () => {
+    return handleRequest(
+      () => api.get(POST_API_ENDPOINTS.GET_POST_USER_BY_ID),
+      "Get posts successfully"
+    );
+  },
+};
+
+export default POST;

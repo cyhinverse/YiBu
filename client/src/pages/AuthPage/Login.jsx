@@ -1,8 +1,39 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
+import { useDispatch } from "react-redux";
+import Auth from "../../services/authService";
+import toast from "react-hot-toast";
+import { login } from "../../slices/AuthSlice";
 
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigator = useNavigate();
+  const [data, setData] = useState({
+    email: "",
+    password: "",
+  });
+  const handleOnchangeValue = (e) => {
+    setData({
+      ...data,
+      [e.target.name]: e.target.value,
+    });
+  };
+  const handSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await Auth.login(data);
+      if (res.code === 1) {
+        toast.success("Login successfully!");
+        localStorage.setItem("accessToken", res.accessToken);
+        dispatch(login(res));
+        navigator("/");
+      }
+    } catch (error) {
+      console.log("Error::", error);
+      toast.error("Login failed! Please try again.");
+    }
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
       <div className="bg-white/95 backdrop-blur-sm w-full max-w-4xl p-8 rounded-2xl shadow-2xl flex animate-fadeIn hover:shadow-3xl transition-shadow duration-300">
@@ -21,7 +52,7 @@ const Login = () => {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handSubmit}>
             <div className="space-y-4">
               <div className="transform transition-all duration-300 hover:scale-[1.02]">
                 <label
@@ -31,7 +62,10 @@ const Login = () => {
                   Email Address
                 </label>
                 <input
+                  onChange={handleOnchangeValue}
+                  value={data.email}
                   type="email"
+                  name="email"
                   id="email"
                   className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
                   placeholder="Enter your email"
@@ -45,7 +79,10 @@ const Login = () => {
                   Password
                 </label>
                 <input
+                  onChange={handleOnchangeValue}
+                  value={data.password}
                   type="password"
+                  name="password"
                   id="password"
                   className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
                   placeholder="Enter your password"

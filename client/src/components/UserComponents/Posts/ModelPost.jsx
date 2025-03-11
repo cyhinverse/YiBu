@@ -1,21 +1,56 @@
-import { AudioLines, Image, MapPin } from "lucide-react";
+import { AudioLines, Image, MapPin, X } from "lucide-react";
 import React, { useState } from "react";
+import POST from "../../../services/postService";
+import toast from "react-hot-toast";
 
 const ModelPost = ({ closeModal }) => {
-  const [mediaPreview, setMediaPreview] = useState(null);
+  const [mediaPreviews, setMediaPreviews] = useState([]);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [title, setTitle] = useState("");
 
   const handleMediaChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setMediaPreview(previewUrl);
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    const previewUrls = files.map((file) => URL.createObjectURL(file));
+
+    setMediaPreviews((prev) => [...prev, ...previewUrls]);
+    setMediaFiles((prev) => [...prev, ...files]);
+    event.target.value = "";
+  };
+
+  const removeMedia = (index) => {
+    setMediaPreviews((prev) => prev.filter((_, i) => i !== index));
+    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePosts = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      setTitle("");
+      mediaFiles.forEach((file) => {
+        formData.append("media", file);
+      });
+
+      console.log("🚀 Sending FormData:", Array.from(formData.entries()));
+
+      const res = await POST.CREATE_POST(formData);
+
+      if (res.code === 1) {
+        toast.success(res.message);
+      } else {
+        toast.error("Upload failed ");
+      }
+    } catch (error) {
+      console.error("❌ Error creating post:", error);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/20 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl relative">
-        {/* Close button */}
         <button
           onClick={closeModal}
           className="absolute top-5 right-4 text-md text-black transition cursor-pointer"
@@ -23,10 +58,8 @@ const ModelPost = ({ closeModal }) => {
           Exit
         </button>
 
-        {/* Title */}
         <h2 className="text-md text-black mb-6">What do you think?</h2>
 
-        {/* Input section */}
         <div className="flex gap-3 mb-4 items-start">
           <img
             src="https://plus.unsplash.com/premium_photo-1661404163778-8a72ca780190?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
@@ -36,28 +69,50 @@ const ModelPost = ({ closeModal }) => {
           <div className="flex flex-col h-full w-full">
             <span>Hana</span>
             <textarea
-              placeholder="Có ý tưởng mới ?"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Có ý tưởng mới?"
               className="flex-1 h-auto bg-transparent resize-none overflow-hidden leading-relaxed text-gray-800 placeholder-gray-400 border-none outline-none focus:ring-0"
             />
           </div>
         </div>
 
-        {/* Media preview */}
-        {mediaPreview && (
-          <div className="mb-4 overflow-auto" style={{ maxHeight: "380px" }}>
-            {mediaPreview.includes("video") ? (
-              <video
-                src={mediaPreview}
-                controls
-                className="w-full rounded-md"
-              />
-            ) : (
-              <img
-                src={mediaPreview}
-                alt="Preview"
-                className="w-full rounded-md object-cover"
-              />
-            )}
+        {mediaPreviews.length > 0 && (
+          <div className="mb-4 flex gap-3 overflow-x-auto scrollbar-hide">
+            {mediaPreviews.map((preview, index) => (
+              <div
+                key={index}
+                className="relative min-w-[128px] h-[128px] rounded-lg overflow-hidden group transition-transform"
+              >
+                <button
+                  onClick={() => removeMedia(index)}
+                  className="absolute top-1 right-1 bg-black text-white p-1 rounded-full shadow-lg hover:bg-red-700 transition"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={15} />
+                </button>
+                {preview.includes("video") ? (
+                  <video
+                    src={preview}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => setSelectedImage(preview)}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -67,6 +122,7 @@ const ModelPost = ({ closeModal }) => {
               <input
                 type="file"
                 accept="image/*,video/*"
+                multiple
                 className="hidden"
                 onChange={handleMediaChange}
               />
@@ -80,11 +136,33 @@ const ModelPost = ({ closeModal }) => {
             </button>
           </div>
 
-          <button className="w-[100px] h-[40px] bg-purple-600 text-white text-lg font-medium rounded-md hover:bg-purple-700 transition">
+          <button
+            onClick={handlePosts}
+            className="w-[100px] h-[40px] bg-purple-600 text-white text-lg font-medium rounded-md hover:bg-purple-700 transition"
+          >
             Post
           </button>
         </div>
       </div>
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Full Preview"
+            className="max-w-full max-h-full rounded-lg shadow-lg"
+          />
+          <button
+            className="absolute top-4 right-4 bg-white text-black p-2 rounded-full shadow-lg hover:bg-gray-200 transition"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X size={24} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,11 +4,11 @@ import {
   Bell,
   Home,
   MessageCircle,
-  MonitorPlay,
   Moon,
   Search,
   Sun,
   Settings,
+  Music,
 } from "lucide-react";
 import { DataContext } from "../../../DataProvider";
 
@@ -19,7 +19,7 @@ const Navigate = () => {
   const navItems = [
     { icon: Home, path: "/" },
     { icon: MessageCircle, path: "/messages" },
-    { icon: MonitorPlay, path: "/videos" },
+    { icon: Music, path: "/musics" },
   ];
 
   return (

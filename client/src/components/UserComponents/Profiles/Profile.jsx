@@ -1,8 +1,15 @@
 import React from "react";
 import { Settings } from "lucide-react";
-import { Post } from "../Posts";
+import { Post, PostList } from "../Posts";
+import { useSelector } from "react-redux";
+import PostLists from "../Posts/PostLists";
 
 const Profile = () => {
+  const user = useSelector((state) => state.auth.user);
+  const followersCount = user.user.followers.length;
+  const followingCount = user.user.following.length;
+  const posts = useSelector((s) => s.post.posts);
+  const postCount = posts.length;
   return (
     <div className="w-[75%] h-full bg-white rounded-3xl shadow-sm">
       <div className="h-full max-w-3xl mx-auto pt-8 px-4 overflow-y-auto config-scroll">
@@ -10,22 +17,28 @@ const Profile = () => {
         <div className="flex items-start justify-between mb-8">
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Nguyễn Văn Z</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {user.user.name}
+              </h2>
               <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <Settings size={20} className="text-gray-600" />
               </button>
             </div>
             <div className="flex items-center gap-8 mb-4">
               <div className="text-center">
-                <span className="font-bold text-gray-900">245</span>
+                <span className="font-bold text-gray-900">{postCount}</span>
                 <p className="text-sm text-gray-500">Bài viết</p>
               </div>
               <div className="text-center">
-                <span className="font-bold text-gray-900">1.2K</span>
+                <span className="font-bold text-gray-900">
+                  {followersCount}
+                </span>
                 <p className="text-sm text-gray-500">Người theo dõi</p>
               </div>
               <div className="text-center">
-                <span className="font-bold text-gray-900">891</span>
+                <span className="font-bold text-gray-900">
+                  {followingCount}
+                </span>
                 <p className="text-sm text-gray-500">Đang theo dõi</p>
               </div>
             </div>
@@ -74,8 +87,9 @@ const Profile = () => {
 
         {/* Posts Feed */}
         <div className="space-y-6">
-          <Post />
-          <Post />
+          {/* <Post />
+          <Post /> */}
+          <PostLists />
         </div>
       </div>
     </div>
