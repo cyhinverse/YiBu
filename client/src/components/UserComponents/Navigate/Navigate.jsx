@@ -11,6 +11,7 @@ import {
   Music,
 } from "lucide-react";
 import { DataContext } from "../../../DataProvider";
+import { useSelector } from "react-redux";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
@@ -21,10 +22,11 @@ const Navigate = () => {
     { icon: MessageCircle, path: "/messages" },
     { icon: Music, path: "/musics" },
   ];
+  const id = useSelector((s) => s.auth.user.user._id);
 
   return (
     <>
-      <div className="hidden md:flex w-[250px] h-[50px] items-center px-4 shadow-xl rounded-xl bg-purple-100">
+      <div className="hidden md:flex w-[250px] h-[50px] items-center px-4 shadow-md rounded-xl bg-purple-100 border border-gray-300">
         {hideSearch && <Search />}
         <input
           onClick={() => setHideSearch(!hideSearch)}
@@ -34,7 +36,7 @@ const Navigate = () => {
         />
       </div>
 
-      <div className="flex w-[200px] md:w-[250px] h-[50px] justify-between items-center px-3 md:px-6 shadow-xl rounded-xl bg-purple-100">
+      <div className="flex w-[200px] md:w-[250px] h-[50px] justify-between items-center px-3 md:px-6 shadow-md border border-gray-300 rounded-xl bg-purple-100">
         {navItems.map((item, i) => (
           <NavLink
             key={i}
@@ -51,7 +53,7 @@ const Navigate = () => {
 
         {/* Avatar */}
         <NavLink
-          to="/profile"
+          to={`/profile/${id}`}
           className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] flex items-center justify-center rounded-full hover:opacity-50 transition-all ease-out cursor-pointer"
         >
           <img
@@ -62,7 +64,7 @@ const Navigate = () => {
         </NavLink>
       </div>
 
-      <div className="flex w-[150px] md:w-[200px] h-[50px] justify-center items-center gap-2 md:gap-4 px-3 md:px-6 shadow-xl rounded-xl bg-purple-100">
+      <div className="flex w-[150px] md:w-[200px] h-[50px] justify-center items-center gap-2 md:gap-4 px-3 md:px-6 shadow-md border border-gray-300 rounded-xl bg-purple-100">
         <div
           onClick={() => setSunMoon(!sunMoon)}
           className="cursor-pointer w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex"

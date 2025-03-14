@@ -1,9 +1,17 @@
 import React from "react";
 
-const PostOption = () => {
-  const options = ["Lưu bài viết", "Báo cáo ", "Ẩn bài viết"];
+const PostOption = ({ show }) => {
+  const options = ["Lưu bài viết", "Báo cáo", "Ẩn bài viết"];
+
   return (
-    <div className="flex flex-col h-fit w-[120px] bg-purple-400 absolute z-30 top-5 right-5 rounded-md gap-0.5 items-center justify-center">
+    <div
+      className={`flex flex-col shadow-xl h-fit w-[120px] bg-purple-400 absolute z-30 top-5 right-5 rounded-md gap-0.5 items-center justify-center transition-all duration-200 ease-out
+      ${
+        show
+          ? "opacity-100 scale-100"
+          : "opacity-0 scale-90 pointer-events-none"
+      }`}
+    >
       {options.map((op, i) => (
         <div
           key={i}

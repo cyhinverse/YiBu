@@ -10,7 +10,7 @@ const ProfileSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "",
+      default: "https://sbcf.fr/en/default-avatar/",
     },
     bio: {
       type: String,
@@ -18,15 +18,12 @@ const ProfileSchema = new Schema(
     },
     birthday: {
       type: Date,
+      default: new Date.now(),
     },
     gender: {
       type: String,
       enum: ["male", "female", "other"],
       default: "other",
-    },
-    location: {
-      type: String,
-      default: "",
     },
   },
   {

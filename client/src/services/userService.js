@@ -9,11 +9,12 @@ const User = {
       "Get all user failed!"
     ),
 
-  GET_USER_BY_ID: async (data) =>
-    handleRequest(
-      () => api.post(USER_API_ENDPOINTS.GET_USER_BY_ID, data),
-      `Get user by id failed !`
-    ),
+  GET_USER_BY_ID: (id) => {
+    return handleRequest(
+      () => api.post(USER_API_ENDPOINTS.get_user_by_id, { id }),
+      "Get user successfully"
+    );
+  },
 
   CREATE_USER: (data) =>
     handleRequest(

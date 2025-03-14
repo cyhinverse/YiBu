@@ -1,8 +1,13 @@
 import React from "react";
-import { CreatePost, Post } from "../Posts";
+import { CreatePost } from "../Posts";
 import "./index.css";
 import { TrendingTopics } from "../TrendingTopics";
 import TopUser from "../TopUser/TopUser";
+import PostLists from "../Posts/PostLists";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import POST from "../../../services/postService";
+import { getAllPost } from "../../../slices/PostSlice";
 
 const Contents = () => {
   const trendingTopics = [
@@ -20,6 +25,21 @@ const Contents = () => {
     { name: "Phạm Thị E", score: "9k🥇" },
     { name: "Hoàng Văn F", score: "7k🎉" },
   ];
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await POST.GET_ALL_USER();
+        dispatch(getAllPost(res.posts));
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+    fetchPosts();
+  }, []);
+
   return (
     <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6 ">
       <div className="w-full md:w-[100%] h-full rounded-xl flex flex-col md:flex-row justify-between gap-6">
@@ -28,9 +48,7 @@ const Contents = () => {
         </div>
         <div className="w-full md:w-1/2 h-full overflow-y-scroll content-post rounded-t-xl border border-gray-300">
           <CreatePost />
-          {/* <Post />
-          <Post />
-          <Post /> */}
+          <PostLists />
         </div>
 
         <div className="hidden md:block md:w-1/4">

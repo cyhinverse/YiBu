@@ -1,27 +1,56 @@
+import { CatchError } from "../../configs/CatchError.js";
 import Post from "../../models/mongodb/Posts.js";
 
 const PostController = {
   GetAllPost: async (req, res) => {
     try {
-      const posts = await Post.find();
+      const posts = await Post.find()
+        .populate("userId", "name followers following")
+        .sort({ createdAt: -1 })
+        .lean();
       res.status(200).json({ code: 1, posts });
     } catch (error) {
       res.status(500).json({ code: 2, message: error.message });
     }
   },
-  GetPostPostUserById: async (req, res) => {
-    try {
-      const userId = req.user.id;
+  // GetPostPostUserById: async (req, res) => {
+  //   try {
+  //     const userId = req.user.id;
 
-      const post = await Post.find({ userId });
+  //     const post = await Post.find({ userId });
 
-      if (!post)
-        return res.status(404).json({ code: 0, message: "Post not found" });
-      res.status(200).json({ code: 1, post });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
+  //     if (!post)
+  //       return res.status(404).json({ code: 0, message: "Post not found" });
+  //     res.status(200).json({ code: 1, post });
+  //   } catch (error) {
+  //     res.status(500).json({ message: error.message });
+  //   }
+  // },
+
+  // GetPostUserById: CatchError(async (req, res) => {
+  //   const { userId } = req.params;
+  //   if (!userId) {
+  //     return res.status(400).json({
+  //       code: 0,
+  //       message: "User ID is required!",
+  //     });
+  //   }
+  //   const postOfUser = await Post.find({ userId });
+
+  //   if (!postOfUser) {
+  //     return res.status(404).json({
+  //       code: 0,
+  //       message: "No posts found for this user!",
+  //     });
+  //   }
+
+  //   return res.status(200).json({
+  //     code: 1,
+  //     message: "Get posts of user successfully!",
+  //     postOfUser,
+  //   });
+  // }, "Get post of user failed !"),
+
   DeletePost: async (req, res) => {
     try {
       const { id } = req.params;
@@ -46,7 +75,7 @@ const PostController = {
   },
   CreatePost: async (req, res) => {
     try {
-      const { title, image, video, tags } = req.body;
+      const { title, tags } = req.body;
       console.log(req.body);
       const userId = req.user.id;
 
@@ -54,20 +83,28 @@ const PostController = {
         return res.status(400).json({ code: 0, message: "Title là bắt buộc" });
       }
 
-      const mediaPaths = req.files.map((file) => file.path);
+      const mediaPaths = req.files.map((file) => ({
+        url: file.path,
+        type: file.mimetype.includes("image") ? "image" : "video",
+      }));
 
       const newPost = new Post({
         userId,
         title,
-        image: mediaPaths[0] || null,
-        video: mediaPaths.find((path) => path.includes("mp4")) || null,
+        media: mediaPaths,
         tags: Array.isArray(tags) ? tags : [],
       });
 
       await newPost.save();
-      res
-        .status(201)
-        .json({ code: 1, message: "Post created successfully", post: newPost });
+      const populatedPost = await Post.findById(newPost._id)
+        .populate("userId", "name followers following")
+        .lean();
+
+      res.status(201).json({
+        code: 1,
+        message: "Post created successfully",
+        post: populatedPost,
+      });
     } catch (error) {
       res.status(500).json({ code: 0, message: error.message });
     }

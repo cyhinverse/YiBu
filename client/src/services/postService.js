@@ -18,6 +18,12 @@ const POST = {
       "Get posts successfully"
     );
   },
+  GET_ALL_USER: () => {
+    return handleRequest(
+      () => api.get(POST_API_ENDPOINTS.GET_ALL_USER),
+      "Get list user failed"
+    );
+  },
 };
 
 export default POST;

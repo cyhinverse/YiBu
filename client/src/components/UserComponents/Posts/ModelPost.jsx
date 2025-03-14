@@ -1,13 +1,22 @@
 import { AudioLines, Image, MapPin, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import POST from "../../../services/postService";
 import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { addPost } from "../../../slices/PostSlice";
 
 const ModelPost = ({ closeModal }) => {
   const [mediaPreviews, setMediaPreviews] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [title, setTitle] = useState("");
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    return () => {
+      mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [mediaPreviews]);
 
   const handleMediaChange = (event) => {
     const files = Array.from(event.target.files);
@@ -30,18 +39,22 @@ const ModelPost = ({ closeModal }) => {
       const formData = new FormData();
       formData.append("title", title);
       setTitle("");
+
       mediaFiles.forEach((file) => {
         formData.append("media", file);
       });
 
-      console.log("🚀 Sending FormData:", Array.from(formData.entries()));
-
       const res = await POST.CREATE_POST(formData);
+      dispatch(addPost(res.post));
 
       if (res.code === 1) {
         toast.success(res.message);
+        dispatch(addPost(res.post));
+        setTitle("");
+        setMediaFiles([]);
+        setMediaPreviews([]);
       } else {
-        toast.error("Upload failed ");
+        toast.error("Upload failed");
       }
     } catch (error) {
       console.error("❌ Error creating post:", error);
@@ -77,6 +90,7 @@ const ModelPost = ({ closeModal }) => {
           </div>
         </div>
 
+        {/* Hiển thị preview media */}
         {mediaPreviews.length > 0 && (
           <div className="mb-4 flex gap-3 overflow-x-auto scrollbar-hide">
             {mediaPreviews.map((preview, index) => (
@@ -87,13 +101,6 @@ const ModelPost = ({ closeModal }) => {
                 <button
                   onClick={() => removeMedia(index)}
                   className="absolute top-1 right-1 bg-black text-white p-1 rounded-full shadow-lg hover:bg-red-700 transition"
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
                 >
                   <X size={15} />
                 </button>
@@ -116,6 +123,7 @@ const ModelPost = ({ closeModal }) => {
           </div>
         )}
 
+        {/* Các nút chọn media */}
         <div className="flex justify-between">
           <div className="flex items-center gap-4 text-gray-500 mb-6">
             <label className="p-2 rounded-full hover:bg-gray-100 transition cursor-pointer">
@@ -145,6 +153,7 @@ const ModelPost = ({ closeModal }) => {
         </div>
       </div>
 
+      {/* Hiển thị ảnh lớn khi click */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"

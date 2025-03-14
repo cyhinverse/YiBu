@@ -39,7 +39,7 @@ api.interceptors.response.use(
         console.error("Refresh token expired, please login again.");
 
         localStorage.removeItem("accessToken");
-        window.location.href = "/login";
+        window.location.href = "/auth/login";
         return Promise.reject(refreshError);
       }
     }

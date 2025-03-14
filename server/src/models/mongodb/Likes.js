@@ -1,9 +1,13 @@
 import { Schema, Types, model } from "mongoose";
 
-const LikeSchema = new Schema({
-  user: { type: Types.ObjectId, ref: "User", required: true },
-  post: { type: Types.ObjectId, ref: "Post", required: true },
-  createdAt: { type: Date, default: Date.now },
-});
+const LikeSchema = new Schema(
+  {
+    user: { type: Types.ObjectId, ref: "User", required: true },
+    post: { type: Types.ObjectId, ref: "Post", required: true },
+  },
+  { timestamps: true, collection: "Likes" }
+);
 
-export default Like = model("Like", LikeSchema);
+LikeSchema.index({ user: 1, post: 1 }, { unique: true });
+
+export default model("Like", LikeSchema);

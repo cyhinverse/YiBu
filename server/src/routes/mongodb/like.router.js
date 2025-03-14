@@ -1,19 +1,24 @@
 import express from "express";
+import LikeController from "../../controllers/mongodb/like.controller.js";
+import VerifyToken from "../../middlewares/middlewareController.js";
 const router = express.Router();
 
-// Create a new like
-router.post("/");
+router.post(
+  "/create-like",
+  VerifyToken.VerifyAccessToken,
+  LikeController.CreateLike
+);
 
-// Get all likes for a specific post
 router.get("/post/:postId");
 
-// Delete a like
-router.delete("/:id");
+router.delete(
+  "/delete-like",
+  VerifyToken.VerifyAccessToken,
+  LikeController.DeleteLike
+);
 
-// Get all likes for a specific user
 router.get("/user/:userId");
 
-// Get all likes for a specific post
 router.get("/post/:postId");
 
 export default router;

@@ -1,28 +1,30 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  loading: false,
+  commonPost: [],
+  userPost: [],
   post: null,
-  posts: [],
-  error: false,
+  loading: false,
+  error: null,
 };
 
 const postSlice = createSlice({
   name: "post",
   initialState,
   reducers: {
-    CreatePost: (state, action) => {
-      state.post = action.payload;
+    getAllPost: (state, action) => {
+      state.commonPost = action.payload;
       state.loading = false;
       state.error = false;
     },
-    GetPostUserByID: (state, action) => {
-      state.posts = action.payload;
+    addPost: (state, action) => {
+      state.commonPost.unshift(action.payload);
       state.loading = false;
       state.error = false;
     },
   },
 });
 
-export const { CreatePost, GetPostUserByID } = postSlice.actions;
+export const { getAllPost, addPost } = postSlice.actions;
+
 export default postSlice.reducer;

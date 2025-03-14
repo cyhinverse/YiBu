@@ -1,35 +1,18 @@
-import { Schema, model, Types } from "mongoose";
+import mongoose from "mongoose";
 
-const postSchema = new Schema(
+const PostSchema = new mongoose.Schema(
   {
-    userId: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    image: {
-      type: String,
-      required: false, 
-    },
-    video: {
-      type: String,
-      required: false, 
-    },
-    tags: [
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    caption: { type: String },
+    media: [
       {
-        type: String,
-        trim: true,
+        url: { type: String, required: true },
+        type: { type: String, enum: ["image", "video"], required: true },
       },
     ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true, collection: "Posts" }
 );
 
-export default model("Post", postSchema);
+const Post = mongoose.model("Post", PostSchema);
+export default Post;

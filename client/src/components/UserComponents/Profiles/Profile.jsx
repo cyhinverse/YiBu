@@ -1,6 +1,5 @@
 import React from "react";
 import { Settings } from "lucide-react";
-import { Post, PostList } from "../Posts";
 import { useSelector } from "react-redux";
 import PostLists from "../Posts/PostLists";
 
@@ -8,8 +7,7 @@ const Profile = () => {
   const user = useSelector((state) => state.auth.user);
   const followersCount = user.user.followers.length;
   const followingCount = user.user.following.length;
-  const posts = useSelector((s) => s.post.posts);
-  const postCount = posts.length;
+
   return (
     <div className="w-[75%] h-full bg-white rounded-3xl shadow-sm">
       <div className="h-full max-w-3xl mx-auto pt-8 px-4 overflow-y-auto config-scroll">
@@ -26,7 +24,7 @@ const Profile = () => {
             </div>
             <div className="flex items-center gap-8 mb-4">
               <div className="text-center">
-                <span className="font-bold text-gray-900">{postCount}</span>
+                <span className="font-bold text-gray-900">{0}</span>
                 <p className="text-sm text-gray-500">Bài viết</p>
               </div>
               <div className="text-center">
