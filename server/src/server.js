@@ -6,6 +6,7 @@ import routerPosts from "./routes/mongodb/post.router.js";
 import routerAuth from "./routes/mongodb/auth.router.js";
 import routerUser from "./routes/mongodb/user.router.js";
 import routerLike from "./routes/mongodb/like.router.js";
+import routerProfile from "./routes/mongodb/profile.router.js";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -32,5 +33,6 @@ app.use("/api/auth", routerAuth);
 app.use("/api/v1", routerPosts);
 app.use("/user", routerUser);
 app.use("/like", routerLike);
+app.use("/profile", routerProfile);
 
 CheckConnectionToMongoDB(app, PORT);

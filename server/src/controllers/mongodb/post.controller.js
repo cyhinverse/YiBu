@@ -17,6 +17,7 @@ const PostController = {
 
   GetPostUserById: CatchError(async (req, res) => {
     const { userId } = req.params;
+    console.log(`Check id params ${userId}`);
     if (!userId) {
       return res.status(400).json({
         code: 0,

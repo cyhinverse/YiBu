@@ -1,4 +1,5 @@
 import express from "express";
+import ProfileController from "../../controllers/mongodb/profile.controller.js";
 const router = express.Router();
 
 // Create a new profile
@@ -14,7 +15,7 @@ router.put("/:id");
 router.delete("/:id");
 
 // Get a profile by id
-router.get("/:id");
+router.get("/:id", ProfileController.GET_PROFILE_BY_ID);
 
 // Get a profile by username
 router.get("/username/:username");

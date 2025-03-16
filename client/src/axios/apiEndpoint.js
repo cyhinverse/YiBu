@@ -9,7 +9,7 @@ export const AUTH_API_ENDPOINTS = {
 
 export const USER_API_ENDPOINTS = {
   GET_ALL_USER: "/api/v1/",
-  get_user_by_id: "/user/get-user",
+  GET_USER_BY_ID: "/user/:id",
   CREATE_USER: "/api/v1",
   UPDATE_USER: "api/v1",
   DELETE_USER: "/api/v1",
@@ -27,4 +27,8 @@ export const POST_API_ENDPOINTS = {
 export const LIKE_API_ENDPOINTS = {
   CREATE_LIKE: "/like/create-like",
   DELETE_LIKE: "/like/delete-like",
+};
+
+export const PROFILE_API_ENDPOINTS = {
+  GET_PROFILE_BY_ID: "/profile/:id",
 };

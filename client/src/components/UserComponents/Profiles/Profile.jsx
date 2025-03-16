@@ -1,12 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Settings } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PostLists from "../Posts/PostLists";
+import { useParams } from "react-router-dom";
+import User from "../../../services/userService";
 
 const Profile = () => {
-  const user = useSelector((state) => state.auth.user);
-  const followersCount = user.user.followers.length;
-  const followingCount = user.user.following.length;
+  const { userId } = useParams();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await User.GET_USER_BY_ID(userId);
+      console.log(`Check data res`, res);
+    };
+    fetchUsers();
+  }, []);
 
   return (
     <div className="w-[75%] h-full bg-white rounded-3xl shadow-sm">
@@ -15,9 +24,7 @@ const Profile = () => {
         <div className="flex items-start justify-between mb-8">
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {user.user.name}
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900">home</h2>
               <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <Settings size={20} className="text-gray-600" />
               </button>
@@ -28,15 +35,11 @@ const Profile = () => {
                 <p className="text-sm text-gray-500">Bài viết</p>
               </div>
               <div className="text-center">
-                <span className="font-bold text-gray-900">
-                  {followersCount}
-                </span>
+                <span className="font-bold text-gray-900">{0}</span>
                 <p className="text-sm text-gray-500">Người theo dõi</p>
               </div>
               <div className="text-center">
-                <span className="font-bold text-gray-900">
-                  {followingCount}
-                </span>
+                <span className="font-bold text-gray-900">{0}</span>
                 <p className="text-sm text-gray-500">Đang theo dõi</p>
               </div>
             </div>
@@ -85,8 +88,6 @@ const Profile = () => {
 
         {/* Posts Feed */}
         <div className="space-y-6">
-          {/* <Post />
-          <Post /> */}
           <PostLists />
         </div>
       </div>

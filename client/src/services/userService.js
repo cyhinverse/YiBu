@@ -11,8 +11,8 @@ const User = {
 
   GET_USER_BY_ID: (id) => {
     return handleRequest(
-      () => api.post(USER_API_ENDPOINTS.get_user_by_id, { id }),
-      "Get user successfully"
+      () => api.get(USER_API_ENDPOINTS.GET_USER_BY_ID, { params: { id } }),
+      "Get user failed!"
     );
   },
 

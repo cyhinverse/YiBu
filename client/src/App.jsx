@@ -61,6 +61,7 @@ function App() {
 
             <Route path={`${ROUTES.PROFILE}`} element={<ProfileLayout />}>
               <Route index element={<HomeProfile />} />
+              <Route path=":userId" element={<HomeProfile />} />
               <Route path="home" element={<HomeProfile />} />
               <Route path="following" element={<FollowingUser />} />
               <Route path="friends" element={<Friends />} />

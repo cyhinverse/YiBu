@@ -5,7 +5,6 @@ const ProfileSchema = new Schema(
     userId: {
       type: Types.ObjectId,
       ref: "User",
-      required: true,
       unique: true,
     },
     avatar: {
@@ -18,7 +17,7 @@ const ProfileSchema = new Schema(
     },
     birthday: {
       type: Date,
-      default: new Date.now(),
+      default: new Date(),
     },
     gender: {
       type: String,

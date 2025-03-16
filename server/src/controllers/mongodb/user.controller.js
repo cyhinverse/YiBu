@@ -43,18 +43,25 @@ const UserController = {
   },
   Get_User_By_Id: async (req, res) => {
     try {
-      const { id } = req.body;
+      const { id } = req.params;
       console.log("check id", id);
-      if (id) {
-        const data = await Users.findOne({
-          id: new mongoose.Types.ObjectId(id),
-        }).lean();
-        return data;
+      if (!id) {
+        return res.status(400).json({
+          code: 0,
+          message: "User ID is required!",
+        });
+      }
+      const user = await Users.findById(id).populate("profile").lean();
+      if (!user) {
+        return res.status(404).json({
+          code: 0,
+          message: "User not found!",
+        });
       }
       return res.json({
         code: 1,
         message: "Get user successfully!",
-        data,
+        data: user,
       });
     } catch (error) {
       return res.json({
