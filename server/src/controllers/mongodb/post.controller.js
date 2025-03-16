@@ -6,7 +6,11 @@ const PostController = {
   GetAllPost: async (req, res) => {
     try {
       const posts = await Post.find()
-        .populate("user", "name followers following")
+        .populate({
+          path: "user",
+          select: "name followers following",
+          populate: { path: "profile", select: "avatar" },
+        })
         .sort({ createdAt: -1 })
         .lean();
       res.status(200).json({ code: 1, posts });

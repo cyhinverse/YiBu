@@ -4,6 +4,7 @@ import {
   GenerateRefreshToken,
 } from "../../helpers/GenerateTokens.js";
 import HashPasswordForUser from "../../helpers/HashPassword.js";
+
 import RefreshToken from "../../models/mongodb/RefreshToken.js";
 import Users from "../../models/mongodb/Users.js";
 import UserService from "../../services/User.Service.js";
@@ -26,12 +27,15 @@ const AuthController = {
           message: "Email already in use.",
         });
       }
+
+      // Tạo user mới
       const NewUser = new Users({
         name,
         password: await HashPasswordForUser(password),
         email,
       });
       await NewUser.save();
+
       return res.status(201).json({
         code: 1,
         message: "User created successfully",
@@ -45,6 +49,7 @@ const AuthController = {
       });
     }
   },
+
   Login: async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -163,7 +168,6 @@ const AuthController = {
       });
     }
   },
-  
 };
 
 export default AuthController;

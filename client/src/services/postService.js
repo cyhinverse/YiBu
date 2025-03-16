@@ -12,12 +12,12 @@ const POST = {
       "Create post failed!"
     );
   },
-  GET_POST_USER_BY_ID: (userId) => {
-    return handleRequest(
-      () => api.get(`${POST_API_ENDPOINTS.GET_POST_USER_BY_ID}/${userId}`),
-      "Get posts failed!" 
-    );
-  },
+  // GET_POST_USER_BY_ID: (userId) => {
+  //   return handleRequest(
+  //     () => api.get(`${POST_API_ENDPOINTS.GET_POST_USER_BY_ID}/${userId}`),
+  //     "Get posts failed!"
+  //   );
+  // },
   GET_ALL_USER: () => {
     return handleRequest(
       () => api.get(POST_API_ENDPOINTS.GET_ALL_USER),

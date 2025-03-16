@@ -9,7 +9,7 @@ export const AUTH_API_ENDPOINTS = {
 
 export const USER_API_ENDPOINTS = {
   GET_ALL_USER: "/api/v1/",
-  GET_USER_BY_ID: "/user/:id",
+  GET_USER_BY_ID: "/user/",
   CREATE_USER: "/api/v1",
   UPDATE_USER: "api/v1",
   DELETE_USER: "/api/v1",

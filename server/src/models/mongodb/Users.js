@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 const UserSchema = new Schema(
   {
@@ -32,7 +32,7 @@ const UserSchema = new Schema(
       default: "user",
     },
     profile: {
-      type: Schema.Types.ObjectId,
+      type: Types.ObjectId,
       ref: "Profile",
       unique: true,
     },

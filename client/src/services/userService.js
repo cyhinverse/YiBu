@@ -11,7 +11,7 @@ const User = {
 
   GET_USER_BY_ID: (id) => {
     return handleRequest(
-      () => api.get(USER_API_ENDPOINTS.GET_USER_BY_ID, { params: { id } }),
+      () => api.get(`${USER_API_ENDPOINTS.GET_USER_BY_ID}/${id}`),
       "Get user failed!"
     );
   },

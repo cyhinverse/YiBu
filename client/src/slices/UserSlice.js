@@ -17,8 +17,7 @@ const userSlice = createSlice({
     },
 
     getUserById: (state, action) => {
-      const userId = action.payload;
-      state.user = state.users.find((user) => user.id === userId) || null;
+      state.user = action.payload;
       state.loading = false;
     },
 

@@ -39,17 +39,17 @@ const Contents = () => {
     };
     fetchPosts();
   }, []);
-  useEffect(() => {
-    const fetchPostUsers = async () => {
-      try {
-        const res = await POST.GET_POST_USER_BY_ID();
-        dispatch(getPostUserById(res.posts));
-      } catch (error) {
-        console.error("Error ", error);
-      }
-    };
-    fetchPostUsers();
-  }, []);
+  // useEffect(() => {
+  //   const fetchPostUsers = async () => {
+  //     try {
+  //       const res = await POST.GET_POST_USER_BY_ID();
+  //       dispatch(getPostUserById(res.posts));
+  //     } catch (error) {
+  //       console.error("Error ", error);
+  //     }
+  //   };
+  //   fetchPostUsers();
+  // }, []);
 
   return (
     <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6 ">
