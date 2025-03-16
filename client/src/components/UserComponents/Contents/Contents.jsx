@@ -7,7 +7,7 @@ import PostLists from "../Posts/PostLists";
 import { useDispatch } from "react-redux";
 import { useEffect } from "react";
 import POST from "../../../services/postService";
-import { getAllPost } from "../../../slices/PostSlice";
+import { getAllPost, getPostUserById } from "../../../slices/PostSlice";
 
 const Contents = () => {
   const trendingTopics = [
@@ -38,6 +38,17 @@ const Contents = () => {
       }
     };
     fetchPosts();
+  }, []);
+  useEffect(() => {
+    const fetchPostUsers = async () => {
+      try {
+        const res = await POST.GET_POST_USER_BY_ID();
+        dispatch(getPostUserById(res.posts));
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+    fetchPostUsers();
   }, []);
 
   return (

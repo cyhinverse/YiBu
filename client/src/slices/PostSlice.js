@@ -13,18 +13,30 @@ const postSlice = createSlice({
   initialState,
   reducers: {
     getAllPost: (state, action) => {
-      state.commonPost = action.payload;
+      const uniquePosts = [
+        ...new Map(action.payload.map((post) => [post._id, post])).values(),
+      ];
+      state.commonPost = uniquePosts;
+      state.loading = false;
+      state.error = false;
+    },
+    getPostUserById: (state, action) => {
+      state.userPost = action.payload;
       state.loading = false;
       state.error = false;
     },
     addPost: (state, action) => {
-      state.commonPost.unshift(action.payload);
+      const isDuplicate = state.commonPost.some(
+        (post) => post._id === action.payload._id
+      );
+      if (!isDuplicate) {
+        state.commonPost.unshift(action.payload);
+      }
       state.loading = false;
       state.error = false;
     },
   },
 });
 
-export const { getAllPost, addPost } = postSlice.actions;
-
+export const { getAllPost, addPost, getPostUserById } = postSlice.actions;
 export default postSlice.reducer;

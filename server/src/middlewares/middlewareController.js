@@ -4,9 +4,8 @@ const VerifyToken = {
   VerifyAccessToken: (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
-      console.log("Auth Header:", authHeader);
 
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      if (!authHeader) {
         return res
           .status(401)
           .json({ code: 0, message: "You are not authenticated" });

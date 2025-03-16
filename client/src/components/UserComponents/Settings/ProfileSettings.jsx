@@ -35,7 +35,7 @@ const ProfileSettings = () => {
         </div>
       </section>
 
-      <section className="space-y-4">
+      {/* <section className="space-y-4">
         <h2 className="text-lg font-medium text-neutral-700">Location</h2>
         <input
           type="text"
@@ -47,7 +47,7 @@ const ProfileSettings = () => {
             Save
           </button>
         </div>
-      </section>
+      </section> */}
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium text-neutral-700">

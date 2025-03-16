@@ -66,23 +66,6 @@ const AccountSettings = () => {
         </div>
       </section>
 
-      {/* Change Phone */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium text-neutral-700">
-          Change Phone Number
-        </h2>
-        <input
-          type="tel"
-          placeholder="New phone number"
-          className="w-full p-3 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-        />
-        <div className="flex justify-end">
-          <button className="px-5 py-2 bg-neutral-800 text-white rounded-md text-sm hover:bg-neutral-900 transition">
-            Save
-          </button>
-        </div>
-      </section>
-
       {/* Connected Accounts */}
       <section className="space-y-4">
         <h2 className="text-lg font-medium text-neutral-700">
@@ -94,9 +77,6 @@ const AccountSettings = () => {
           </button>
           <button className="px-4 py-2 border border-neutral-300 rounded-md text-sm hover:bg-neutral-100">
             Facebook
-          </button>
-          <button className="px-4 py-2 border border-neutral-300 rounded-md text-sm hover:bg-neutral-100">
-            Apple
           </button>
         </div>
       </section>

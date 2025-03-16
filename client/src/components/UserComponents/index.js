@@ -7,3 +7,4 @@ export * from "./MainMessage";
 export * from "./Messages";
 export * from "./Profiles";
 export * from "./Settings";
+export * from "./Comment";

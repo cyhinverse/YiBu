@@ -7,10 +7,12 @@ const PostLists = () => {
   const path = location.pathname;
   const data = useSelector((s) => s.post.commonPost);
 
+  console.log("Check data from post list  :>> ", data);
+
   return (
     <div>
       {path.includes("/") ? (
-        data?.map((post) => <Post key={post._id} data={post} />)
+        data?.map((post, index) => <Post key={post._id || index} data={post} />)
       ) : (
         <p>No posts available</p>
       )}

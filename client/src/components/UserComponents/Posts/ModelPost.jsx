@@ -9,7 +9,8 @@ const ModelPost = ({ closeModal }) => {
   const [mediaPreviews, setMediaPreviews] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [title, setTitle] = useState("");
+  const [caption, setCaption] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -35,35 +36,47 @@ const ModelPost = ({ closeModal }) => {
   };
 
   const handlePosts = async () => {
+    if (!caption.trim() && mediaFiles.length === 0) {
+      toast.error("Xin vui lòng nhập thêm nội dung!");
+      return;
+    }
+
+    setIsLoading(true);
+    closeModal();
+    const toastId = toast.loading("Đang đăng bài...");
+
     try {
       const formData = new FormData();
-      formData.append("title", title);
-      setTitle("");
-
+      formData.append("caption", caption);
       mediaFiles.forEach((file) => {
         formData.append("media", file);
       });
 
       const res = await POST.CREATE_POST(formData);
-      dispatch(addPost(res.post));
+      console.log(`Check data res:::`, res);
 
       if (res.code === 1) {
-        toast.success(res.message);
+        toast.success(res.message, { id: toastId });
         dispatch(addPost(res.post));
-        setTitle("");
+
+        // Reset form
+        setCaption("");
         setMediaFiles([]);
         setMediaPreviews([]);
       } else {
         toast.error("Upload failed");
       }
     } catch (error) {
-      console.error("❌ Error creating post:", error);
+      console.error("Error creating post:", error);
+      toast.error("Lỗi khi đăng bài!");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-black/30 p-4">
+      <div className="w-full  max-w-md bg-white rounded-xl p-6 shadow-2xl relative">
         <button
           onClick={closeModal}
           className="absolute top-5 right-4 text-md text-black transition cursor-pointer"
@@ -82,8 +95,8 @@ const ModelPost = ({ closeModal }) => {
           <div className="flex flex-col h-full w-full">
             <span>Hana</span>
             <textarea
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
               placeholder="Có ý tưởng mới?"
               className="flex-1 h-auto bg-transparent resize-none overflow-hidden leading-relaxed text-gray-800 placeholder-gray-400 border-none outline-none focus:ring-0"
             />
@@ -146,9 +159,14 @@ const ModelPost = ({ closeModal }) => {
 
           <button
             onClick={handlePosts}
-            className="w-[100px] h-[40px] bg-purple-600 text-white text-lg font-medium rounded-md hover:bg-purple-700 transition"
+            disabled={isLoading}
+            className={`w-[100px] h-[40px] text-lg font-medium rounded-md transition ${
+              isLoading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-purple-600 hover:bg-purple-700 text-white"
+            }`}
           >
-            Post
+            {isLoading ? "Posting..." : "Post"}
           </button>
         </div>
       </div>

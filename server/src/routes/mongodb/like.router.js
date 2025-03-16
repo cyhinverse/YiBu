@@ -11,6 +11,8 @@ router.post(
 
 router.get("/post/:postId");
 
+router.get("/likes", )
+
 router.delete(
   "/delete-like",
   VerifyToken.VerifyAccessToken,

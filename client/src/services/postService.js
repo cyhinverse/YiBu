@@ -15,7 +15,7 @@ const POST = {
   GET_POST_USER_BY_ID: () => {
     return handleRequest(
       () => api.get(POST_API_ENDPOINTS.GET_POST_USER_BY_ID),
-      "Get posts successfully"
+      "Get posts failed!"
     );
   },
   GET_ALL_USER: () => {
