@@ -5,7 +5,7 @@ const PostOption = ({ show }) => {
 
   return (
     <div
-      className={`flex flex-col shadow-xl h-fit w-[120px] bg-purple-400 absolute z-30 top-5 right-5 rounded-md gap-0.5 items-center justify-center transition-all duration-200 ease-out
+      className={`flex flex-col shadow-xl h-fit w-[130px] bg-white absolute z-30 top-5 right-5 rounded-md gap-0.5 items-center justify-center transition-all duration-200 ease-out border border-gray-300
       ${
         show
           ? "opacity-100 scale-100"
@@ -15,7 +15,7 @@ const PostOption = ({ show }) => {
       {options.map((op, i) => (
         <div
           key={i}
-          className="text-white w-full px-2 h-[40px] border-b border-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80"
+          className="text-black w-full px-2 h-[40px] border-b border-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80"
         >
           {op}
         </div>

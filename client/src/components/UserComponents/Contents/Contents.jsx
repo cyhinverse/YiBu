@@ -17,13 +17,11 @@ const Contents = () => {
     { name: "#CodeNewbie", posts: "3.4K" },
     { name: "#Travel2025", posts: "10.7K" },
   ];
-  const topUsers = [
-    { name: "Ngô Văn An", score: "18k🏆" },
-    { name: "Nguyễn Văn B", score: "15k🔥" },
-    { name: "Trần Thị C", score: "12k💎" },
-    { name: "Lê Văn D", score: "10k✨" },
-    { name: "Phạm Thị E", score: "9k🥇" },
-    { name: "Hoàng Văn F", score: "7k🎉" },
+  const contentPost = [
+    { content: "Nguoi anh em o dong nai bat duoc ca sau" },
+    { content: "Mot vu no lon tai cac nha may hat nhan cua my" },
+    { content: "Chi phu cac quoc gia dang yeu cau trong cay" },
+    { content: "Di em gai duoi que" },
   ];
 
   const dispatch = useDispatch();
@@ -39,23 +37,12 @@ const Contents = () => {
     };
     fetchPosts();
   }, []);
-  // useEffect(() => {
-  //   const fetchPostUsers = async () => {
-  //     try {
-  //       const res = await POST.GET_POST_USER_BY_ID();
-  //       dispatch(getPostUserById(res.posts));
-  //     } catch (error) {
-  //       console.error("Error ", error);
-  //     }
-  //   };
-  //   fetchPostUsers();
-  // }, []);
 
   return (
     <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6 ">
       <div className="w-full md:w-[100%] h-full rounded-xl flex flex-col md:flex-row justify-between gap-6">
         <div className="hidden md:block md:w-1/4 h-full">
-          <TopUser topUsers={topUsers} />
+          <TopUser content={contentPost} />
         </div>
         <div className="w-full md:w-1/2 h-full overflow-y-scroll content-post rounded-t-xl border border-gray-300">
           <CreatePost />

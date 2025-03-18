@@ -31,7 +31,6 @@ import React from "react";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
 import AdminPage from "./pages/AdminPage/AdminPage";
-import Music from "./pages/Music/Music";
 
 function App() {
   return (
@@ -42,9 +41,6 @@ function App() {
           <Route path={`${ROUTES.HOME}`} element={<UserLayout />}>
             <Route index element={<Home />} />
             <Route path="messages" element={<Message />} />
-
-            {/* Router music */}
-            <Route path="musics" element={<Music />} />
 
             {/* Router settings */}
             <Route path={`${ROUTES.SETTINGS}`} element={<SettingsLayout />}>

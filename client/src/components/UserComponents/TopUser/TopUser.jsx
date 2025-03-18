@@ -1,37 +1,35 @@
 import React from "react";
-import { Search } from "lucide-react";
 
-const TopUser = ({ topUsers }) => {
+const TopUser = ({ content }) => {
   return (
-    <div className="bg-white border h-full border-gray-300 rounded-xl shadow-lg p-5">
-      <h1 className="text-center text-xl md:text-2xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-        Top Users
+    <div className="bg-white border h-full border-gray-300 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+      {/* Header với gradient và animation */}
+      <h1 className="text-center text-2xl md:text-3xl font-bold mb-6 bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300">
+        Đề xuất
       </h1>
 
-      {/* Ô tìm kiếm */}
-      <div className="relative mb-4">
-        <input
-          type="text"
-          placeholder="Search user..."
-          className="w-full h-10 pl-4 pr-10 rounded-md border border-gray-300 outline-none focus:ring-2 focus:ring-purple-500"
-        />
-        <Search
-          size={20}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-        />
-      </div>
-
-      {/* Danh sách người dùng */}
-      <div className="flex flex-col gap-3">
-        {topUsers.map((user, index) => (
+      <div className="flex flex-col gap-4">
+        {content.map((user, index) => (
           <div
             key={index}
-            className="flex items-center px-4 py-2 rounded-md bg-gray-100 hover:bg-purple-100 transition text-sm md:text-base"
+            className="flex items-center justify-between px-5 py-4 rounded-lg
+            bg-gradient-to-r from-gray-50 to-gray-100
+            hover:from-violet-100 hover:to-pink-100
+            transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md
+            cursor-pointer"
           >
-            <span className="font-medium flex-1">{user.name}</span>
-            <span className="font-bold text-purple-600 hidden md:inline">
-              {user.score}
-            </span>
+            <div className="flex items-center gap-4">
+              <div
+                className="w-10 h-10 flex items-center justify-center rounded-full 
+                bg-violet-100 text-violet-600 font-semibold
+                shadow-sm hover:bg-violet-200 transition-colors"
+              >
+                {index + 1}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700">{user.content}</span>
+              </div>
+            </div>
           </div>
         ))}
       </div>

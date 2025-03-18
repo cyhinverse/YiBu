@@ -5,9 +5,9 @@ import SuggestFriends from "./SuggestFriends";
 
 const HomeProfile = () => {
   return (
-    <div className="flex w-full h-full bg-gray-100 gap-4 ">
-      <Profile/>
-      <SuggestFriends/>
+    <div className="flex w-full h-full  gap-4 ">
+      <Profile />
+      {/* <SuggestFriends/> */}
     </div>
   );
 };

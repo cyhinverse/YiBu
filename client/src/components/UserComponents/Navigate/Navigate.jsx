@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Bell,
@@ -11,18 +11,33 @@ import {
   Music,
 } from "lucide-react";
 import { DataContext } from "../../../DataProvider";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import POST from "../../../services/postService";
+import { getPostUserById } from "../../../slices/PostSlice";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
   const [sunMoon, setSunMoon] = useState(true);
+  const dispatch = useDispatch();
 
   const navItems = [
     { icon: Home, path: "/" },
     { icon: MessageCircle, path: "/messages" },
-    { icon: Music, path: "/musics" },
   ];
   const id = useSelector((s) => s.auth.user.user._id);
+
+  useEffect(() => {
+    const fetchPostOfUser = async () => {
+      try {
+        const res = await POST.GET_POST_USER_BY_ID(id);
+        console.log(`Check res from navigate::::`, res);
+        dispatch(getPostUserById(res.postOfUser));
+      } catch (error) {
+        console.log(`Error:::`, error);
+      }
+    };
+    fetchPostOfUser();
+  }, [id, dispatch]);
 
   return (
     <>
@@ -47,7 +62,7 @@ const Navigate = () => {
               }`
             }
           >
-            <item.icon size={20} />
+            <item.icon size={25} />
           </NavLink>
         ))}
 

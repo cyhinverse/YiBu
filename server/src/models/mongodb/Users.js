@@ -1,46 +1,18 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model } from "mongoose";
 
 const UserSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
-    },
-    followers: {
-      type: Array,
-      default: [],
-      ref: "User",
-    },
-    following: {
-      type: Array,
-      default: [],
-      ref: "User",
-    },
-    role: {
-      type: String,
-      enum: ["admin", "user"],
-      default: "user",
-    },
-    profile: {
-      type: Types.ObjectId,
-      ref: "Profile",
-      unique: true,
-    },
+    username: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    avatar: { type: String, default: "https://via.placeholder.com/150" },
+    profile: { type: Schema.Types.ObjectId, ref: "Profile" },
   },
   {
-    timestamps: true,
     collection: "Users",
+    timestamps: true,
   }
 );
 
-export default model("User", UserSchema);
+export const User = model("User", UserSchema);
+export default User;

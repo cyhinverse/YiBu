@@ -9,18 +9,22 @@ router.post(
   LikeController.CreateLike
 );
 
-router.get("/post/:postId");
-
-router.get("/likes", )
-
 router.delete(
   "/delete-like",
   VerifyToken.VerifyAccessToken,
   LikeController.DeleteLike
 );
 
-router.get("/user/:userId");
+router.get(
+  "/post/:postId",
+  VerifyToken.VerifyAccessToken,
+  LikeController.GetLikeStatus
+);
 
-router.get("/post/:postId");
+router.post(
+  "/getAllLikes",
+  VerifyToken.VerifyAccessToken,
+  LikeController.GetAllLikeFromPosts
+);
 
 export default router;

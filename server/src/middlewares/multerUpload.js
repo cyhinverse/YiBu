@@ -10,7 +10,7 @@ const storage = new CloudinaryStorage({
     let isVideo = file.mimetype.startsWith("video/");
 
     if (!isImage && !isVideo) {
-      throw new Error("Chỉ hỗ trợ upload ảnh hoặc video!");
+      throw new Error("Only support upload image or video!");
     }
 
     return {

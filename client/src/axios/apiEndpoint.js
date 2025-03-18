@@ -27,6 +27,8 @@ export const POST_API_ENDPOINTS = {
 export const LIKE_API_ENDPOINTS = {
   CREATE_LIKE: "/like/create-like",
   DELETE_LIKE: "/like/delete-like",
+  GET_LIKE_STATUS: "/like/post",
+  GET_ALL_LIKES: "/like/getAllLikes",
 };
 
 export const PROFILE_API_ENDPOINTS = {

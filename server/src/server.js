@@ -7,6 +7,10 @@ import routerAuth from "./routes/mongodb/auth.router.js";
 import routerUser from "./routes/mongodb/user.router.js";
 import routerLike from "./routes/mongodb/like.router.js";
 import routerProfile from "./routes/mongodb/profile.router.js";
+import routerMessage from "./routes/mongodb/message.router.js";
+import { initSocket } from "./socket.js";
+import http from "http";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,5 +38,19 @@ app.use("/api/v1", routerPosts);
 app.use("/user", routerUser);
 app.use("/like", routerLike);
 app.use("/profile", routerProfile);
+app.use("/api/messages", routerMessage);
 
-CheckConnectionToMongoDB(app, PORT);
+// Đảm bảo kết nối MongoDB trước khi khởi động server
+CheckConnectionToMongoDB()
+  .then(() => {
+    const server = http.createServer(app);
+    initSocket(server);
+
+    server.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Server failed to start:", error);
+    process.exit(1);
+  });

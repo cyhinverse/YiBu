@@ -20,15 +20,24 @@ const PostController = {
   },
 
   GetPostUserById: CatchError(async (req, res) => {
-    const { userId } = req.params;
-    console.log(`Check id params ${userId}`);
-    if (!userId) {
+    const id = req.params.id;
+    console.log(`Check id user from params ${id}`);
+    if (!id) {
       return res.status(400).json({
         code: 0,
         message: "User ID is required!",
       });
     }
-    const postOfUser = await Post.find({ userId }).lean();
+    const postOfUser = await Post.find({
+      user: new mongoose.Types.ObjectId(id),
+    })
+      .populate({
+        path: "user",
+        select: "name ",
+        populate: { path: "profile", select: "avatar" },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (!postOfUser) {
       return res.status(404).json({

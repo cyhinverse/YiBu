@@ -1,12 +1,13 @@
 import ConnectToMongodb from "../database/connect.mongodb.js";
 
-const CheckConnectionToMongoDB = async (app, PORT) => {
+const CheckConnectionToMongoDB = async () => {
   try {
     await ConnectToMongodb();
-    app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
+    console.log("MongoDB connected successfully");
   } catch (e) {
-    console.log(`Server failed to start`, e);
+    console.log(`Failed to connect to MongoDB`, e);
     process.exit(1);
   }
 };
+
 export default CheckConnectionToMongoDB;

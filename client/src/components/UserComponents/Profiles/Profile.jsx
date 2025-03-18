@@ -49,7 +49,6 @@ const Profile = () => {
   const currentUser = useSelector((s) => s.auth?.user);
   const isOwnProfile = currentUser?.id === userId;
 
-  // Giả lập bio dài để demo tính năng "Xem thêm"
   const longBio =
     "Đam mê công nghệ, cháy hết mình với từng dòng code. Fullstack Developer với kinh nghiệm trong React, Node.js và các công nghệ hiện đại. Luôn tìm kiếm cơ hội để học hỏi và phát triển bản thân trong lĩnh vực công nghệ. Tin rằng code đẹp cũng quan trọng như UI đẹp.";
 

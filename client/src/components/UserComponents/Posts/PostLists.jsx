@@ -6,16 +6,13 @@ const PostLists = () => {
   const location = useLocation();
   const path = location.pathname;
   const data = useSelector((s) => s.post.commonPost);
-
-  console.log("Check data from post list  :>> ", data);
+  const postOfUser = useSelector((s) => s.post.userPost);
 
   return (
     <div>
-      {path.includes("/") ? (
-        data?.map((post, index) => <Post key={post._id || index} data={post} />)
-      ) : (
-        <p>No posts available</p>
-      )}
+      {path === "/"
+        ? data?.map((post) => <Post key={post._id} data={post} />)
+        : postOfUser?.map((post) => <Post key={post._id} data={post} />)}
     </div>
   );
 };

@@ -4,7 +4,6 @@ const VerifyToken = {
   VerifyAccessToken: (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
-
       if (!authHeader) {
         return res
           .status(401)
@@ -27,7 +26,6 @@ const VerifyToken = {
         }
 
         req.user = user;
-        console.log(req.user);
         next();
       });
     } catch (error) {

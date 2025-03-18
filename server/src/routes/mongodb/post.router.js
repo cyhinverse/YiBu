@@ -7,11 +7,7 @@ const router = express.Router();
 
 router.get("/posts", PostController.GetAllPost);
 
-router.get(
-  "/post-user",
-  VerifyToken.VerifyAccessToken,
-  PostController.GetPostUserById
-);
+router.get("/post-user/:id", PostController.GetPostUserById);
 
 router.post(
   "/create-post",

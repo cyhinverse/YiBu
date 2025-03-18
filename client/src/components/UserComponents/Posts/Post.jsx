@@ -6,7 +6,7 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect, useCallback } from "react";
 import PostOption from "./PostOption";
 import Like from "../../../services/likeService";
 import "./index.css";
@@ -14,6 +14,7 @@ import { DataContext } from "../../../DataProvider";
 import CommentModel from "../Comment/CommentModel";
 import { formatDistanceToNowStrict } from "date-fns";
 import { vi } from "date-fns/locale";
+import { socket } from "../../../socket";
 
 const Post = ({ data }) => {
   const [liked, setLiked] = useState(false);
@@ -29,6 +30,7 @@ const Post = ({ data }) => {
   const [isPlaying, setIsPlaying] = useState({});
   const [volumeControls, setVolumeControls] = useState({});
   const videoRefs = useRef({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatTime = (date) => {
     const formattedRelative = formatDistanceToNowStrict(new Date(date), {
@@ -40,18 +42,54 @@ const Post = ({ data }) => {
       : formattedRelative;
   };
 
-  const toggleLike = async () => {
+  const fetchLikeCount = useCallback(async () => {
     try {
+      const response = await Like.GET_ALL_LIKES([data._id]);
+      setLikes(response.data[data._id]?.count || 0);
+    } catch (error) {
+      console.error("Failed to fetch like count:", error);
+    }
+  }, [data._id]);
+
+  useEffect(() => {
+    const fetchLikeStatus = async () => {
+      try {
+        const response = await Like.GET_LIKE_STATUS(data._id);
+        setLiked(response.data.isLiked);
+      } catch (error) {
+        console.error("Failed to fetch like status:", error);
+      }
+    };
+
+    fetchLikeStatus();
+    fetchLikeCount();
+    setIsLoading(false);
+
+    socket.on(`post:${data._id}:likeUpdate`, (newLikeCount) => {
+      setLikes(newLikeCount);
+    });
+
+    return () => {
+      socket.off(`post:${data._id}:likeUpdate`);
+    };
+  }, [data._id, fetchLikeCount]);
+
+  const toggleLike = async () => {
+    if (isLoading) return;
+
+    try {
+      setIsLoading(true);
       if (liked) {
         await Like.DELETE_LIKE({ postId: data._id });
-        setLikes((prev) => prev - 1);
       } else {
         await Like.CREATE_LIKE({ postId: data._id });
-        setLikes((prev) => prev + 1);
       }
       setLiked(!liked);
     } catch (error) {
       console.error("Like action failed:", error);
+      fetchLikeCount();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -298,7 +336,9 @@ const Post = ({ data }) => {
           <div className="flex items-center space-x-1">
             <Heart
               onClick={toggleLike}
-              className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 "
+              className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
+                isLoading ? "opacity-50" : ""
+              }`}
               color={liked ? "red" : "black"}
               fill={liked ? "red" : "none"}
               size={20}
