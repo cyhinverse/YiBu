@@ -14,10 +14,12 @@ import { DataContext } from "../../../DataProvider";
 import { useDispatch, useSelector } from "react-redux";
 import POST from "../../../services/postService";
 import { getPostUserById } from "../../../slices/PostSlice";
+import SearchUser from "../Search";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
   const [sunMoon, setSunMoon] = useState(true);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const dispatch = useDispatch();
 
   const navItems = [
@@ -39,17 +41,30 @@ const Navigate = () => {
     fetchPostOfUser();
   }, [id, dispatch]);
 
+  const handleOpenSearch = () => {
+    setShowSearchModal(true);
+    setHideSearch(true);
+  };
+
+  const handleCloseSearch = () => {
+    setShowSearchModal(false);
+    setHideSearch(false);
+  };
+
   return (
     <>
       <div className="hidden md:flex w-[250px] h-[50px] items-center px-4 shadow-md rounded-xl bg-purple-100 border border-gray-300">
         {hideSearch && <Search />}
         <input
-          onClick={() => setHideSearch(!hideSearch)}
+          onClick={handleOpenSearch}
           className="indent-2 h-full flex-1 outline-none cursor-pointer bg-transparent"
           type="text"
-          placeholder="Search event..."
+          placeholder="Search users..."
+          readOnly
         />
       </div>
+
+      <SearchUser isOpen={showSearchModal} onClose={handleCloseSearch} />
 
       <div className="flex w-[200px] md:w-[250px] h-[50px] justify-between items-center px-3 md:px-6 shadow-md border border-gray-300 rounded-xl bg-purple-100">
         {navItems.map((item, i) => (
@@ -66,7 +81,6 @@ const Navigate = () => {
           </NavLink>
         ))}
 
-        {/* Avatar */}
         <NavLink
           to={`/profile/${id}`}
           className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] flex items-center justify-center rounded-full hover:opacity-50 transition-all ease-out cursor-pointer"
@@ -88,6 +102,12 @@ const Navigate = () => {
         </div>
         <div className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex">
           <Bell className="cursor-pointer" size={20} />
+        </div>
+        <div
+          className="md:hidden w-[35px] h-[35px] items-center justify-center flex"
+          onClick={handleOpenSearch}
+        >
+          <Search className="cursor-pointer" size={20} />
         </div>
         <NavLink
           to="/settings"

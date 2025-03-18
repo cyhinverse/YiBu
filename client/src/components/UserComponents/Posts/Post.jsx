@@ -15,6 +15,47 @@ import CommentModel from "../Comment/CommentModel";
 import { formatDistanceToNowStrict } from "date-fns";
 import { vi } from "date-fns/locale";
 import { socket } from "../../../socket";
+import ShowImagePost from "./ShowImagePost";
+import ShowVideoPost from "./ShowVideoPost";
+
+const LikeStorage = {
+  saveLikeState: (postId, isLiked, likeCount) => {
+    try {
+      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "{}");
+      likedPosts[postId] = isLiked;
+      localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
+      const postLikeCounts = JSON.parse(
+        localStorage.getItem("postLikeCounts") || "{}"
+      );
+      postLikeCounts[postId] = likeCount;
+      localStorage.setItem("postLikeCounts", JSON.stringify(postLikeCounts));
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
+  },
+
+  getLikeState: (postId) => {
+    try {
+      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "{}");
+      return !!likedPosts[postId];
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+      return false;
+    }
+  },
+
+  getLikeCount: (postId) => {
+    try {
+      const postLikeCounts = JSON.parse(
+        localStorage.getItem("postLikeCounts") || "{}"
+      );
+      return postLikeCounts[postId] || 0;
+    } catch (error) {
+      console.error("Error reading like count from localStorage:", error);
+      return 0;
+    }
+  },
+};
 
 const Post = ({ data }) => {
   const [liked, setLiked] = useState(false);
@@ -24,13 +65,11 @@ const Post = ({ data }) => {
   const [showImage, setShowImage] = useState(null);
   const [showVideo, setShowVideo] = useState(null);
   const { openComment, setOpenComment } = useContext(DataContext);
-  const [translated, setTranslated] = useState(false);
-  const [translatedText, setTranslatedText] = useState("");
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState({});
   const [volumeControls, setVolumeControls] = useState({});
   const videoRefs = useRef({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [likeLoading, setLikeLoading] = useState(false);
 
   const formatTime = (date) => {
     const formattedRelative = formatDistanceToNowStrict(new Date(date), {
@@ -45,51 +84,85 @@ const Post = ({ data }) => {
   const fetchLikeCount = useCallback(async () => {
     try {
       const response = await Like.GET_ALL_LIKES([data._id]);
-      setLikes(response.data[data._id]?.count || 0);
+      if (response && response.data && response.data[data._id]) {
+        setLikes(response.data[data._id].count || 0);
+      }
     } catch (error) {
       console.error("Failed to fetch like count:", error);
     }
   }, [data._id]);
 
   useEffect(() => {
-    const fetchLikeStatus = async () => {
+    let isMounted = true;
+    setLikeLoading(true);
+
+    const loadLikeData = async () => {
       try {
-        const response = await Like.GET_LIKE_STATUS(data._id);
-        setLiked(response.data.isLiked);
+        const [statusResponse, countResponse] = await Promise.all([
+          Like.GET_LIKE_STATUS(data._id),
+          Like.GET_ALL_LIKES([data._id]),
+        ]);
+
+        if (isMounted) {
+          if (statusResponse && statusResponse.data) {
+            setLiked(statusResponse.data.isLiked);
+          }
+
+          if (
+            countResponse &&
+            countResponse.data &&
+            countResponse.data[data._id]
+          ) {
+            setLikes(countResponse.data[data._id].count || 0);
+          }
+        }
       } catch (error) {
-        console.error("Failed to fetch like status:", error);
+        console.error("Error loading like data:", error);
+      } finally {
+        if (isMounted) {
+          setLikeLoading(false);
+        }
       }
     };
 
-    fetchLikeStatus();
-    fetchLikeCount();
-    setIsLoading(false);
+    loadLikeData();
 
     socket.on(`post:${data._id}:likeUpdate`, (newLikeCount) => {
-      setLikes(newLikeCount);
+      if (isMounted) {
+        setLikes(newLikeCount);
+      }
     });
 
     return () => {
+      isMounted = false;
       socket.off(`post:${data._id}:likeUpdate`);
     };
-  }, [data._id, fetchLikeCount]);
+  }, [data._id]);
 
   const toggleLike = async () => {
-    if (isLoading) return;
+    if (likeLoading) return;
+
+    setLikeLoading(true);
+
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikes((prevLikes) =>
+      wasLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1
+    );
 
     try {
-      setIsLoading(true);
-      if (liked) {
+      if (wasLiked) {
         await Like.DELETE_LIKE({ postId: data._id });
       } else {
         await Like.CREATE_LIKE({ postId: data._id });
       }
-      setLiked(!liked);
     } catch (error) {
       console.error("Like action failed:", error);
-      fetchLikeCount();
+
+      setLiked(wasLiked);
+      await fetchLikeCount();
     } finally {
-      setIsLoading(false);
+      setLikeLoading(false);
     }
   };
 
@@ -337,7 +410,7 @@ const Post = ({ data }) => {
             <Heart
               onClick={toggleLike}
               className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
-                isLoading ? "opacity-50" : ""
+                likeLoading ? "opacity-50" : ""
               }`}
               color={liked ? "red" : "black"}
               fill={liked ? "red" : "none"}
@@ -379,45 +452,12 @@ const Post = ({ data }) => {
 
       {/* Full Image View */}
       {showImage && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
-          <div className="relative">
-            <button
-              className="absolute top-2 right-2 bg-gray-900 text-white rounded-full p-2 hover:bg-gray-700 transition-all"
-              onClick={() => setShowImage(null)}
-            >
-              <X size={24} />
-            </button>
-            <img
-              className="max-w-[90vw] max-h-[90vh] object-contain rounded-md"
-              src={showImage}
-              alt="Full Image"
-            />
-          </div>
-        </div>
+        <ShowImagePost setShowImage={setShowImage} showImage={showImage} />
       )}
 
       {/* Full Video View */}
       {showVideo && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90 z-50">
-          <div className="relative max-w-[90vw] max-h-[90vh]">
-            <button
-              className="absolute top-2 right-2 bg-gray-900 text-white rounded-full p-2 hover:bg-gray-700 transition-all z-10"
-              onClick={() => setShowVideo(null)}
-            >
-              <X size={24} />
-            </button>
-            <div className="video-fullscreen-container">
-              <video
-                autoPlay
-                controls
-                className="max-w-[90vw] max-h-[90vh] object-contain rounded-md"
-              >
-                <source src={showVideo} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          </div>
-        </div>
+        <ShowVideoPost setShowVideo={setShowVideo} showVideo={showVideo} />
       )}
     </div>
   );

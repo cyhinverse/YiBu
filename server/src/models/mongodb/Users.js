@@ -7,6 +7,22 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     avatar: { type: String, default: "https://via.placeholder.com/150" },
     profile: { type: Schema.Types.ObjectId, ref: "Profile" },
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    verified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     collection: "Users",

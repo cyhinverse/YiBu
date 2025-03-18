@@ -10,9 +10,24 @@ const User = {
     ),
 
   GET_USER_BY_ID: (id) => {
+    if (!id) {
+      return Promise.reject(new Error("User ID is required"));
+    }
     return handleRequest(
       () => api.get(`${USER_API_ENDPOINTS.GET_USER_BY_ID}/${id}`),
       "Get user failed!"
+    );
+  },
+
+  SEARCH_USERS: (query) => {
+    return handleRequest(
+      () =>
+        api.get(
+          `${USER_API_ENDPOINTS.SEARCH_USERS}?query=${encodeURIComponent(
+            query
+          )}`
+        ),
+      "Search users failed!"
     );
   },
 
@@ -45,6 +60,28 @@ const User = {
     handleRequest(
       () => api.post(USER_API_ENDPOINTS.REMOVE_FOLLOWER, data),
       "Remove follower failed!"
+    ),
+  followUser: (targetUserId) =>
+    handleRequest(
+      () =>
+        api.post(USER_API_ENDPOINTS.FOLLOW_USER, {
+          targetUserId,
+        }),
+      "Không thể theo dõi người dùng"
+    ),
+  unfollowUser: (targetUserId) =>
+    handleRequest(
+      () =>
+        api.post(USER_API_ENDPOINTS.UNFOLLOW_USER, {
+          targetUserId,
+        }),
+      "Không thể hủy theo dõi người dùng"
+    ),
+  checkFollowStatus: (targetUserId) =>
+    handleRequest(
+      () =>
+        api.get(`${USER_API_ENDPOINTS.CHECK_FOLLOW_STATUS}/${targetUserId}`),
+      "Không thể kiểm tra trạng thái theo dõi"
     ),
 };
 

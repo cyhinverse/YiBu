@@ -25,7 +25,11 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "http://localhost:9258",
+    origin: [
+      "http://localhost:9258",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
     optionsSuccessStatus: 200,
@@ -40,7 +44,6 @@ app.use("/like", routerLike);
 app.use("/profile", routerProfile);
 app.use("/api/messages", routerMessage);
 
-// Đảm bảo kết nối MongoDB trước khi khởi động server
 CheckConnectionToMongoDB()
   .then(() => {
     const server = http.createServer(app);

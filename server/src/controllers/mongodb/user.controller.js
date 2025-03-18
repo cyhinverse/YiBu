@@ -71,22 +71,55 @@ const UserController = {
         });
       }
 
-      // Nếu user chưa có profile, tạo profile mặc định
       if (!user.profile) {
         const newProfile = await Profiles.create({ userId: user._id });
-
         await User.findByIdAndUpdate(id, { profile: newProfile._id });
-
-        // Gán profile vào user để trả về dữ liệu đầy đủ
         user.profile = newProfile;
       }
+
+      if (!user.following) {
+        await User.findByIdAndUpdate(id, { following: [] });
+        user.following = [];
+      }
+      if (!user.followers) {
+        await User.findByIdAndUpdate(id, { followers: [] });
+        user.followers = [];
+      }
+
+      const posts = await mongoose
+        .model("Post")
+        .find({ user: id })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const postIds = posts.map((post) => post._id);
+      const likesCount = await mongoose.model("Like").countDocuments({
+        post: { $in: postIds },
+      });
+
+      const enhancedUserData = {
+        ...user,
+        stats: {
+          postsCount: posts.length,
+          likesCount: likesCount,
+          followersCount: user.followers.length,
+          followingCount: user.following.length,
+        },
+        posts: posts.map((post) => ({
+          _id: post._id,
+          caption: post.caption,
+          media: post.media,
+          createdAt: post.createdAt,
+        })),
+      };
 
       return res.json({
         code: 1,
         message: "Get user successfully!",
-        data: user,
+        data: enhancedUserData,
       });
     } catch (error) {
+      console.error("Error in Get_User_By_Id:", error);
       return res.status(500).json({
         code: 0,
         message: error.message,
@@ -94,20 +127,17 @@ const UserController = {
     }
   },
 
-  // Lấy danh sách người dùng và tin nhắn cuối cùng
   getAllUsers: CatchError(async (req, res) => {
     try {
       const currentUserId = req.user.id;
-      console.log("Current user ID:", currentUserId); // Để debug
+      console.log("Current user ID:", currentUserId);
 
-      // Lấy tất cả người dùng trừ người dùng hiện tại
       const users = await User.find({
         _id: { $ne: currentUserId },
       }).select("username avatar email createdAt");
 
-      console.log("Found users:", users); // Để debug
+      console.log("Found users:", users);
 
-      // Lấy tin nhắn cuối cùng cho mỗi người dùng
       const usersWithLastMessage = await Promise.all(
         users.map(async (user) => {
           const lastMessage = await Message.findOne({
@@ -142,7 +172,7 @@ const UserController = {
         })
       );
 
-      console.log("Users with messages:", usersWithLastMessage); // Để debug
+      console.log("Users with messages:", usersWithLastMessage);
 
       res.status(200).json({
         success: true,
@@ -153,6 +183,222 @@ const UserController = {
       res.status(500).json({
         success: false,
         message: "Failed to fetch users",
+        error: error.message,
+      });
+    }
+  }),
+
+  searchUsers: CatchError(async (req, res) => {
+    try {
+      const { query } = req.query;
+      const currentUserId = req.user.id;
+
+      if (!query) {
+        return res.status(400).json({
+          success: false,
+          message: "Search query is required",
+        });
+      }
+
+      const users = await User.find({
+        $and: [
+          { _id: { $ne: currentUserId } },
+          {
+            $or: [
+              { username: { $regex: query, $options: "i" } },
+              { email: { $regex: query, $options: "i" } },
+            ],
+          },
+        ],
+      }).select("username avatar email createdAt");
+
+      const formattedUsers = users.map((user) => ({
+        _id: user._id,
+        username: user.username,
+        avatar: user.avatar || "https://via.placeholder.com/150",
+        email: user.email,
+        createdAt: user.createdAt,
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: formattedUsers,
+      });
+    } catch (error) {
+      console.error("Error in searchUsers:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to search users",
+        error: error.message,
+      });
+    }
+  }),
+
+  checkFollowStatus: CatchError(async (req, res) => {
+    try {
+      const { targetUserId } = req.params;
+      const currentUserId = req.user.id;
+
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng hiện tại",
+        });
+      }
+
+      if (!currentUser.following) {
+        await User.findByIdAndUpdate(currentUserId, { following: [] });
+        return res.status(200).json({
+          success: true,
+          isFollowing: false,
+        });
+      }
+
+      const isFollowing = currentUser.following.includes(targetUserId);
+
+      res.status(200).json({
+        success: true,
+        isFollowing,
+      });
+    } catch (error) {
+      console.error("Error in checkFollowStatus:", error);
+      res.status(500).json({
+        success: false,
+        message: "Không thể kiểm tra trạng thái theo dõi",
+        error: error.message,
+      });
+    }
+  }),
+
+  followUser: CatchError(async (req, res) => {
+    try {
+      const { targetUserId } = req.body;
+      const currentUserId = req.user.id;
+
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "Bạn không thể theo dõi chính mình",
+        });
+      }
+
+      const targetUser = await User.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng",
+        });
+      }
+
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng hiện tại",
+        });
+      }
+
+      if (!currentUser.following) {
+        currentUser.following = [];
+      }
+      if (!targetUser.followers) {
+        targetUser.followers = [];
+      }
+
+      const isFollowing = currentUser.following.includes(targetUserId);
+      if (isFollowing) {
+        return res.status(400).json({
+          success: false,
+          message: "Bạn đã theo dõi người dùng này rồi",
+        });
+      }
+
+      await User.findByIdAndUpdate(currentUserId, {
+        $push: { following: targetUserId },
+      });
+
+      await User.findByIdAndUpdate(targetUserId, {
+        $push: { followers: currentUserId },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Theo dõi thành công",
+      });
+    } catch (error) {
+      console.error("Error in followUser:", error);
+      res.status(500).json({
+        success: false,
+        message: "Không thể theo dõi người dùng",
+        error: error.message,
+      });
+    }
+  }),
+
+  unfollowUser: CatchError(async (req, res) => {
+    try {
+      const { targetUserId } = req.body;
+      const currentUserId = req.user.id;
+
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "Không thể thực hiện thao tác này",
+        });
+      }
+
+      const targetUser = await User.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng",
+        });
+      }
+
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng hiện tại",
+        });
+      }
+
+      if (!currentUser.following) {
+        return res.status(400).json({
+          success: false,
+          message: "Bạn chưa theo dõi ai",
+        });
+      }
+      if (!targetUser.followers) {
+        targetUser.followers = [];
+      }
+
+      const isFollowing = currentUser.following.includes(targetUserId);
+      if (!isFollowing) {
+        return res.status(400).json({
+          success: false,
+          message: "Bạn chưa theo dõi người dùng này",
+        });
+      }
+
+      await User.findByIdAndUpdate(currentUserId, {
+        $pull: { following: targetUserId },
+      });
+
+      await User.findByIdAndUpdate(targetUserId, {
+        $pull: { followers: currentUserId },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Đã hủy theo dõi",
+      });
+    } catch (error) {
+      console.error("Error in unfollowUser:", error);
+      res.status(500).json({
+        success: false,
+        message: "Không thể hủy theo dõi người dùng",
         error: error.message,
       });
     }

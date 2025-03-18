@@ -8,14 +8,12 @@ export const AUTH_API_ENDPOINTS = {
 };
 
 export const USER_API_ENDPOINTS = {
-  GET_ALL_USER: "/api/v1/",
-  GET_USER_BY_ID: "/user/",
-  CREATE_USER: "/api/v1",
-  UPDATE_USER: "api/v1",
-  DELETE_USER: "/api/v1",
-  GET_FOLLOWER_BY_USERID: "/api/v1",
-  ADD_FOLLOWER: "/api/v1",
-  REMOVE_FOLLOWER: "/api/v1",
+  GET_ALL_USER: "/user/list",
+  GET_USER_BY_ID: "/user",
+  SEARCH_USERS: "/user/search",
+  FOLLOW_USER: "/user/follow",
+  UNFOLLOW_USER: "/user/unfollow",
+  CHECK_FOLLOW_STATUS: "/user/follow-status",
 };
 
 export const POST_API_ENDPOINTS = {
