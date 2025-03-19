@@ -23,10 +23,10 @@ export const POST_API_ENDPOINTS = {
 };
 
 export const LIKE_API_ENDPOINTS = {
-  CREATE_LIKE: "/like/create-like",
-  DELETE_LIKE: "/like/delete-like",
-  GET_LIKE_STATUS: "/like/post",
-  GET_ALL_LIKES: "/like/getAllLikes",
+  CREATE_LIKE: "/api/like/create",
+  DELETE_LIKE: "/api/like/delete",
+  GET_LIKE_STATUS: "/api/like/status",
+  GET_ALL_LIKES: "/api/like/get-all",
 };
 
 export const PROFILE_API_ENDPOINTS = {

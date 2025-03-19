@@ -15,23 +15,23 @@ export const initSocket = (server) => {
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    // Tham gia phòng chat
+
     socket.on("join_room", (roomId) => {
       socket.join(roomId);
       console.log(`User joined room: ${roomId}`);
     });
 
-    // Gửi tin nhắn
+
     socket.on("send_message", (data) => {
       io.to(data.roomId).emit("receive_message", data);
     });
 
-    // Đánh dấu tin nhắn đã đọc
+
     socket.on("mark_as_read", (data) => {
       io.to(data.roomId).emit("message_read", data);
     });
 
-    // Typing indicator
+
     socket.on("typing", (data) => {
       socket.to(data.roomId).emit("user_typing", data);
     });

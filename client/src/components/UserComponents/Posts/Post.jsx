@@ -6,7 +6,8 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { useContext, useState, useRef, useEffect, useCallback } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import PostOption from "./PostOption";
 import Like from "../../../services/likeService";
 import "./index.css";
@@ -17,51 +18,16 @@ import { vi } from "date-fns/locale";
 import { socket } from "../../../socket";
 import ShowImagePost from "./ShowImagePost";
 import ShowVideoPost from "./ShowVideoPost";
-
-const LikeStorage = {
-  saveLikeState: (postId, isLiked, likeCount) => {
-    try {
-      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "{}");
-      likedPosts[postId] = isLiked;
-      localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
-      const postLikeCounts = JSON.parse(
-        localStorage.getItem("postLikeCounts") || "{}"
-      );
-      postLikeCounts[postId] = likeCount;
-      localStorage.setItem("postLikeCounts", JSON.stringify(postLikeCounts));
-    } catch (error) {
-      console.error("Error saving to localStorage:", error);
-    }
-  },
-
-  getLikeState: (postId) => {
-    try {
-      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "{}");
-      return !!likedPosts[postId];
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
-      return false;
-    }
-  },
-
-  getLikeCount: (postId) => {
-    try {
-      const postLikeCounts = JSON.parse(
-        localStorage.getItem("postLikeCounts") || "{}"
-      );
-      return postLikeCounts[postId] || 0;
-    } catch (error) {
-      console.error("Error reading like count from localStorage:", error);
-      return 0;
-    }
-  },
-};
+import { setPostLikeStatus, updateLikeCount } from "../../../slices/LikeSlice";
 
 const Post = ({ data }) => {
-  const [liked, setLiked] = useState(false);
+  const dispatch = useDispatch();
+  const likeState = useSelector((state) => {
+    // console.log(`[REDUX STATE] Post ${data?._id}:`, state?.like);
+    return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
+  });
   const [postOption, setPostOption] = useState(false);
-  const [likes, setLikes] = useState(0);
-  const [comments, setComments] = useState(0);
+  const [comments] = useState(0);
   const [showImage, setShowImage] = useState(null);
   const [showVideo, setShowVideo] = useState(null);
   const { openComment, setOpenComment } = useContext(DataContext);
@@ -70,6 +36,11 @@ const Post = ({ data }) => {
   const [volumeControls, setVolumeControls] = useState({});
   const videoRefs = useRef({});
   const [likeLoading, setLikeLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // useEffect(() => {
+  //   console.log(`[Post ${data?._id}] Current like state:`, likeState);
+  // }, [data?._id, likeState]);
 
   const formatTime = (date) => {
     const formattedRelative = formatDistanceToNowStrict(new Date(date), {
@@ -81,43 +52,64 @@ const Post = ({ data }) => {
       : formattedRelative;
   };
 
-  const fetchLikeCount = useCallback(async () => {
-    try {
-      const response = await Like.GET_ALL_LIKES([data._id]);
-      if (response && response.data && response.data[data._id]) {
-        setLikes(response.data[data._id].count || 0);
-      }
-    } catch (error) {
-      console.error("Failed to fetch like count:", error);
-    }
-  }, [data._id]);
-
   useEffect(() => {
-    let isMounted = true;
-    setLikeLoading(true);
+    if (!data || !data._id) {
+      console.log("[Post] Missing data or post ID");
+      return;
+    }
 
-    const loadLikeData = async () => {
+    // console.log(
+    //   `[Post ${data._id}] Setting up effect for data loading and socket`
+    // );
+    let isMounted = true;
+
+    const fetchLikeData = async () => {
       try {
+        setLikeLoading(true);
+        // console.log(`[Post ${data._id}] Fetching like data from API...`);
+
         const [statusResponse, countResponse] = await Promise.all([
           Like.GET_LIKE_STATUS(data._id),
           Like.GET_ALL_LIKES([data._id]),
         ]);
 
-        if (isMounted) {
-          if (statusResponse && statusResponse.data) {
-            setLiked(statusResponse.data.isLiked);
-          }
+        if (!isMounted) {
+          // console.log(
+          //   `[Post ${data._id}] Component unmounted, ignoring responses`
+          // );
+          return;
+        }
 
-          if (
-            countResponse &&
-            countResponse.data &&
-            countResponse.data[data._id]
-          ) {
-            setLikes(countResponse.data[data._id].count || 0);
-          }
+        // console.log(`[Post ${data._id}] API responses:`, {
+        //   statusResponse: statusResponse?.data,
+        //   countResponse: countResponse?.data,
+        // });
+
+        if (
+          statusResponse?.data?.code === 1 &&
+          countResponse?.data?.code === 1
+        ) {
+          const isLiked = statusResponse.data.data?.isLiked || false;
+          const count = countResponse.data.data?.[data._id]?.count || 0;
+
+          // console.log(`[Post ${data._id}] Processed data:`, { isLiked, count });
+
+          dispatch(
+            setPostLikeStatus({
+              postId: data._id,
+              isLiked,
+              count,
+            })
+          );
+          setDataLoaded(true);
+        } else {
+          console.error(`[Post ${data._id}] Invalid API response:`, {
+            statusCode: statusResponse?.data?.code,
+            countCode: countResponse?.data?.code,
+          });
         }
       } catch (error) {
-        console.error("Error loading like data:", error);
+        console.error(`[Post ${data._id}] Error fetching like data:`, error);
       } finally {
         if (isMounted) {
           setLikeLoading(false);
@@ -125,42 +117,138 @@ const Post = ({ data }) => {
       }
     };
 
-    loadLikeData();
+    const handleLikeUpdate = (updateData) => {
+      if (!isMounted) return;
 
-    socket.on(`post:${data._id}:likeUpdate`, (newLikeCount) => {
-      if (isMounted) {
-        setLikes(newLikeCount);
+      // console.log(`[Post ${data._id}] Socket update received:`, updateData);
+
+      if (typeof updateData === "object" && updateData !== null) {
+        if ("isLiked" in updateData) {
+          // console.log(
+          //   `[Post ${data._id}] Updating like status and count:`,
+          //   updateData
+          // );
+          dispatch(
+            setPostLikeStatus({
+              postId: data._id,
+              isLiked: updateData.isLiked,
+              count: updateData.count || 0,
+            })
+          );
+        } else {
+          // console.log(
+          //   `[Post ${data._id}] Updating like count only:`,
+          //   updateData.count
+          // );
+          dispatch(
+            updateLikeCount({
+              postId: data._id,
+              count: updateData.count || 0,
+            })
+          );
+        }
+      } else {
+        // console.log(
+        //   `[Post ${data._id}] Updating like count (numeric):`,
+        //   updateData
+        // );
+        dispatch(
+          updateLikeCount({
+            postId: data._id,
+            count: updateData || 0,
+          })
+        );
       }
-    });
+    };
+
+    const socketEvent = `post:${data._id}:likeUpdate`;
+    // console.log(
+    //   `[Post ${data._id}] Registering socket listener for:`,
+    //   socketEvent
+    // );
+    socket.on(socketEvent, handleLikeUpdate);
+
+    if (!dataLoaded) {
+      // console.log(`[Post ${data._id}] Initial data load`);
+      fetchLikeData();
+    }
 
     return () => {
+      // console.log(`[Post ${data._id}] Cleaning up effect`);
       isMounted = false;
-      socket.off(`post:${data._id}:likeUpdate`);
+      socket.off(socketEvent, handleLikeUpdate);
     };
-  }, [data._id]);
+  }, [data, dispatch, dataLoaded]);
 
-  const toggleLike = async () => {
-    if (likeLoading) return;
+  const handleLike = async () => {
+    if (likeLoading || !data?._id) {
+      // console.log(
+      //   `[Post ${data?._id}] Skipping like action, loading:${likeLoading}`
+      // );
+      return;
+    }
 
-    setLikeLoading(true);
-
-    const wasLiked = liked;
-    setLiked(!wasLiked);
-    setLikes((prevLikes) =>
-      wasLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1
-    );
+    // console.log(
+    //   `[Post ${data._id}] Like button clicked, current state:`,
+    //   likeState
+    // );
 
     try {
-      if (wasLiked) {
-        await Like.DELETE_LIKE({ postId: data._id });
+      setLikeLoading(true);
+
+      const oldState = { ...likeState };
+
+      const newIsLiked = !likeState.isLiked;
+      const newCount = newIsLiked
+        ? likeState.count + 1
+        : Math.max(0, likeState.count - 1);
+
+      console.log(`[Post ${data._id}] Optimistic update:`, {
+        newIsLiked,
+        newCount,
+      });
+
+      dispatch(
+        setPostLikeStatus({
+          postId: data._id,
+          isLiked: newIsLiked,
+          count: newCount,
+        })
+      );
+
+      let response;
+      if (newIsLiked) {
+        // console.log(`[Post ${data._id}] Calling CREATE_LIKE API`);
+        response = await Like.CREATE_LIKE({ postId: data._id });
       } else {
-        await Like.CREATE_LIKE({ postId: data._id });
+        // console.log(`[Post ${data._id}] Calling DELETE_LIKE API`);
+        response = await Like.DELETE_LIKE({ postId: data._id });
+      }
+
+      // console.log(`[Post ${data._id}] API response:`, response?.data);
+
+      if (!response || response.data?.code !== 1) {
+        // console.error(`[Post ${data._id}] API error:`, response?.data);
+        dispatch(
+          setPostLikeStatus({
+            postId: data._id,
+            isLiked: oldState.isLiked,
+            count: oldState.count,
+          })
+        );
+      } else {
+        console.log(`[Post ${data._id}] Like action successful`);
       }
     } catch (error) {
-      console.error("Like action failed:", error);
+      console.error(`[Post ${data._id}] Like action failed:`, error);
 
-      setLiked(wasLiked);
-      await fetchLikeCount();
+      dispatch(
+        setPostLikeStatus({
+          postId: data._id,
+          isLiked: likeState.isLiked,
+          count: likeState.count,
+        })
+      );
     } finally {
       setLikeLoading(false);
     }
@@ -181,8 +269,6 @@ const Post = ({ data }) => {
         video.muted = false;
         setIsMuted(false);
       }
-
-      console.log(`Video ${videoId} volume set to: ${volume}`);
     }
   };
 
@@ -201,9 +287,6 @@ const Post = ({ data }) => {
       }
 
       setIsMuted(video.muted);
-      console.log(
-        `Video ${videoId} muted: ${video.muted}, volume: ${video.volume}`
-      );
     }
   };
 
@@ -215,31 +298,25 @@ const Post = ({ data }) => {
           .play()
           .then(() => {
             setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-            console.log(`Video ${videoId} đang phát`);
           })
           .catch((err) => console.error("Lỗi khi phát video:", err));
       } else {
         video.pause();
         setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
-        console.log(`Video ${videoId} đã tạm dừng`);
       }
     }
   };
 
   const handleVideoLoaded = (videoId) => {
-    console.log(`Video ${videoId} đã tải xong`);
-
     if (videoRefs.current[videoId]) {
       const video = videoRefs.current[videoId];
 
       video.addEventListener("play", () => {
         setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-        console.log(`Video ${videoId} đã bắt đầu phát tự động`);
       });
 
       video.addEventListener("pause", () => {
         setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
-        console.log(`Video ${videoId} đã tạm dừng`);
       });
 
       if (!video.paused) {
@@ -408,22 +485,22 @@ const Post = ({ data }) => {
         <div className="flex space-x-4 items-center">
           <div className="flex items-center space-x-1">
             <Heart
-              onClick={toggleLike}
+              onClick={handleLike}
               className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
                 likeLoading ? "opacity-50" : ""
               }`}
-              color={liked ? "red" : "black"}
-              fill={liked ? "red" : "none"}
+              color={likeState.isLiked ? "red" : "black"}
+              fill={likeState.isLiked ? "red" : "none"}
               size={20}
               strokeWidth={1}
             />
-            {likes > 0 && (
-              <span className="text-sm font-medium text-gray-700">{likes}</span>
-            )}
+            <span className="text-sm font-medium text-gray-700">
+              {likeState.count}
+            </span>
           </div>
           <div className="flex items-center space-x-1">
             <MessageCircle
-              className="cursor-pointer  transition-all duration-200 hover:scale-110 active:scale-90"
+              className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
               strokeWidth={1}
               size={20}
               onClick={() => setOpenComment(!openComment)}

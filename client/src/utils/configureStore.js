@@ -4,16 +4,19 @@ import storage from "redux-persist/lib/storage";
 import authReducer from "../slices/AuthSlice.js";
 import userReducer from "../slices/UserSlice.js";
 import postReducer from "../slices/PostSlice.js";
+import likeReducer from "../slices/LikeSlice.js";
 
 const persistConfig = {
   key: "root",
   storage,
+  whitelist: ["auth", "user", "post", "like"],
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   post: postReducer,
+  like: likeReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
