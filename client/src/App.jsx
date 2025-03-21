@@ -8,6 +8,8 @@ import {
   HomeProfile,
   ProfileLayout,
   SavePosts,
+  MainMessage,
+  MessageDetail,
 } from "./components/UserComponents";
 import Login from "./pages/AuthPage/Login";
 import Register from "./pages/AuthPage/Register";
@@ -40,7 +42,12 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path={`${ROUTES.HOME}`} element={<UserLayout />}>
             <Route index element={<Home />} />
-            <Route path="messages" element={<Message />} />
+
+            {/* Message Routes */}
+            <Route path={`${ROUTES.MESSAGE}`} element={<Message />}>
+              <Route index element={<MainMessage />} />
+              <Route path=":userId" element={<MessageDetail />} />
+            </Route>
 
             {/* Router settings */}
             <Route path={`${ROUTES.SETTINGS}`} element={<SettingsLayout />}>

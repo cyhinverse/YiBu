@@ -5,6 +5,13 @@ import Post from "../../models/mongodb/Posts.js";
 const PostController = {
   GetAllPost: async (req, res) => {
     try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      const totalPosts = await Post.countDocuments();
+      const totalPages = Math.ceil(totalPosts / limit);
+
       const posts = await Post.find()
         .populate({
           path: "user",
@@ -12,8 +19,21 @@ const PostController = {
           populate: { path: "profile", select: "avatar" },
         })
         .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
-      res.status(200).json({ code: 1, posts });
+
+      res.status(200).json({
+        code: 1,
+        posts,
+        pagination: {
+          page,
+          limit,
+          totalPosts,
+          totalPages,
+          hasMore: page < totalPages,
+        },
+      });
     } catch (error) {
       res.status(500).json({ code: 2, message: error.message });
     }

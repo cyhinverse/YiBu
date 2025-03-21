@@ -1,22 +1,28 @@
 import express from "express";
-import MessageController from "../../controllers/mongodb/message.controller.js";
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  markAsRead,
+  deleteMessage,
+} from "../../controllers/mongodb/message.controller.js";
 import { verifyToken } from "../../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Bảo vệ tất cả routes với middleware xác thực
-router.use(verifyToken);
+// Get all conversations for the current user
+router.get("/conversations", verifyToken, getConversations);
 
-// Tạo tin nhắn mới
-router.post("/", MessageController.createMessage);
+// Get messages between current user and another user
+router.get("/:userId", verifyToken, getMessages);
 
-// Lấy tin nhắn giữa 2 người dùng
-router.get("/user/:userId", MessageController.getMessages);
+// Send a message to another user
+router.post("/send", verifyToken, sendMessage);
 
-// Đánh dấu tin nhắn đã đọc
-router.patch("/:messageId/read", MessageController.markAsRead);
+// Mark a message as read
+router.put("/read/:messageId", verifyToken, markAsRead);
 
-// Xóa tin nhắn
-router.delete("/:messageId", MessageController.deleteMessage);
+// Delete a message
+router.delete("/:messageId", verifyToken, deleteMessage);
 
 export default router;

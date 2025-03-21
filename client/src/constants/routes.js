@@ -4,7 +4,7 @@ export const ROUTES = {
   REGISTER: "register",
   PROFILE: "profile",
   SETTINGS: "settings",
-  MESSAGE: "message",
+  MESSAGE: "messages",
   AUTH: "auth",
   VIDEO: "videos",
   ADMIN: "admin",

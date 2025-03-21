@@ -18,9 +18,12 @@ const POST = {
       "Get posts failed!"
     );
   },
-  GET_ALL_USER: () => {
+  GET_ALL_USER: (page = 1, limit = 10) => {
     return handleRequest(
-      () => api.get(POST_API_ENDPOINTS.GET_ALL_USER),
+      () =>
+        api.get(
+          `${POST_API_ENDPOINTS.GET_ALL_USER}?page=${page}&limit=${limit}`
+        ),
       "Get list user failed"
     );
   },

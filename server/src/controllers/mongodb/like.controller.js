@@ -1,15 +1,12 @@
 import { CatchError } from "../../configs/CatchError.js";
 import Likes from "../../models/mongodb/Likes.js";
-import { getIO } from "../../socket.js";
+import { io } from "../../socket.js";
 import mongoose from "mongoose";
 
-
 const LikeController = {
-
   CreateLike: CatchError(async (req, res) => {
     const { postId } = req.body;
     const userId = req.user.id;
-
 
     if (!postId) {
       return res.status(400).json({
@@ -19,12 +16,10 @@ const LikeController = {
     }
 
     try {
- 
       const session = await mongoose.startSession();
       session.startTransaction();
 
       try {
-
         const exists = await Likes.findOne({
           user: userId,
           post: postId,
@@ -38,34 +33,27 @@ const LikeController = {
           });
         }
 
-
         const newLike = new Likes({
           user: userId,
           post: postId,
         });
         await newLike.save({ session });
 
-
         const likeCount = await Likes.countDocuments({ post: postId }).session(
           session
         );
 
-
         await session.commitTransaction();
         session.endSession();
 
-
-        const io = getIO();
         io.emit(`post:${postId}:likeUpdate`, {
           count: likeCount,
           isLiked: true,
         });
 
-
         console.log(
           `[Server] User ${userId} liked post ${postId}. New count: ${likeCount}`
         );
-
 
         return res.status(200).json({
           code: 1,
@@ -76,7 +64,6 @@ const LikeController = {
           },
         });
       } catch (error) {
-
         await session.abortTransaction();
         session.endSession();
         throw error;
@@ -91,11 +78,9 @@ const LikeController = {
     }
   }, "Failed to like post"),
 
-
   DeleteLike: CatchError(async (req, res) => {
     const { postId } = req.body;
     const userId = req.user.id;
-
 
     if (!postId) {
       return res.status(400).json({
@@ -105,12 +90,10 @@ const LikeController = {
     }
 
     try {
-
       const session = await mongoose.startSession();
       session.startTransaction();
 
       try {
-
         const exists = await Likes.findOne({
           user: userId,
           post: postId,
@@ -124,24 +107,19 @@ const LikeController = {
           });
         }
 
-
         await Likes.deleteOne({ _id: exists._id }).session(session);
-
 
         const likeCount = await Likes.countDocuments({ post: postId }).session(
           session
         );
 
-
         await session.commitTransaction();
         session.endSession();
 
-        const io = getIO();
         io.emit(`post:${postId}:likeUpdate`, {
           count: likeCount,
           isLiked: false,
         });
-
 
         console.log(
           `[Server] User ${userId} unliked post ${postId}. New count: ${likeCount}`
@@ -155,7 +133,6 @@ const LikeController = {
           },
         });
       } catch (error) {
-
         await session.abortTransaction();
         session.endSession();
         throw error;
@@ -170,11 +147,9 @@ const LikeController = {
     }
   }, "Failed to unlike post"),
 
-
   GetLikeStatus: CatchError(async (req, res) => {
     const { postId } = req.params;
     const userId = req.user.id;
-
 
     if (!postId) {
       return res.status(400).json({
@@ -184,17 +159,13 @@ const LikeController = {
     }
 
     try {
-
       const like = await Likes.findOne({ user: userId, post: postId });
 
-
       const likeCount = await Likes.countDocuments({ post: postId });
-
 
       console.log(
         `[Server] Like status for post ${postId}, user ${userId}: isLiked=${!!like}, count=${likeCount}`
       );
-
 
       return res.status(200).json({
         code: 1,
@@ -213,11 +184,9 @@ const LikeController = {
     }
   }, "Failed to get like status"),
 
-
   GetAllLikeFromPosts: CatchError(async (req, res) => {
     const { postIds } = req.body;
     const userId = req.user.id;
-
 
     if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
       return res.status(400).json({
@@ -227,11 +196,9 @@ const LikeController = {
     }
 
     try {
-
       const sanitizedPostIds = postIds.map(
         (id) => new mongoose.Types.ObjectId(id)
       );
-
 
       const likeCounts = await Likes.aggregate([
         {
@@ -256,7 +223,6 @@ const LikeController = {
         },
       ]);
 
-
       const formattedResults = postIds.reduce((acc, postId) => {
         const postLikes = likeCounts.find(
           (item) => item._id.toString() === postId.toString()
@@ -272,9 +238,7 @@ const LikeController = {
         return acc;
       }, {});
 
-
       console.log(`[Server] GetAllLikeFromPosts response:`, formattedResults);
-
 
       return res.status(200).json({
         code: 1,

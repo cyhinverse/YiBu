@@ -17,16 +17,18 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import PostLists from "../Posts/PostLists";
-import { useParams, Link as RouterLink } from "react-router-dom";
+import { useParams, Link as RouterLink, useNavigate } from "react-router-dom";
 import User from "../../../services/userService";
 import { getUserById } from "../../../slices/UserSlice";
 import { formatDistance } from "date-fns";
 import { vi } from "date-fns/locale";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
+import { ROUTES } from "../../../constants/routes";
 
 const Profile = () => {
   const { userId } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("posts");
   const [showBioFull, setShowBioFull] = useState(false);
@@ -37,7 +39,17 @@ const Profile = () => {
   const currentUser = useSelector((s) => s.auth?.user);
   const userFromRedux = useSelector((s) => s.user.user);
   const user = userData || userFromRedux;
-  const isOwnProfile = currentUser?.id === userId;
+
+  // Cập nhật logic kiểm tra isOwnProfile để hỗ trợ cả id và _id
+  const currentUserId = currentUser?.user?._id || currentUser?.user?.id;
+  const profileUserId = userId;
+  const isOwnProfile = currentUserId === profileUserId;
+
+  console.log("Profile - currentUser:", currentUser);
+  console.log("Profile - currentUserId:", currentUserId);
+  console.log("Profile - profileUserId (userId):", profileUserId);
+  console.log("Profile - userData:", userData);
+  console.log("Profile - isOwnProfile:", isOwnProfile);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -122,6 +134,59 @@ const Profile = () => {
     } finally {
       setFollowLoading(false);
     }
+  };
+
+  const handleMessageUser = () => {
+    console.log("=== Start handleMessageUser ===");
+    console.log("Current user data:", currentUser);
+    console.log("Target user data:", user);
+
+    if (!currentUser?.user?._id) {
+      console.log("Error: No current user found");
+      toast.error("Vui lòng đăng nhập để nhắn tin");
+      navigate("/auth/login");
+      return;
+    }
+
+    const targetUserId = user?._id;
+    console.log("Target user ID:", targetUserId);
+
+    if (!targetUserId) {
+      console.log("Error: No target user ID found");
+      toast.error("Không tìm thấy thông tin người dùng");
+      return;
+    }
+
+    if (targetUserId === currentUser.user._id) {
+      console.log("Error: Cannot message self");
+      toast.error("Bạn không thể nhắn tin với chính mình");
+      return;
+    }
+
+    // Đảm bảo ID là string để tránh lỗi so sánh
+    const selectedUserData = {
+      _id: targetUserId.toString(),
+      email: user.email || `user_${targetUserId}@example.com`,
+      name: user.name || user.username || "Người dùng",
+      avatar: user.avatar || user.profile?.avatar,
+      online: user.online || false,
+    };
+
+    console.log("Selected user data being passed:", selectedUserData);
+
+    // Đường dẫn chính xác theo định dạng trong App.jsx
+    // Kiểm tra xem URL nên là /messages hay /message
+    const messagePath = `/messages/${targetUserId}`;
+    console.log("Navigation path:", messagePath);
+
+    // Điều hướng đến trang tin nhắn với người dùng được chọn
+    navigate(messagePath, {
+      state: {
+        selectedUser: selectedUserData,
+      },
+    });
+
+    console.log("=== End handleMessageUser ===");
   };
 
   if (isLoading) {
@@ -315,7 +380,10 @@ const Profile = () => {
                     <>{isFollowing ? "Đang theo dõi" : "Theo dõi"}</>
                   )}
                 </button>
-                <button className="flex-1 py-2 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={handleMessageUser}
+                  className="flex-1 py-2 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
                   <MessageCircle size={16} className="mr-2 inline-block" />
                   Nhắn tin
                 </button>

@@ -9,6 +9,34 @@ const User = {
       "Get all user failed!"
     ),
 
+  getAllUsers: async () => {
+    try {
+      console.log("[userService] Fetching all users");
+      const response = await api.get(USER_API_ENDPOINTS.GET_ALL_USER);
+
+      if (response && response.data) {
+        return {
+          success: true,
+          data: response.data.data || [],
+        };
+      }
+
+      return {
+        success: false,
+        error: "Không thể lấy danh sách người dùng",
+        data: [],
+      };
+    } catch (error) {
+      console.error("[userService] Error fetching users:", error);
+      return {
+        success: false,
+        error:
+          error.response?.data?.message || "Không thể lấy danh sách người dùng",
+        data: [],
+      };
+    }
+  },
+
   GET_USER_BY_ID: (id) => {
     if (!id) {
       return Promise.reject(new Error("User ID is required"));

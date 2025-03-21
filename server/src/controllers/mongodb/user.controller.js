@@ -134,7 +134,7 @@ const UserController = {
 
       const users = await User.find({
         _id: { $ne: currentUserId },
-      }).select("username avatar email createdAt");
+      }).select("avatar email createdAt");
 
       console.log("Found users:", users);
 
@@ -157,7 +157,6 @@ const UserController = {
 
           return {
             _id: user._id,
-            username: user.username,
             avatar: user.avatar || "https://via.placeholder.com/150",
             email: user.email,
             lastMessage: lastMessage
@@ -204,17 +203,13 @@ const UserController = {
         $and: [
           { _id: { $ne: currentUserId } },
           {
-            $or: [
-              { username: { $regex: query, $options: "i" } },
-              { email: { $regex: query, $options: "i" } },
-            ],
+            $or: [{ email: { $regex: query, $options: "i" } }],
           },
         ],
-      }).select("username avatar email createdAt");
+      }).select("avatar email createdAt");
 
       const formattedUsers = users.map((user) => ({
         _id: user._id,
-        username: user.username,
         avatar: user.avatar || "https://via.placeholder.com/150",
         email: user.email,
         createdAt: user.createdAt,
