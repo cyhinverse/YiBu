@@ -9,3 +9,7 @@
 .config-scroll {
   scrollbar-width: none;
 }
+
+.scroll-save {
+  scrollbar-width: none;
+}

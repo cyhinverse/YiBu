@@ -37,7 +37,9 @@ const Profile = () => {
   const [followLoading, setFollowLoading] = useState(false);
 
   const currentUser = useSelector((s) => s.auth?.user);
+  console.log("currentUser", currentUser);
   const userFromRedux = useSelector((s) => s.user.user);
+  console.log("userFromRedux", userFromRedux);
   const user = userData || userFromRedux;
 
   // Cập nhật logic kiểm tra isOwnProfile để hỗ trợ cả id và _id

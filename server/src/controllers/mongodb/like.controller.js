@@ -1,5 +1,7 @@
 import { CatchError } from "../../configs/CatchError.js";
 import Likes from "../../models/mongodb/Likes.js";
+import Post from "../../models/mongodb/Posts.js";
+import Notification from "../../models/mongodb/Notifications.js";
 import { io } from "../../socket.js";
 import mongoose from "mongoose";
 
@@ -33,6 +35,18 @@ const LikeController = {
           });
         }
 
+        const post = await Post.findById(postId).session(session);
+        if (!post) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(404).json({
+            code: 0,
+            message: "Post not found",
+          });
+        }
+
+        const postOwner = post.user.toString();
+
         const newLike = new Likes({
           user: userId,
           post: postId,
@@ -43,6 +57,23 @@ const LikeController = {
           session
         );
 
+        if (userId !== postOwner) {
+          const username = req.user.username || "Một người dùng";
+          const notificationContent = `${username} đã thích bài viết của bạn`;
+
+          const notification = new Notification({
+            recipient: postOwner,
+            sender: userId,
+            type: "like",
+            content: notificationContent,
+            post: postId,
+            isRead: false,
+          });
+
+          await notification.save({ session });
+          console.log("Created notification in DB:", notification);
+        }
+
         await session.commitTransaction();
         session.endSession();
 
@@ -50,6 +81,43 @@ const LikeController = {
           count: likeCount,
           isLiked: true,
         });
+
+        if (userId !== postOwner) {
+          console.log(
+            `Sending notification to user ${postOwner} for post ${postId} liked by ${userId}`
+          );
+          console.log(`User data:`, req.user);
+
+          const notificationPayload = {
+            _id: new mongoose.Types.ObjectId().toString(),
+            recipient: postOwner,
+            sender: {
+              _id: userId,
+              username: req.user.username,
+              name: req.user.username,
+              avatar: req.user.avatar || "https://via.placeholder.com/40",
+            },
+            type: "like",
+            content: `${
+              req.user.username || "Một người dùng"
+            } đã thích bài viết của bạn`,
+            post: {
+              _id: postId,
+              caption: post.caption,
+              media: post.media && post.media.length > 0 ? [post.media[0]] : [],
+            },
+            isRead: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          io.to(postOwner).emit("notification:new", notificationPayload);
+
+          console.log(
+            `Notification emitted through socket.io to ${postOwner}:`,
+            notificationPayload
+          );
+        }
 
         console.log(
           `[Server] User ${userId} liked post ${postId}. New count: ${likeCount}`

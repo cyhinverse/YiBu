@@ -17,6 +17,7 @@
     "dotenv": "^16.4.7",
     "emoji-picker-react": "^4.12.2",
     "lucide-react": "^0.477.0",
+    "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",

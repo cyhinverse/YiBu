@@ -5,15 +5,21 @@ let io;
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:9258",
-      methods: ["GET", "POST"],
+      origin: [
+        "http://localhost:9258",
+        "http://localhost:5173",
+        "http://localhost:3000",
+      ],
+      methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization"],
     },
+    path: "/socket.io/",
   });
 
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
+    socket.emit("connection_established", { message: "Kết nối thành công" });
 
     socket.on("join_room", (roomId) => {
       try {
@@ -268,5 +274,4 @@ export const initSocket = (server) => {
   return io;
 };
 
-// Export the io object so it can be used in other files
 export { io };

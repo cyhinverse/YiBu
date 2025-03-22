@@ -11,4 +11,8 @@ const SavePostSchema = new Schema(
   }
 );
 
-export default SavePost = model("SavePost", SavePostSchema);
+// Thêm compound index để đảm bảo mỗi user chỉ save một post một lần
+SavePostSchema.index({ user: 1, post: 1 }, { unique: true });
+
+const SavePost = model("SavePost", SavePostSchema);
+export default SavePost;

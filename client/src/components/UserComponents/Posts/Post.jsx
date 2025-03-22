@@ -18,19 +18,42 @@ import { vi } from "date-fns/locale";
 import { socket } from "../../../socket";
 import ShowImagePost from "./ShowImagePost";
 import ShowVideoPost from "./ShowVideoPost";
-import { setPostLikeStatus, updateLikeCount } from "../../../slices/LikeSlice";
+import { setPostLikeStatus } from "../../../slices/LikeSlice";
+import SAVE_POST from "../../../services/savePostService";
+import { setSavedStatus } from "../../../slices/SavePostSlice";
+import { toast } from "react-hot-toast";
 
-const Post = ({ data }) => {
+const InvalidPostFallback = ({ message }) => (
+  <div className="w-full p-4 border-b border-gray-200">
+    <div className="flex items-center space-x-2">
+      <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
+      <div>
+        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-3 w-16 bg-gray-100 rounded mt-2 animate-pulse"></div>
+      </div>
+    </div>
+    <div className="mt-3 text-sm text-red-500">{message}</div>
+  </div>
+);
+
+const Post = ({ data, isSavedPost = false }) => {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth?.user);
   const likeState = useSelector((state) => {
-    return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
+    return (
+      state?.like?.likesByPost?.[data?._id] || { isLiked: false, count: 0 }
+    );
   });
+  const savedStatus = useSelector(
+    (state) => state.savePost?.savedStatus?.[data?._id] || isSavedPost
+  );
+
   const [postOption, setPostOption] = useState(false);
-  const [comments] = useState(0);
+  const [saveLoading, setSaveLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const { socket, openComment, setOpenComment } = useContext(DataContext);
   const [showImage, setShowImage] = useState(null);
   const [showVideo, setShowVideo] = useState(null);
-  const { openComment, setOpenComment } = useContext(DataContext);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState({});
   const [volumeControls, setVolumeControls] = useState({});
@@ -38,28 +61,75 @@ const Post = ({ data }) => {
   const [likeLoading, setLikeLoading] = useState(false);
   const isProcessingLike = useRef(false);
   const hasSetupSocketListeners = useRef(false);
+  const [comments] = useState(0);
+
+  const isValidData = data && data._id;
+
+  const user = data?.user || {
+    name: "Người dùng không xác định",
+    avatar: null,
+  };
 
   const formatTime = (date) => {
-    const formattedRelative = formatDistanceToNowStrict(new Date(date), {
-      addSuffix: true,
-      locale: vi,
-    });
-    return formattedRelative.includes("dưới 1 phút trước")
-      ? "Vừa xong"
-      : formattedRelative;
+    if (!date) return "Không xác định";
+    try {
+      const formattedRelative = formatDistanceToNowStrict(new Date(date), {
+        addSuffix: true,
+        locale: vi,
+      });
+      return formattedRelative.includes("dưới 1 phút trước")
+        ? "Vừa xong"
+        : formattedRelative;
+    } catch (error) {
+      console.error("Lỗi định dạng thời gian:", error);
+      return "Không xác định";
+    }
+  };
+
+  const handleVideoLoaded = (videoId) => {
+    if (videoRefs.current[videoId]) {
+      setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
+      setVolumeControls((prev) => ({
+        ...prev,
+        [videoId]: videoRefs.current[videoId].volume,
+      }));
+    }
+  };
+
+  const togglePlay = (videoId) => {
+    const video = videoRefs.current[videoId];
+    if (!video) return;
+
+    if (video.paused) {
+      video.play();
+      setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
+    } else {
+      video.pause();
+      setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
+    }
+  };
+
+  const toggleMute = (videoId) => {
+    const video = videoRefs.current[videoId];
+    if (!video) return;
+
+    const newMutedState = !video.muted;
+    video.muted = newMutedState;
+    setIsMuted(newMutedState);
   };
 
   useEffect(() => {
-    if (!data || !data._id) return;
+    if (!isValidData) return;
 
     let isMounted = true;
+    const postId = data._id;
 
     const fetchLikeData = async () => {
       try {
         setLikeLoading(true);
         const [statusResponse, countResponse] = await Promise.all([
-          Like.GET_LIKE_STATUS(data._id),
-          Like.GET_ALL_LIKES([data._id]),
+          Like.GET_LIKE_STATUS(postId),
+          Like.GET_ALL_LIKES([postId]),
         ]);
 
         if (!isMounted) return;
@@ -69,18 +139,18 @@ const Post = ({ data }) => {
           countResponse?.data?.code === 1
         ) {
           const isLiked = statusResponse.data.data?.isLiked || false;
-          const count = countResponse.data.data?.[data._id]?.count || 0;
+          const count = countResponse.data.data?.[postId]?.count || 0;
 
           dispatch(
             setPostLikeStatus({
-              postId: data._id,
+              postId,
               isLiked,
               count,
             })
           );
         }
       } catch (error) {
-        console.error(`[Post ${data._id}] Error fetching like data:`, error);
+        console.error(`[Post ${postId}] Error fetching like data:`, error);
       } finally {
         if (isMounted) {
           setLikeLoading(false);
@@ -88,59 +158,78 @@ const Post = ({ data }) => {
       }
     };
 
-    fetchLikeData();
+    const setupSocketListeners = () => {
+      if (hasSetupSocketListeners.current || !socket) return;
 
-    return () => {
-      isMounted = false;
-    };
-  }, [data?._id, dispatch]);
+      hasSetupSocketListeners.current = true;
 
-  useEffect(() => {
-    if (!data || !data._id || hasSetupSocketListeners.current) return;
+      const handleLikeUpdate = (updateData) => {
+        if (!isMounted) return;
+        if (isProcessingLike.current) return;
 
-    let isMounted = true;
-    hasSetupSocketListeners.current = true;
+        if (updateData.postId === postId) {
+          const newIsLiked = updateData.action === "like";
+          if (updateData.userId === currentUser?.user?._id) {
+            return;
+          }
 
-    const handleLikeUpdate = (updateData) => {
-      if (!isMounted) return;
+          const newCount = newIsLiked
+            ? likeState.count + 1
+            : Math.max(0, likeState.count - 1);
 
-      if (isProcessingLike.current) {
-        return;
-      }
-
-      if (updateData.postId === data._id) {
-        const newIsLiked = updateData.action === "like";
-        if (updateData.userId === currentUser?.user?._id) {
-          return;
+          dispatch(
+            setPostLikeStatus({
+              postId,
+              isLiked: likeState.isLiked,
+              count: newCount,
+            })
+          );
         }
+      };
 
-        const newCount = newIsLiked
-          ? likeState.count + 1
-          : Math.max(0, likeState.count - 1);
+      socket.emit("join_room", `post:${postId}`);
+      socket.on(`post:${postId}:like`, handleLikeUpdate);
 
-        dispatch(
-          setPostLikeStatus({
-            postId: data._id,
-            isLiked: likeState.isLiked,
-            count: newCount,
-          })
-        );
+      return () => {
+        socket.off(`post:${postId}:like`, handleLikeUpdate);
+        hasSetupSocketListeners.current = false;
+      };
+    };
+
+    // Check saved status
+    const checkSavedStatus = async () => {
+      try {
+        const response = await SAVE_POST.CHECK_SAVED_STATUS(postId);
+        if (response.data?.code === 1) {
+          dispatch(setSavedStatus({ postId, status: response.data.isSaved }));
+        }
+      } catch (error) {
+        console.error("Error checking saved status:", error);
       }
     };
 
-    socket.emit("join_room", `post:${data._id}`);
-
-    socket.on(`post:${data._id}:like`, handleLikeUpdate);
+    fetchLikeData();
+    const cleanupSocket = setupSocketListeners();
+    checkSavedStatus();
 
     return () => {
       isMounted = false;
-      socket.off(`post:${data._id}:like`, handleLikeUpdate);
-      hasSetupSocketListeners.current = false;
+      if (typeof cleanupSocket === "function") {
+        cleanupSocket();
+      }
     };
-  }, [data?._id, dispatch, currentUser?.user?._id, likeState.isLiked]);
+  }, [
+    dispatch,
+    isValidData,
+    data,
+    currentUser?.user?._id,
+    likeState.isLiked,
+    likeState.count,
+    socket,
+  ]);
 
   const handleLike = () => {
-    if (likeLoading || !data?._id || !currentUser?.user?._id) {
+    if (!isValidData || likeLoading || !currentUser?.user?._id) {
       return;
     }
 
@@ -149,7 +238,7 @@ const Post = ({ data }) => {
       isProcessingLike.current = true;
 
       const oldState = { ...likeState };
-
+      const postId = data._id;
       const newIsLiked = !likeState.isLiked;
       const newCount = newIsLiked
         ? likeState.count + 1
@@ -157,27 +246,27 @@ const Post = ({ data }) => {
 
       dispatch(
         setPostLikeStatus({
-          postId: data._id,
+          postId,
           isLiked: newIsLiked,
           count: newCount,
         })
       );
 
-      if (socket.connected) {
+      if (socket && socket.connected) {
         socket.emit("post:like", {
-          postId: data._id,
+          postId,
           userId: currentUser.user._id,
           action: newIsLiked ? "like" : "unlike",
         });
       }
 
       const apiCall = newIsLiked ? Like.CREATE_LIKE : Like.DELETE_LIKE;
-      apiCall({ postId: data._id })
+      apiCall({ postId })
         .then((response) => {
           if (!response || response.data?.code !== 1) {
             dispatch(
               setPostLikeStatus({
-                postId: data._id,
+                postId,
                 isLiked: oldState.isLiked,
                 count: oldState.count,
               })
@@ -185,10 +274,10 @@ const Post = ({ data }) => {
           }
         })
         .catch((error) => {
-          console.error(`[Post ${data._id}] Like action failed:`, error);
+          console.error(`[Post ${postId}] Like action failed:`, error);
           dispatch(
             setPostLikeStatus({
-              postId: data._id,
+              postId,
               isLiked: oldState.isLiked,
               count: oldState.count,
             })
@@ -230,74 +319,59 @@ const Post = ({ data }) => {
     }
   };
 
-  const toggleMute = (videoId) => {
-    if (videoRefs.current[videoId]) {
-      const video = videoRefs.current[videoId];
-      video.muted = !video.muted;
+  const handleSavePost = async () => {
+    if (!isValidData || saveLoading) return;
 
-      if (!video.muted) {
-        const savedVolume = volumeControls[videoId] || 1.0;
-        video.volume = savedVolume;
-        video.currentTime = 0;
-        video
-          .play()
-          .catch((err) => console.error("Không thể phát video:", err));
-      }
+    try {
+      setSaveLoading(true);
+      const postId = data._id;
 
-      setIsMuted(video.muted);
-    }
-  };
+      const apiCall = savedStatus ? SAVE_POST.UNSAVE_POST : SAVE_POST.SAVE_POST;
+      const response = await apiCall(postId);
 
-  const togglePlay = (videoId) => {
-    if (videoRefs.current[videoId]) {
-      const video = videoRefs.current[videoId];
-      if (video.paused) {
-        video
-          .play()
-          .then(() => {
-            setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
+      if (response.data?.code === 1) {
+        dispatch(
+          setSavedStatus({
+            postId,
+            status: !savedStatus,
           })
-          .catch((err) => console.error("Lỗi khi phát video:", err));
+        );
+        toast.success(savedStatus ? "Đã bỏ lưu bài viết" : "Đã lưu bài viết");
       } else {
-        video.pause();
-        setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
+        toast.error(response.data?.message || "Có lỗi xảy ra");
       }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi lưu bài viết"
+      );
+    } finally {
+      setSaveLoading(false);
     }
   };
 
-  const handleVideoLoaded = (videoId) => {
-    if (videoRefs.current[videoId]) {
-      const video = videoRefs.current[videoId];
-
-      video.addEventListener("play", () => {
-        setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-      });
-
-      video.addEventListener("pause", () => {
-        setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
-      });
-
-      if (!video.paused) {
-        setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-      }
-    }
-  };
+  if (!isValidData) {
+    const errorMessage = !data
+      ? "Dữ liệu bài viết không tồn tại"
+      : "Dữ liệu bài viết không hợp lệ (thiếu ID)";
+    console.error("Post component:", errorMessage, data);
+    return <InvalidPostFallback message={errorMessage} />;
+  }
 
   return (
-    <div className="w-full bg-white border-b border-t border-gray-300 flex flex-col justify-start gap-2">
+    <div className="w-full bg-white border-b border-gray-300 flex flex-col justify-start gap-2">
       <div className="flex justify-between px-4 pt-2">
         <div className="flex space-x-2 relative">
           <img
             className="h-[35px] w-[35px] object-cover rounded-full cursor-pointer"
             src={
-              data.user?.avatar ||
+              user?.avatar ||
               "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1"
             }
             alt="Profile"
           />
-          <div className="flex gap-3 justify-start ">
+          <div className="flex gap-3 justify-start">
             <span className="font-semibold hover:underline">
-              {data.user.name}
+              {user?.name || "Người dùng"}
             </span>
             <span className="text-sm font-semibold text-black/15">
               {formatTime(data.createdAt)}
@@ -310,13 +384,13 @@ const Post = ({ data }) => {
         </div>
       </div>
 
-      <p className="px-4">{data.caption}</p>
+      <p className="px-4">{data.caption || ""}</p>
 
-      {data.media?.length > 0 && (
+      {data.media && data.media.length > 0 && (
         <div className="w-auto mx-4 overflow-x-scroll flex gap-2 flex-nowrap hide-scroll">
           {data.media.map((item, index) => (
             <div key={index} className="flex-shrink-0">
-              {item.type === "video" ? (
+              {item?.type === "video" ? (
                 <div className="threads-video-container relative">
                   <video
                     ref={(el) => (videoRefs.current[`video-${index}`] = el)}
@@ -445,7 +519,7 @@ const Post = ({ data }) => {
               }`}
               color={likeState.isLiked ? "red" : "black"}
               fill={likeState.isLiked ? "red" : "none"}
-              size={20}
+              size={23}
               strokeWidth={1}
             />
             <span className="text-sm font-medium text-gray-700">
@@ -456,7 +530,7 @@ const Post = ({ data }) => {
             <MessageCircle
               className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
               strokeWidth={1}
-              size={20}
+              size={23}
               onClick={() => setOpenComment(!openComment)}
             />
             {openComment && <CommentModel />}
@@ -469,14 +543,17 @@ const Post = ({ data }) => {
           <ExternalLink
             className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
             strokeWidth={1}
-            size={20}
+            size={23}
           />
         </div>
         <div>
           <Save
-            className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
+            onClick={handleSavePost}
+            className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
+              saveLoading ? "opacity-50" : ""
+            }`}
             strokeWidth={1}
-            size={20}
+            size={23}
           />
         </div>
       </div>
@@ -484,10 +561,13 @@ const Post = ({ data }) => {
       {showImage && (
         <ShowImagePost setShowImage={setShowImage} showImage={showImage} />
       )}
-
       {showVideo && (
         <ShowVideoPost setShowVideo={setShowVideo} showVideo={showVideo} />
       )}
+      {openComment === data._id && (
+        <CommentModel post={data} setOpenComment={setOpenComment} />
+      )}
+      {postOption && <PostOption post={data} setPostOption={setPostOption} />}
     </div>
   );
 };

@@ -6,11 +6,21 @@ import userReducer from "../slices/UserSlice.js";
 import postReducer from "../slices/PostSlice.js";
 import likeReducer from "../slices/LikeSlice.js";
 import messageReducer from "../slices/MessageSlice.js";
+import savePostReducer from "../slices/SavePostSlice.js";
+import notificationReducer from "../slices/NotificationSlice.js";
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "user", "post", "like", "message"],
+  whitelist: [
+    "auth",
+    "user",
+    "post",
+    "like",
+    "message",
+    "savePost",
+    "notification",
+  ],
 };
 
 const rootReducer = combineReducers({
@@ -19,6 +29,8 @@ const rootReducer = combineReducers({
   post: postReducer,
   like: likeReducer,
   message: messageReducer,
+  savePost: savePostReducer,
+  notification: notificationReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

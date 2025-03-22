@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import io from "socket.io-client";
 import { toast } from "react-hot-toast";
-import { addMessage, markMessageAsRead } from "../slices/MessageSlice";
+import { addMessage, markAsRead } from "../slices/MessageSlice";
+import { addNotification } from "../slices/NotificationSlice";
 
 const useSocket = (userId) => {
   const socketRef = useRef(null);
@@ -100,7 +101,12 @@ const useSocket = (userId) => {
         socketRef.current.on("message_read", (data) => {
           console.log("Message read event received:", data);
           if (data && data.messageId) {
-            dispatch(markMessageAsRead(data.messageId));
+            dispatch(
+              markAsRead({
+                messageIds: [data.messageId],
+                conversationId: data.conversationId || data.roomId,
+              })
+            );
           }
         });
 
@@ -112,9 +118,68 @@ const useSocket = (userId) => {
           console.log("User stop typing event received:", data);
         });
 
+        socketRef.current.on("notification:new", (notification) => {
+          console.log("Received new notification via socket:", notification);
+
+          // Kiểm tra dữ liệu notification
+          if (!notification || !notification._id) {
+            console.error("Received invalid notification:", notification);
+            toast.error("Có lỗi khi nhận thông báo");
+            return;
+          }
+
+          // Dispatch để cập nhật UI
+          try {
+            // Kiểm tra xem thông báo có đầy đủ thông tin không
+            // Nếu thiếu thông tin của sender hoặc post, có thể cần refresh lại từ server
+            const hasFullData =
+              notification.sender?._id &&
+              (notification.type !== "like" || notification.post?._id);
+
+            if (hasFullData) {
+              dispatch(addNotification(notification));
+            } else {
+              console.log(
+                "Notification missing full data, refreshing from server..."
+              );
+              // Tìm phương thức refresh thông báo từ context hoặc service
+              // Ví dụ: NotificationService.refreshNotifications();
+              // Hoặc sử dụng event để yêu cầu component tự refresh
+              document.dispatchEvent(new CustomEvent("refresh:notifications"));
+            }
+
+            // Tạo tin nhắn toast có thêm thông tin về post nếu là thông báo like
+            let toastMessage = notification.content || "Bạn có thông báo mới";
+
+            if (notification.type === "like" && notification.post?.caption) {
+              toastMessage += ` - "${notification.post.caption.substring(
+                0,
+                20
+              )}${notification.post.caption.length > 20 ? "..." : ""}"`;
+            }
+
+            // Hiển thị toast với nội dung
+            toast.success(toastMessage, {
+              duration: 5000,
+              icon: "🔔",
+            });
+
+            // Log để debug
+            console.log("Notification added to store:", notification);
+          } catch (error) {
+            console.error("Error processing notification:", error);
+            toast.error("Có lỗi khi xử lý thông báo");
+          }
+        });
+
         socketRef.current.on("error", (error) => {
           console.error("Socket error:", error);
           toast.error("Lỗi kết nối chat");
+        });
+
+        // Lắng nghe sự kiện xác nhận kết nối
+        socketRef.current.on("connection_established", (data) => {
+          console.log("Socket connection established:", data);
         });
       } catch (error) {
         console.error("Error initializing socket:", error);

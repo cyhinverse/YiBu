@@ -33,6 +33,7 @@ import React from "react";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
 import AdminPage from "./pages/AdminPage/AdminPage";
+import { SocketProvider } from "./contexts/SocketContext";
 
 function App() {
   return (
@@ -40,7 +41,14 @@ function App() {
       <Toaster />
       <Routes>
         <Route element={<ProtectedRoute />}>
-          <Route path={`${ROUTES.HOME}`} element={<UserLayout />}>
+          <Route
+            path={`${ROUTES.HOME}`}
+            element={
+              <SocketProvider>
+                <UserLayout />
+              </SocketProvider>
+            }
+          >
             <Route index element={<Home />} />
 
             {/* Message Routes */}

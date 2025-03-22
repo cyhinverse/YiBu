@@ -1,4 +1,6 @@
 import io from "socket.io-client";
+import { addNotification } from "./slices/NotificationSlice";
+import { store } from "./utils/configureStore";
 
 // Tạo socket connection
 let socket;
@@ -7,7 +9,6 @@ let connectedSockets = new Set();
 try {
   console.log("Initializing socket connection from socket.js");
 
-  // Lấy server URL từ biến môi trường hoặc sử dụng địa chỉ mặc định
   const serverUrl =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:9785";
   console.log("Socket connecting to server:", serverUrl);
@@ -19,12 +20,12 @@ try {
     reconnectionDelayMax: 5000,
     reconnectionAttempts: 5,
     autoConnect: true,
+    path: "/socket.io/",
     extraHeaders: {
       Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
     },
   });
 
-  // Xử lý các sự kiện socket cơ bản
   socket.on("connect", () => {
     console.log(
       "Socket connected successfully from socket.js with ID:",
@@ -85,7 +86,12 @@ try {
     // Xử lý người dùng dừng nhập sẽ được thực hiện trong các components
   });
 
-  // Kiểm tra kết nối định kỳ
+
+  socket.on("notification:new", (notification) => {
+    console.log("New notification received via socket:", notification);
+    store.dispatch(addNotification(notification));
+  });
+
   setInterval(() => {
     if (socket && !socket.connected) {
       console.log("Socket disconnected, attempting to reconnect...");
@@ -94,7 +100,7 @@ try {
   }, 10000);
 } catch (error) {
   console.error("Failed to initialize socket:", error.message);
-  // Tạo dummy socket để tránh lỗi khi socket không khởi tạo được
+
   socket = {
     on: (event, callback) => {},
     off: (event, callback) => {},
@@ -107,10 +113,8 @@ try {
   };
 }
 
-// Hàm tiện ích để kiểm tra socket
 const isSocketConnected = () => socket && socket.connected;
 
-// Hàm tiện ích để emit event với kiểm tra trước
 const emitSocketEvent = (event, data) => {
   if (!isSocketConnected()) {
     console.warn(`Socket not connected, cannot emit ${event}`);

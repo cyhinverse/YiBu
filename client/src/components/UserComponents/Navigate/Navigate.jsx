@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from "react-redux";
 import POST from "../../../services/postService";
 import { getPostUserById } from "../../../slices/PostSlice";
 import SearchUser from "../Search";
+import NotificationBell from "../Notification/NotificationBell";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
@@ -101,7 +102,7 @@ const Navigate = () => {
           {sunMoon ? <Sun size={20} /> : <Moon size={20} />}
         </div>
         <div className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex">
-          <Bell className="cursor-pointer" size={20} />
+          <NotificationBell />
         </div>
         <div
           className="md:hidden w-[35px] h-[35px] items-center justify-center flex"

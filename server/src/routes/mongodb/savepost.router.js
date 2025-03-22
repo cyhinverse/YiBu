@@ -1,21 +1,21 @@
 import express from "express";
+import SavePostController from "../../controllers/mongodb/savepost.controller.js";
+import { verifyToken } from "../../middleware/auth.middleware.js";
+
 const router = express.Router();
 
-// Create a new savepost
-router.post("/");
+router.use(verifyToken);
 
-// Get all saveposts for a specific user
-router.get("/user/:userId");
+// Save a post
+router.post("/:postId", SavePostController.savePost);
 
-// Delete a savepost
-router.delete("/:id");
+// Unsave a post
+router.delete("/:postId", SavePostController.unsavePost);
 
-// Get all saveposts for a specific post
-router.get("/post/:postId");
+// Get all saved posts with pagination
+router.get("/", SavePostController.getSavedPosts);
 
-// Update a savepost
-router.put("/:id");
-
-
+// Check if a post is saved by the user
+router.get("/check/:postId", SavePostController.checkSavedStatus);
 
 export default router;
