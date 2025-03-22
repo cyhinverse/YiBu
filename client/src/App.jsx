@@ -29,13 +29,50 @@ import NotFound from "./pages/NotFound/NotFound";
 import ForgotPassword from "./pages/AuthPage/ForgotPassword";
 import EnterCode from "./pages/AuthPage/EnterCode";
 import AuthLayout from "./pages/AuthPage/AuthLayout";
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
 import AdminPage from "./pages/AdminPage/AdminPage";
 import { SocketProvider } from "./contexts/SocketContext";
+import { getLikeManager } from "./socket/likeManager";
+import { getNotificationManager } from "./socket/notificationManager";
+import { useSelector } from "react-redux";
 
-function App() {
+const App = () => {
+  const currentUser = useSelector((state) => state.auth?.user);
+
+  useEffect(() => {
+    // Khởi tạo likeManager
+    const likeManager = getLikeManager();
+    if (!likeManager) {
+      console.warn("[App] Failed to initialize likeManager");
+    } else {
+      console.log("[App] likeManager initialized successfully");
+    }
+
+    // Khởi tạo notificationManager
+    const notificationManager = getNotificationManager();
+    if (!notificationManager) {
+      console.warn("[App] Failed to initialize notificationManager");
+    } else {
+      console.log("[App] notificationManager initialized successfully");
+    }
+  }, []);
+
+  // Đăng ký nhận thông báo khi người dùng đã đăng nhập
+  useEffect(() => {
+    if (currentUser?.user?._id) {
+      const notificationManager = getNotificationManager();
+      if (notificationManager) {
+        notificationManager.registerForNotifications(currentUser.user._id);
+        console.log(
+          "[App] Registered for notifications with userId:",
+          currentUser.user._id
+        );
+      }
+    }
+  }, [currentUser?.user?._id]);
+
   return (
     <>
       <Toaster />
@@ -95,6 +132,6 @@ function App() {
       <Outlet />
     </>
   );
-}
+};
 
 export default App;

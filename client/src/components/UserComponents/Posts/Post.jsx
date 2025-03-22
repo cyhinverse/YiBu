@@ -4,7 +4,6 @@ import {
   Heart,
   MessageCircle,
   Save,
-  X,
 } from "lucide-react";
 import { useContext, useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,13 +14,13 @@ import { DataContext } from "../../../DataProvider";
 import CommentModel from "../Comment/CommentModel";
 import { formatDistanceToNowStrict } from "date-fns";
 import { vi } from "date-fns/locale";
-import { socket } from "../../../socket";
 import ShowImagePost from "./ShowImagePost";
 import ShowVideoPost from "./ShowVideoPost";
 import { setPostLikeStatus } from "../../../slices/LikeSlice";
 import SAVE_POST from "../../../services/savePostService";
 import { setSavedStatus } from "../../../slices/SavePostSlice";
 import { toast } from "react-hot-toast";
+import { getLikeManager } from "../../../socket/likeManager";
 
 const InvalidPostFallback = ({ message }) => (
   <div className="w-full p-4 border-b border-gray-200">
@@ -40,9 +39,7 @@ const Post = ({ data, isSavedPost = false }) => {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth?.user);
   const likeState = useSelector((state) => {
-    return (
-      state?.like?.likesByPost?.[data?._id] || { isLiked: false, count: 0 }
-    );
+    return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
   });
   const savedStatus = useSelector(
     (state) => state.savePost?.savedStatus?.[data?._id] || isSavedPost
@@ -51,7 +48,7 @@ const Post = ({ data, isSavedPost = false }) => {
   const [postOption, setPostOption] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   // eslint-disable-next-line no-unused-vars
-  const { socket, openComment, setOpenComment } = useContext(DataContext);
+  const { openComment, setOpenComment } = useContext(DataContext);
   const [showImage, setShowImage] = useState(null);
   const [showVideo, setShowVideo] = useState(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -60,7 +57,6 @@ const Post = ({ data, isSavedPost = false }) => {
   const videoRefs = useRef({});
   const [likeLoading, setLikeLoading] = useState(false);
   const isProcessingLike = useRef(false);
-  const hasSetupSocketListeners = useRef(false);
   const [comments] = useState(0);
 
   const isValidData = data && data._id;
@@ -123,6 +119,7 @@ const Post = ({ data, isSavedPost = false }) => {
 
     let isMounted = true;
     const postId = data._id;
+    const likeManager = getLikeManager();
 
     const fetchLikeData = async () => {
       try {
@@ -158,43 +155,15 @@ const Post = ({ data, isSavedPost = false }) => {
       }
     };
 
-    const setupSocketListeners = () => {
-      if (hasSetupSocketListeners.current || !socket) return;
-
-      hasSetupSocketListeners.current = true;
-
-      const handleLikeUpdate = (updateData) => {
-        if (!isMounted) return;
-        if (isProcessingLike.current) return;
-
-        if (updateData.postId === postId) {
-          const newIsLiked = updateData.action === "like";
-          if (updateData.userId === currentUser?.user?._id) {
-            return;
-          }
-
-          const newCount = newIsLiked
-            ? likeState.count + 1
-            : Math.max(0, likeState.count - 1);
-
-          dispatch(
-            setPostLikeStatus({
-              postId,
-              isLiked: likeState.isLiked,
-              count: newCount,
-            })
-          );
-        }
-      };
-
-      socket.emit("join_room", `post:${postId}`);
-      socket.on(`post:${postId}:like`, handleLikeUpdate);
-
-      return () => {
-        socket.off(`post:${postId}:like`, handleLikeUpdate);
-        hasSetupSocketListeners.current = false;
-      };
-    };
+    // Tham gia phòng socket cho post này
+    if (likeManager) {
+      console.log(`[Post ${postId}] Joining post room for realtime updates`);
+      likeManager.joinPostRoom(postId);
+    } else {
+      console.warn(
+        `[Post ${postId}] likeManager not available, can't join room`
+      );
+    }
 
     // Check saved status
     const checkSavedStatus = async () => {
@@ -209,27 +178,20 @@ const Post = ({ data, isSavedPost = false }) => {
     };
 
     fetchLikeData();
-    const cleanupSocket = setupSocketListeners();
     checkSavedStatus();
 
     return () => {
       isMounted = false;
-      if (typeof cleanupSocket === "function") {
-        cleanupSocket();
-      }
     };
-  }, [
-    dispatch,
-    isValidData,
-    data,
-    currentUser?.user?._id,
-    likeState.isLiked,
-    likeState.count,
-    socket,
-  ]);
+  }, [dispatch, isValidData, data?._id, currentUser?.user?._id]);
 
   const handleLike = () => {
     if (!isValidData || likeLoading || !currentUser?.user?._id) {
+      console.log("[Like Debug] Cannot like:", {
+        isValidData,
+        likeLoading,
+        userId: currentUser?.user?._id,
+      });
       return;
     }
 
@@ -239,11 +201,21 @@ const Post = ({ data, isSavedPost = false }) => {
 
       const oldState = { ...likeState };
       const postId = data._id;
+      const userId = currentUser.user._id;
       const newIsLiked = !likeState.isLiked;
       const newCount = newIsLiked
         ? likeState.count + 1
         : Math.max(0, likeState.count - 1);
 
+      console.log("[Like Debug] Attempting to like/unlike:", {
+        postId,
+        oldState,
+        newIsLiked,
+        newCount,
+        userId,
+      });
+
+      // Cập nhật UI trước
       dispatch(
         setPostLikeStatus({
           postId,
@@ -252,18 +224,32 @@ const Post = ({ data, isSavedPost = false }) => {
         })
       );
 
-      if (socket && socket.connected) {
-        socket.emit("post:like", {
+      // Gửi sự kiện thông qua socket
+      const likeManager = getLikeManager();
+      if (likeManager) {
+        likeManager.emitLikeAction(
           postId,
-          userId: currentUser.user._id,
-          action: newIsLiked ? "like" : "unlike",
-        });
+          userId,
+          newIsLiked ? "like" : "unlike"
+        );
       }
+
+      // Debug output trước khi gọi API
+      console.log("[Like Debug] Calling API:", {
+        endpoint: newIsLiked ? "CREATE_LIKE" : "DELETE_LIKE",
+        data: { postId },
+      });
 
       const apiCall = newIsLiked ? Like.CREATE_LIKE : Like.DELETE_LIKE;
       apiCall({ postId })
         .then((response) => {
+          console.log("[Like Debug] API response:", response);
+
           if (!response || response.data?.code !== 1) {
+            console.warn(
+              "[Like Debug] API returned non-success code:",
+              response?.data
+            );
             dispatch(
               setPostLikeStatus({
                 postId,
@@ -271,10 +257,30 @@ const Post = ({ data, isSavedPost = false }) => {
                 count: oldState.count,
               })
             );
+          } else {
+            // API thành công - cập nhật lần cuối với dữ liệu từ server
+            const serverCount = response.data?.data?.likeCount || newCount;
+            if (serverCount !== newCount) {
+              dispatch(
+                setPostLikeStatus({
+                  postId,
+                  isLiked: newIsLiked,
+                  count: serverCount,
+                })
+              );
+            }
           }
         })
         .catch((error) => {
           console.error(`[Post ${postId}] Like action failed:`, error);
+          console.error("[Like Debug] Error details:", {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            message: error.message,
+          });
+
+          // Khôi phục trạng thái cũ nếu API thất bại
           dispatch(
             setPostLikeStatus({
               postId,
@@ -285,9 +291,11 @@ const Post = ({ data, isSavedPost = false }) => {
         })
         .finally(() => {
           isProcessingLike.current = false;
+          setLikeLoading(false);
         });
     } catch (error) {
       console.error(`[Post ${data._id}] Like action failed:`, error);
+      // Khôi phục trạng thái ban đầu nếu xảy ra lỗi
       dispatch(
         setPostLikeStatus({
           postId: data._id,
@@ -296,7 +304,6 @@ const Post = ({ data, isSavedPost = false }) => {
         })
       );
       isProcessingLike.current = false;
-    } finally {
       setLikeLoading(false);
     }
   };

@@ -8,10 +8,28 @@ const Like = {
         throw new Error("Post ID is required for CREATE_LIKE");
       }
 
-      const response = await api.post(LIKE_API_ENDPOINTS.CREATE_LIKE, data);
+      console.log("[likeService] Creating like with data:", data);
+
+      // Đảm bảo postId là string nếu cần
+      const requestData = {
+        postId: data.postId.toString(),
+      };
+
+      const response = await api.post(
+        LIKE_API_ENDPOINTS.CREATE_LIKE,
+        requestData
+      );
+      console.log("[likeService] CREATE_LIKE response:", response);
       return response;
     } catch (error) {
       console.error("[likeService] CREATE_LIKE error:", error);
+      console.error("[likeService] Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        request: error.config,
+      });
       throw error;
     }
   },
@@ -22,10 +40,28 @@ const Like = {
         throw new Error("Post ID is required for DELETE_LIKE");
       }
 
-      const response = await api.post(LIKE_API_ENDPOINTS.DELETE_LIKE, data);
+      console.log("[likeService] Deleting like with data:", data);
+
+      // Đảm bảo postId là string nếu cần
+      const requestData = {
+        postId: data.postId.toString(),
+      };
+
+      const response = await api.post(
+        LIKE_API_ENDPOINTS.DELETE_LIKE,
+        requestData
+      );
+      console.log("[likeService] DELETE_LIKE response:", response);
       return response;
     } catch (error) {
       console.error("[likeService] DELETE_LIKE error:", error);
+      console.error("[likeService] Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        request: error.config,
+      });
       throw error;
     }
   },

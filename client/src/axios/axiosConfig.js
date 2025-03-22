@@ -11,12 +11,19 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log(`[AxiosConfig] Request to ${config.url} with auth token`);
+  } else {
+    console.warn(`[AxiosConfig] Request to ${config.url} WITHOUT auth token`);
   }
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
+    console.log(`[AxiosConfig] Response from ${response.config.url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+    });
     return response;
   },
   async (error) => {

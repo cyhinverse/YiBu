@@ -43,6 +43,17 @@ export const initSocket = (server) => {
             console.log(`User also joined their own user room: ${userIdRoom}`);
           }
 
+          if (!roomId.includes(":")) {
+            console.log(
+              `User ${socket.id} joined user notification room: ${roomIdStr}`
+            );
+            socket.emit("notification:registered", {
+              userId: roomIdStr,
+              success: true,
+              timestamp: new Date(),
+            });
+          }
+
           socket.emit("room_joined", { roomId: roomIdStr, success: true });
         }
       } catch (error) {
@@ -123,6 +134,47 @@ export const initSocket = (server) => {
         console.error("Error sending message via socket:", error);
         socket.emit("error", {
           message: "Failed to send message",
+          error: error.message,
+          originalData: data,
+        });
+      }
+    });
+
+    socket.on("send_notification", (data) => {
+      try {
+        console.log("Sending notification:", data);
+
+        if (!data || !data.recipient || !data.type) {
+          console.error("Invalid notification data:", data);
+          socket.emit("error", { message: "Invalid notification data", data });
+          return;
+        }
+
+        const { recipient } = data;
+
+        const recipientStr = recipient.toString();
+
+        socket.to(recipientStr).emit("notification:new", {
+          ...data,
+          timestamp: new Date(),
+        });
+
+        io.emit(`user:${recipientStr}:notification`, {
+          ...data,
+          timestamp: new Date(),
+        });
+
+        console.log(`Notification sent to user ${recipientStr}`);
+
+        socket.emit("notification_sent", {
+          success: true,
+          recipient: recipientStr,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error("Error sending notification:", error);
+        socket.emit("error", {
+          message: "Failed to send notification",
           error: error.message,
           originalData: data,
         });
@@ -244,20 +296,84 @@ export const initSocket = (server) => {
         }
 
         const roomId = `post:${postId}`;
-        io.to(roomId).emit(`post:${postId}:like`, {
+
+        io.to(roomId).emit(`post:like:update`, {
           postId,
           userId,
           action,
           timestamp: new Date(),
         });
 
-        console.log(`Broadcast like event to room ${roomId}`);
+        io.emit(`post:${postId}:like:update`, {
+          postId,
+          userId,
+          action,
+          timestamp: new Date(),
+        });
+
+        console.log(
+          `Broadcast like update event to room ${roomId} and globally`
+        );
       } catch (error) {
         console.error("Error handling post:like event:", error);
         socket.emit("error", {
           message: "Failed to process post:like event",
           error: error.message,
           originalData: data,
+        });
+      }
+    });
+
+    socket.on("post:like:listen", (postId) => {
+      try {
+        if (!postId) {
+          console.error("Invalid postId in post:like:listen event");
+          return;
+        }
+
+        const roomId = `post:${postId}`;
+        socket.join(roomId);
+        console.log(
+          `User ${socket.id} is now listening for likes on post: ${postId}`
+        );
+        socket.emit("post:like:listening", { postId, success: true });
+      } catch (error) {
+        console.error("Error setting up like listener:", error);
+        socket.emit("error", {
+          message: "Failed to set up like listener",
+          error: error.message,
+        });
+      }
+    });
+
+    socket.on("notification:register", (userId) => {
+      try {
+        if (!userId) {
+          console.error("Invalid userId in notification:register event");
+          socket.emit("error", {
+            message: "Invalid userId for notification registration",
+          });
+          return;
+        }
+
+        const userIdStr = userId.toString();
+        socket.join(userIdStr);
+
+        socket.user = { id: userIdStr };
+
+        console.log(
+          `User ${socket.id} registered for notifications with userId: ${userIdStr}`
+        );
+        socket.emit("notification:registered", {
+          userId: userIdStr,
+          success: true,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error("Error registering for notifications:", error);
+        socket.emit("error", {
+          message: "Failed to register for notifications",
+          error: error.message,
         });
       }
     });

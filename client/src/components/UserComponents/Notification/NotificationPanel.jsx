@@ -30,7 +30,7 @@ const NotificationPanel = () => {
   );
   const [connectionIssue, setConnectionIssue] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
-  const [filter, setFilter] = useState("all"); // 'all', 'unread', 'read'
+  const [filter, setFilter] = useState("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const fetchNotifications = async () => {
@@ -58,12 +58,10 @@ const NotificationPanel = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Auto refresh every 30 seconds
     const refreshInterval = setInterval(() => {
       fetchNotifications();
     }, 30000);
 
-    // Listen for refresh:notifications event
     const handleRefreshEvent = () => {
       fetchNotifications();
     };
@@ -109,7 +107,6 @@ const NotificationPanel = () => {
       : formattedRelative;
   };
 
-  // Filter notifications based on current filter
   const filteredNotifications = notifications.filter((notification) => {
     if (filter === "all") return true;
     if (filter === "unread") return !notification.isRead;
@@ -246,7 +243,6 @@ const NotificationPanel = () => {
         </div>
       </div>
 
-      {/* Notification list */}
       <div className="overflow-y-auto bg-white divide-y divide-gray-100">
         {filteredNotifications.length === 0 ? (
           <div className="p-10 text-center text-gray-500">
@@ -295,7 +291,6 @@ const NotificationPanel = () => {
                     )}
                   </p>
 
-                  {/* Display post information if available */}
                   {notification.post && (
                     <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs flex items-center">
                       <FileText
