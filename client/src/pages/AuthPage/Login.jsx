@@ -26,7 +26,12 @@ const Login = () => {
       if (res.code === 1) {
         toast.success("Login successfully!");
         localStorage.setItem("accessToken", res.accessToken);
-        dispatch(login(res));
+
+        if (res.user) {
+          console.log("Dữ liệu user sau khi login:", res.user);
+          localStorage.setItem("user", JSON.stringify(res.user));
+          dispatch(login(res.user));
+        }
         navigator("/");
       }
     } catch (error) {

@@ -27,12 +27,33 @@ const Navigate = () => {
     { icon: Home, path: "/" },
     { icon: MessageCircle, path: "/messages" },
   ];
-  const id = useSelector((s) => s.auth.user.user._id);
 
+  // Lấy user từ Redux và kiểm tra các trường hợp undefined
+  const authState = useSelector((s) => s.auth);
+  // Kiểm tra cấu trúc dữ liệu có lồng nhau hay không
+  let userId = null;
+
+  if (authState && authState.user) {
+    // Nếu là cấu trúc lồng { user: { user: {...} } }
+    if (authState.user.user && authState.user.user._id) {
+      userId = authState.user.user._id;
+    }
+    // Nếu là cấu trúc đơn giản { user: {...} }
+    else if (authState.user._id) {
+      userId = authState.user._id;
+    }
+  }
+
+  // Chỉ gọi API khi đã có userId
   useEffect(() => {
     const fetchPostOfUser = async () => {
+      if (!userId) {
+        console.log("Không có ID người dùng, bỏ qua fetch posts");
+        return;
+      }
+
       try {
-        const res = await POST.GET_POST_USER_BY_ID(id);
+        const res = await POST.GET_POST_USER_BY_ID(userId);
         console.log(`Check res from navigate::::`, res);
         dispatch(getPostUserById(res.postOfUser));
       } catch (error) {
@@ -40,7 +61,7 @@ const Navigate = () => {
       }
     };
     fetchPostOfUser();
-  }, [id, dispatch]);
+  }, [userId, dispatch]);
 
   const handleOpenSearch = () => {
     setShowSearchModal(true);
@@ -83,7 +104,7 @@ const Navigate = () => {
         ))}
 
         <NavLink
-          to={`/profile/${id}`}
+          to={userId ? `/profile/${userId}` : "/auth/login"}
           className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] flex items-center justify-center rounded-full hover:opacity-50 transition-all ease-out cursor-pointer"
         >
           <img

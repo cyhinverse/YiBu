@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import io from "socket.io-client";
 import { toast } from "react-hot-toast";
-import { addMessage, markAsRead } from "../slices/MessageSlice";
+import { addMessage, markMessagesAsRead } from "../slices/MessageSlice";
 import { addNotification } from "../slices/NotificationSlice";
 
 const useSocket = (userId) => {
@@ -102,7 +102,7 @@ const useSocket = (userId) => {
           console.log("Message read event received:", data);
           if (data && data.messageId) {
             dispatch(
-              markAsRead({
+              markMessagesAsRead({
                 messageIds: [data.messageId],
                 conversationId: data.conversationId || data.roomId,
               })

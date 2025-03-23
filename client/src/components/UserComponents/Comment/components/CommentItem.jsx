@@ -1,17 +1,99 @@
+import { useState, useRef, useEffect } from "react";
 import {
   Heart,
   MessageSquare,
   Share2,
   MoreHorizontal,
   Clock,
+  Edit,
+  Trash2,
+  X,
 } from "lucide-react";
 import CommentReply from "./CommentReply";
 import ReplyInput from "./ReplyInput";
 import CommentDecoration from "./CommentDecoration";
+import { useSelector } from "react-redux";
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
+
+// Modal tự tạo thay thế cho Modal của antd
+const CustomModal = ({
+  title,
+  isOpen,
+  onClose,
+  onConfirm,
+  children,
+  danger = false,
+}) => {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscKey);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscKey);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+          <button
+            className="text-gray-400 hover:text-gray-500 focus:outline-none"
+            onClick={onClose}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="px-6 py-4">{children}</div>
+
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none ${
+              danger
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {danger ? "Xóa" : "Xác nhận"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CommentItem = ({
   comment,
   onLike,
+  onUpdate,
+  onDelete,
   onReplyClick,
   onAddReply,
   reply,
@@ -19,16 +101,72 @@ const CommentItem = ({
   currentComment,
   setCurrentComment,
 }) => {
-  const { id, user, avatar, text, time, likes, liked, replies, isEditing } =
-    comment;
+  const [isEditing, setIsEditing] = useState(comment.isEditing || false);
+  const [editedContent, setEditedContent] = useState(comment.content || "");
+  const [showOptions, setShowOptions] = useState(false);
+  const { current: currentUser } = useSelector((state) => state.user);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  // Kiểm tra xem người dùng hiện tại có phải là chủ sở hữu của comment không
+  const isOwner = currentUser?._id === comment.user?._id;
+
+  // Format thời gian
+  const formattedTime = comment.createdAt
+    ? formatDistanceToNow(new Date(comment.createdAt), {
+        addSuffix: true,
+        locale: vi,
+      })
+    : "Vừa xong";
+
+  const handleUpdate = async () => {
+    if (editedContent.trim() === "") return;
+
+    // Nếu là comment tạm thời, thêm mới
+    if (comment.isTemp) {
+      // Thêm comment mới thay vì cập nhật comment tạm thời
+      const success = await onAddReply(null, null, editedContent);
+      if (success) {
+        // Xóa comment tạm thời khỏi danh sách
+        setCurrentComment((currentComments) =>
+          currentComments.filter((c) => !c.isTemp)
+        );
+        setIsEditing(false);
+      }
+    } else {
+      // Cập nhật comment
+      const success = await onUpdate(comment._id, editedContent);
+      if (success) {
+        setIsEditing(false);
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (comment.isTemp) {
+      // Xóa comment tạm thời khỏi UI mà không gọi API
+      setCurrentComment((currentComments) =>
+        currentComments.filter((c) => c._id !== comment._id)
+      );
+    } else {
+      // Xóa comment thông thường qua API
+      await onDelete(comment._id, false);
+    }
+    setDeleteModalVisible(false);
+  };
+
+  const toggleOptions = () => {
+    setShowOptions(!showOptions);
+  };
 
   return (
     <div className="transform-gpu transition-all duration-200 hover:translate-x-1">
       {/* Main comment */}
       <div className="flex items-start space-x-4">
         <img
-          src={avatar}
-          alt={user}
+          src={
+            comment.user?.profile?.avatar || "https://i.pravatar.cc/150?img=5"
+          }
+          alt={comment.user?.name || "User"}
           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
           loading="lazy"
         />
@@ -36,100 +174,44 @@ const CommentItem = ({
           {isEditing ? (
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-purple-200 transition-colors duration-200">
               <div className="flex justify-between items-center mb-3">
-                <p className="font-semibold text-gray-800">{user}</p>
+                <p className="font-semibold text-gray-800">
+                  {comment.user?.name || "Bạn"}
+                </p>
                 <span className="text-xs text-gray-500 flex items-center">
-                  <Clock size={12} className="mr-1 text-gray-400" /> {time}
+                  <Clock size={12} className="mr-1 text-gray-400" />{" "}
+                  {formattedTime}
                 </span>
               </div>
-              <div
-                className="w-full p-3 border border-gray-200 rounded-lg bg-white"
-                contentEditable
-                suppressContentEditableWarning
-                onInput={(e) => {
-                  const selection = window.getSelection();
-                  const range = selection.getRangeAt(0);
-                  const offset = range.startOffset;
-
-                  setCurrentComment(
-                    currentComment.map((c) =>
-                      c.id === id
-                        ? { ...c, text: e.currentTarget.textContent || "" }
-                        : c
-                    )
-                  );
-
-                  setTimeout(() => {
-                    try {
-                      const newRange = document.createRange();
-                      newRange.setStart(
-                        e.currentTarget.childNodes[0] || e.currentTarget,
-                        Math.min(
-                          offset,
-                          (e.currentTarget.textContent || "").length
-                        )
-                      );
-                      newRange.collapse(true);
-                      selection.removeAllRanges();
-                      selection.addRange(newRange);
-                    } catch (err) {
-                      console.log("Error setting cursor position:", err);
-                    }
-                  }, 0);
-                }}
-                ref={(el) => {
-                  if (el && isEditing) {
-                    if (text === "New comment placeholder - click to edit") {
-                      el.textContent = "";
-                    } else if (!el.textContent) {
-                      el.textContent = text;
-                    }
-                    el.focus();
-
-                    const range = document.createRange();
-                    const selection = window.getSelection();
-                    if (el.childNodes.length > 0) {
-                      const lastNode = el.childNodes[el.childNodes.length - 1];
-                      range.setStart(lastNode, lastNode.length || 0);
-                    } else {
-                      range.setStart(el, 0);
-                    }
-                    range.collapse(true);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                  }
-                }}
-              ></div>
+              <textarea
+                className="w-full p-3 border border-gray-200 rounded-lg bg-white resize-none focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                rows={3}
+                placeholder="Nhập bình luận của bạn..."
+                autoFocus
+              />
               <div className="flex justify-end mt-2 space-x-2">
                 <button
                   className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors duration-200"
                   onClick={() => {
-                    setCurrentComment(
-                      currentComment.filter((c) => c.id !== id)
-                    );
+                    if (comment.isTemp) {
+                      // Xóa comment tạm thời khỏi danh sách một cách an toàn
+                      setCurrentComment((currentComments) =>
+                        currentComments.filter((c) => c._id !== comment._id)
+                      );
+                    } else {
+                      setIsEditing(false);
+                      setEditedContent(comment.content);
+                    }
                   }}
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
                   className="px-3 py-1 text-xs bg-purple-500 hover:bg-purple-600 text-white rounded-md transition-colors duration-200"
-                  onClick={() => {
-                    if (
-                      text.trim() === "" ||
-                      text === "New comment placeholder - click to edit"
-                    ) {
-                      setCurrentComment(
-                        currentComment.filter((c) => c.id !== id)
-                      );
-                      return;
-                    }
-                    setCurrentComment(
-                      currentComment.map((c) =>
-                        c.id === id ? { ...c, isEditing: false } : c
-                      )
-                    );
-                  }}
+                  onClick={handleUpdate}
                 >
-                  Post
+                  Đăng
                 </button>
               </div>
             </div>
@@ -137,43 +219,86 @@ const CommentItem = ({
             <>
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 transition-colors duration-200">
                 <div className="flex justify-between items-center mb-2">
-                  <p className="font-semibold text-gray-800">{user}</p>
-                  <div className="flex items-center space-x-2">
+                  <p className="font-semibold text-gray-800">
+                    {comment.user?.name || "Người dùng"}
+                  </p>
+                  <div className="flex items-center space-x-2 relative">
                     <span className="text-xs text-gray-500 flex items-center">
-                      <Clock size={12} className="mr-1 text-gray-400" /> {time}
+                      <Clock size={12} className="mr-1 text-gray-400" />{" "}
+                      {formattedTime}
                     </span>
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                      <MoreHorizontal size={16} />
-                    </button>
+                    {isOwner && (
+                      <div className="relative">
+                        <button
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                          onClick={toggleOptions}
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+
+                        {showOptions && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                            <ul className="py-1">
+                              <li>
+                                <button
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                  onClick={() => {
+                                    setIsEditing(true);
+                                    setShowOptions(false);
+                                  }}
+                                >
+                                  <Edit size={14} className="mr-2" />
+                                  Chỉnh sửa bình luận
+                                </button>
+                              </li>
+                              <li>
+                                <button
+                                  className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                                  onClick={() => {
+                                    setDeleteModalVisible(true);
+                                    setShowOptions(false);
+                                  }}
+                                >
+                                  <Trash2 size={14} className="mr-2" />
+                                  Xóa bình luận
+                                </button>
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <p className="text-gray-700 leading-relaxed">{text}</p>
+                <p className="text-gray-700 leading-relaxed">
+                  {comment.content}
+                </p>
               </div>
 
               <div className="flex items-center mt-3 space-x-6 px-2">
                 <button
                   className={`text-xs flex items-center space-x-1.5 ${
-                    liked ? "text-pink-500" : "text-gray-500"
+                    comment.liked ? "text-pink-500" : "text-gray-500"
                   } hover:text-pink-500 transition-colors duration-200 font-medium`}
-                  onClick={() => onLike(id)}
+                  onClick={() => onLike && onLike(comment._id)}
                 >
                   <Heart
                     size={16}
-                    fill={liked ? "currentColor" : "none"}
-                    className={`${liked ? "animate-heartBeat" : ""}`}
+                    fill={comment.liked ? "currentColor" : "none"}
+                    className={`${comment.liked ? "animate-heartBeat" : ""}`}
                   />
-                  <span>{likes > 0 ? likes : "Like"}</span>
+                  <span>{comment.likes > 0 ? comment.likes : "Like"}</span>
                 </button>
                 <button
                   className="text-xs text-gray-500 hover:text-purple-500 flex items-center space-x-1.5 transition-colors duration-200 font-medium"
-                  onClick={() => onReplyClick(id)}
+                  onClick={() => onReplyClick(comment._id)}
                 >
                   <MessageSquare size={16} />
-                  <span>Reply</span>
+                  <span>Trả lời</span>
                 </button>
                 <button className="text-xs text-gray-500 hover:text-blue-500 flex items-center space-x-1.5 transition-colors duration-200 font-medium">
                   <Share2 size={16} />
-                  <span>Share</span>
+                  <span>Chia sẻ</span>
                 </button>
               </div>
             </>
@@ -182,32 +307,48 @@ const CommentItem = ({
       </div>
 
       {/* Replies section */}
-      {replies.length > 0 && (
+      {comment.replies && comment.replies.length > 0 && (
         <div className="ml-14 mt-4 pl-6 space-y-4 relative">
-          <CommentDecoration replies={replies} />
+          <CommentDecoration replies={comment.replies} />
 
-          {replies.map((replyItem) => (
+          {comment.replies.map((replyItem) => (
             <CommentReply
-              key={replyItem.id}
+              key={replyItem._id}
               reply={replyItem}
-              parentId={id}
-              onLike={onLike}
+              parentId={comment._id}
+              onDelete={onDelete}
+              onUpdate={onUpdate}
               onReplyClick={onReplyClick}
-              allReplies={replies}
+              allReplies={comment.replies}
+              currentUser={currentUser}
             />
           ))}
         </div>
       )}
 
       {/* Reply input */}
-      {reply === id && (
+      {reply === comment._id && (
         <ReplyInput
-          parentId={id}
+          parentId={comment._id}
           replyToChild={replyToChild}
           onAddReply={onAddReply}
-          replies={replies}
+          replies={comment.replies || []}
         />
       )}
+
+      {/* Modal xác nhận xóa */}
+      <CustomModal
+        title="Xác nhận xóa"
+        isOpen={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleDelete}
+        danger={true}
+      >
+        <p>Bạn có chắc chắn muốn xóa bình luận này?</p>
+        <p className="text-gray-500 text-sm mt-2">
+          Hành động này không thể hoàn tác.
+        </p>
+      </CustomModal>
     </div>
   );
 };

@@ -1,16 +1,31 @@
-const express = require("express");
+import express from "express";
+import CommentController from "../../controllers/mongodb/comment.controller.js";
+import VerifyToken from "../../middlewares/middlewareController.js";
+
 const router = express.Router();
 
-// Create a new comment
-router.post("/");
+// Tạo comment mới
+router.post(
+  "/",
+  VerifyToken.VerifyAccessToken,
+  CommentController.createComment
+);
 
-// Get all comments for a specific post
-router.get("/post/:postId");
+// Lấy tất cả comments cho một bài viết
+router.get("/post/:postId", CommentController.getCommentsByPost);
 
-// Update a comment
-router.put("/:id");
+// Cập nhật comment
+router.put(
+  "/:id",
+  VerifyToken.VerifyAccessToken,
+  CommentController.updateComment
+);
 
-// Delete a comment
-router.delete("/:id");
+// Xóa comment
+router.delete(
+  "/:id",
+  VerifyToken.VerifyAccessToken,
+  CommentController.deleteComment
+);
 
-module.exports = router;
+export default router;

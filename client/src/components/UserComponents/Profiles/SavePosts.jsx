@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SAVE_POST from "../../../services/savePostService";
 import {
@@ -6,6 +6,7 @@ import {
   setLoading,
   setError,
   removeSavedPost,
+  clearError,
 } from "../../../slices/SavePostSlice";
 import Post from "../Posts/Post";
 import { Bookmark, Loader2, Trash2, X, Filter, Grid, List } from "lucide-react";
@@ -22,31 +23,58 @@ const SavePosts = () => {
   const [viewMode, setViewMode] = useState("list");
   const [filterType, setFilterType] = useState("all");
 
-  const processPostData = (post) => {
-    if (!post || !post._id) {
-      console.error("Invalid post data:", post);
+  const processPostData = useCallback((post) => {
+    if (!post) {
+      console.error("Post data is null or undefined");
       return null;
     }
 
+    if (!post._id) {
+      console.error("Invalid post data (missing _id):", post);
+      return null;
+    }
+
+    // Ensure user data is valid
+    let userData = post.user;
+    if (!userData || typeof userData !== "object") {
+      userData = { name: "Người dùng", avatar: null };
+    } else if (!userData.name) {
+      userData = { ...userData, name: "Người dùng" };
+    }
+
+    // Ensure media array is valid
+    const mediaArray = Array.isArray(post.media) ? post.media : [];
+
     return {
       ...post,
-      user: post.user || { name: "Người dùng", avatar: null },
-      media: post.media || [],
+      user: userData,
+      media: mediaArray,
     };
-  };
+  }, []);
 
   useEffect(() => {
     const fetchSavedPosts = async () => {
       try {
+        dispatch(clearError());
         dispatch(setLoading(true));
 
         const response = await SAVE_POST.GET_SAVED_POSTS(1, 100);
-        console.log("API Response:", response.data);
 
-        if (
-          response.data?.code === 1 &&
-          Array.isArray(response.data?.savedPosts)
-        ) {
+        if (!response || !response.data) {
+          dispatch(setError("Không thể kết nối đến máy chủ"));
+          return;
+        }
+
+        if (response.data?.code === 1) {
+          if (!Array.isArray(response.data?.savedPosts)) {
+            console.error(
+              "savedPosts is not an array:",
+              response.data?.savedPosts
+            );
+            dispatch(setSavedPosts([]));
+            return;
+          }
+
           const postsArray = response.data.savedPosts;
           console.log("Posts from API:", postsArray.length);
 
@@ -69,7 +97,7 @@ const SavePosts = () => {
     };
 
     fetchSavedPosts();
-  }, [dispatch]);
+  }, [dispatch, processPostData]);
 
   const handleUnsavePost = async (postId) => {
     try {

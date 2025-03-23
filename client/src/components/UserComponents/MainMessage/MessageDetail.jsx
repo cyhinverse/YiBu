@@ -11,6 +11,7 @@ import {
   Info,
 } from "lucide-react";
 import { socket } from "../../../socket";
+import { messageManager } from "../../../socket/messageManager";
 import { toast } from "react-hot-toast";
 import EmojiPicker from "emoji-picker-react";
 
@@ -70,18 +71,71 @@ const useUniqueMessages = () => {
 
 const MessageDetail = () => {
   const { userId } = useParams(); // ID của người nhận
-  const { user } = useSelector((state) => state.auth); // Người dùng hiện tại
+  const auth = useSelector((state) => state.auth); // Người dùng hiện tại
   const navigate = useNavigate();
   const location = useLocation();
 
   // Console log cho debugging
   console.log("MessageDetail rendered with userId:", userId);
-  console.log("Current authenticated user:", user);
+  console.log("Current authenticated user:", auth);
   console.log("Location state:", location.state);
 
   // Nhận thông tin người dùng từ state navigation nếu có
   const selectedUserFromNav = location.state?.selectedUser;
   console.log("selectedUserFromNav:", selectedUserFromNav);
+
+  // Đảm bảo cấu trúc user nhất quán
+  const getUserData = () => {
+    // Thử lấy từ state navigation trước
+    const currentUserFromNav = location.state?.currentUser;
+    if (currentUserFromNav && currentUserFromNav._id) {
+      console.log("Using current user data from navigation state");
+      return currentUserFromNav;
+    }
+
+    // Thử lấy từ Redux
+    if (auth && (auth.user?._id || auth._id)) {
+      console.log("Using current user data from Redux store");
+      return auth.user || auth;
+    }
+
+    // Thử lấy từ localStorage
+    try {
+      const storedUserStr = localStorage.getItem("user");
+      if (storedUserStr) {
+        const storedUser = JSON.parse(storedUserStr);
+        console.log(
+          "Using current user data from localStorage:",
+          storedUser._id
+        );
+        return storedUser;
+      }
+    } catch (error) {
+      console.error("Error parsing user data from localStorage:", error);
+    }
+
+    // Thử lấy từ accessToken
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        console.log("Using accessToken to create fallback user object");
+        // Tạo đối tượng người dùng dự phòng từ token
+        // Không có _id, nhưng ít nhất chúng ta có thể tiếp tục sử dụng token
+        return {
+          _id: "temp_" + Math.random().toString(36).substring(2, 15),
+          token: token,
+          isFallbackUser: true,
+        };
+      }
+    } catch (error) {
+      console.error("Error creating fallback user:", error);
+    }
+
+    console.warn("No valid user data found!");
+    return null;
+  };
+
+  const user = getUserData();
 
   // Sử dụng custom hook thay cho useState trực tiếp
   const { messages, addMessages, setMessages } = useUniqueMessages();
@@ -107,6 +161,139 @@ const MessageDetail = () => {
   // Scroll to bottom khi có tin nhắn mới
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Định nghĩa các callback functions trước khi sử dụng trong useEffect
+  // Xử lý khi nhận tin nhắn mới
+  const onNewMessage = useCallback(
+    (data) => {
+      if (!data || !data.message) {
+        console.log("Received empty message data");
+        return;
+      }
+
+      const message = data.message;
+      const messageId = message._id;
+
+      // Kiểm tra nhanh trong ref trước
+      if (messageId && processedMessageIdsRef.current.has(messageId)) {
+        console.log(`Socket: Message ${messageId} already processed, skipping`);
+        return;
+      }
+
+      // Thêm bảo vệ khi không có user
+      if (!user || !user._id) {
+        console.log("Cannot process socket message - no user data");
+        return;
+      }
+
+      // Kiểm tra xem tin nhắn thuộc về cuộc trò chuyện này không
+      const isSenderCurrentUser =
+        message.sender._id === user._id || message.sender === user._id;
+      const isReceiverCurrentUser =
+        message.receiver._id === user._id || message.receiver === user._id;
+      const isSenderOtherUser =
+        message.sender._id === userId || message.sender === userId;
+      const isReceiverOtherUser =
+        message.receiver._id === userId || message.receiver === userId;
+
+      if (
+        (isSenderCurrentUser && isReceiverOtherUser) ||
+        (isReceiverCurrentUser && isSenderOtherUser)
+      ) {
+        // Kiểm tra trùng lặp và thêm tin nhắn mới
+        if (messageId) {
+          processedMessageIdsRef.current.add(messageId);
+        }
+
+        console.log("Adding new message from socket to state:", messageId);
+        addMessages(message);
+
+        // Đánh dấu là đã đọc nếu chúng ta là người nhận
+        if (isReceiverCurrentUser) {
+          markMessageAsRead(message._id);
+        }
+
+        // Cuộn xuống tin nhắn mới
+        setTimeout(scrollToBottom, 100);
+      }
+    },
+    [userId, user, addMessages]
+  );
+
+  // Xử lý khi người dùng đang nhập
+  const onUserTyping = useCallback(
+    (data) => {
+      if (data.senderId === userId) {
+        setIsTyping(true);
+      }
+    },
+    [userId]
+  );
+
+  // Xử lý khi người dùng dừng nhập
+  const onUserStopTyping = useCallback(
+    (data) => {
+      if (data.senderId === userId) {
+        setIsTyping(false);
+      }
+    },
+    [userId]
+  );
+
+  // Xử lý khi tin nhắn được đánh dấu đã đọc
+  const onMessageRead = useCallback(
+    (data) => {
+      // Cập nhật trạng thái đã đọc cho tin nhắn
+      if (data && data.messageIds && data.messageIds.length > 0) {
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            data.messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg
+          )
+        );
+      }
+    },
+    [setMessages]
+  );
+
+  // Mark messages as read
+  const markMessageAsRead = async (messageId) => {
+    try {
+      if (!messageId || !userId || !user) return;
+
+      // Gửi sự kiện thông qua socket ngay
+      messageManager.markAsRead({
+        messageIds: [messageId],
+        senderId: userId,
+        receiverId: user._id,
+      });
+
+      // Gửi API request
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/messages/read/${messageId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Error marking message as read:", response.statusText);
+        return;
+      }
+
+      // Cập nhật UI
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg._id === messageId ? { ...msg, isRead: true } : msg
+        )
+      );
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+    }
   };
 
   // Fetch thông tin người nhận
@@ -190,37 +377,118 @@ const MessageDetail = () => {
     fetchUserInfo();
   }, [userId, selectedUserFromNav]);
 
-  // Fetch tin nhắn giữa hai người dùng
+  // Thêm đoạn useEffect để kiểm tra trạng thái đăng nhập và dữ liệu người dùng khi trang được làm mới
+  useEffect(() => {
+    const checkAuthAndData = async () => {
+      // Kiểm tra xem có token không để xác định đã đăng nhập hay chưa
+      const token = localStorage.getItem("accessToken");
+
+      if (!token) {
+        console.log("No access token found, redirecting to login");
+        toast.error("Vui lòng đăng nhập để tiếp tục");
+        navigate("/login");
+        return;
+      }
+
+      if (!user || !user._id) {
+        console.log(
+          "User data missing or invalid in Redux store, trying to reload from storage"
+        );
+        // Kiểm tra nếu có dữ liệu người dùng trong localStorage
+        const storedUser = localStorage.getItem("user");
+
+        if (storedUser) {
+          try {
+            // Parse và sử dụng dữ liệu người dùng từ localStorage
+            const parsedUser = JSON.parse(storedUser);
+            console.log("Found user data in local storage:", parsedUser._id);
+
+            // Tùy chọn: có thể dispatch một hành động để cập nhật Redux store
+            if (!global.reduxUserRestored) {
+              console.log("Restoring user data to auth state");
+              global.reduxUserRestored = true;
+              // Reload trang để cập nhật lại state từ localStorage
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error parsing stored user data:", error);
+            toast.error("Có lỗi xảy ra, vui lòng đăng nhập lại");
+            navigate("/login");
+          }
+        } else {
+          // Không có dữ liệu người dùng, chuyển hướng đến trang đăng nhập
+          console.log("No user data in storage, redirecting to login");
+          toast.error("Phiên đăng nhập đã hết hạn");
+          navigate("/login");
+        }
+      } else {
+        console.log("User data verified in Redux store:", user._id);
+      }
+    };
+
+    checkAuthAndData();
+  }, [user, navigate]);
+
+  // Sửa đổi useEffect fetchMessages để thêm logic retry và lưu cache khi cần thiết
   useEffect(() => {
     const fetchMessages = async () => {
-      const currentUserId = user?.user?._id; // Lấy ID từ cấu trúc đúng user.user._id
-
-      if (!userId || !currentUserId) {
-        console.log(
-          "Skipping fetchMessages - missing userId or currentUserId",
-          {
-            userId,
-            currentUserId,
-          }
-        );
+      if (!userId) {
+        console.log("Skipping fetchMessages - no userId available");
         return;
+      }
+
+      if (!user) {
+        console.log("No user data, creating token-only request");
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          console.log("No token available, cannot fetch messages");
+          setLoadingError("Không thể tải tin nhắn. Vui lòng đăng nhập lại.");
+          setLoading(false);
+          return;
+        }
       }
 
       try {
         console.log(
-          "fetchMessages - Starting to fetch messages between",
-          userId,
-          "and",
-          currentUserId
+          "fetchMessages - Starting to fetch messages for user:",
+          userId
         );
         setLoading(true);
         setLoadingError(null); // Reset error state
 
+        // Kiểm tra cache trước
+        const cacheKey = `messages_${userId}`;
+        const cachedMessages = sessionStorage.getItem(cacheKey);
+
+        if (cachedMessages) {
+          try {
+            const parsedMessages = JSON.parse(cachedMessages);
+            console.log(
+              `Restoring ${parsedMessages.length} messages from cache`
+            );
+            setMessages(parsedMessages);
+
+            // Vẫn tải từ API ở nền để lấy dữ liệu mới nhất
+            setTimeout(() => fetchFromApi(false), 100);
+            return;
+          } catch (error) {
+            console.error("Error parsing cached messages:", error);
+            // Tiếp tục tải từ API nếu cache bị lỗi
+          }
+        }
+
+        fetchFromApi(true);
+      } catch (error) {
+        console.error("Error in fetchMessages:", error);
+        handleFetchError(error);
+      }
+    };
+
+    // Tách riêng phần tải từ API để dễ tái sử dụng
+    const fetchFromApi = async (updateLoadingState = true) => {
+      try {
         if (!import.meta.env.VITE_API_BASE_URL) {
-          console.error("API URL not configured. Please check .env file");
-          setLoadingError("API configuration missing. Please contact admin.");
-          setLoading(false);
-          return;
+          throw new Error("API URL not configured. Please check .env file");
         }
 
         const url = `${
@@ -245,34 +513,35 @@ const MessageDetail = () => {
         }
 
         const data = await response.json();
+        console.log("API response for messages:", data);
 
         if (data.code === 1) {
-          const messageCount = data.data ? data.data.length : 0;
+          const messageData = data.data || [];
+          const messageCount = messageData.length;
           console.log(`Successfully loaded ${messageCount} messages`);
 
-          // Nếu đã có tin nhắn trong state, tránh trùng lặp khi tải thêm
-          if (messages.length > 0) {
-            // Lọc để chỉ thêm tin nhắn chưa có trong state
-            const existingMessageIds = new Set(messages.map((msg) => msg._id));
-            const newMessages = data.data.filter(
-              (msg) => !existingMessageIds.has(msg._id)
-            );
+          // Lưu vào cache
+          if (messageCount > 0) {
+            const cacheKey = `messages_${userId}`;
+            sessionStorage.setItem(cacheKey, JSON.stringify(messageData));
+          }
 
-            console.log(
-              `Found ${newMessages.length} new messages to add to existing ${messages.length}`
-            );
+          // Cập nhật state nếu data khác với cache hoặc state hiện tại
+          const currentMsgIds = messages
+            .map((m) => m._id)
+            .sort()
+            .join(",");
+          const newMsgIds = messageData
+            .map((m) => m._id)
+            .sort()
+            .join(",");
 
-            // Chỉ cập nhật nếu có tin nhắn mới
-            if (newMessages.length > 0) {
-              setMessages((prev) => [...prev, ...newMessages]);
-            }
-          } else {
-            // Nếu chưa có tin nhắn nào, đặt tất cả
-            setMessages(data.data || []);
+          if (currentMsgIds !== newMsgIds) {
+            setMessages(messageData);
           }
 
           // Nếu có tin nhắn, scroll xuống dưới
-          if (data.data && data.data.length > 0) {
+          if (messageData.length > 0 && updateLoadingState) {
             setTimeout(scrollToBottom, 100);
           }
         } else {
@@ -282,23 +551,53 @@ const MessageDetail = () => {
             "message:",
             data.message
           );
-          setLoadingError(data.message || "Failed to load messages");
+          if (updateLoadingState) {
+            setLoadingError(data.message || "Failed to load messages");
+          }
         }
       } catch (error) {
-        console.error("Error fetching messages:", error);
-        setLoadingError(error.message || "Failed to load messages");
-
-        if (process.env.NODE_ENV !== "production") {
-          console.log("In development mode - showing empty messages UI");
-          setMessages([]);
+        console.error("Error fetching messages from API:", error);
+        if (updateLoadingState) {
+          handleFetchError(error);
         }
       } finally {
-        setLoading(false);
+        if (updateLoadingState) {
+          setLoading(false);
+        }
       }
     };
 
+    const handleFetchError = (error) => {
+      setLoadingError(error.message || "Failed to load messages");
+
+      if (process.env.NODE_ENV !== "production") {
+        console.log("In development mode - showing empty messages UI");
+        setMessages([]);
+      }
+
+      setLoading(false);
+    };
+
     fetchMessages();
-  }, [userId, user?.user?._id]);
+
+    // Thiết lập interval để làm mới tin nhắn
+    const refreshInterval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        console.log("Auto-refreshing messages");
+        fetchFromApi(false);
+      }
+    }, 30000); // Làm mới mỗi 30 giây
+
+    return () => {
+      clearInterval(refreshInterval);
+
+      // Lưu trạng thái tin nhắn hiện tại vào cache trước khi unmount
+      if (messages.length > 0) {
+        const cacheKey = `messages_${userId}`;
+        sessionStorage.setItem(cacheKey, JSON.stringify(messages));
+      }
+    };
+  }, [userId]);
 
   // Cập nhật danh sách ID tin nhắn đã xử lý
   useEffect(() => {
@@ -313,170 +612,104 @@ const MessageDetail = () => {
     }
   }, [messages]);
 
-  // Cập nhật socket cho messages
+  // Đăng ký các hàm xử lý socket
   useEffect(() => {
-    const currentUserId = user?.user?._id;
-    if (!currentUserId || !userId) return;
-
-    // Tạo ID phòng chat duy nhất
-    const room = [currentUserId, userId].sort().join("-");
-    console.log(`Joining chat room: ${room}`);
-
-    // Lắng nghe sự kiện socket
-    const onNewMessage = (data) => {
-      if (data && data.message) {
-        const message = data.message;
-        const messageId = message._id;
-
-        // Kiểm tra nhanh trong ref trước
-        if (messageId && processedMessageIdsRef.current.has(messageId)) {
-          console.log(
-            `Socket: Message ${messageId} already processed, skipping`
-          );
-          return;
-        }
-
-        // Check if message belongs to this conversation
-        if (
-          (message.sender._id === userId &&
-            message.receiver._id === currentUserId) ||
-          (message.sender._id === currentUserId &&
-            message.receiver._id === userId) ||
-          (message.sender === userId && message.receiver === currentUserId) ||
-          (message.sender === currentUserId && message.receiver === userId)
-        ) {
-          // Kiểm tra xem tin nhắn đã tồn tại trong state chưa
-          setMessages((prev) => {
-            // Kiểm tra trùng lặp tin nhắn theo ID
-            const isDuplicate =
-              messageId && prev.some((msg) => msg._id === messageId);
-            if (isDuplicate) {
-              console.log("Skipping duplicate message:", messageId);
-              return prev; // Không thêm tin nhắn trùng lặp
-            }
-
-            // Thêm ID vào ref để theo dõi
-            if (messageId) {
-              processedMessageIdsRef.current.add(messageId);
-            }
-
-            console.log("Adding new message to state:", messageId);
-            return [...prev, message]; // Chỉ thêm tin nhắn mới
-          });
-
-          // Mark as read if we're the receiver
-          if (
-            message.receiver === currentUserId ||
-            message.receiver._id === currentUserId
-          ) {
-            markMessageAsRead(message._id);
-          }
-
-          // Scroll to new message
-          setTimeout(scrollToBottom, 100);
-        }
-      }
-    };
-
-    const onUserTyping = (data) => {
-      if (data.senderId === userId) {
-        setIsTyping(true);
-      }
-    };
-
-    const onUserStopTyping = (data) => {
-      if (data.senderId === userId) {
-        setIsTyping(false);
-      }
-    };
-
-    const onMessageRead = (data) => {
-      // Update read status for messages
-      if (data && data.messageIds) {
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            data.messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg
-          )
-        );
-      }
-    };
-
-    // Connect socket events
-    if (socket) {
-      socket.emit("join_room", room);
-      socket.on("new_message", onNewMessage);
-      socket.on("user_typing", onUserTyping);
-      socket.on("user_stop_typing", onUserStopTyping);
-      socket.on("message_read", onMessageRead);
+    if (!userId) {
+      console.log("No userId available for socket setup");
+      return;
     }
 
-    // Cleanup
-    return () => {
-      if (socket) {
-        socket.off("new_message", onNewMessage);
-        socket.off("user_typing", onUserTyping);
-        socket.off("user_stop_typing", onUserStopTyping);
-        socket.off("message_read", onMessageRead);
-        socket.emit("leave_room", room);
-      }
-    };
-  }, [userId, user?.user?._id]);
-
-  // Mark messages as read
-  const markMessageAsRead = async (messageId) => {
-    if (!messageId) return;
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/messages/read/${messageId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
+    // Nếu không có user, không thiết lập socket
+    if (!user || !user._id) {
+      console.log(
+        "No valid user data for socket setup, skipping socket event listeners"
       );
-
-      if (!response.ok) {
-        console.error("Failed to mark message as read");
-      }
-    } catch (error) {
-      console.error("Error marking message as read:", error);
-    }
-  };
-
-  // Handle typing events
-  const handleInputChange = (e) => {
-    setMessageText(e.target.value);
-    const currentUserId = user?.user?._id;
-
-    // Emit typing event if input is not empty
-    if (socket && !isTyping && e.target.value.trim() && currentUserId) {
-      socket.emit("typing", {
-        senderId: currentUserId,
-        receiverId: userId,
-      });
+      return;
     }
 
-    // Clear previous timeout
+    console.log("Setting up socket event listeners for user:", userId);
+
+    // Tạo chat room ID
+    const chatRoomId = [user._id, userId].sort().join("-");
+    console.log("Chat room ID:", chatRoomId);
+
+    // Tham gia phòng chat
+    messageManager.joinRoom(chatRoomId);
+
+    // Tham gia phòng của người dùng - sử dụng ID người dùng làm room ID
+    messageManager.joinRoom(user._id);
+
+    // Lắng nghe tin nhắn mới
+    const unsubscribeNewMessage = messageManager.onNewMessage(onNewMessage);
+
+    // Lắng nghe trạng thái đang nhập
+    const unsubscribeTyping = messageManager.onTyping(onUserTyping);
+
+    // Lắng nghe dừng nhập
+    const unsubscribeStopTyping = messageManager.onStopTyping(onUserStopTyping);
+
+    // Lắng nghe đánh dấu đã đọc
+    const unsubscribeMessageRead = messageManager.onMessageRead(onMessageRead);
+
+    // Clean up
+    return () => {
+      messageManager.leaveRoom(chatRoomId);
+      unsubscribeNewMessage();
+      unsubscribeTyping();
+      unsubscribeStopTyping();
+      unsubscribeMessageRead();
+    };
+  }, [
+    userId,
+    user,
+    onNewMessage,
+    onUserTyping,
+    onUserStopTyping,
+    onMessageRead,
+  ]);
+
+  // Xử lý đăng ký đang nhập
+  useEffect(() => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set stop typing timeout
-    typingTimeoutRef.current = setTimeout(() => {
-      if (
-        socket &&
-        (!e.target.value.trim() || !e.target.value) &&
-        currentUserId
-      ) {
-        socket.emit("stop_typing", {
-          senderId: currentUserId,
+    if (messageText && userId && user) {
+      // Gửi sự kiện đang nhập
+      messageManager.sendTyping({
+        senderId: user._id,
+        receiverId: userId,
+        isTyping: true,
+      });
+
+      // Thiết lập timeout để gửi sự kiện dừng nhập sau 3 giây
+      typingTimeoutRef.current = setTimeout(() => {
+        messageManager.sendStopTyping({
+          senderId: user._id,
           receiverId: userId,
+          isTyping: false,
         });
+      }, 3000);
+    } else if (userId && user) {
+      // Nếu không nhập, gửi sự kiện dừng nhập
+      messageManager.sendStopTyping({
+        senderId: user._id,
+        receiverId: userId,
+        isTyping: false,
+      });
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
-    }, 1000);
+    };
+  }, [messageText, userId, user]);
+
+  // Xử lý thay đổi nội dung input
+  const handleInputChange = (e) => {
+    setMessageText(e.target.value);
+    // Các sự kiện typing được xử lý tự động trong useEffect ở trên
   };
 
   // Scroll to bottom when messages load or update
@@ -486,34 +719,50 @@ const MessageDetail = () => {
     }
   }, [messages, loading]);
 
-  // Send message function
+  // Gửi tin nhắn
   const sendMessage = async () => {
-    const currentUserId = user?.user?._id;
-    if (
-      (!messageText.trim() && !imageFile) ||
-      !userId ||
-      !currentUserId ||
-      sendingMessage
-    )
+    if (!messageText.trim() && !imageFile) {
       return;
+    }
+
+    // Kiểm tra xem có userId hay không
+    if (!userId) {
+      console.error("No userId available, cannot send message");
+      toast.error("Không thể gửi tin nhắn. Thiếu thông tin người nhận.");
+      return;
+    }
+
+    // Kiểm tra xem có token hay không
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      console.error("No token available, cannot send message");
+      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      navigate("/login");
+      return;
+    }
 
     try {
       setSendingMessage(true);
 
-      let media = null;
+      // Tạo message data
+      const messageData = {
+        receiverId: userId,
+        // Nếu không có user._id, sử dụng null và để server xử lý
+        senderId: user?._id || null,
+        content: messageText.trim(),
+      };
 
-      // If there's an image to upload
+      // Xử lý tải lên hình ảnh (nếu có)
       if (imageFile) {
         const formData = new FormData();
-        formData.append("image", imageFile);
+        formData.append("media", imageFile);
 
-        // Upload image
         const uploadResponse = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/upload`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/messages/upload`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              Authorization: `Bearer ${token}`,
             },
             body: formData,
           }
@@ -524,73 +773,71 @@ const MessageDetail = () => {
         }
 
         const uploadData = await uploadResponse.json();
-        media = uploadData.imageUrl;
+        if (uploadData.code === 1 && uploadData.data.mediaUrl) {
+          messageData.media = uploadData.data.mediaUrl;
+        }
       }
 
-      // Send message
+      // Xóa nội dung và preview sau khi submit
+      setMessageText("");
+      setImageFile(null);
+      setPreviewImage(null);
+      setShowEmojiPicker(false);
+
+      // Reset typing status nếu có user
+      if (user && user._id) {
+        messageManager.sendStopTyping({
+          senderId: user._id,
+          receiverId: userId,
+          isTyping: false,
+        });
+      }
+
+      // Gửi tin nhắn qua API
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/messages/send`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            receiverId: userId,
-            content: messageText.trim(),
-            media,
-          }),
+          body: JSON.stringify(messageData),
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
-      }
 
       const data = await response.json();
 
       if (data.code === 1) {
-        // Thêm tin nhắn vào state (chỉ khi chưa được xử lý qua socket)
-        // Đánh dấu tin nhắn này đã được xử lý để tránh xử lý lại từ socket
-        const messageId = data.data._id;
-        if (messageId) {
-          processedMessageIdsRef.current.add(messageId);
-        }
+        // Thêm tin nhắn vào UI
+        const newMessage = data.data;
+        addMessages(newMessage);
 
-        // Kiểm tra xem tin nhắn đã tồn tại trong state chưa trước khi thêm
-        setMessages((prev) => {
-          const isDuplicate =
-            messageId && prev.some((msg) => msg._id === messageId);
-          if (isDuplicate) {
-            console.log(
-              "Message already exists, not adding duplicate:",
-              messageId
-            );
-            return prev;
-          }
-          console.log("Adding new sent message to state:", messageId);
-          return [...prev, data.data];
-        });
-
-        setMessageText("");
-        setImageFile(null);
-        setPreviewImage(null);
-        scrollToBottom();
-
-        // Stop typing signal
-        if (socket) {
-          socket.emit("stop_typing", {
-            senderId: currentUserId,
+        // Gửi thông báo qua socket nếu có user
+        if (user && user._id) {
+          messageManager.sendMessage({
+            message: newMessage,
             receiverId: userId,
+            senderId: user._id,
           });
         }
+
+        // Đảm bảo scroll xuống dưới sau khi thêm tin nhắn
+        setTimeout(scrollToBottom, 100);
+
+        // Làm mới trang sau 2 giây nếu dùng user dự phòng
+        if (user?.isFallbackUser) {
+          toast.success(
+            "Tin nhắn đã gửi. Đang làm mới trang để hiển thị chính xác."
+          );
+          setTimeout(() => window.location.reload(), 2000);
+        }
       } else {
-        toast.error(data.message || "Failed to send message");
+        toast.error(data.message || "Could not send message");
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(error.message || "Failed to send message");
+      toast.error("Error sending message. Please try again.");
     } finally {
       setSendingMessage(false);
     }
@@ -653,6 +900,13 @@ const MessageDetail = () => {
   // Check if we should show the date separator
   const shouldShowDate = (message, index) => {
     if (index === 0) return true;
+    if (
+      !message ||
+      !message.createdAt ||
+      !messages[index - 1] ||
+      !messages[index - 1].createdAt
+    )
+      return false;
 
     const currentDate = new Date(message.createdAt).toLocaleDateString();
     const prevDate = new Date(
@@ -755,8 +1009,7 @@ const MessageDetail = () => {
     // Tải lại tin nhắn sau 300ms để tránh quá nhiều request
     setTimeout(() => {
       const fetchMessagesRetry = async () => {
-        const currentUserId = user?.user?._id;
-        if (!userId || !currentUserId) return;
+        if (!userId || !user._id) return;
 
         try {
           const url = `${
@@ -866,6 +1119,54 @@ const MessageDetail = () => {
     }
   }, [messages]);
 
+  // Kiểm tra xem có thông tin trong sessionStorage không
+  useEffect(() => {
+    if (!selectedUserFromNav && userId) {
+      try {
+        // Nếu không có thông tin từ state, thử lấy từ sessionStorage
+        const storedUserData = sessionStorage.getItem(`selectedUser_${userId}`);
+        if (storedUserData) {
+          console.log("Restoring selected user data from sessionStorage");
+          const parsedUserData = JSON.parse(storedUserData);
+          setReceiverUser(parsedUserData);
+        }
+      } catch (error) {
+        console.error("Error retrieving user data from sessionStorage:", error);
+      }
+    }
+  }, [selectedUserFromNav, userId]);
+
+  // Kiểm tra xem message có dữ liệu sender không
+  const isSenderCurrentUser = (message) => {
+    // Nếu không có người dùng hiện tại, không thể là người gửi
+    if (!user || !user._id) return false;
+
+    // Trường hợp sender là đối tượng
+    if (message.sender && message.sender._id) {
+      return message.sender._id === user._id;
+    }
+
+    // Trường hợp sender là chuỗi ID
+    if (typeof message.sender === "string") {
+      return message.sender === user._id;
+    }
+
+    return false;
+  };
+
+  // Kiểm tra xem message có hiển thị avatar không
+  const shouldShowAvatar = (message, index, messages) => {
+    // Nếu tin nhắn đầu tiên, luôn hiển thị avatar
+    if (index === 0) return true;
+
+    const currentIsSentByCurrentUser = isSenderCurrentUser(message);
+    const prevIsSentByCurrentUser = isSenderCurrentUser(messages[index - 1]);
+
+    // Chỉ hiển thị nếu tin nhắn hiện tại không phải do người dùng hiện tại gửi
+    // và tin nhắn trước đó là do người dùng hiện tại gửi
+    return !currentIsSentByCurrentUser && prevIsSentByCurrentUser;
+  };
+
   return (
     <div className="h-[calc(100vh-160px)] flex flex-col bg-white rounded-tr-2xl rounded-br-2xl overflow-hidden border-t border-r border-b border-gray-300">
       {/* Header - simple user info */}
@@ -918,7 +1219,9 @@ const MessageDetail = () => {
         ref={messageContainerRef}
         className="flex-1 p-5 overflow-y-auto scrollbar-hide bg-white"
       >
-        {messages.length === 0 ? (
+        {loading ? (
+          renderMessageLoadingState()
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center animate-fadeIn">
             <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
               <Send size={22} className="text-indigo-600" />
@@ -941,32 +1244,38 @@ const MessageDetail = () => {
           </div>
         ) : (
           <div className="space-y-3">
+            {/* Thông báo debugging chỉ hiển thị trong development */}
+            {process.env.NODE_ENV !== "production" && (
+              <div className="text-xs bg-yellow-50 p-2 rounded text-yellow-700 mb-2">
+                Debug: Hiển thị {messages.length} tin nhắn
+              </div>
+            )}
+
             {/* Messages content */}
             {messages.map((message, index) => {
-              // Identify message sender
-              const isSentByCurrentUser =
-                message.sender._id === user?.user?._id ||
-                message.sender === user?.user?._id;
+              if (!message || !message._id) return null;
 
-              // Show avatar only for first message in a sequence from same user
-              const showAvatar =
-                !isSentByCurrentUser &&
-                (index === 0 ||
-                  messages[index - 1].sender._id === user?.user?._id ||
-                  messages[index - 1].sender === user?.user?._id);
+              // Kiểm tra xem message có dữ liệu sender không
+              const hasSender =
+                message.sender &&
+                (message.sender._id || typeof message.sender === "string");
+              if (!hasSender) return null;
+
+              // Sử dụng helper function để xác định người gửi
+              const isSentByCurrentUser = isSenderCurrentUser(message);
+
+              // Sử dụng helper function để xác định hiển thị avatar
+              const showAvatar = shouldShowAvatar(message, index, messages);
 
               // Group consecutive messages from same sender
               const isConsecutiveMessage =
                 index > 0 &&
-                ((isSentByCurrentUser &&
-                  (messages[index - 1].sender._id === user?.user?._id ||
-                    messages[index - 1].sender === user?.user?._id)) ||
-                  (!isSentByCurrentUser &&
-                    messages[index - 1].sender._id !== user?.user?._id &&
-                    messages[index - 1].sender !== user?.user?._id));
+                messages[index - 1] &&
+                isSentByCurrentUser ===
+                  isSenderCurrentUser(messages[index - 1]);
 
               return (
-                <React.Fragment key={message._id || index}>
+                <React.Fragment key={message._id}>
                   {/* Date separator */}
                   {shouldShowDate(message, index) && (
                     <div className="flex justify-center my-4">

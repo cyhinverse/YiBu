@@ -10,6 +10,8 @@ import routerProfile from "./routes/mongodb/profile.router.js";
 import routerMessage from "./routes/mongodb/message.router.js";
 import routerSavePost from "./routes/mongodb/savepost.router.js";
 import routerNotification from "./routes/mongodb/notification.router.js";
+import routerComment from "./routes/mongodb/comment.router.js";
+import routerUserSettings from "./routes/mongodb/userSettings.router.js";
 import { initSocket } from "./socket.js";
 import http from "http";
 
@@ -47,6 +49,8 @@ app.use("/profile", routerProfile);
 app.use("/api/messages", routerMessage);
 app.use("/api/savepost", routerSavePost);
 app.use("/api/notifications", routerNotification);
+app.use("/api/comments", routerComment);
+app.use("/api/settings", routerUserSettings);
 
 CheckConnectionToMongoDB()
   .then(() => {

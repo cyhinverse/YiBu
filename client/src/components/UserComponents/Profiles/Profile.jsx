@@ -42,16 +42,15 @@ const Profile = () => {
   console.log("userFromRedux", userFromRedux);
   const user = userData || userFromRedux;
 
-  // Cập nhật logic kiểm tra isOwnProfile để hỗ trợ cả id và _id
   const currentUserId = currentUser?.user?._id || currentUser?.user?.id;
   const profileUserId = userId;
   const isOwnProfile = currentUserId === profileUserId;
 
-  console.log("Profile - currentUser:", currentUser);
-  console.log("Profile - currentUserId:", currentUserId);
-  console.log("Profile - profileUserId (userId):", profileUserId);
-  console.log("Profile - userData:", userData);
-  console.log("Profile - isOwnProfile:", isOwnProfile);
+  // console.log("Profile - currentUser:", currentUser);
+  // console.log("Profile - currentUserId:", currentUserId);
+  // console.log("Profile - profileUserId (userId):", profileUserId);
+  // console.log("Profile - userData:", userData);
+  // console.log("Profile - isOwnProfile:", isOwnProfile);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -119,13 +118,11 @@ const Profile = () => {
         toast.success("Đã theo dõi thành công");
       }
 
-      // Cập nhật lại dữ liệu profile của người dùng hiện tại
       const currentUserRes = await User.GET_USER_BY_ID(currentUser.user._id);
       if (currentUserRes?.data) {
         dispatch(getUserById(currentUserRes.data));
       }
 
-      // Cập nhật lại dữ liệu profile của người dùng đang xem
       const targetUserRes = await User.GET_USER_BY_ID(userId);
       if (targetUserRes?.data) {
         setUserData(targetUserRes.data);
@@ -165,7 +162,6 @@ const Profile = () => {
       return;
     }
 
-    // Đảm bảo ID là string để tránh lỗi so sánh
     const selectedUserData = {
       _id: targetUserId.toString(),
       email: user.email || `user_${targetUserId}@example.com`,
@@ -176,19 +172,14 @@ const Profile = () => {
 
     console.log("Selected user data being passed:", selectedUserData);
 
-    // Đường dẫn chính xác theo định dạng trong App.jsx
-    // Kiểm tra xem URL nên là /messages hay /message
     const messagePath = `/messages/${targetUserId}`;
     console.log("Navigation path:", messagePath);
 
-    // Điều hướng đến trang tin nhắn với người dùng được chọn
     navigate(messagePath, {
       state: {
         selectedUser: selectedUserData,
       },
     });
-
-    console.log("=== End handleMessageUser ===");
   };
 
   if (isLoading) {

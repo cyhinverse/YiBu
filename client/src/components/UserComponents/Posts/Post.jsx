@@ -21,6 +21,7 @@ import SAVE_POST from "../../../services/savePostService";
 import { setSavedStatus } from "../../../slices/SavePostSlice";
 import { toast } from "react-hot-toast";
 import { getLikeManager } from "../../../socket/likeManager";
+import { getCommentManager } from "../../../socket/commentManager";
 
 const InvalidPostFallback = ({ message }) => (
   <div className="w-full p-4 border-b border-gray-200">
@@ -57,7 +58,9 @@ const Post = ({ data, isSavedPost = false }) => {
   const videoRefs = useRef({});
   const [likeLoading, setLikeLoading] = useState(false);
   const isProcessingLike = useRef(false);
-  const [comments] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
+  const [postId, setPostId] = useState(null);
+  const commentManager = getCommentManager();
 
   const isValidData = data && data._id;
 
@@ -114,6 +117,32 @@ const Post = ({ data, isSavedPost = false }) => {
     setIsMuted(newMutedState);
   };
 
+  const checkSavedStatus = async () => {
+    if (!isValidData) return;
+
+    try {
+      const postId = data._id;
+      if (!postId) return;
+
+      const response = await SAVE_POST.CHECK_SAVED_STATUS(postId);
+      if (response && response.data && response.data.code === 1) {
+        dispatch(setSavedStatus({ postId, status: response.data.isSaved }));
+      }
+    } catch (error) {
+      console.error("Error checking saved status:", error);
+      // Không cần hiển thị lỗi cho người dùng khi chỉ kiểm tra trạng thái
+    }
+  };
+
+  useEffect(() => {
+    if (!isValidData) return;
+
+    // Nếu đã có trạng thái từ props isSavedPost, không cần kiểm tra lại
+    if (!isSavedPost) {
+      checkSavedStatus();
+    }
+  }, [isValidData, data._id, isSavedPost]);
+
   useEffect(() => {
     if (!isValidData) return;
 
@@ -155,7 +184,6 @@ const Post = ({ data, isSavedPost = false }) => {
       }
     };
 
-    // Tham gia phòng socket cho post này
     if (likeManager) {
       console.log(`[Post ${postId}] Joining post room for realtime updates`);
       likeManager.joinPostRoom(postId);
@@ -165,25 +193,46 @@ const Post = ({ data, isSavedPost = false }) => {
       );
     }
 
-    // Check saved status
-    const checkSavedStatus = async () => {
-      try {
-        const response = await SAVE_POST.CHECK_SAVED_STATUS(postId);
-        if (response.data?.code === 1) {
-          dispatch(setSavedStatus({ postId, status: response.data.isSaved }));
-        }
-      } catch (error) {
-        console.error("Error checking saved status:", error);
-      }
-    };
-
     fetchLikeData();
-    checkSavedStatus();
 
     return () => {
       isMounted = false;
     };
   }, [dispatch, isValidData, data?._id, currentUser?.user?._id]);
+
+  // Tham gia room của bài viết để nhận các sự kiện comment
+  useEffect(() => {
+    if (isValidData) {
+      // Tham gia room của bài viết để nhận thông báo về comment
+      commentManager.joinPostRoom(data._id);
+
+      // Đăng ký các handler cho sự kiện comment
+      const unregisterNewComment =
+        commentManager.registerNewCommentHandler(handleCommentUpdate);
+      const unregisterUpdateComment =
+        commentManager.registerUpdateCommentHandler(handleCommentUpdate);
+      const unregisterDeleteComment =
+        commentManager.registerDeleteCommentHandler(handleCommentUpdate);
+
+      return () => {
+        // Hủy đăng ký khi component unmount
+        unregisterNewComment();
+        unregisterUpdateComment();
+        unregisterDeleteComment();
+        commentManager.leavePostRoom(data._id);
+      };
+    }
+  }, [data._id]);
+
+  // Xử lý khi có sự kiện comment (new, update, delete)
+  const handleCommentUpdate = (eventData) => {
+    if (
+      eventData.postId === data._id &&
+      typeof eventData.commentCount === "number"
+    ) {
+      setCommentCount(eventData.commentCount);
+    }
+  };
 
   const handleLike = () => {
     if (!isValidData || likeLoading || !currentUser?.user?._id) {
@@ -215,7 +264,6 @@ const Post = ({ data, isSavedPost = false }) => {
         userId,
       });
 
-      // Cập nhật UI trước
       dispatch(
         setPostLikeStatus({
           postId,
@@ -224,7 +272,6 @@ const Post = ({ data, isSavedPost = false }) => {
         })
       );
 
-      // Gửi sự kiện thông qua socket
       const likeManager = getLikeManager();
       if (likeManager) {
         likeManager.emitLikeAction(
@@ -234,7 +281,6 @@ const Post = ({ data, isSavedPost = false }) => {
         );
       }
 
-      // Debug output trước khi gọi API
       console.log("[Like Debug] Calling API:", {
         endpoint: newIsLiked ? "CREATE_LIKE" : "DELETE_LIKE",
         data: { postId },
@@ -258,7 +304,6 @@ const Post = ({ data, isSavedPost = false }) => {
               })
             );
           } else {
-            // API thành công - cập nhật lần cuối với dữ liệu từ server
             const serverCount = response.data?.data?.likeCount || newCount;
             if (serverCount !== newCount) {
               dispatch(
@@ -280,7 +325,6 @@ const Post = ({ data, isSavedPost = false }) => {
             message: error.message,
           });
 
-          // Khôi phục trạng thái cũ nếu API thất bại
           dispatch(
             setPostLikeStatus({
               postId,
@@ -295,7 +339,6 @@ const Post = ({ data, isSavedPost = false }) => {
         });
     } catch (error) {
       console.error(`[Post ${data._id}] Like action failed:`, error);
-      // Khôi phục trạng thái ban đầu nếu xảy ra lỗi
       dispatch(
         setPostLikeStatus({
           postId: data._id,
@@ -332,11 +375,14 @@ const Post = ({ data, isSavedPost = false }) => {
     try {
       setSaveLoading(true);
       const postId = data._id;
+      if (!postId) {
+        throw new Error("ID bài viết không hợp lệ");
+      }
 
       const apiCall = savedStatus ? SAVE_POST.UNSAVE_POST : SAVE_POST.SAVE_POST;
       const response = await apiCall(postId);
 
-      if (response.data?.code === 1) {
+      if (response && response.data && response.data.code === 1) {
         dispatch(
           setSavedStatus({
             postId,
@@ -345,9 +391,11 @@ const Post = ({ data, isSavedPost = false }) => {
         );
         toast.success(savedStatus ? "Đã bỏ lưu bài viết" : "Đã lưu bài viết");
       } else {
-        toast.error(response.data?.message || "Có lỗi xảy ra");
+        console.error("Lỗi khi lưu bài viết:", response?.data);
+        toast.error(response?.data?.message || "Có lỗi xảy ra");
       }
     } catch (error) {
+      console.error("Lỗi khi lưu/bỏ lưu bài viết:", error);
       toast.error(
         error.response?.data?.message || "Có lỗi xảy ra khi lưu bài viết"
       );
@@ -355,6 +403,34 @@ const Post = ({ data, isSavedPost = false }) => {
       setSaveLoading(false);
     }
   };
+
+  // Hiển thị CommentModel khi click vào biểu tượng comment
+  const openCommentModal = () => {
+    setPostId(data._id); // Lưu ID của bài viết hiện tại
+    setOpenComment(true); // Mở modal comment
+  };
+
+  // Tải số lượng comment ban đầu khi component được mount
+  useEffect(() => {
+    if (isValidData) {
+      // Tải số lượng comment từ server
+      const fetchCommentCount = async () => {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/comments/post/${data._id}`
+          );
+          const responseData = await response.json();
+          if (responseData.code === 1) {
+            setCommentCount(responseData.commentCount || 0);
+          }
+        } catch (error) {
+          console.error("Error fetching comment count:", error);
+        }
+      };
+
+      fetchCommentCount();
+    }
+  }, [data._id, isValidData]);
 
   if (!isValidData) {
     const errorMessage = !data
@@ -538,12 +614,11 @@ const Post = ({ data, isSavedPost = false }) => {
               className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
               strokeWidth={1}
               size={23}
-              onClick={() => setOpenComment(!openComment)}
+              onClick={openCommentModal}
             />
-            {openComment && <CommentModel />}
-            {comments > 0 && (
+            {commentCount > 0 && (
               <span className="text-sm font-medium text-gray-700">
-                {comments}
+                {commentCount}
               </span>
             )}
           </div>
@@ -571,8 +646,14 @@ const Post = ({ data, isSavedPost = false }) => {
       {showVideo && (
         <ShowVideoPost setShowVideo={setShowVideo} showVideo={showVideo} />
       )}
-      {openComment === data._id && (
-        <CommentModel post={data} setOpenComment={setOpenComment} />
+      {openComment && postId && (
+        <CommentModel
+          postId={postId}
+          onClose={() => {
+            setOpenComment(false);
+            setPostId(null);
+          }}
+        />
       )}
       {postOption && <PostOption post={data} setPostOption={setPostOption} />}
     </div>

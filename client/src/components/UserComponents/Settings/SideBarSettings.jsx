@@ -13,42 +13,42 @@ import {
 
 const menuItems = [
   {
-    title: "Account Settings",
+    title: "Cài Đặt Tài Khoản",
     icon: <User size={20} />,
     path: "/settings/account",
   },
   {
-    title: "Profile Settings",
+    title: "Cài Đặt Hồ Sơ",
     icon: <Settings size={20} />,
     path: "/settings/profile",
   },
   {
-    title: "Privacy Settings",
+    title: "Cài Đặt Quyền Riêng Tư",
     icon: <Shield size={20} />,
     path: "/settings/privacy",
   },
   {
-    title: "Notification Settings",
+    title: "Cài Đặt Thông Báo",
     icon: <Bell size={20} />,
     path: "/settings/notification",
   },
   {
-    title: "Security Settings",
+    title: "Cài Đặt Bảo Mật",
     icon: <Lock size={20} />,
     path: "/settings/security",
   },
   {
-    title: "Content Settings",
+    title: "Cài Đặt Nội Dung",
     icon: <Globe size={20} />,
     path: "/settings/content",
   },
   {
-    title: "Language & Theme",
+    title: "Ngôn Ngữ & Giao Diện",
     icon: <Palette size={20} />,
     path: "/settings/theme",
   },
   {
-    title: "Support & Feedback",
+    title: "Hỗ Trợ & Phản Hồi",
     icon: <HelpCircle size={20} />,
     path: "/settings/support",
   },

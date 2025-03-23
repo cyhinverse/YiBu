@@ -75,7 +75,6 @@ const App = () => {
 
   return (
     <>
-      <Toaster />
       <Routes>
         <Route element={<ProtectedRoute />}>
           <Route
@@ -130,6 +129,30 @@ const App = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Outlet />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+          },
+          success: {
+            style: {
+              background: "#ECFDF5",
+              border: "1px solid #10B981",
+              color: "#065F46",
+            },
+          },
+          error: {
+            style: {
+              background: "#FEF2F2",
+              border: "1px solid #EF4444",
+              color: "#991B1B",
+            },
+          },
+        }}
+      />
     </>
   );
 };

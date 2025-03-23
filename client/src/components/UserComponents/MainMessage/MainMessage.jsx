@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Edit, MessageSquare } from "lucide-react";
 import { socket } from "../../../socket";
+import { messageManager } from "../../../socket/messageManager";
 import { toast } from "react-hot-toast";
 
 const MainMessage = () => {
@@ -65,103 +66,120 @@ const MainMessage = () => {
 
     fetchConversations();
 
-    // Listen for new messages
-    if (socket) {
-      const handleNewMessage = (data) => {
-        if (data && data.message) {
-          // Update conversations with the new message
-          setConversations((prevConversations) => {
-            const message = data.message;
-            const otherUserId =
-              message.sender._id === user._id
-                ? message.receiver._id
-                : message.sender._id;
+    // Đăng ký lắng nghe tin nhắn mới
+    const unsubscribeNewMessage = messageManager.onNewMessage((data) => {
+      if (data && data.message) {
+        // Cập nhật danh sách hội thoại với tin nhắn mới
+        setConversations((prevConversations) => {
+          const message = data.message;
+          const otherUserId =
+            message.sender._id === user._id
+              ? message.receiver._id
+              : message.sender._id;
 
-            // Check if conversation exists
-            const conversationExists = prevConversations.some(
-              (conv) => conv._id.toString() === otherUserId.toString()
-            );
+          // Kiểm tra xem hội thoại đã tồn tại chưa
+          const conversationExists = prevConversations.some(
+            (conv) => conv._id.toString() === otherUserId.toString()
+          );
 
-            if (conversationExists) {
-              // Update existing conversation
-              return prevConversations
-                .map((conv) => {
-                  if (conv._id.toString() === otherUserId.toString()) {
-                    return {
-                      ...conv,
-                      latestMessage: message,
-                      unreadCount:
-                        message.receiver._id === user._id && !message.isRead
-                          ? conv.unreadCount + 1
-                          : conv.unreadCount,
-                    };
-                  }
-                  return conv;
-                })
-                .sort((a, b) => {
-                  return (
-                    new Date(b.latestMessage.createdAt) -
-                    new Date(a.latestMessage.createdAt)
-                  );
-                });
-            } else {
-              // It's a new conversation
-              const newConversation = {
-                _id: otherUserId,
-                user:
-                  message.sender._id === user._id
-                    ? message.receiver
-                    : message.sender,
-                latestMessage: message,
-                unreadCount:
-                  message.receiver._id === user._id && !message.isRead ? 1 : 0,
+          if (conversationExists) {
+            // Cập nhật hội thoại hiện có
+            return prevConversations
+              .map((conv) => {
+                if (conv._id.toString() === otherUserId.toString()) {
+                  return {
+                    ...conv,
+                    latestMessage: message,
+                    unreadCount:
+                      message.receiver._id === user._id && !message.isRead
+                        ? conv.unreadCount + 1
+                        : conv.unreadCount,
+                  };
+                }
+                return conv;
+              })
+              .sort((a, b) => {
+                return (
+                  new Date(b.latestMessage.createdAt) -
+                  new Date(a.latestMessage.createdAt)
+                );
+              });
+          } else {
+            // Đây là hội thoại mới
+            const newConversation = {
+              _id: otherUserId,
+              user:
+                message.sender._id === user._id
+                  ? message.receiver
+                  : message.sender,
+              latestMessage: message,
+              unreadCount:
+                message.receiver._id === user._id && !message.isRead ? 1 : 0,
+            };
+
+            return [newConversation, ...prevConversations];
+          }
+        });
+      }
+    });
+
+    // Đăng ký lắng nghe đánh dấu đã đọc
+    const unsubscribeMessageRead = messageManager.onMessageRead((data) => {
+      if (data) {
+        // Cập nhật hội thoại để đánh dấu tin nhắn là đã đọc
+        setConversations((prevConversations) => {
+          return prevConversations.map((conv) => {
+            if (
+              data.messageIds &&
+              data.messageIds.includes(conv.latestMessage._id)
+            ) {
+              return {
+                ...conv,
+                latestMessage: { ...conv.latestMessage, isRead: true },
+                unreadCount: 0,
               };
-
-              return [newConversation, ...prevConversations];
             }
+            return conv;
           });
-        }
-      };
+        });
+      }
+    });
 
-      socket.on("new_message", handleNewMessage);
-
-      return () => {
-        socket.off("new_message", handleNewMessage);
-      };
-    }
-  }, [user]);
-
-  // Handle message mark as read
-  useEffect(() => {
-    if (socket) {
-      const handleMessageRead = (data) => {
-        if (data) {
-          // Update conversations to mark messages as read
+    // Đăng ký nhận thông báo tin nhắn đã xóa
+    const unsubscribeMessageDeleted = messageManager.onMessageDeleted(
+      (data) => {
+        if (data && data.messageId) {
+          // Xóa tin nhắn khỏi UI nếu cần thiết
           setConversations((prevConversations) => {
             return prevConversations.map((conv) => {
-              if (
-                data.messageIds &&
-                data.messageIds.includes(conv.latestMessage._id)
-              ) {
-                return {
-                  ...conv,
-                  latestMessage: { ...conv.latestMessage, isRead: true },
-                  unreadCount: 0,
-                };
+              if (conv.latestMessage._id === data.messageId) {
+                // Cần fetch tin nhắn mới nhất
+                fetchConversations();
+                return conv;
               }
               return conv;
             });
           });
         }
-      };
+      }
+    );
 
-      socket.on("message_read", handleMessageRead);
-
-      return () => {
-        socket.off("message_read", handleMessageRead);
-      };
+    // Đăng ký nhận phòng chat cá nhân
+    if (user && user._id) {
+      messageManager.joinRoom(user._id);
     }
-  }, []);
+
+    // Clear các đăng ký khi component unmount
+    return () => {
+      unsubscribeNewMessage();
+      unsubscribeMessageRead();
+      unsubscribeMessageDeleted();
+
+      if (user && user._id) {
+        messageManager.leaveRoom(user._id);
+      }
+    };
+  }, [user]);
 
   // Handle search users
   useEffect(() => {
@@ -216,10 +234,52 @@ const MainMessage = () => {
   }, [searchTerm, selectedUsers, newMessageMode]);
 
   const goToMessageDetail = (userId) => {
-    // Navigate to the MessageDetail route with the user ID
+    // Kiểm tra nếu không có dữ liệu người dùng hoặc token
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      console.error("No auth token found");
+      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      navigate("/login");
+      return;
+    }
+
+    let currentUser = user;
+    // Nếu không tìm thấy user từ Redux, thử lấy từ localStorage
+    if (!currentUser || !currentUser._id) {
+      try {
+        const storedUserStr = localStorage.getItem("user");
+        if (storedUserStr) {
+          currentUser = JSON.parse(storedUserStr);
+          console.log("Using user data from localStorage:", currentUser._id);
+        } else {
+          console.error("No user data found in localStorage");
+          // Không chuyển hướng ngay, cố gắng tiếp tục
+        }
+      } catch (error) {
+        console.error("Error parsing user data from localStorage:", error);
+      }
+    }
+
+    // Tìm thông tin cuộc trò chuyện từ danh sách hiện có
+    const conversation = conversations.find((c) => c._id === userId);
+    const selectedUser = conversation?.user;
+
+    console.log("Navigating to message detail for user:", userId);
+    console.log("Selected user data:", selectedUser);
+
+    // Lưu thông tin user được chọn vào sessionStorage để khôi phục nếu cần
+    if (selectedUser) {
+      sessionStorage.setItem(
+        `selectedUser_${userId}`,
+        JSON.stringify(selectedUser)
+      );
+    }
+
+    // Navigate to the MessageDetail route with the user ID and user data
     navigate(`/messages/${userId}`, {
       state: {
-        selectedUser: conversations.find((c) => c._id === userId)?.user,
+        selectedUser: selectedUser,
+        currentUser: currentUser,
       },
     });
   };

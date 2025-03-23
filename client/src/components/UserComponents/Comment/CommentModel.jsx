@@ -2,42 +2,43 @@ import { useContext, useRef, useEffect } from "react";
 import { DataContext } from "../../../DataProvider";
 import { useComments } from "./hooks/useComments";
 import { CommentHeader, CommentItem } from "./components";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 import "./index.css";
 
-const initialComments = [
-  {
-    id: 1,
-    user: "Alice Smith",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    text: "This is awesome! The design looks incredible. I love how you've incorporated those subtle animations. 🚀",
-    time: "2 hours ago",
-    likes: 5,
-    liked: false,
-    replies: [],
-  },
-  {
-    id: 2,
-    user: "Bob Johnson",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    text: "Nice post! The color palette is perfect. Would love to see more content like this. 🔥",
-    time: "1 hour ago",
-    likes: 3,
-    liked: true,
-    replies: [
-      {
-        id: 21,
-        user: "Charlie Davis",
-        avatar: "https://i.pravatar.cc/150?img=3",
-        text: "I agree with you! The attention to detail is impressive.",
-        time: "30 minutes ago",
-        likes: 1,
-        liked: false,
-      },
-    ],
-  },
-];
+// Component Loading tự tạo thay thế cho Spin của Antd
+const LoadingSpinner = ({ message }) => (
+  <div className="flex flex-col items-center justify-center py-8">
+    <div className="animate-spin w-8 h-8 text-purple-500 mb-2">
+      <RefreshCw size={24} />
+    </div>
+    <p className="text-gray-500 text-sm">{message}</p>
+  </div>
+);
 
-const CommentModel = () => {
+// Component thông báo lỗi tự tạo thay thế cho Alert của Antd
+const ErrorAlert = ({ message, description, onRetry }) => (
+  <div className="bg-red-50 border border-red-100 rounded-md p-4 mb-4">
+    <div className="flex items-start">
+      <div className="flex-shrink-0 text-red-500 mr-3">
+        <AlertTriangle size={20} />
+      </div>
+      <div className="flex-1">
+        <h4 className="text-sm font-medium text-red-800 mb-1">{message}</h4>
+        <p className="text-sm text-red-600">{description}</p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-2 text-sm text-blue-500 hover:underline focus:outline-none"
+          >
+            Thử lại
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+const CommentModel = ({ postId, onClose }) => {
   const { setOpenComment } = useContext(DataContext);
   const scrollRef = useRef(null);
 
@@ -46,12 +47,17 @@ const CommentModel = () => {
     setComments,
     reply,
     replyToChild,
+    loading,
+    error,
     handleAddComment,
     handleAddReply,
-    handleLike,
+    handleUpdateComment,
+    handleDeleteComment,
     handleReplyClick,
     handleCreateNewComment,
-  } = useComments(initialComments);
+    refreshComments,
+    commentCount,
+  } = useComments([], postId);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -83,15 +89,24 @@ const CommentModel = () => {
     return newComment;
   };
 
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setOpenComment(false);
+    }
+  };
+
+  // Đếm tổng số bình luận (bao gồm cả replies)
   const commentsCount = comments.reduce(
-    (total, cmt) => total + 1 + cmt.replies.length,
+    (total, cmt) => total + 1 + (cmt.replies?.length || 0),
     0
   );
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/5 p-4"
-      onClick={() => setOpenComment(false)}
+      onClick={handleClose}
     >
       <div
         className="bg-white w-[600px] h-[700px] border border-gray-300 rounded-xl flex flex-col overflow-hidden"
@@ -100,7 +115,7 @@ const CommentModel = () => {
         <CommentHeader
           commentsCount={commentsCount}
           onAddComment={handleAddNewComment}
-          onClose={() => setOpenComment(false)}
+          onClose={handleClose}
         />
 
         <div
@@ -111,11 +126,28 @@ const CommentModel = () => {
             WebkitOverflowScrolling: "touch",
           }}
         >
+          {loading && <LoadingSpinner message="Đang tải bình luận..." />}
+
+          {error && (
+            <ErrorAlert
+              message="Lỗi"
+              description={error}
+              onRetry={refreshComments}
+            />
+          )}
+
+          {!loading && comments.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              Chưa có bình luận nào. Hãy trở thành người đầu tiên bình luận!
+            </div>
+          )}
+
           {comments.map((comment) => (
             <CommentItem
-              key={comment.id}
+              key={comment._id}
               comment={comment}
-              onLike={handleLike}
+              onDelete={handleDeleteComment}
+              onUpdate={handleUpdateComment}
               onReplyClick={handleReplyClick}
               onAddReply={handleAddReply}
               reply={reply}

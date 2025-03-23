@@ -8,4 +8,31 @@ router.post("/login", UserController.Login);
 router.post("/refresh-token", UserController.RefreshToken);
 router.post("/logout", VerifyToken.VerifyAccessToken, UserController.Logout);
 
+// Account settings routes
+router.put(
+  "/update-email",
+  VerifyToken.VerifyAccessToken,
+  UserController.UpdateEmail
+);
+router.put(
+  "/update-password",
+  VerifyToken.VerifyAccessToken,
+  UserController.UpdatePassword
+);
+router.post(
+  "/connect-social",
+  VerifyToken.VerifyAccessToken,
+  UserController.ConnectSocialAccount
+);
+router.post(
+  "/verify-account",
+  VerifyToken.VerifyAccessToken,
+  UserController.VerifyAccount
+);
+router.delete(
+  "/delete-account",
+  VerifyToken.VerifyAccessToken,
+  UserController.DeleteAccount
+);
+
 export default router;

@@ -41,6 +41,76 @@ const Auth = {
       throw error;
     }
   },
+
+  // New functions for account settings
+  updateEmail: async (newEmail) => {
+    try {
+      const res = await api.put(AUTH_API_ENDPOINTS.UPDATE_EMAIL, {
+        email: newEmail,
+      });
+      return res.data;
+    } catch (error) {
+      console.log(
+        "Update email failed!",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
+  updatePassword: async (data) => {
+    try {
+      const res = await api.put(AUTH_API_ENDPOINTS.UPDATE_PASSWORD, data);
+      return res.data;
+    } catch (error) {
+      console.log(
+        "Update password failed!",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
+  connectSocialAccount: async (provider) => {
+    try {
+      const res = await api.post(AUTH_API_ENDPOINTS.CONNECT_SOCIAL, {
+        provider,
+      });
+      return res.data;
+    } catch (error) {
+      console.log(
+        `Connect to ${provider} failed!`,
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
+  verifyAccount: async () => {
+    try {
+      const res = await api.post(AUTH_API_ENDPOINTS.VERIFY_ACCOUNT);
+      return res.data;
+    } catch (error) {
+      console.log(
+        "Verify account failed!",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
+  deleteAccount: async () => {
+    try {
+      const res = await api.delete(AUTH_API_ENDPOINTS.DELETE_ACCOUNT);
+      return res.data;
+    } catch (error) {
+      console.log(
+        "Delete account failed!",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
 };
 
 export default Auth;

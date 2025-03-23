@@ -25,6 +25,14 @@ const ProfileSchema = new Schema(
       enum: ["male", "female", "other"],
       default: "other",
     },
+    website: {
+      type: String,
+      default: "",
+    },
+    interests: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
