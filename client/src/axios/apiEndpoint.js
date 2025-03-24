@@ -25,6 +25,8 @@ export const POST_API_ENDPOINTS = {
   CREATE_POST: "/api/v1/create-post",
   GET_POST_USER_BY_ID: "/api/v1/post-user",
   GET_ALL_USER: "/api/v1/posts",
+  DELETE_POST: "/api/v1/post",
+  REPORT_POST: "/api/v1/report-post",
 };
 
 export const LIKE_API_ENDPOINTS = {
@@ -32,6 +34,8 @@ export const LIKE_API_ENDPOINTS = {
   DELETE_LIKE: "/api/like/delete",
   GET_LIKE_STATUS: "/api/like/status",
   GET_ALL_LIKES: "/api/like/get-all",
+  TOGGLE_LIKE: "/api/like/toggle",
+  GET_LIKED_POSTS: "/api/like/liked-posts",
 };
 
 export const PROFILE_API_ENDPOINTS = {
@@ -49,7 +53,7 @@ export const SETTINGS_API_ENDPOINTS = {
   GET_ALL_SETTINGS: "/api/settings",
   UPDATE_PROFILE: "/api/settings/profile",
   UPDATE_PRIVACY: "/api/settings/privacy",
-  UPDATE_NOTIFICATION: "/api/settings/notification",
+  UPDATE_NOTIFICATION: "/api/settings/notifications",
   UPDATE_SECURITY: "/api/settings/security",
   UPDATE_CONTENT: "/api/settings/content",
   UPDATE_THEME: "/api/settings/theme",

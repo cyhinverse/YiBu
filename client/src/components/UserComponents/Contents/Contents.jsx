@@ -108,7 +108,7 @@ const Contents = () => {
   }, []);
 
   return (
-    <div className="w-[95vw] h-[86vh] bg-purple-50 mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6">
+    <div className="w-[95vw] h-[86vh]  mt-5 shadow-md rounded-xl m-auto flex flex-col md:flex-row gap-6">
       <div className="w-full md:w-[100%] h-full rounded-xl flex flex-col md:flex-row justify-between gap-6">
         <div className="hidden md:block md:w-1/4 h-full">
           <TopUser content={contentPost} />

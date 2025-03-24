@@ -67,6 +67,13 @@ const postSlice = createSlice({
       state.loading = false;
       state.error = false;
     },
+    removePost: (state, action) => {
+      const postId = action.payload;
+      // Xóa bài viết khỏi danh sách bài viết chung
+      state.commonPost = state.commonPost.filter((post) => post._id !== postId);
+      // Xóa bài viết khỏi danh sách bài viết của người dùng
+      state.userPost = state.userPost.filter((post) => post._id !== postId);
+    },
     resetPagination: (state) => {
       state.pagination = {
         page: 1,
@@ -85,5 +92,6 @@ export const {
   getPostUserById,
   setLoading,
   resetPagination,
+  removePost,
 } = postSlice.actions;
 export default postSlice.reducer;

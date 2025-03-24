@@ -286,7 +286,7 @@ const SavePosts = () => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-50 flex flex-col ">
+    <div className="w-full h-full  flex flex-col ">
       {/* Header */}
       <div className="w-full flex justify-between items-center p-4 border-b border-gray-200 bg-white shadow-sm sticky top-0 z-10 rounded-xl">
         <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ const SavePosts = () => {
               className={`flex items-center gap-1 px-3 py-1.5 ${
                 viewMode === "list"
                   ? "bg-purple-100 text-purple-700"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
+                  : "bg-white text-gray-600 "
               }`}
             >
               <List size={16} />
@@ -315,7 +315,7 @@ const SavePosts = () => {
               className={`flex items-center gap-1 px-3 py-1.5 ${
                 viewMode === "grid"
                   ? "bg-purple-100 text-purple-700"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
+                  : "bg-white text-gray-600 "
               }`}
             >
               <Grid size={16} />
@@ -324,7 +324,7 @@ const SavePosts = () => {
 
           {/* Filter dropdown */}
           <div className="relative group">
-            <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg bg-white text-gray-700 hover:bg-gray-50">
+            <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg  text-gray-700 ">
               <Filter size={16} />
               <span className="text-sm font-medium">
                 {filterType === "all" && "Tất cả"}
@@ -333,13 +333,13 @@ const SavePosts = () => {
                 {filterType === "text" && "Văn bản"}
               </span>
             </button>
-            <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-20 hidden group-hover:block">
+            <div className="absolute right-0 mt-1 w-36  border border-gray-200 rounded-lg shadow-lg z-20 hidden group-hover:block">
               <button
                 onClick={() => setFilterType("all")}
                 className={`w-full text-left px-3 py-2 text-sm ${
                   filterType === "all"
-                    ? "bg-purple-50 text-purple-700"
-                    : "hover:bg-gray-50"
+                    ? " text-purple-700 bg-gray-600"
+                    : "hover:opacity-55"
                 }`}
               >
                 Tất cả
@@ -400,7 +400,7 @@ const SavePosts = () => {
                 return (
                   <div
                     key={post._id}
-                    className="relative group border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                    className="relative group border-b border-gray-100 last:border-0 transition-colors"
                   >
                     <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button

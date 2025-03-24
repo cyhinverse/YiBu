@@ -15,13 +15,10 @@ import Login from "./pages/AuthPage/Login";
 import Register from "./pages/AuthPage/Register";
 import {
   AccountSettings,
-  ContentSettings,
   NotificationSettings,
   PrivacySettings,
   ProfileSettings,
-  SecuritySettings,
   SettingsLayout,
-  SupportSettings,
   ThemeSettings,
 } from "./components/UserComponents/Settings";
 import { ROUTES } from "./constants/routes";
@@ -40,9 +37,17 @@ import { useSelector } from "react-redux";
 
 const App = () => {
   const currentUser = useSelector((state) => state.auth?.user);
+  const userSettings = useSelector((state) => state.user?.settings);
+  const theme = userSettings?.theme;
+
+  // Create the ref outside the effect
+  const prevThemeRef = React.useRef({
+    appearance: null,
+    primaryColor: null,
+    fontSize: null,
+  });
 
   useEffect(() => {
-    // Khởi tạo likeManager
     const likeManager = getLikeManager();
     if (!likeManager) {
       console.warn("[App] Failed to initialize likeManager");
@@ -50,7 +55,6 @@ const App = () => {
       console.log("[App] likeManager initialized successfully");
     }
 
-    // Khởi tạo notificationManager
     const notificationManager = getNotificationManager();
     if (!notificationManager) {
       console.warn("[App] Failed to initialize notificationManager");
@@ -59,7 +63,6 @@ const App = () => {
     }
   }, []);
 
-  // Đăng ký nhận thông báo khi người dùng đã đăng nhập
   useEffect(() => {
     if (currentUser?.user?._id) {
       const notificationManager = getNotificationManager();
@@ -72,6 +75,75 @@ const App = () => {
       }
     }
   }, [currentUser?.user?._id]);
+
+  // Apply theme settings from Redux
+  useEffect(() => {
+    console.log("App: Applying theme settings from Redux", theme);
+
+    if (!theme) {
+      console.log("App: No theme settings found, using defaults");
+      return;
+    }
+
+    const prevTheme = prevThemeRef.current;
+
+    // Only update appearance if it changed
+    if (prevTheme.appearance !== theme.appearance) {
+      // Apply appearance
+      if (theme.appearance === "light") {
+        console.log("App: Setting light mode");
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        console.log(
+          "App: Current classList after light mode:",
+          document.documentElement.className
+        );
+      } else if (theme.appearance === "dark") {
+        console.log("App: Setting dark mode");
+        document.documentElement.classList.remove("light");
+        document.documentElement.classList.add("dark");
+        console.log(
+          "App: Current classList after dark mode:",
+          document.documentElement.className
+        );
+      } else if (theme.appearance === "system") {
+        console.log("App: Setting system mode");
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
+        console.log("App: System prefers dark mode?", prefersDark);
+        document.documentElement.classList.remove(
+          prefersDark ? "light" : "dark"
+        );
+        document.documentElement.classList.add(prefersDark ? "dark" : "light");
+        console.log(
+          "App: Current classList after system mode:",
+          document.documentElement.className
+        );
+      }
+      prevTheme.appearance = theme.appearance;
+    }
+
+    // Only update primary color if it changed
+    if (prevTheme.primaryColor !== theme.primaryColor) {
+      console.log("App: Setting primary color to", theme.primaryColor);
+      document.documentElement.style.setProperty(
+        "--primary-color",
+        theme.primaryColor
+      );
+      prevTheme.primaryColor = theme.primaryColor;
+    }
+
+    // Only update font size if it changed
+    if (prevTheme.fontSize !== theme.fontSize) {
+      let rootFontSize = "16px";
+      if (theme.fontSize === "small") rootFontSize = "14px";
+      if (theme.fontSize === "large") rootFontSize = "18px";
+      console.log("App: Setting font size to", rootFontSize);
+      document.documentElement.style.fontSize = rootFontSize;
+      prevTheme.fontSize = theme.fontSize;
+    }
+  }, [theme]);
 
   return (
     <>
@@ -100,10 +172,8 @@ const App = () => {
               <Route path="profile" element={<ProfileSettings />} />
               <Route path="privacy" element={<PrivacySettings />} />
               <Route path="notification" element={<NotificationSettings />} />
-              <Route path="security" element={<SecuritySettings />} />
-              <Route path="content" element={<ContentSettings />} />
+
               <Route path="theme" element={<ThemeSettings />} />
-              <Route path="support" element={<SupportSettings />} />
             </Route>
 
             <Route path={`${ROUTES.PROFILE}`} element={<ProfileLayout />}>

@@ -1,13 +1,33 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Home, Save, Users } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const SideBarProfile = () => {
+  const currentUser = useSelector((state) => state.auth?.user);
+
+  // Lấy ID người dùng hiện tại từ Redux store
+  const getCurrentUserId = () => {
+    if (!currentUser) return null;
+
+    if (currentUser._id) return currentUser._id;
+    if (currentUser.id) return currentUser.id;
+    if (currentUser.user?._id) return currentUser.user._id;
+    if (currentUser.user?.id) return currentUser.user.id;
+    if (currentUser.data?._id) return currentUser.data._id;
+    if (currentUser.data?.id) return currentUser.data.id;
+
+    return null;
+  };
+
+  const currentUserId = getCurrentUserId();
+  const homeLink = currentUserId ? `/profile/${currentUserId}` : "/profile";
+
   const profileOptions = [
     {
       id: 1,
       name: "Trang chủ",
-      link: "/profile/home",
+      link: homeLink,
       icon: <Home size={18} />,
     },
     {
@@ -34,7 +54,7 @@ const SideBarProfile = () => {
             className={({ isActive }) =>
               isActive
                 ? "text-purple-500 font-semibold flex items-center"
-                : "text-black hover:text-purple-400 flex items-center"
+                : " hover:text-purple-400 flex items-center"
             }
           >
             <span className="mr-3">{item.icon}</span>

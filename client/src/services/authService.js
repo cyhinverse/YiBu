@@ -89,13 +89,31 @@ const Auth = {
   verifyAccount: async () => {
     try {
       const res = await api.post(AUTH_API_ENDPOINTS.VERIFY_ACCOUNT);
-      return res.data;
+
+      if (res.data && res.data.code === 1) {
+        return {
+          success: true,
+          message: res.data.message,
+          email: res.data.sentTo,
+        };
+      } else {
+        return {
+          success: false,
+          message: res.data.message || "Không thể gửi email xác thực",
+        };
+      }
     } catch (error) {
       console.log(
         "Verify account failed!",
         error.response?.data || error.message
       );
-      throw error;
+
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          "Không thể gửi email xác thực. Vui lòng thử lại sau.",
+      };
     }
   },
 

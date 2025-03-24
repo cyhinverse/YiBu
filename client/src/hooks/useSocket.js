@@ -15,7 +15,6 @@ const useSocket = (userId) => {
 
   useEffect(() => {
     if (!userId) {
-      console.warn("No userId provided for socket connection");
       return;
     }
 

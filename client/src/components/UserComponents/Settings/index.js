@@ -1,10 +1,10 @@
+import AccountSettings from "./AccountSettings";
+import ProfileSettings from "./ProfileSettings";
+import NotificationSettings from "./NotificationSettings";
+
+export { AccountSettings, ProfileSettings, NotificationSettings };
+
 export { default as SettingsLayout } from "./SettingsLayout";
 export { default as SideBarSettings } from "./SideBarSettings";
-export { default as AccountSettings } from "./AccountSettings";
-export { default as ProfileSettings } from "./ProfileSettings";
 export { default as PrivacySettings } from "./PrivacySettings";
-export { default as NotificationSettings } from "./NotificationSettings";
-export { default as SecuritySettings } from "./SecuritySettings";
-export { default as ContentSettings } from "./ContentSettings";
 export { default as ThemeSettings } from "./ThemeSettings";
-export { default as SupportSettings } from "./SupportSettings";

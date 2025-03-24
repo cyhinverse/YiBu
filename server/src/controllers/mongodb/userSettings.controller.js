@@ -62,7 +62,8 @@ const UserSettingsController = {
 
         // Upload file lên Cloudinary thay vì lưu cục bộ
         try {
-          const cloudinary = (await import("../../configs/cloudinaryConfig.js")).default;
+          const cloudinary = (await import("../../configs/cloudinaryConfig.js"))
+            .default;
           const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
             folder: "avatars",
             public_id: `avatar_${userId}_${Date.now()}`,
@@ -220,8 +221,16 @@ const UserSettingsController = {
   // Cập nhật cài đặt thông báo
   updateNotificationSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { pushNotifications, emailNotifications, activityNotifications } =
-      req.body;
+    const {
+      email,
+      push,
+      newFollower,
+      likes,
+      comments,
+      mentions,
+      directMessages,
+      systemUpdates,
+    } = req.body;
 
     let userSettings = await UserSettings.findOne({ userId });
 
@@ -229,60 +238,67 @@ const UserSettingsController = {
       userSettings = new UserSettings({ userId });
     }
 
-    // Cập nhật pushNotifications
-    if (pushNotifications) {
-      if (pushNotifications.enabled !== undefined)
-        userSettings.notifications.pushNotifications.enabled =
-          pushNotifications.enabled;
-      if (pushNotifications.likes !== undefined)
-        userSettings.notifications.pushNotifications.likes =
-          pushNotifications.likes;
-      if (pushNotifications.comments !== undefined)
-        userSettings.notifications.pushNotifications.comments =
-          pushNotifications.comments;
-      if (pushNotifications.follows !== undefined)
-        userSettings.notifications.pushNotifications.follows =
-          pushNotifications.follows;
-      if (pushNotifications.messages !== undefined)
-        userSettings.notifications.pushNotifications.messages =
-          pushNotifications.messages;
+    // Update email and push notification settings
+    if (email !== undefined) {
+      userSettings.notifications.emailNotifications.enabled = email;
     }
 
-    // Cập nhật emailNotifications
-    if (emailNotifications) {
-      if (emailNotifications.enabled !== undefined)
-        userSettings.notifications.emailNotifications.enabled =
-          emailNotifications.enabled;
-      if (emailNotifications.accountUpdates !== undefined)
-        userSettings.notifications.emailNotifications.accountUpdates =
-          emailNotifications.accountUpdates;
-      if (emailNotifications.newFeatures !== undefined)
-        userSettings.notifications.emailNotifications.newFeatures =
-          emailNotifications.newFeatures;
-      if (emailNotifications.marketingEmails !== undefined)
-        userSettings.notifications.emailNotifications.marketingEmails =
-          emailNotifications.marketingEmails;
+    if (push !== undefined) {
+      userSettings.notifications.pushNotifications.enabled = push;
     }
 
-    // Cập nhật activityNotifications
-    if (activityNotifications) {
-      if (activityNotifications.friendActivity !== undefined)
-        userSettings.notifications.activityNotifications.friendActivity =
-          activityNotifications.friendActivity;
-      if (activityNotifications.groupActivity !== undefined)
-        userSettings.notifications.activityNotifications.groupActivity =
-          activityNotifications.groupActivity;
-      if (activityNotifications.eventActivity !== undefined)
-        userSettings.notifications.activityNotifications.eventActivity =
-          activityNotifications.eventActivity;
+    // Update specific notification types
+    if (newFollower !== undefined) {
+      userSettings.notifications.pushNotifications.follows = newFollower;
+    }
+
+    if (likes !== undefined) {
+      userSettings.notifications.pushNotifications.likes = likes;
+    }
+
+    if (comments !== undefined) {
+      userSettings.notifications.pushNotifications.comments = comments;
+    }
+
+    if (mentions !== undefined) {
+      // Add mentions field if it doesn't exist yet
+      if (
+        !userSettings.notifications.pushNotifications.hasOwnProperty("mentions")
+      ) {
+        userSettings.notifications.pushNotifications.mentions = mentions;
+      } else {
+        userSettings.notifications.pushNotifications.mentions = mentions;
+      }
+    }
+
+    if (directMessages !== undefined) {
+      userSettings.notifications.pushNotifications.messages = directMessages;
+    }
+
+    if (systemUpdates !== undefined) {
+      userSettings.notifications.emailNotifications.accountUpdates =
+        systemUpdates;
     }
 
     await userSettings.save();
 
+    // Format the response to match the client-side structure
+    const formattedSettings = {
+      email: userSettings.notifications.emailNotifications.enabled,
+      push: userSettings.notifications.pushNotifications.enabled,
+      newFollower: userSettings.notifications.pushNotifications.follows,
+      likes: userSettings.notifications.pushNotifications.likes,
+      comments: userSettings.notifications.pushNotifications.comments,
+      mentions: userSettings.notifications.pushNotifications.mentions || false,
+      directMessages: userSettings.notifications.pushNotifications.messages,
+      systemUpdates:
+        userSettings.notifications.emailNotifications.accountUpdates,
+    };
+
     res.status(200).json({
       success: true,
       message: "Cập nhật cài đặt thông báo thành công",
-      notificationSettings: userSettings.notifications,
+      notificationSettings: formattedSettings,
     });
   }, "Failed to update notification settings"),
 
@@ -486,6 +502,8 @@ const UserSettingsController = {
     const userId = req.user.id;
     const { blockedUserId } = req.body;
 
+    console.log("Yêu cầu chặn user:", { userId, blockedUserId });
+
     if (!blockedUserId) {
       return res.status(400).json({
         success: false,
@@ -493,42 +511,68 @@ const UserSettingsController = {
       });
     }
 
-    // Kiểm tra người dùng tồn tại
-    const blockedUser = await User.findById(blockedUserId);
-    if (!blockedUser) {
-      return res.status(404).json({
+    try {
+      // Tạo query để tìm kiếm user
+      const query = {
+        $or: [{ email: blockedUserId }, { username: blockedUserId }],
+      };
+
+      // Kiểm tra nếu blockedUserId có thể là một ObjectId hợp lệ
+      const mongoose = (await import("mongoose")).default;
+      if (mongoose.Types.ObjectId.isValid(blockedUserId)) {
+        query.$or.push({ _id: blockedUserId });
+      }
+
+      console.log("Query tìm kiếm user:", JSON.stringify(query));
+
+      // Kiểm tra người dùng tồn tại
+      const blockedUser = await User.findOne(query);
+
+      console.log("Kết quả tìm kiếm user:", blockedUser);
+
+      if (!blockedUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng cần chặn",
+        });
+      }
+
+      let userSettings = await UserSettings.findOne({ userId });
+
+      if (!userSettings) {
+        userSettings = new UserSettings({ userId });
+      }
+
+      const actualBlockedUserId = blockedUser._id.toString();
+
+      // Kiểm tra xem đã chặn chưa
+      const alreadyBlocked = userSettings.privacy.blockList.some(
+        (id) => id.toString() === actualBlockedUserId
+      );
+
+      if (alreadyBlocked) {
+        return res.status(400).json({
+          success: false,
+          message: "Người dùng này đã bị chặn",
+        });
+      }
+
+      // Thêm vào danh sách chặn
+      userSettings.privacy.blockList.push(actualBlockedUserId);
+      await userSettings.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Chặn người dùng thành công",
+        blockList: userSettings.privacy.blockList,
+      });
+    } catch (error) {
+      console.error("Lỗi khi chặn người dùng:", error);
+      return res.status(500).json({
         success: false,
-        message: "Không tìm thấy người dùng cần chặn",
+        message: "Lỗi server khi chặn người dùng: " + error.message,
       });
     }
-
-    let userSettings = await UserSettings.findOne({ userId });
-
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
-    }
-
-    // Kiểm tra xem đã chặn chưa
-    const alreadyBlocked = userSettings.privacy.blockList.some(
-      (id) => id.toString() === blockedUserId
-    );
-
-    if (alreadyBlocked) {
-      return res.status(400).json({
-        success: false,
-        message: "Người dùng này đã bị chặn",
-      });
-    }
-
-    // Thêm vào danh sách chặn
-    userSettings.privacy.blockList.push(blockedUserId);
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Chặn người dùng thành công",
-      blockList: userSettings.privacy.blockList,
-    });
   }, "Failed to block user"),
 
   // API để bỏ chặn người dùng

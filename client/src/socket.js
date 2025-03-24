@@ -86,6 +86,11 @@ try {
     // Xử lý người dùng dừng nhập sẽ được thực hiện trong các components
   });
 
+  // Thêm sự kiện lắng nghe xóa tin nhắn
+  socket.on("message_deleted", (data) => {
+    console.log("Message deleted received via socket:", data);
+    // Xử lý tin nhắn bị xóa sẽ được thực hiện trong các components
+  });
 
   socket.on("notification:new", (notification) => {
     console.log("New notification received via socket:", notification);
@@ -117,7 +122,6 @@ const isSocketConnected = () => socket && socket.connected;
 
 const emitSocketEvent = (event, data) => {
   if (!isSocketConnected()) {
-    console.warn(`Socket not connected, cannot emit ${event}`);
     return false;
   }
 

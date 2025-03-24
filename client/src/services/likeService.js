@@ -15,6 +15,10 @@ const Like = {
         postId: data.postId.toString(),
       };
 
+      // Check authentication token before making the request
+      const token = localStorage.getItem("accessToken");
+      console.log("[likeService] Authentication token exists:", !!token);
+
       const response = await api.post(
         LIKE_API_ENDPOINTS.CREATE_LIKE,
         requestData
@@ -46,6 +50,10 @@ const Like = {
       const requestData = {
         postId: data.postId.toString(),
       };
+
+      // Check authentication token before making the request
+      const token = localStorage.getItem("accessToken");
+      console.log("[likeService] Authentication token exists:", !!token);
 
       const response = await api.post(
         LIKE_API_ENDPOINTS.DELETE_LIKE,
@@ -104,6 +112,69 @@ const Like = {
       return response;
     } catch (error) {
       console.error("[likeService] GET_COUNT_LIKE_POSTS error:", error);
+      throw error;
+    }
+  },
+
+  TOGGLE_LIKE: async (postId) => {
+    try {
+      if (!postId) {
+        throw new Error("Post ID is required for TOGGLE_LIKE");
+      }
+
+      console.log("[likeService] Toggling like for post:", postId);
+
+      const response = await api.post(LIKE_API_ENDPOINTS.TOGGLE_LIKE, {
+        postId: postId.toString(),
+      });
+
+      console.log("[likeService] TOGGLE_LIKE response:", response);
+      return response;
+    } catch (error) {
+      console.error("[likeService] TOGGLE_LIKE error:", error);
+      console.error("[likeService] Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        request: error.config,
+      });
+      throw error;
+    }
+  },
+
+  GET_LIKED_POSTS: async () => {
+    try {
+      console.log("[likeService] Fetching liked posts");
+
+      // Kiểm tra token
+      const token = localStorage.getItem("accessToken");
+      console.log("[likeService] Authorization token exists:", !!token);
+      console.log(
+        "[likeService] API endpoint:",
+        LIKE_API_ENDPOINTS.GET_LIKED_POSTS
+      );
+
+      const response = await api.get(LIKE_API_ENDPOINTS.GET_LIKED_POSTS);
+
+      console.log(
+        "[likeService] GET_LIKED_POSTS response status:",
+        response.status
+      );
+      console.log(
+        "[likeService] GET_LIKED_POSTS response data:",
+        response.data
+      );
+      return response;
+    } catch (error) {
+      console.error("[likeService] GET_LIKED_POSTS error:", error);
+      console.error("[likeService] Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        request: error.config,
+      });
       throw error;
     }
   },

@@ -1,5 +1,5 @@
-import { Message } from "../../models/mongodb/Messages.js";
-import { User } from "../../models/mongodb/Users.js";
+import Message from "../../models/mongodb/Messages.js";
+import User from "../../models/mongodb/Users.js";
 import mongoose from "mongoose";
 import { io } from "../../socket.js";
 
@@ -7,6 +7,7 @@ import { io } from "../../socket.js";
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log("Finding conversations for user ID:", userId);
 
     // Find all messages where the user is either sender or receiver
     const messages = await Message.aggregate([
@@ -43,14 +44,14 @@ export const getConversations = async (req, res) => {
         },
       },
       // Unwind the user array
-      { $unwind: "$user" },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
       // Project only the fields we need
       {
         $project: {
           _id: 1,
           user: {
             _id: 1,
-            fullname: 1,
+            name: 1,
             username: 1,
             avatar: 1,
           },
@@ -86,7 +87,7 @@ export const getConversations = async (req, res) => {
       { $sort: { "latestMessage.createdAt": -1 } },
     ]);
 
-    // Get unread message count for each conversation
+    // Get unread message count for each conversation AND fetch complete user data
     const conversationsWithUnreadCount = await Promise.all(
       messages.map(async (conversation) => {
         const unreadCount = await Message.countDocuments({
@@ -94,6 +95,53 @@ export const getConversations = async (req, res) => {
           receiver: userId,
           isRead: false,
         });
+
+        // Lấy thông tin đầy đủ về người dùng từ DB
+        try {
+          const userData = await User.findById(conversation._id);
+          if (userData) {
+            conversation.user = {
+              ...conversation.user,
+              _id: userData._id,
+              username: userData.username || "User",
+              name: userData.name || "Unknown",
+              avatar:
+                userData.avatar ||
+                conversation.user?.avatar ||
+                "https://via.placeholder.com/40",
+            };
+          } else {
+            // Nếu không tìm thấy user, đặt giá trị mặc định
+            if (
+              !conversation.user ||
+              Object.keys(conversation.user).length === 0
+            ) {
+              conversation.user = {
+                _id: conversation._id,
+                username: "User",
+                name: "Unknown",
+                avatar: "https://via.placeholder.com/40",
+              };
+            } else if (conversation.user) {
+              conversation.user.username = conversation.user.username || "User";
+              conversation.user.name = conversation.user.name || "Unknown";
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching complete user data:", err);
+          // Đảm bảo có giá trị mặc định khi có lỗi
+          if (
+            !conversation.user ||
+            Object.keys(conversation.user).length === 0
+          ) {
+            conversation.user = {
+              _id: conversation._id,
+              username: "User",
+              name: "Unknown",
+              avatar: "https://via.placeholder.com/40",
+            };
+          }
+        }
 
         return {
           ...conversation,
@@ -144,8 +192,8 @@ export const getMessages = async (req, res) => {
       ],
     })
       .sort({ createdAt: 1 })
-      .populate("sender", "fullname username avatar")
-      .populate("receiver", "fullname username avatar");
+      .populate("sender", "username name avatar")
+      .populate("receiver", "username name avatar");
 
     // Mark unread messages as read
     await Message.updateMany(
@@ -232,8 +280,8 @@ export const sendMessage = async (req, res) => {
 
     // Populate sender and receiver details
     const populatedMessage = await Message.findById(newMessage._id)
-      .populate("sender", "fullname username avatar")
-      .populate("receiver", "fullname username avatar");
+      .populate("sender", "username name avatar")
+      .populate("receiver", "username name avatar");
 
     // Send the message via socket
     if (io) {
@@ -398,6 +446,80 @@ export const deleteMessage = async (req, res) => {
     return res.status(500).json({
       code: 0,
       message: "Error deleting message",
+      error: error.message,
+    });
+  }
+};
+
+// Delete an entire conversation with a specific user
+export const deleteConversation = async (req, res) => {
+  try {
+    const { userId } = req.params; // ID của người nhận
+    const currentUserId = req.user.id; // ID của người dùng hiện tại
+
+    if (!userId) {
+      return res.status(400).json({
+        code: 0,
+        message: "User ID is required",
+      });
+    }
+
+    // Kiểm tra xem người dùng có tồn tại không
+    const userExists = await User.findById(userId);
+    if (!userExists) {
+      return res.status(404).json({
+        code: 0,
+        message: "User not found",
+      });
+    }
+
+    console.log(`Deleting conversation between ${currentUserId} and ${userId}`);
+
+    // Tìm và xóa tất cả tin nhắn giữa hai người dùng
+    const deleteResult = await Message.deleteMany({
+      $or: [
+        { sender: currentUserId, receiver: userId },
+        { sender: userId, receiver: currentUserId },
+      ],
+    });
+
+    console.log("Delete result:", deleteResult);
+    
+    // Kiểm tra xem có tin nhắn nào bị xóa không
+    if (deleteResult.deletedCount === 0) {
+      return res.status(200).json({
+        code: 1,
+        message: "No messages to delete",
+        deletedCount: 0,
+      });
+    }
+
+    // Thông báo qua socket
+    if (io) {
+      // Thông báo cho người dùng kia về việc cuộc trò chuyện bị xóa
+      io.to(userId).emit("conversation_deleted", {
+        deletedBy: currentUserId,
+        withUser: userId,
+      });
+
+      // Thông báo cho phòng chat
+      const room = [currentUserId, userId].sort().join("-");
+      io.to(room).emit("conversation_deleted", {
+        deletedBy: currentUserId,
+        withUser: userId,
+      });
+    }
+
+    return res.status(200).json({
+      code: 1,
+      message: "Conversation deleted successfully",
+      deletedCount: deleteResult.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    return res.status(500).json({
+      code: 0,
+      message: "Error deleting conversation",
       error: error.message,
     });
   }

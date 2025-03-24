@@ -14,4 +14,8 @@ router.get("/status/:postId", LikeController.GetLikeStatus);
 
 router.post("/get-all", LikeController.GetAllLikeFromPosts);
 
+router.post("/toggle", LikeController.ToggleLike);
+
+router.get("/liked-posts", LikeController.GetLikedPosts);
+
 export default router;

@@ -357,20 +357,40 @@ const AuthController = {
         });
       }
 
-      // In a real world scenario, you would send a verification email
-      // For this implementation, we'll just mark the user as verified
-      user.isVerified = true;
-      await user.save();
+      // Giả lập gửi email xác thực (implementation note)
+      // Trong môi trường thực tế, bạn sẽ tích hợp dịch vụ email như Nodemailer hoặc SendGrid
+      console.log(
+        `[Email Service] Sending verification email to: ${user.email}`
+      );
+      console.log(
+        `[Email Service] Verification link: https://yourdomain.com/verify?token=${userId}`
+      );
+
+      // Cập nhật trạng thái mà không xác thực schema
+      await Users.findByIdAndUpdate(
+        userId,
+        {
+          verificationRequested: true,
+          verificationRequestDate: new Date(),
+        },
+        {
+          new: true,
+          runValidators: false,
+        }
+      );
 
       return res.status(200).json({
         code: 1,
-        message: "Account verified successfully",
+        message:
+          "Verification email sent successfully. Please check your inbox.",
+        sentTo: user.email,
       });
     } catch (error) {
       console.error("Verify account error:", error);
       return res.status(500).json({
         code: 0,
-        message: "An error occurred while verifying account",
+        message: "An error occurred while sending verification email",
+        error: error.message,
       });
     }
   },

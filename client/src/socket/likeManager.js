@@ -8,35 +8,30 @@ export const setupLikeSocket = () => {
     return false;
   }
 
-  // Lắng nghe sự kiện update like từ server
   socket.on("post:like:update", (data) => {
     const { postId, count, action, userId } = data;
 
-    console.log(`[Socket] Received like update for post ${postId}:`, data);
+    // console.log(`[Socket] Received like update for post ${postId}:`, data);
 
-    // Lấy state hiện tại
     const currentState = store.getState();
     const currentUser = currentState.auth?.user?.user?._id;
     const currentLikeState = currentState.like?.likesByPost?.[postId];
 
-    // Kiểm tra nếu người gửi event chính là người dùng hiện tại thì bỏ qua
-    // vì client đã tự cập nhật UI rồi
     if (userId === currentUser) {
       console.log(`[Socket] Ignoring like update from current user: ${userId}`);
       return;
     }
 
-    // Nếu không có dữ liệu count, không cập nhật
     if (count === undefined || count === null) {
       console.warn(`[Socket] Missing count in like update:`, data);
       return;
     }
 
-    console.log(
-      `[Socket] Updating like state for post ${postId}. Current state:`,
-      currentLikeState
-    );
-    console.log(`[Socket] New count: ${count}, User action: ${action}`);
+    // console.log(
+    //   `[Socket] Updating like state for post ${postId}. Current state:`,
+    //   currentLikeState
+    // );
+    // console.log(`[Socket] New count: ${count}, User action: ${action}`);
 
     // Cập nhật store với số lượng like mới từ server
     // Giữ nguyên trạng thái isLiked của user hiện tại
@@ -48,7 +43,7 @@ export const setupLikeSocket = () => {
       })
     );
 
-    console.log(`[Socket] State updated for post ${postId}`);
+    // console.log(`[Socket] State updated for post ${postId}`);
   });
 
   // Thêm lắng nghe cho sự kiện toàn cục - phòng hợp socket room không hoạt động đúng
@@ -62,10 +57,10 @@ export const setupLikeSocket = () => {
     }
 
     const postId = postIdMatch[1];
-    console.log(
-      `[Socket] Received global like update for post ${postId}:`,
-      data
-    );
+    // console.log(
+    //   `[Socket] Received global like update for post ${postId}:`,
+    //   data
+    // );
 
     // Lấy state hiện tại
     const currentState = store.getState();
@@ -92,7 +87,7 @@ export const setupLikeSocket = () => {
     if (!postId || !socket.connected) return false;
 
     try {
-      console.log(`[Socket] Joining post room: post:${postId}`);
+      // console.log(`[Socket] Joining post room: post:${postId}`);
 
       // Tham gia phòng bằng join_room thông thường
       socket.emit("join_room", `post:${postId}`);
@@ -102,10 +97,10 @@ export const setupLikeSocket = () => {
 
       // Thêm lắng nghe sự kiện cụ thể cho post này
       socket.on(`post:${postId}:like:update`, (data) => {
-        console.log(
-          `[Socket] Received direct like update for post ${postId}:`,
-          data
-        );
+        // console.log(
+        //   `[Socket] Received direct like update for post ${postId}:`,
+        //   data
+        // );
 
         // Lấy state hiện tại
         const currentState = store.getState();
@@ -149,7 +144,7 @@ export const setupLikeSocket = () => {
     }
 
     try {
-      console.log(`[Socket] Emitting ${action} action for post ${postId}`);
+      // console.log(`[Socket] Emitting ${action} action for post ${postId}`);
       socket.emit("post:like", {
         postId,
         userId,

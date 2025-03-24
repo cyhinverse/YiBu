@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 // import { useSocketContext } from "../../../contexts/SocketContext";
 import { Bell, Send } from "lucide-react";
@@ -7,9 +7,57 @@ import { toast } from "react-hot-toast";
 
 const NotificationTest = () => {
   const { user } = useSelector((state) => state.auth);
-  const userId = user?.user?._id;
+  const [userId, setUserId] = useState(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Extract the user ID correctly based on the auth state structure
+  useEffect(() => {
+    let extractedId = null;
+
+    if (user) {
+      // Try all possible paths where the ID might be stored
+      if (user._id) {
+        extractedId = user._id;
+        console.log("Found ID directly in user object:", extractedId);
+      } else if (user.user && user.user._id) {
+        extractedId = user.user._id;
+        console.log("Found ID in user.user object:", extractedId);
+      } else if (user.id) {
+        extractedId = user.id;
+        console.log("Found ID as user.id:", extractedId);
+      } else if (user.user && user.user.id) {
+        extractedId = user.user.id;
+        console.log("Found ID as user.user.id:", extractedId);
+      } else {
+        // Try to get it from localStorage as a fallback
+        try {
+          const storedUser = JSON.parse(localStorage.getItem("user"));
+          if (storedUser && storedUser._id) {
+            extractedId = storedUser._id;
+            console.log("Found ID in localStorage user:", extractedId);
+          } else if (storedUser && storedUser.user && storedUser.user._id) {
+            extractedId = storedUser.user._id;
+            console.log("Found ID in localStorage user.user:", extractedId);
+          } else if (storedUser && storedUser.id) {
+            extractedId = storedUser.id;
+            console.log("Found ID as localStorage user.id:", extractedId);
+          } else if (storedUser && storedUser.user && storedUser.user.id) {
+            extractedId = storedUser.user.id;
+            console.log("Found ID as localStorage user.user.id:", extractedId);
+          }
+        } catch (error) {
+          console.error("Error parsing user from localStorage:", error);
+        }
+      }
+    }
+
+    if (extractedId) {
+      setUserId(extractedId);
+    } else {
+      console.error("Could not find user ID in any expected location", user);
+    }
+  }, [user]);
 
   const handleTestNotification = async () => {
     try {
@@ -18,12 +66,24 @@ const NotificationTest = () => {
         return;
       }
 
+      if (!userId) {
+        toast.error("Không thể xác định người dùng. Vui lòng đăng nhập lại.");
+        return;
+      }
+
       setSending(true);
-      const response = await NOTIFICATION.CREATE_NOTIFICATION({
+
+      // The notification controller requires recipient, type, and content
+      const notificationData = {
         recipient: userId,
         type: "test",
         content: message,
-      });
+        // The sender will be set automatically from the authenticated user on the server
+      };
+
+      console.log("Sending notification data:", notificationData);
+
+      const response = await NOTIFICATION.CREATE_NOTIFICATION(notificationData);
 
       if (response.data.code === 1) {
         toast.success("Đã gửi thông báo test");
@@ -31,7 +91,26 @@ const NotificationTest = () => {
       }
     } catch (error) {
       console.error("Lỗi khi gửi thông báo test:", error);
-      toast.error("Lỗi khi gửi thông báo");
+
+      // Extract more detailed error information
+      let errorMessage = "Lỗi khi gửi thông báo";
+
+      if (error.response) {
+        const responseData = error.response.data;
+        if (responseData.message) {
+          errorMessage += `: ${responseData.message}`;
+        }
+        if (responseData.details) {
+          errorMessage += ` (${JSON.stringify(responseData.details)})`;
+        }
+        if (responseData.errors) {
+          errorMessage += ` - Lỗi: ${JSON.stringify(responseData.errors)}`;
+        }
+      } else if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setSending(false);
     }
@@ -56,7 +135,7 @@ const NotificationTest = () => {
           />
           <button
             onClick={handleTestNotification}
-            disabled={sending}
+            disabled={sending || !userId}
             className="px-4 py-2.5 bg-indigo-500 text-white rounded-r-lg hover:bg-indigo-600 transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {sending ? (

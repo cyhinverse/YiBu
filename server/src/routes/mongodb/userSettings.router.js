@@ -22,7 +22,7 @@ router.put(
 router.put("/privacy", UserSettingsController.updatePrivacySettings);
 
 // Cập nhật cài đặt thông báo
-router.put("/notification", UserSettingsController.updateNotificationSettings);
+router.put("/notifications", UserSettingsController.updateNotificationSettings);
 
 // Cập nhật cài đặt bảo mật
 router.put("/security", UserSettingsController.updateSecuritySettings);

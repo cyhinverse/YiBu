@@ -5,6 +5,7 @@ import {
   sendMessage,
   markAsRead,
   deleteMessage,
+  deleteConversation,
 } from "../../controllers/mongodb/message.controller.js";
 import { verifyToken } from "../../middleware/auth.middleware.js";
 
@@ -24,5 +25,8 @@ router.put("/read/:messageId", verifyToken, markAsRead);
 
 // Delete a message
 router.delete("/:messageId", verifyToken, deleteMessage);
+
+// Delete entire conversation with a user
+router.delete("/conversation/:userId", verifyToken, deleteConversation);
 
 export default router;

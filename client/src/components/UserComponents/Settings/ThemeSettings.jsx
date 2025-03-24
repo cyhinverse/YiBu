@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import UserSettingsService from "../../../services/userSettingsService";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
+import { setThemeSettings } from "../../../slices/UserSlice";
+import { Sun, Moon, Monitor, Save } from "lucide-react";
 
 const ThemeSettings = () => {
+  const dispatch = useDispatch();
+  const userSettings = useSelector((state) => state.user?.settings);
+  const theme = userSettings?.theme;
+
   const [loading, setLoading] = useState(false);
   const [themeData, setThemeData] = useState({
     appearance: "system",
@@ -11,135 +18,292 @@ const ThemeSettings = () => {
   });
 
   useEffect(() => {
+    // Initialize with Redux state if available
+    if (theme) {
+      setThemeData(theme);
+    }
+
+    // Only fetch from server if we don't already have theme data
     const fetchSettings = async () => {
       try {
+        setLoading(true);
         const response = await UserSettingsService.getAllSettings();
-        if (response.success && response.userSettings && response.userSettings.theme) {
-          setThemeData(response.userSettings.theme);
+        if (
+          response.success &&
+          response.userSettings &&
+          response.userSettings.theme
+        ) {
+          const serverTheme = response.userSettings.theme;
+          setThemeData(serverTheme);
+          // Update Redux state with server data
+          dispatch(setThemeSettings(serverTheme));
         }
       } catch (error) {
         console.error("Lỗi khi lấy cài đặt:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchSettings();
+    // Only fetch if we don't have theme data
+    if (!theme) {
+      fetchSettings();
+    }
+  }, [dispatch]); // Remove theme from dependencies
+
+  // Apply theme changes in real-time
+  useEffect(() => {
+    applyThemeToDocument(themeData);
+  }, [themeData]);
+
+  // Log initial state values when the component mounts
+  useEffect(() => {
+    console.log("ThemeSettings: Component mounted");
+    console.log("ThemeSettings: Initial Redux theme state:", theme);
+    console.log("ThemeSettings: Initial theme data state:", themeData);
+
+    // Check localStorage
+    try {
+      const persistedRoot = localStorage.getItem("persist:root");
+      if (persistedRoot) {
+        const parsedRoot = JSON.parse(persistedRoot);
+        if (parsedRoot.user) {
+          const userData = JSON.parse(parsedRoot.user);
+          console.log(
+            "ThemeSettings: Theme from localStorage:",
+            userData?.settings?.theme
+          );
+        }
+      }
+    } catch (error) {
+      console.error("ThemeSettings: Error parsing localStorage:", error);
+    }
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setThemeData((prev) => ({
-      ...prev,
+  const applyThemeToDocument = (theme) => {
+    console.log("ThemeSettings: Applying theme to document", theme);
+
+    // Kiểm tra classList hiện tại trước khi thay đổi
+    console.log(
+      "ThemeSettings: Current classList before change:",
+      document.documentElement.className
+    );
+
+    // Apply appearance
+    if (theme.appearance === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      console.log(
+        "ThemeSettings: Applied light mode, classList after:",
+        document.documentElement.className
+      );
+    } else if (theme.appearance === "dark") {
+      document.documentElement.classList.remove("light");
+      document.documentElement.classList.add("dark");
+      console.log(
+        "ThemeSettings: Applied dark mode, classList after:",
+        document.documentElement.className
+      );
+    } else if (theme.appearance === "system") {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      console.log("ThemeSettings: System prefers dark?", prefersDark);
+
+      document.documentElement.classList.remove(prefersDark ? "light" : "dark");
+      document.documentElement.classList.add(prefersDark ? "dark" : "light");
+      console.log(
+        "ThemeSettings: Applied system preference mode, classList after:",
+        document.documentElement.className
+      );
+    }
+
+    // Apply primary color
+    document.documentElement.style.setProperty(
+      "--primary-color",
+      theme.primaryColor
+    );
+    console.log("ThemeSettings: Applied primary color:", theme.primaryColor);
+
+    // Apply font size
+    let rootFontSize = "16px";
+    if (theme.fontSize === "small") rootFontSize = "14px";
+    if (theme.fontSize === "large") rootFontSize = "18px";
+    document.documentElement.style.fontSize = rootFontSize;
+    console.log("ThemeSettings: Applied font size:", rootFontSize);
+  };
+
+  const handleChange = (name, value) => {
+    console.log(`Changing ${name} to ${value}`);
+
+    const updatedTheme = {
+      ...themeData,
       [name]: value,
-    }));
+    };
+    console.log("Updated theme data:", updatedTheme);
+
+    setThemeData(updatedTheme);
+
+    // Update Redux immediately for real-time preview
+    dispatch(setThemeSettings(updatedTheme));
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      await UserSettingsService.updateThemeSettings(themeData);
-      toast.success("Cài đặt giao diện đã được lưu");
+      const response = await UserSettingsService.updateThemeSettings(themeData);
+
+      if (response && response.success) {
+        toast.success("Cài đặt giao diện đã được lưu");
+        // Make sure Redux has the latest settings
+        dispatch(setThemeSettings(themeData));
+      } else {
+        toast.error("Không thể lưu cài đặt giao diện");
+      }
     } catch (error) {
       console.error("Lỗi khi cập nhật giao diện:", error);
-      toast.error("Lỗi khi lưu cài đặt");
+      toast.error("Lỗi khi lưu cài đặt: " + (error.message || "Đã xảy ra lỗi"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-8 space-y-10 bg-neutral-50 border border-neutral-200 rounded-xl">
-      <h1 className="text-2xl font-semibold text-neutral-800">Cài Đặt Giao Diện</h1>
+    <div className="w-full max-w-2xl mx-auto p-8 space-y-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">
+        Cài Đặt Giao Diện
+      </h1>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium text-neutral-700">Chế Độ Hiển Thị</h2>
+        <h2 className="text-lg font-medium text-gray-700 dark:text-gray-200">
+          Chế Độ Hiển Thị
+        </h2>
         <div className="grid grid-cols-3 gap-3">
           <button
-            className={`p-4 rounded-md flex flex-col items-center justify-center border ${
+            type="button"
+            className={`p-4 rounded-md flex flex-col items-center justify-center border transition-all ${
               themeData.appearance === "light"
-                ? "border-blue-500 bg-blue-50"
-                : "border-neutral-300 bg-white"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-gray-800 dark:text-white"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
             }`}
-            onClick={() => setThemeData(prev => ({ ...prev, appearance: "light" }))}
+            onClick={() => handleChange("appearance", "light")}
           >
-            <span className="material-icons-outlined text-3xl mb-2">light_mode</span>
+            <Sun className="w-6 h-6 mb-2 text-yellow-500 dark:text-yellow-400" />
             <span>Sáng</span>
           </button>
           <button
-            className={`p-4 rounded-md flex flex-col items-center justify-center border ${
+            type="button"
+            className={`p-4 rounded-md flex flex-col items-center justify-center border transition-all ${
               themeData.appearance === "dark"
-                ? "border-blue-500 bg-blue-50"
-                : "border-neutral-300 bg-white"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-gray-800 dark:text-white"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
             }`}
-            onClick={() => setThemeData(prev => ({ ...prev, appearance: "dark" }))}
+            onClick={() => handleChange("appearance", "dark")}
           >
-            <span className="material-icons-outlined text-3xl mb-2">dark_mode</span>
+            <Moon className="w-6 h-6 mb-2 text-indigo-400 dark:text-indigo-300" />
             <span>Tối</span>
           </button>
           <button
-            className={`p-4 rounded-md flex flex-col items-center justify-center border ${
+            type="button"
+            className={`p-4 rounded-md flex flex-col items-center justify-center border transition-all ${
               themeData.appearance === "system"
-                ? "border-blue-500 bg-blue-50"
-                : "border-neutral-300 bg-white"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-gray-800 dark:text-white"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
             }`}
-            onClick={() => setThemeData(prev => ({ ...prev, appearance: "system" }))}
+            onClick={() => handleChange("appearance", "system")}
           >
-            <span className="material-icons-outlined text-3xl mb-2">devices</span>
+            <Monitor className="w-6 h-6 mb-2 text-gray-500 dark:text-gray-400" />
             <span>Hệ thống</span>
           </button>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium text-neutral-700">Màu Chủ Đạo</h2>
+        <h2 className="text-lg font-medium text-gray-700 dark:text-gray-200">
+          Màu Chủ Đạo
+        </h2>
         <div className="grid grid-cols-5 gap-3">
-          {["#4f46e5", "#7c3aed", "#db2777", "#ea580c", "#16a34a"].map((color) => (
-            <button
-              key={color}
-              className={`w-12 h-12 rounded-full ${
-                themeData.primaryColor === color ? "ring-2 ring-offset-2 ring-blue-500" : ""
-              }`}
-              style={{ backgroundColor: color }}
-              onClick={() => setThemeData(prev => ({ ...prev, primaryColor: color }))}
-            ></button>
-          ))}
+          {["#4f46e5", "#7c3aed", "#db2777", "#ea580c", "#16a34a"].map(
+            (color) => (
+              <button
+                key={color}
+                type="button"
+                className={`w-12 h-12 rounded-full transition-all ${
+                  themeData.primaryColor === color
+                    ? "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400 dark:ring-offset-gray-800"
+                    : "hover:scale-110"
+                }`}
+                style={{ backgroundColor: color }}
+                onClick={() => {
+                  console.log(`Selecting color: ${color}`);
+                  handleChange("primaryColor", color);
+                }}
+                aria-label={`Select color ${color}`}
+              ></button>
+            )
+          )}
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium text-neutral-700">Cỡ Chữ</h2>
-        <div className="flex items-center space-x-4">
+        <h2 className="text-lg font-medium text-gray-700 dark:text-gray-200">
+          Cỡ Chữ
+        </h2>
+        <div className="flex flex-col space-y-2">
+          <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+            <span>Nhỏ</span>
+            <span>Vừa</span>
+            <span>Lớn</span>
+          </div>
           <input
             type="range"
-            name="fontSize"
             min="1"
             max="3"
             value={
-              themeData.fontSize === "small" ? 1 : themeData.fontSize === "medium" ? 2 : 3
+              themeData.fontSize === "small"
+                ? 1
+                : themeData.fontSize === "medium"
+                ? 2
+                : 3
             }
             onChange={(e) => {
-              const value = e.target.value;
-              const fontSize = value === "1" ? "small" : value === "2" ? "medium" : "large";
-              setThemeData(prev => ({ ...prev, fontSize }));
+              const value = parseInt(e.target.value, 10);
+              const fontSize =
+                value === 1 ? "small" : value === 2 ? "medium" : "large";
+              handleChange("fontSize", fontSize);
             }}
-            className="w-full"
+            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500"
           />
-          <span className="text-xs">
-            {themeData.fontSize === "small"
-              ? "Nhỏ"
-              : themeData.fontSize === "medium"
-              ? "Vừa"
-              : "Lớn"}
-          </span>
+          <div className="text-center text-sm mt-2 text-gray-600 dark:text-gray-300">
+            Kích thước hiện tại:
+            <span className="font-medium ml-1">
+              {themeData.fontSize === "small"
+                ? "Nhỏ"
+                : themeData.fontSize === "medium"
+                ? "Vừa"
+                : "Lớn"}
+            </span>
+          </div>
         </div>
       </section>
 
       <div className="flex justify-end pt-4">
         <button
-          className="px-6 py-2 bg-neutral-800 text-white rounded-md hover:bg-neutral-900 transition disabled:opacity-50"
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-md transition disabled:opacity-50 flex items-center gap-2 shadow-sm"
           onClick={handleSave}
           disabled={loading}
         >
-          {loading ? "Đang lưu..." : "Lưu Thay Đổi"}
+          {loading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Đang lưu...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Lưu Thay Đổi</span>
+            </>
+          )}
         </button>
       </div>
     </div>

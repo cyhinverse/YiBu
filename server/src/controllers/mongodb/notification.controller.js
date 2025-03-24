@@ -3,12 +3,25 @@ import Notification from "../../models/mongodb/Notifications.js";
 import { io } from "../../socket.js";
 
 const createNotification = CatchError(async (req, res) => {
+  console.log("CreateNotification received request body:", req.body);
+  console.log("CreateNotification user from token:", req.user);
+
   const { recipient, sender, type, content, post, comment } = req.body;
 
   if (!recipient || !type || !content) {
+    console.log("Missing required fields:", {
+      hasRecipient: !!recipient,
+      hasType: !!type,
+      hasContent: !!content,
+    });
     return res.status(400).json({
       code: 0,
       message: "Thiếu thông tin cần thiết",
+      details: {
+        recipient: recipient ? "provided" : "missing",
+        type: type ? "provided" : "missing",
+        content: content ? "provided" : "missing",
+      },
     });
   }
 

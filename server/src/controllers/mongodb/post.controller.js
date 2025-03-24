@@ -15,8 +15,8 @@ const PostController = {
       const posts = await Post.find()
         .populate({
           path: "user",
-          select: "name followers following",
-          populate: { path: "profile", select: "avatar" },
+          select: "name followers following avatar",
+          // populate: { path: "profile", select: "avatar" },
         })
         .sort({ createdAt: -1 })
         .skip(skip)

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import User from "../../models/mongodb/Users.js";
 import Profiles from "../../models/mongodb/Profiles.js";
-import { Message } from "../../models/mongodb/Messages.js";
+import Message from "../../models/mongodb/Messages.js";
 import { CatchError } from "../../configs/CatchError.js";
 
 const UserController = {

@@ -60,11 +60,11 @@ const UserSettingsService = {
   },
 
   // Cập nhật cài đặt thông báo
-  updateNotificationSettings: async (notificationData) => {
+  updateNotificationSettings: async (notificationSettings) => {
     try {
       const response = await api.put(
         SETTINGS_API_ENDPOINTS.UPDATE_NOTIFICATION,
-        notificationData
+        notificationSettings
       );
       return response.data;
     } catch (error) {
@@ -113,16 +113,28 @@ const UserSettingsService = {
   // Cập nhật cài đặt giao diện
   updateThemeSettings: async (themeData) => {
     try {
+      console.log(
+        "userSettingsService: Updating theme settings with data:",
+        themeData
+      );
+      console.log(
+        "userSettingsService: Using endpoint:",
+        SETTINGS_API_ENDPOINTS.UPDATE_THEME
+      );
+
       const response = await api.put(
         SETTINGS_API_ENDPOINTS.UPDATE_THEME,
         themeData
       );
+
+      console.log("userSettingsService: Theme update response:", response.data);
       return response.data;
     } catch (error) {
       console.error(
         "Lỗi khi cập nhật giao diện:",
         error.response?.data || error.message
       );
+      console.error("userSettingsService: Full error details:", error);
       throw error;
     }
   },

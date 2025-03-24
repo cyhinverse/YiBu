@@ -1,10 +1,158 @@
 @import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 @import "tailwindcss";
 
+:root {
+  --primary-color: #4f46e5;
+
+  /* Light mode colors */
+  --background-color: #ffffff;
+  --text-color: #1f2937;
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+}
+
+.dark {
+  --background-color: black;
+  --text-color: #f9fafb;
+  --border-color: #374151;
+  --card-bg: black;
+  color-scheme: dark;
+}
+
+/* Typography defaults */
+html {
+  font-size: 16px;
+}
+
 body {
-  padding: 0;
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
   box-sizing: border-box;
   font-family: "Poppins", sans-serif;
-  background-color: #fafafa;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* CSS tùy chỉnh cho dark mode - ghi đè lên Tailwind */
+html.dark body {
+  background-color: black;
+  color: #f9fafb;
+}
+
+html.dark .bg-white {
+  background-color: black !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #374151 !important;
+}
+
+html.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+html.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+html.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+html.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html.dark .border-gray-200 {
+  border-color: #374151 !important;
+}
+
+html.dark .border-gray-300 {
+  border-color: #4b5563 !important;
+}
+
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-sm {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5),
+    0 2px 4px -1px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Thêm các lớp tùy chỉnh để sử dụng với các biến CSS */
+.bg-app {
+  background-color: var(--background-color);
+}
+
+.text-app {
+  color: var(--text-color);
+}
+
+.border-app {
+  border-color: var(--border-color);
+}
+
+.bg-card {
+  background-color: var(--card-bg);
+}
+
+/* Adding accent color classes */
+.text-primary {
+  color: var(--primary-color);
+}
+
+.bg-primary {
+  background-color: var(--primary-color);
+}
+
+.border-primary {
+  border-color: var(--primary-color);
+}
+
+/* Hover effect for primary buttons */
+.hover\:bg-primary-dark:hover {
+  background-color: color-mix(in srgb, var(--primary-color), #000 10%);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Thêm hiệu ứng cho các component */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes dropdownIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out forwards;
+}
+
+.animate-dropdown {
+  animation: dropdownIn 0.2s ease-out forwards;
+}
+
+/* Tùy chỉnh scrollbar */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -12,8 +12,6 @@ import Like from "../../../services/likeService";
 import "./index.css";
 import { DataContext } from "../../../DataProvider";
 import CommentModel from "../Comment/CommentModel";
-import { formatDistanceToNowStrict } from "date-fns";
-import { vi } from "date-fns/locale";
 import ShowImagePost from "./ShowImagePost";
 import ShowVideoPost from "./ShowVideoPost";
 import { setPostLikeStatus } from "../../../slices/LikeSlice";
@@ -22,23 +20,30 @@ import { setSavedStatus } from "../../../slices/SavePostSlice";
 import { toast } from "react-hot-toast";
 import { getLikeManager } from "../../../socket/likeManager";
 import { getCommentManager } from "../../../socket/commentManager";
+import InvalidPostFallback from "./InvalidPostFallback";
+import formatTime from "../../../utils/formatTime";
 
-const InvalidPostFallback = ({ message }) => (
-  <div className="w-full p-4 border-b border-gray-200">
-    <div className="flex items-center space-x-2">
-      <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
-      <div>
-        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-        <div className="h-3 w-16 bg-gray-100 rounded mt-2 animate-pulse"></div>
-      </div>
-    </div>
-    <div className="mt-3 text-sm text-red-500">{message}</div>
-  </div>
-);
+// Wrapper component để xử lý việc kiểm tra bài viết ẩn
+const PostWrapper = ({ data, isSavedPost = false }) => {
+  // Kiểm tra xem bài viết có bị ẩn không
+  const hiddenPosts = useSelector(
+    (state) => state.hiddenPosts?.hiddenPosts || []
+  );
+  const isHidden = data && data._id && hiddenPosts.includes(data._id);
+
+  if (isHidden) {
+    return null;
+  }
+
+  return <Post data={data} isSavedPost={isSavedPost} />;
+};
 
 const Post = ({ data, isSavedPost = false }) => {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth?.user);
+  const { avatar } = data.user;
+  console.log(`Check avatar every user:::`, avatar);
+  console.log(`Check data currentUser`, data);
   const likeState = useSelector((state) => {
     return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
   });
@@ -62,27 +67,14 @@ const Post = ({ data, isSavedPost = false }) => {
   const [postId, setPostId] = useState(null);
   const commentManager = getCommentManager();
 
-  const isValidData = data && data._id;
+  const isValidData = !!(data && data._id);
+
+  const userId =
+    currentUser?._id || currentUser?.user?._id || currentUser?.data?._id;
 
   const user = data?.user || {
     name: "Người dùng không xác định",
     avatar: null,
-  };
-
-  const formatTime = (date) => {
-    if (!date) return "Không xác định";
-    try {
-      const formattedRelative = formatDistanceToNowStrict(new Date(date), {
-        addSuffix: true,
-        locale: vi,
-      });
-      return formattedRelative.includes("dưới 1 phút trước")
-        ? "Vừa xong"
-        : formattedRelative;
-    } catch (error) {
-      console.error("Lỗi định dạng thời gian:", error);
-      return "Không xác định";
-    }
   };
 
   const handleVideoLoaded = (videoId) => {
@@ -130,14 +122,11 @@ const Post = ({ data, isSavedPost = false }) => {
       }
     } catch (error) {
       console.error("Error checking saved status:", error);
-      // Không cần hiển thị lỗi cho người dùng khi chỉ kiểm tra trạng thái
     }
   };
 
   useEffect(() => {
     if (!isValidData) return;
-
-    // Nếu đã có trạng thái từ props isSavedPost, không cần kiểm tra lại
     if (!isSavedPost) {
       checkSavedStatus();
     }
@@ -185,7 +174,7 @@ const Post = ({ data, isSavedPost = false }) => {
     };
 
     if (likeManager) {
-      console.log(`[Post ${postId}] Joining post room for realtime updates`);
+      // console.log(`[Post ${postId}] Joining post room for realtime updates`);
       likeManager.joinPostRoom(postId);
     } else {
       console.warn(
@@ -200,13 +189,10 @@ const Post = ({ data, isSavedPost = false }) => {
     };
   }, [dispatch, isValidData, data?._id, currentUser?.user?._id]);
 
-  // Tham gia room của bài viết để nhận các sự kiện comment
   useEffect(() => {
     if (isValidData) {
-      // Tham gia room của bài viết để nhận thông báo về comment
       commentManager.joinPostRoom(data._id);
 
-      // Đăng ký các handler cho sự kiện comment
       const unregisterNewComment =
         commentManager.registerNewCommentHandler(handleCommentUpdate);
       const unregisterUpdateComment =
@@ -215,7 +201,6 @@ const Post = ({ data, isSavedPost = false }) => {
         commentManager.registerDeleteCommentHandler(handleCommentUpdate);
 
       return () => {
-        // Hủy đăng ký khi component unmount
         unregisterNewComment();
         unregisterUpdateComment();
         unregisterDeleteComment();
@@ -224,7 +209,6 @@ const Post = ({ data, isSavedPost = false }) => {
     }
   }, [data._id]);
 
-  // Xử lý khi có sự kiện comment (new, update, delete)
   const handleCommentUpdate = (eventData) => {
     if (
       eventData.postId === data._id &&
@@ -235,11 +219,11 @@ const Post = ({ data, isSavedPost = false }) => {
   };
 
   const handleLike = () => {
-    if (!isValidData || likeLoading || !currentUser?.user?._id) {
+    if (!isValidData || likeLoading || !userId) {
       console.log("[Like Debug] Cannot like:", {
         isValidData,
         likeLoading,
-        userId: currentUser?.user?._id,
+        userId,
       });
       return;
     }
@@ -250,7 +234,6 @@ const Post = ({ data, isSavedPost = false }) => {
 
       const oldState = { ...likeState };
       const postId = data._id;
-      const userId = currentUser.user._id;
       const newIsLiked = !likeState.isLiked;
       const newCount = newIsLiked
         ? likeState.count + 1
@@ -404,16 +387,13 @@ const Post = ({ data, isSavedPost = false }) => {
     }
   };
 
-  // Hiển thị CommentModel khi click vào biểu tượng comment
   const openCommentModal = () => {
-    setPostId(data._id); // Lưu ID của bài viết hiện tại
-    setOpenComment(true); // Mở modal comment
+    setPostId(data._id);
+    setOpenComment(true);
   };
 
-  // Tải số lượng comment ban đầu khi component được mount
   useEffect(() => {
     if (isValidData) {
-      // Tải số lượng comment từ server
       const fetchCommentCount = async () => {
         try {
           const response = await fetch(
@@ -441,29 +421,33 @@ const Post = ({ data, isSavedPost = false }) => {
   }
 
   return (
-    <div className="w-full bg-white border-b border-gray-300 flex flex-col justify-start gap-2">
+    <div className="w-full  border-b border-gray-300 flex flex-col justify-start gap-2">
       <div className="flex justify-between px-4 pt-2">
         <div className="flex space-x-2 relative">
           <img
             className="h-[35px] w-[35px] object-cover rounded-full cursor-pointer"
             src={
-              user?.avatar ||
+              avatar ||
               "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1"
             }
             alt="Profile"
           />
-          <div className="flex gap-3 justify-start">
-            <span className="font-semibold hover:underline">
+          <div className="flex gap-3 justify-start items-start">
+            <span className="font-semibold text-medium hover:underline">
               {user?.name || "Người dùng"}
             </span>
-            <span className="text-sm font-semibold text-black/15">
+            <span className=" font-medium text-gray-500 ">
               {formatTime(data.createdAt)}
             </span>
           </div>
         </div>
         <div onClick={() => setPostOption(!postOption)} className="relative">
           <Ellipsis className="cursor-pointer" size={20} />
-          <PostOption show={postOption} />
+          <PostOption
+            show={postOption}
+            postId={data._id}
+            postUserId={data.user?._id}
+          />
         </div>
       </div>
 
@@ -660,4 +644,5 @@ const Post = ({ data, isSavedPost = false }) => {
   );
 };
 
-export default Post;
+// Xuất component wrapper thay vì component gốc
+export default PostWrapper;

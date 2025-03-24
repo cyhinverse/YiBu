@@ -48,7 +48,7 @@ class CommentManager {
 
     emitSocketEvent("join_room", roomId);
     this.postRooms.add(roomId);
-    console.log(`Joined post room: ${roomId}`);
+    // console.log(`Joined post room: ${roomId}`);
   }
 
   // Rời khỏi room của bài viết
@@ -60,7 +60,7 @@ class CommentManager {
 
     emitSocketEvent("leave_room", roomId);
     this.postRooms.delete(roomId);
-    console.log(`Left post room: ${roomId}`);
+    // console.log(`Left post room: ${roomId}`);
   }
 
   // Đăng ký handler để nhận thông báo về sự kiện comment

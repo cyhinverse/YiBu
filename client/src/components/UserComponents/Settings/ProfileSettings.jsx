@@ -421,17 +421,17 @@ const ProfileSettings = () => {
 
   return (
     <>
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-purple-700">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+        <h1 className="text-2xl font-bold mb-6 text-purple-700 dark:text-purple-400">
           Cài Đặt Hồ Sơ Cá Nhân
         </h1>
 
         <div className="space-y-6">
           {/* Ảnh đại diện */}
-          <div className="bg-gray-50 p-6 rounded-lg flex items-center justify-between">
+          <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg flex items-center justify-between">
             <div className="flex items-center">
               <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
                   <img
                     src={
                       profileData.avatar || "https://via.placeholder.com/150"
@@ -442,29 +442,29 @@ const ProfileSettings = () => {
                 </div>
                 <button
                   onClick={() => handleEdit("avatar")}
-                  className="absolute bottom-0 right-0 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-1.5"
+                  className="absolute bottom-0 right-0 bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white rounded-full p-1.5"
                   disabled={isSubmitting}
                 >
                   <Camera size={16} />
                 </button>
               </div>
               <div className="ml-6">
-                <h3 className="text-lg font-semibold text-gray-800">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                   Ảnh đại diện
                 </h3>
                 {profileData.avatarInfo ? (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {profileData.avatarInfo}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Tải lên ảnh đại diện của bạn
                   </p>
                 )}
               </div>
             </div>
             <button
-              className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 text-sm font-medium"
               onClick={() => handleEdit("avatar")}
               disabled={isSubmitting}
             >

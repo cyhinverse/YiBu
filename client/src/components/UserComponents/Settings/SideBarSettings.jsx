@@ -32,32 +32,20 @@ const menuItems = [
     icon: <Bell size={20} />,
     path: "/settings/notification",
   },
-  {
-    title: "Cài Đặt Bảo Mật",
-    icon: <Lock size={20} />,
-    path: "/settings/security",
-  },
-  {
-    title: "Cài Đặt Nội Dung",
-    icon: <Globe size={20} />,
-    path: "/settings/content",
-  },
+
   {
     title: "Ngôn Ngữ & Giao Diện",
     icon: <Palette size={20} />,
     path: "/settings/theme",
   },
-  {
-    title: "Hỗ Trợ & Phản Hồi",
-    icon: <HelpCircle size={20} />,
-    path: "/settings/support",
-  },
 ];
 
 const SideBarSettings = () => {
   return (
-    <div className="w-[300px] h-full bg-white rounded-xl shadow-lg p-5 border border-gray-200">
-      <h2 className="text-2xl font-bold mb-6 text-purple-700">Settings</h2>
+    <div className="w-[300px] h-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-2xl font-bold mb-6 text-purple-700 dark:text-purple-400">
+        Settings
+      </h2>
       <ul className="space-y-2">
         {menuItems.map((item, index) => (
           <li key={index}>
@@ -68,16 +56,16 @@ const SideBarSettings = () => {
                 transition-all duration-300 ease-in-out
                 ${
                   isActive
-                    ? "bg-purple-100 text-purple-700"
-                    : "hover:bg-purple-50 text-gray-800"
+                    ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
+                    : "hover:bg-purple-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
                 }`
               }
             >
               <span
                 className={`mr-3 transition-colors duration-300 ${
                   window.location.pathname === item.path
-                    ? "text-purple-700"
-                    : "text-purple-600"
+                    ? "text-purple-700 dark:text-purple-400"
+                    : "text-purple-600 dark:text-purple-500"
                 }`}
               >
                 {item.icon}

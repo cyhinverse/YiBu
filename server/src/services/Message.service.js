@@ -1,9 +1,9 @@
-import Messages from "../models/Messages.js";
+import Message from "../models/mongodb/Messages.js";
 
 class MessageService {
   static async createMessage(messageData) {
     try {
-      const message = await Messages.create(messageData);
+      const message = await Message.create(messageData);
       return message;
     } catch (error) {
       console.error("Error creating message:", error);
@@ -13,7 +13,7 @@ class MessageService {
 
   static async getMessagesByUserId(userId) {
     try {
-      const messages = await Messages.find({ userId }).sort({ createdAt: -1 });
+      const messages = await Message.find({ userId }).sort({ createdAt: -1 });
       return messages;
     } catch (error) {
       console.error("Error getting messages:", error);
@@ -23,7 +23,7 @@ class MessageService {
 
   static async deleteMessage(messageId) {
     try {
-      const message = await Messages.findByIdAndDelete(messageId);
+      const message = await Message.findByIdAndDelete(messageId);
       if (!message) {
         throw new Error("Message not found");
       }
@@ -36,7 +36,7 @@ class MessageService {
 
   static async updateMessage(messageId, updateData) {
     try {
-      const message = await Messages.findByIdAndUpdate(messageId, updateData, {
+      const message = await Message.findByIdAndUpdate(messageId, updateData, {
         new: true,
       });
       if (!message) {

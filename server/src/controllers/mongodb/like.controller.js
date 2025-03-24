@@ -447,6 +447,208 @@ const LikeController = {
       });
     }
   }, "Failed to get post likes"),
+
+  ToggleLike: CatchError(async (req, res) => {
+    const { postId } = req.body;
+    const userId = req.user.id;
+
+    if (!postId) {
+      return res.status(400).json({
+        code: 3,
+        message: "Post ID is required",
+      });
+    }
+
+    try {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        const postObjectId = new mongoose.Types.ObjectId(postId);
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+        // Kiểm tra xem bài viết có tồn tại không
+        const post = await Post.findById(postObjectId).session(session);
+        if (!post) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(404).json({
+            code: 0,
+            message: "Post not found",
+          });
+        }
+
+        // Kiểm tra nếu like đã tồn tại
+        const existingLike = await Likes.findOne({
+          user: userObjectId,
+          post: postObjectId,
+        }).session(session);
+
+        let action = "";
+        let message = "";
+
+        // Nếu đã like thì bỏ like, nếu chưa thì thêm like
+        if (existingLike) {
+          // Bỏ like
+          await Likes.findByIdAndDelete(existingLike._id).session(session);
+          action = "unlike";
+          message = "Unliked successfully";
+        } else {
+          // Thêm like
+          const newLike = new Likes({
+            user: userObjectId,
+            post: postObjectId,
+          });
+          await newLike.save({ session });
+
+          // Tạo thông báo nếu người like không phải là chủ bài đăng
+          const postOwner = post.user.toString();
+          if (userId !== postOwner) {
+            const username = req.user.username || "Một người dùng";
+            const notificationContent = `${username} đã thích bài viết của bạn`;
+
+            // Tạo thông báo
+            const notification = new Notification({
+              recipient: postOwner,
+              sender: userId,
+              type: "like",
+              content: notificationContent,
+              post: postObjectId,
+              isRead: false,
+            });
+
+            await notification.save({ session });
+
+            // Payload cho socket
+            const notificationPayload = {
+              _id: notification._id.toString(),
+              recipient: postOwner,
+              sender: {
+                _id: userId,
+                username: req.user.username,
+                name: req.user.username,
+                avatar: req.user.avatar || "https://via.placeholder.com/40",
+              },
+              type: "like",
+              content: notificationContent,
+              post: {
+                _id: postId,
+                caption: post.caption,
+                media:
+                  post.media && post.media.length > 0 ? [post.media[0]] : [],
+              },
+              isRead: false,
+              createdAt: notification.createdAt || new Date(),
+              updatedAt: notification.updatedAt || new Date(),
+            };
+
+            // Gửi thông báo qua socket
+            try {
+              io.to(postOwner).emit("notification:new", notificationPayload);
+              io.emit(`user:${postOwner}:notification`, notificationPayload);
+            } catch (socketError) {
+              console.error(
+                "Error sending notification via socket:",
+                socketError
+              );
+            }
+          }
+
+          action = "like";
+          message = "Liked successfully";
+        }
+
+        // Đếm số lượng like hiện tại
+        const likeCount = await Likes.countDocuments({
+          post: postObjectId,
+        }).session(session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        // Gửi thông báo qua socket
+        const socketPayload = {
+          postId,
+          userId,
+          count: likeCount,
+          action: action,
+          timestamp: new Date(),
+        };
+
+        try {
+          io.to(`post:${postId}`).emit("post:like:update", socketPayload);
+          io.emit(`post:${postId}:like:update`, socketPayload);
+        } catch (socketError) {
+          console.error("Error emitting socket event:", socketError);
+        }
+
+        return res.status(200).json({
+          code: 1,
+          message: message,
+          data: {
+            isLiked: action === "like",
+            count: likeCount,
+          },
+        });
+      } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+      }
+    } catch (error) {
+      console.error(`[Server] Error toggling like:`, error);
+      return res.status(500).json({
+        code: 0,
+        message: "Failed to toggle like",
+        error: error.message,
+      });
+    }
+  }, "Toggle like failed!"),
+
+  GetLikedPosts: CatchError(async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      // Tìm tất cả like của người dùng
+      const userLikes = await Likes.find({
+        user: new mongoose.Types.ObjectId(userId),
+      }).sort({ createdAt: -1 });
+
+      if (!userLikes || userLikes.length === 0) {
+        return res.status(200).json({
+          code: 1,
+          message: "No liked posts found",
+          posts: [],
+        });
+      }
+
+      // Lấy id của tất cả bài viết đã thích
+      const postIds = userLikes.map((like) => like.post);
+
+      // Tìm các bài viết từ id
+      const likedPosts = await Post.find({
+        _id: { $in: postIds },
+      })
+        .populate({
+          path: "user",
+          select: "name avatar",
+        })
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json({
+        code: 1,
+        message: "Liked posts retrieved successfully",
+        posts: likedPosts,
+      });
+    } catch (error) {
+      console.error(`[Server] Error getting liked posts:`, error);
+      return res.status(500).json({
+        code: 0,
+        message: "Failed to get liked posts",
+        error: error.message,
+      });
+    }
+  }, "Get liked posts failed!"),
 };
 
 export default LikeController;

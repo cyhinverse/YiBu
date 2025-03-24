@@ -44,6 +44,10 @@ class MessageManager {
     // Lắng nghe sự kiện xóa tin nhắn
     socket.on("message_deleted", (data) => {
       console.log("messageManager received message_deleted:", data);
+      console.log(
+        "Message deleted data structure:",
+        JSON.stringify(data, null, 2)
+      );
       this.callbacks.onMessageDeleted.forEach((callback) => callback(data));
     });
 
@@ -161,6 +165,25 @@ class MessageManager {
     if (!socket || !socket.connected) return false;
     console.log("Leaving room:", roomId);
     socket.emit("leave_room", roomId);
+    return true;
+  }
+
+  // Xóa tin nhắn
+  deleteMessage(data) {
+    if (!socket || !socket.connected) return false;
+    console.log(
+      "Emitting delete_message with data:",
+      JSON.stringify(data, null, 2)
+    );
+    socket.emit("delete_message", data);
+    return true;
+  }
+
+  // Xóa toàn bộ cuộc trò chuyện
+  deleteConversation(data) {
+    if (!socket || !socket.connected) return false;
+    console.log("Emitting delete_conversation:", data);
+    socket.emit("delete_conversation", data);
     return true;
   }
 }

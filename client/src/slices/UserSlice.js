@@ -5,6 +5,13 @@ const initialState = {
   follower: [],
   user: null,
   loading: false,
+  settings: {
+    theme: {
+      appearance: "system",
+      primaryColor: "#4f46e5",
+      fontSize: "medium",
+    }
+  }
 };
 
 const userSlice = createSlice({
@@ -59,6 +66,27 @@ const userSlice = createSlice({
         user.followers = user.followers.filter((id) => id !== followerId);
       }
     },
+    
+    setThemeSettings: (state, action) => {
+      console.log('Redux: Setting theme settings', action.payload);
+      
+      // Make sure we have a valid payload
+      if (!action.payload) {
+        console.error('Redux: Invalid theme settings payload', action.payload);
+        return;
+      }
+      
+      state.settings = {
+        ...state.settings,
+        theme: action.payload
+      };
+      
+      console.log('Redux: New state settings', state.settings);
+    },
+    
+    setUserSettings: (state, action) => {
+      state.settings = action.payload;
+    },
   },
 });
 
@@ -71,5 +99,7 @@ export const {
   getFollowersByUserId,
   addFollower,
   removeFollower,
+  setThemeSettings,
+  setUserSettings,
 } = userSlice.actions;
 export default userSlice.reducer;

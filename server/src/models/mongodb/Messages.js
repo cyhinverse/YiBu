@@ -15,3 +15,4 @@ const MessageSchema = new Schema(
 );
 
 export const Message = model("Message", MessageSchema);
+export default Message;

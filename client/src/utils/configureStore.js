@@ -8,6 +8,8 @@ import likeReducer from "../slices/LikeSlice.js";
 import messageReducer from "../slices/MessageSlice.js";
 import savePostReducer from "../slices/SavePostSlice.js";
 import notificationReducer from "../slices/NotificationSlice.js";
+import hiddenPostsReducer from "../slices/HiddenPostsSlice.js";
+import reportedPostsReducer from "../slices/ReportPostsSlice.js";
 
 const persistConfig = {
   key: "root",
@@ -20,6 +22,8 @@ const persistConfig = {
     "message",
     "savePost",
     "notification",
+    "hiddenPosts",
+    "reportedPosts",
   ],
 };
 
@@ -31,6 +35,8 @@ const rootReducer = combineReducers({
   message: messageReducer,
   savePost: savePostReducer,
   notification: notificationReducer,
+  hiddenPosts: hiddenPostsReducer,
+  reportedPosts: reportedPostsReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
