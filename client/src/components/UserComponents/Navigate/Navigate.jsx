@@ -5,12 +5,13 @@ import { DataContext } from "../../../DataProvider";
 import { useDispatch, useSelector } from "react-redux";
 import POST from "../../../services/postService";
 import { getPostUserById } from "../../../slices/PostSlice";
+import { setThemeSettings } from "../../../slices/UserSlice";
+import UserSettingsService from "../../../services/userSettingsService";
 import SearchUser from "../Search";
 import NotificationBell from "../Notification/NotificationBell";
 
 const Navigate = () => {
   const { hideSearch, setHideSearch } = useContext(DataContext);
-  const [sunMoon, setSunMoon] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const dispatch = useDispatch();
 
@@ -20,6 +21,13 @@ const Navigate = () => {
   ];
 
   const authState = useSelector((s) => s.auth);
+  const userSettings = useSelector((state) => state.user?.settings);
+  const theme = userSettings?.theme || { appearance: "system" };
+  const isDarkMode =
+    theme.appearance === "dark" ||
+    (theme.appearance === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   console.log(`Check authState::::`, authState);
 
   let userId = null;
@@ -58,6 +66,30 @@ const Navigate = () => {
   const handleCloseSearch = () => {
     setShowSearchModal(false);
     setHideSearch(false);
+  };
+
+  const toggleTheme = () => {
+    const newAppearance = isDarkMode ? "light" : "dark";
+    const updatedTheme = {
+      ...theme,
+      appearance: newAppearance,
+    };
+
+    console.log(`Toggling theme to ${newAppearance}`, updatedTheme);
+    dispatch(setThemeSettings(updatedTheme));
+
+    // Save to server
+    try {
+      UserSettingsService.updateThemeSettings(updatedTheme)
+        .then((response) => {
+          console.log("Theme setting saved to server", response);
+        })
+        .catch((error) => {
+          console.error("Error saving theme setting", error);
+        });
+    } catch (error) {
+      console.error("Error saving theme setting", error);
+    }
   };
 
   return (
@@ -104,10 +136,23 @@ const Navigate = () => {
 
       <div className="flex w-[150px] md:w-[200px] h-[50px] justify-center items-center gap-2 md:gap-4 px-3 md:px-6 shadow-md border border-gray-300 rounded-xl ">
         <div
-          onClick={() => setSunMoon(!sunMoon)}
-          className="cursor-pointer w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex"
+          onClick={toggleTheme}
+          className="cursor-pointer w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
+          title={
+            isDarkMode ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"
+          }
         >
-          {sunMoon ? <Sun size={20} /> : <Moon size={20} />}
+          {isDarkMode ? (
+            <Sun
+              size={20}
+              className="text-yellow-500 transition-transform duration-300 hover:rotate-45"
+            />
+          ) : (
+            <Moon
+              size={20}
+              className="text-indigo-400 transition-transform duration-300 hover:rotate-12"
+            />
+          )}
         </div>
         <div className="w-[35px] md:w-[40px] h-[35px] md:h-[40px] items-center justify-center flex">
           <NotificationBell />

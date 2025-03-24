@@ -1,16 +1,13 @@
 import React from "react";
 import AccountSection from "./AccountSection";
+import { LogOut, Trash2 } from "lucide-react";
 
-const AccountActionsSection = ({
-  handleLogout,
-  isLoggingOut,
-  setShowDeleteConfirm,
-}) => {
+const AccountActionsSection = ({ onLogout, onDelete }) => {
   return (
     <AccountSection title="Hành động tài khoản">
       <div className="space-y-5">
         {/* Logout action */}
-        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 border-b border-gray-200 dark:border-gray-700 pb-4">
           <div>
             <p className="text-gray-800 dark:text-gray-200 font-medium">
               Đăng xuất
@@ -20,16 +17,16 @@ const AccountActionsSection = ({
             </p>
           </div>
           <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
+            onClick={onLogout}
+            className="settings-button flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
           >
-            {isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
+            <LogOut size={16} />
+            <span>Đăng xuất</span>
           </button>
         </div>
 
         {/* Delete account action */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
           <div>
             <p className="text-red-600 dark:text-red-400 font-medium">
               Xóa tài khoản
@@ -39,10 +36,11 @@ const AccountActionsSection = ({
             </p>
           </div>
           <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-800/40 transition"
+            onClick={onDelete}
+            className="settings-button flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400"
           >
-            Xóa tài khoản
+            <Trash2 size={16} />
+            <span>Xóa tài khoản</span>
           </button>
         </div>
       </div>

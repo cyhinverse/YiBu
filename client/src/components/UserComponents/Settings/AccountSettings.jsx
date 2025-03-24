@@ -33,24 +33,23 @@ const AccountSettings = () => {
     newPassword: "",
     confirmPassword: "",
   });
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState({});
 
-  // State for account verification
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
-  // State for delete account confirmation
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // State for logout
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // State cho thông báo thành công
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [successType, setSuccessType] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Additional debugging at component initialization
   useEffect(() => {
@@ -301,13 +300,7 @@ const AccountSettings = () => {
 
         // Hiển thị thông báo thành công
         setSuccessMessage("Email đã được cập nhật thành công");
-        setSuccessType("email");
-        setShowSuccess(true);
-
-        // Tự động ẩn thông báo sau 3 giây
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 3000);
+        setShowSuccessNotification(true);
 
         closeEmailModal();
       } else {
@@ -327,7 +320,11 @@ const AccountSettings = () => {
       newPassword: "",
       confirmPassword: "",
     });
-    setPasswordErrors({});
+    setPasswordErrors({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
     setShowPasswordModal(true);
   };
 
@@ -338,7 +335,11 @@ const AccountSettings = () => {
       newPassword: "",
       confirmPassword: "",
     });
-    setPasswordErrors({});
+    setPasswordErrors({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
     setIsUpdatingPassword(false);
   };
 
@@ -381,13 +382,7 @@ const AccountSettings = () => {
       if (response.success) {
         // Hiển thị thông báo thành công
         setSuccessMessage("Mật khẩu đã được cập nhật thành công");
-        setSuccessType("password");
-        setShowSuccess(true);
-
-        // Tự động ẩn thông báo sau 3 giây
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 3000);
+        setShowSuccessNotification(true);
 
         toast.success("Cập nhật mật khẩu thành công!");
         closePasswordModal();
@@ -453,12 +448,12 @@ const AccountSettings = () => {
         navigate("/auth/login");
       } else {
         toast.error(res.message || "Failed to delete account");
-        setShowDeleteConfirm(false);
+        setShowDeleteModal(false);
       }
     } catch (error) {
       console.log(`Error deleting account: ${error}`);
       toast.error("Failed to delete account");
-      setShowDeleteConfirm(false);
+      setShowDeleteModal(false);
     } finally {
       setIsDeleting(false);
     }
@@ -466,7 +461,6 @@ const AccountSettings = () => {
 
   // Handle logout
   const handleLogout = async () => {
-    setIsLoggingOut(true);
     try {
       const res = await Auth.logout();
       if (res.code === 1) {
@@ -479,72 +473,81 @@ const AccountSettings = () => {
     } catch (error) {
       console.log(`Error ${error}`);
       toast.error("Something went wrong!");
-    } finally {
-      setIsLoggingOut(false);
     }
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-      <h1 className="text-2xl font-bold mb-6 text-purple-700 dark:text-purple-400">
-        Cài Đặt Tài Khoản
-      </h1>
+    <div className="fade-in space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Tài khoản
+        </h2>
+        {verificationSent && (
+          <div className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+            Email xác thực đã được gửi
+          </div>
+        )}
+      </div>
 
-      <div className="space-y-8">
-        {/* Email Section */}
-        <EmailSection email={getUserEmail()} openEmailModal={openEmailModal} />
-
-        {/* Password Section */}
-        <PasswordSection openPasswordModal={openPasswordModal} />
-
-        {/* Account Verification Section */}
-        <VerificationSection
+      <div className="grid grid-cols-1 gap-6">
+        <EmailSection
+          email={userData?.email}
           isVerified={userData?.isVerified}
-          handleVerifyAccount={handleVerifyAccount}
-          isVerifying={isVerifying}
+          onUpdateEmail={openEmailModal}
         />
 
-        {/* Account Actions Section */}
+        <PasswordSection onUpdatePassword={openPasswordModal} />
+
+        {!userData?.isVerified && (
+          <VerificationSection
+            isVerifying={isVerifying}
+            onVerify={handleVerifyAccount}
+          />
+        )}
+
         <AccountActionsSection
-          handleLogout={handleLogout}
-          isLoggingOut={isLoggingOut}
-          setShowDeleteConfirm={setShowDeleteConfirm}
+          onDelete={() => setShowDeleteModal(true)}
+          onLogout={handleLogout}
         />
       </div>
 
       {/* Modals */}
-      <EmailModal
-        showEmailModal={showEmailModal}
-        closeEmailModal={closeEmailModal}
-        newEmail={newEmail}
-        handleEmailChange={handleEmailChange}
-        handleUpdateEmail={handleUpdateEmail}
-        isUpdatingEmail={isUpdatingEmail}
-      />
+      {showEmailModal && (
+        <EmailModal
+          email={userData?.email}
+          newEmail={newEmail}
+          onEmailChange={handleEmailChange}
+          onClose={closeEmailModal}
+          onSubmit={handleUpdateEmail}
+          isLoading={isUpdatingEmail}
+        />
+      )}
 
-      <PasswordModal
-        showPasswordModal={showPasswordModal}
-        closePasswordModal={closePasswordModal}
-        passwordData={passwordData}
-        passwordErrors={passwordErrors}
-        handlePasswordChange={handlePasswordChange}
-        handleUpdatePassword={handleUpdatePassword}
-        isUpdatingPassword={isUpdatingPassword}
-      />
+      {showPasswordModal && (
+        <PasswordModal
+          passwordData={passwordData}
+          passwordErrors={passwordErrors}
+          onPasswordChange={handlePasswordChange}
+          onClose={closePasswordModal}
+          onSubmit={handleUpdatePassword}
+          isLoading={isUpdatingPassword}
+        />
+      )}
 
-      <DeleteAccountModal
-        showDeleteConfirm={showDeleteConfirm}
-        setShowDeleteConfirm={setShowDeleteConfirm}
-        handleDeleteAccount={handleDeleteAccount}
-        isDeleting={isDeleting}
-      />
+      {showDeleteModal && (
+        <DeleteAccountModal
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteAccount}
+          isLoading={isDeleting}
+        />
+      )}
 
-      {/* Success notification */}
-      <SuccessNotification
-        showSuccess={showSuccess}
-        successMessage={successMessage}
-        successType={successType}
-      />
+      {showSuccessNotification && (
+        <SuccessNotification
+          message={successMessage}
+          onClose={() => setShowSuccessNotification(false)}
+        />
+      )}
     </div>
   );
 };

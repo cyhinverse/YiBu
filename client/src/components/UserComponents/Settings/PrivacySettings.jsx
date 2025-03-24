@@ -165,7 +165,7 @@ const PrivacySettings = () => {
   });
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 space-y-8 bg-white border border-neutral-200 rounded-xl shadow-sm">
+    <div className="w-full max-w-3xl mx-auto p-6 space-y-8 bg-white  ">
       <div className="flex items-center space-x-3 pb-3 border-b border-neutral-200">
         <Shield className="text-blue-600" size={24} />
         <h1 className="text-2xl font-semibold text-neutral-800">

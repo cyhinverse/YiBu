@@ -34,7 +34,7 @@ const SavePosts = () => {
       return null;
     }
 
-    // Ensure user data is valid
+
     let userData = post.user;
     if (!userData || typeof userData !== "object") {
       userData = { name: "Người dùng", avatar: null };
@@ -42,7 +42,7 @@ const SavePosts = () => {
       userData = { ...userData, name: "Người dùng" };
     }
 
-    // Ensure media array is valid
+
     const mediaArray = Array.isArray(post.media) ? post.media : [];
 
     return {

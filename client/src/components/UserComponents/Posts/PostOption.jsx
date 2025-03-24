@@ -21,7 +21,6 @@ const PostOption = ({ show, postId, postUserId }) => {
   const [reportReason, setReportReason] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Lấy ID người dùng hiện tại
   const getCurrentUserId = () => {
     if (!currentUser) return null;
     if (currentUser._id) return currentUser._id;
@@ -34,14 +33,11 @@ const PostOption = ({ show, postId, postUserId }) => {
 
   const currentUserId = getCurrentUserId();
 
-  // Kiểm tra xem có phải đang ở trang profile không
   const isProfilePage = location.pathname.includes("/profile");
 
-  // Kiểm tra xem post có phải của người dùng hiện tại không
   const isCurrentUserPost =
     currentUserId && postUserId && currentUserId === postUserId;
 
-  // Các tùy chọn mặc định
   let options = [
     {
       id: "save",
@@ -52,7 +48,6 @@ const PostOption = ({ show, postId, postUserId }) => {
     { id: "hide", label: "Ẩn bài viết", icon: <X size={16} /> },
   ];
 
-  // Thêm tùy chọn xóa bài viết nếu đang ở trang profile và bài viết thuộc người dùng hiện tại
   if (isProfilePage && isCurrentUserPost) {
     options.push({
       id: "delete",
@@ -101,11 +96,9 @@ const PostOption = ({ show, postId, postUserId }) => {
 
     try {
       setIsLoading(true);
-      // Gọi API báo cáo
       const response = await POST.REPORT_POST(postId, reportReason);
 
       if (response && response.code === 1) {
-        // Lưu vào Redux để hiển thị trên UI
         dispatch(reportPost({ postId, reason: reportReason }));
         toast.success("Báo cáo bài viết thành công");
       } else {
@@ -113,7 +106,6 @@ const PostOption = ({ show, postId, postUserId }) => {
       }
     } catch (error) {
       console.error("Lỗi khi báo cáo bài viết:", error);
-      // Lưu vào Redux ngay cả khi API gặp lỗi để đảm bảo UX tốt
       dispatch(reportPost({ postId, reason: reportReason }));
       toast.success("Đã ghi nhận báo cáo của bạn");
     } finally {
@@ -124,11 +116,9 @@ const PostOption = ({ show, postId, postUserId }) => {
 
   const handleHidePost = () => {
     try {
-      // Lưu vào localStorage
       const result = POST.saveHiddenPost(postId);
 
       if (result) {
-        // Lưu vào Redux
         dispatch(hidePost(postId));
         toast.success("Đã ẩn bài viết");
       } else {
@@ -201,7 +191,6 @@ const PostOption = ({ show, postId, postUserId }) => {
         ))}
       </div>
 
-      {/* Modal báo cáo */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">

@@ -1,17 +1,25 @@
 import React from "react";
 import AccountSection from "./AccountSection";
+import { LockIcon } from "lucide-react";
 
-const PasswordSection = ({ openPasswordModal }) => {
+const PasswordSection = ({ onUpdatePassword }) => {
   return (
     <AccountSection title="Mật khẩu">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <p className="text-gray-500 mb-1">Mật khẩu của bạn</p>
-          <p className="text-gray-800 font-medium">••••••••</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-1 text-sm">
+            Mật khẩu của bạn
+          </p>
+          <div className="flex items-center">
+            <LockIcon size={16} className="text-gray-500 mr-2" />
+            <p className="text-gray-800 dark:text-gray-200 font-medium">
+              ••••••••
+            </p>
+          </div>
         </div>
         <button
-          onClick={openPasswordModal}
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+          onClick={onUpdatePassword}
+          className="settings-button settings-button-primary bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white"
         >
           Đổi mật khẩu
         </button>

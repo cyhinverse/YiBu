@@ -29,7 +29,7 @@ const CustomModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+        className=" rounded-lg shadow-xl w-full max-w-md mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -81,7 +81,6 @@ const CommentReply = ({
   const [showOptions, setShowOptions] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  // Kiểm tra xem người dùng hiện tại có phải là chủ sở hữu của reply không
   const isOwner = currentUser?._id === reply.user?._id;
 
   // Format thời gian
@@ -127,7 +126,7 @@ const CommentReply = ({
         />
         <div className="flex-1">
           {isEditing ? (
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-200 transition-colors duration-200">
+            <div className=" p-4 rounded-2xl shadow-sm border border-blue-200 transition-colors duration-200">
               <div className="flex justify-between items-center mb-3">
                 <p className="font-semibold text-gray-800">
                   {reply.user?.name || "Bạn"}

@@ -61,7 +61,7 @@ const MessageBubble = ({
               className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors rounded-lg"
             >
               <Trash2 size={14} className="mr-2" />
-              Xóa tin nhắn
+              Xóa
             </button>
           </div>
         )}
@@ -69,8 +69,8 @@ const MessageBubble = ({
         <div
           className={`${
             isSentByCurrentUser
-              ? "bg-indigo-100 text-gray-800 rounded-2xl rounded-tr-sm"
-              : "bg-white text-gray-800 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100"
+              ? "bg-violet-400 font-medium rounded-2xl rounded-tr-sm"
+              : "bg-gray-200 text-black rounded-2xl rounded-tl-sm shadow-sm "
           } px-4 py-3 text-sm inline-block`}
         >
           {/* Message media */}
@@ -108,8 +108,16 @@ const MessageBubble = ({
 
       {/* Show avatar placeholder for current user's messages to maintain balance */}
       {isSentByCurrentUser && (
-        <div className="flex-shrink-0 w-9 h-9 ml-2 invisible">
-          {/* Invisible placeholder */}
+        <div
+          className={`flex-shrink-0 ${showAvatar ? "visible" : "invisible"}`}
+        >
+          <div className="w-9 h-9 rounded-full overflow-hidden ml-2 border border-gray-100 shadow-sm">
+            <img
+              src={message.sender?.avatar || "https://via.placeholder.com/40"}
+              alt="You"
+              className="w-full h-full object-cover"
+            />
+          </div>
         </div>
       )}
     </div>

@@ -3,7 +3,7 @@ import { ArrowLeft, Phone, Video, Info } from "lucide-react";
 
 const MessageHeader = ({ receiverUser, goBack }) => {
   return (
-    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white shadow-sm flex-shrink-0">
+    <div className="px-4 py-[13px] border-b border-gray-200 flex items-center justify-between bg-white shadow-sm flex-shrink-0">
       <div className="flex items-center">
         <button
           onClick={goBack}

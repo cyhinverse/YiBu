@@ -1,15 +1,14 @@
 import React from "react";
+import { X } from "lucide-react";
 
 const EmailModal = ({
-  showEmailModal,
-  closeEmailModal,
+  email,
   newEmail,
-  handleEmailChange,
-  handleUpdateEmail,
-  isUpdatingEmail,
+  onEmailChange,
+  onClose,
+  onSubmit,
+  isLoading,
 }) => {
-  if (!showEmailModal) return null;
-
   // Prevent click propagation to avoid modal closing when clicking inside
   const preventClickPropagation = (e) => {
     e.stopPropagation();
@@ -17,80 +16,77 @@ const EmailModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-      tabIndex="-1"
+      className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg p-6 w-full max-w-md mx-auto"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-5 transform transition-all fade-in"
         onClick={preventClickPropagation}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-purple-700">
-            Cập nhật Email
-          </h2>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Thay đổi email
+          </h3>
           <button
-            type="button"
-            onClick={closeEmailModal}
-            className="text-gray-500 hover:text-gray-700"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X size={20} />
           </button>
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleUpdateEmail();
-          }}
-        >
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="mb-6">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email hiện tại
+            </label>
+            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-md text-gray-800 dark:text-gray-200">
+              {email}
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="newEmail"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Email mới
             </label>
             <input
               type="email"
+              id="newEmail"
               value={newEmail}
-              onChange={handleEmailChange}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+              onChange={onEmailChange}
+              className="settings-input dark:bg-gray-700 dark:text-white"
               placeholder="Nhập email mới"
-              autoFocus
+              disabled={isLoading}
             />
-            <p className="text-sm text-gray-500 mt-2">
-              Sau khi cập nhật, một email xác nhận sẽ được gửi đến địa chỉ mới.
-            </p>
           </div>
+        </div>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={closeEmailModal}
-              disabled={isUpdatingEmail}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={isUpdatingEmail}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-            >
-              {isUpdatingEmail ? "Đang cập nhật..." : "Cập nhật"}
-            </button>
-          </div>
-        </form>
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onClose}
+            className="settings-button bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+            disabled={isLoading}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={isLoading}
+            className="settings-button settings-button-primary flex items-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 mr-2 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                <span>Đang cập nhật...</span>
+              </>
+            ) : (
+              "Cập nhật"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

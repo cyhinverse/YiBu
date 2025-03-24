@@ -5,7 +5,6 @@ import { CommentHeader, CommentItem } from "./components";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import "./index.css";
 
-// Component Loading tự tạo thay thế cho Spin của Antd
 const LoadingSpinner = ({ message }) => (
   <div className="flex flex-col items-center justify-center py-8">
     <div className="animate-spin w-8 h-8 text-purple-500 mb-2">
@@ -15,9 +14,8 @@ const LoadingSpinner = ({ message }) => (
   </div>
 );
 
-// Component thông báo lỗi tự tạo thay thế cho Alert của Antd
 const ErrorAlert = ({ message, description, onRetry }) => (
-  <div className="bg-red-50 border border-red-100 rounded-md p-4 mb-4">
+  <div className=" border border-red-100 rounded-md p-4 mb-4">
     <div className="flex items-start">
       <div className="flex-shrink-0 text-red-500 mr-3">
         <AlertTriangle size={20} />
@@ -97,7 +95,6 @@ const CommentModel = ({ postId, onClose }) => {
     }
   };
 
-  // Đếm tổng số bình luận (bao gồm cả replies)
   const commentsCount = comments.reduce(
     (total, cmt) => total + 1 + (cmt.replies?.length || 0),
     0
@@ -109,7 +106,7 @@ const CommentModel = ({ postId, onClose }) => {
       onClick={handleClose}
     >
       <div
-        className="bg-white w-[600px] h-[700px] border border-gray-300 rounded-xl flex flex-col overflow-hidden"
+        className=" w-[600px] h-[700px] border border-gray-300 rounded-xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <CommentHeader
@@ -120,7 +117,7 @@ const CommentModel = ({ postId, onClose }) => {
 
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-white to-gray-50 overscroll-contain"
+          className="flex-1 overflow-y-auto p-6 space-y-6 bg-black overscroll-contain"
           style={{
             scrollBehavior: "smooth",
             WebkitOverflowScrolling: "touch",

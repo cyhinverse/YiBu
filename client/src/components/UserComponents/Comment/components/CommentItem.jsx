@@ -16,7 +16,6 @@ import { useSelector } from "react-redux";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 
-// Modal tự tạo thay thế cho Modal của antd
 const CustomModal = ({
   title,
   isOpen,
@@ -50,7 +49,7 @@ const CustomModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+        className=" rounded-lg shadow-xl w-full max-w-md mx-4"
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
       >
@@ -107,10 +106,8 @@ const CommentItem = ({
   const { current: currentUser } = useSelector((state) => state.user);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  // Kiểm tra xem người dùng hiện tại có phải là chủ sở hữu của comment không
   const isOwner = currentUser?._id === comment.user?._id;
 
-  // Format thời gian
   const formattedTime = comment.createdAt
     ? formatDistanceToNow(new Date(comment.createdAt), {
         addSuffix: true,
@@ -121,19 +118,15 @@ const CommentItem = ({
   const handleUpdate = async () => {
     if (editedContent.trim() === "") return;
 
-    // Nếu là comment tạm thời, thêm mới
     if (comment.isTemp) {
-      // Thêm comment mới thay vì cập nhật comment tạm thời
       const success = await onAddReply(null, null, editedContent);
       if (success) {
-        // Xóa comment tạm thời khỏi danh sách
         setCurrentComment((currentComments) =>
           currentComments.filter((c) => !c.isTemp)
         );
         setIsEditing(false);
       }
     } else {
-      // Cập nhật comment
       const success = await onUpdate(comment._id, editedContent);
       if (success) {
         setIsEditing(false);
@@ -143,12 +136,10 @@ const CommentItem = ({
 
   const handleDelete = async () => {
     if (comment.isTemp) {
-      // Xóa comment tạm thời khỏi UI mà không gọi API
       setCurrentComment((currentComments) =>
         currentComments.filter((c) => c._id !== comment._id)
       );
     } else {
-      // Xóa comment thông thường qua API
       await onDelete(comment._id, false);
     }
     setDeleteModalVisible(false);
@@ -172,7 +163,7 @@ const CommentItem = ({
         />
         <div className="flex-1">
           {isEditing ? (
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-purple-200 transition-colors duration-200">
+            <div className=" p-4 rounded-2xl shadow-sm border border-purple-200 transition-colors duration-200">
               <div className="flex justify-between items-center mb-3">
                 <p className="font-semibold text-gray-800">
                   {comment.user?.name || "Bạn"}
@@ -195,7 +186,6 @@ const CommentItem = ({
                   className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors duration-200"
                   onClick={() => {
                     if (comment.isTemp) {
-                      // Xóa comment tạm thời khỏi danh sách một cách an toàn
                       setCurrentComment((currentComments) =>
                         currentComments.filter((c) => c._id !== comment._id)
                       );
@@ -217,7 +207,7 @@ const CommentItem = ({
             </div>
           ) : (
             <>
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 transition-colors duration-200">
+              <div className=" p-4 rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 transition-colors duration-200">
                 <div className="flex justify-between items-center mb-2">
                   <p className="font-semibold text-gray-800">
                     {comment.user?.name || "Người dùng"}

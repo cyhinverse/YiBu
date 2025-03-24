@@ -1,0 +1,85 @@
+/* Ẩn thanh cuộn cho tất cả trình duyệt */
+.hide-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE và Edge */
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari và Opera */
+}
+
+/* Animation cho các hiệu ứng chuyển đổi */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Kiểu dáng custom cho các form trong settings */
+.settings-card {
+  transition: all 0.3s ease;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.settings-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.settings-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.settings-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.settings-button-primary {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.settings-button-primary:hover {
+  background-color: #7c3aed;
+}
+
+/* Dark mode */
+.dark .settings-card {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.dark .settings-input {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.dark .settings-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+}

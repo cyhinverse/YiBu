@@ -135,7 +135,7 @@ const MessageList = ({
               new Date(messages[index - 1].createdAt).toLocaleDateString());
 
         return (
-          <React.Fragment key={message._id}>
+          <div key={message._id}>
             {shouldShowDateSeparator && (
               <div className="flex justify-center my-4">
                 <div className="  text-xs px-5 py-1.5 rounded-full">
@@ -155,7 +155,7 @@ const MessageList = ({
               handleDeleteMessage={handleDeleteMessage}
               formatTime={formatTime}
             />
-          </React.Fragment>
+          </div>
         );
       })}
       <div ref={messagesEndRef} className="h-2" />

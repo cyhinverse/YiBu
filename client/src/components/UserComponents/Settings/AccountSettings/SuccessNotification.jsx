@@ -1,46 +1,39 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { CheckCircle, X } from "lucide-react";
 
-const SuccessNotification = ({ showSuccess, successMessage, successType }) => {
-  if (!showSuccess) return null;
+const SuccessNotification = ({ message, onClose }) => {
+  const [isVisible, setIsVisible] = useState(true);
 
-  // Tạo style dựa trên loại thông báo
-  let bgColor = "bg-green-100";
-  let borderColor = "border-green-500";
-  let textColor = "text-green-700";
-  let iconColor = "text-green-500";
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300); // Chờ hiệu ứng mờ dần hoàn tất
+    }, 3000);
 
-  if (successType === "password") {
-    bgColor = "bg-blue-100";
-    borderColor = "border-blue-500";
-    textColor = "text-blue-700";
-    iconColor = "text-blue-500";
-  } else if (successType === "verification") {
-    bgColor = "bg-purple-100";
-    borderColor = "border-purple-500";
-    textColor = "text-purple-700";
-    iconColor = "text-purple-500";
-  }
+    return () => clearTimeout(timer);
+  }, [onClose]);
 
   return (
     <div
-      className={`fixed bottom-5 right-5 ${bgColor} border-l-4 ${borderColor} ${textColor} p-4 rounded shadow-md z-50 animate-fade-in-up`}
+      className={`fixed bottom-4 right-4 flex items-center bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-green-200 dark:border-green-900 p-4 max-w-md transition-all duration-300 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+      }`}
     >
-      <div className="flex items-center">
-        <svg
-          className={`h-6 w-6 ${iconColor} mr-2`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-        <p>{successMessage}</p>
+      <CheckCircle className="text-green-500 mr-3 flex-shrink-0" size={20} />
+      <div className="mr-3">
+        <p className="text-gray-800 dark:text-gray-200 font-medium">
+          {message}
+        </p>
       </div>
+      <button
+        onClick={() => {
+          setIsVisible(false);
+          setTimeout(onClose, 300);
+        }}
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-auto"
+      >
+        <X size={18} />
+      </button>
     </div>
   );
 };

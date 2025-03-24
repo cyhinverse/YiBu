@@ -1,6 +1,7 @@
 import AccountSettings from "./AccountSettings";
 import ProfileSettings from "./ProfileSettings";
 import NotificationSettings from "./NotificationSettings";
+import "./styles.css";
 
 export { AccountSettings, ProfileSettings, NotificationSettings };
 

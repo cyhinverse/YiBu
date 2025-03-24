@@ -18,12 +18,10 @@ const ThemeSettings = () => {
   });
 
   useEffect(() => {
-    // Initialize with Redux state if available
     if (theme) {
       setThemeData(theme);
     }
 
-    // Only fetch from server if we don't already have theme data
     const fetchSettings = async () => {
       try {
         setLoading(true);
@@ -35,7 +33,6 @@ const ThemeSettings = () => {
         ) {
           const serverTheme = response.userSettings.theme;
           setThemeData(serverTheme);
-          // Update Redux state with server data
           dispatch(setThemeSettings(serverTheme));
         }
       } catch (error) {
@@ -45,24 +42,20 @@ const ThemeSettings = () => {
       }
     };
 
-    // Only fetch if we don't have theme data
     if (!theme) {
       fetchSettings();
     }
-  }, [dispatch]); // Remove theme from dependencies
+  }, [dispatch]);
 
-  // Apply theme changes in real-time
   useEffect(() => {
     applyThemeToDocument(themeData);
   }, [themeData]);
 
-  // Log initial state values when the component mounts
   useEffect(() => {
     console.log("ThemeSettings: Component mounted");
     console.log("ThemeSettings: Initial Redux theme state:", theme);
     console.log("ThemeSettings: Initial theme data state:", themeData);
 
-    // Check localStorage
     try {
       const persistedRoot = localStorage.getItem("persist:root");
       if (persistedRoot) {
@@ -83,13 +76,11 @@ const ThemeSettings = () => {
   const applyThemeToDocument = (theme) => {
     console.log("ThemeSettings: Applying theme to document", theme);
 
-    // Kiểm tra classList hiện tại trước khi thay đổi
     console.log(
       "ThemeSettings: Current classList before change:",
       document.documentElement.className
     );
 
-    // Apply appearance
     if (theme.appearance === "light") {
       document.documentElement.classList.remove("dark");
       document.documentElement.classList.add("light");
@@ -118,14 +109,12 @@ const ThemeSettings = () => {
       );
     }
 
-    // Apply primary color
     document.documentElement.style.setProperty(
       "--primary-color",
       theme.primaryColor
     );
     console.log("ThemeSettings: Applied primary color:", theme.primaryColor);
 
-    // Apply font size
     let rootFontSize = "16px";
     if (theme.fontSize === "small") rootFontSize = "14px";
     if (theme.fontSize === "large") rootFontSize = "18px";
@@ -144,7 +133,6 @@ const ThemeSettings = () => {
 
     setThemeData(updatedTheme);
 
-    // Update Redux immediately for real-time preview
     dispatch(setThemeSettings(updatedTheme));
   };
 
@@ -155,7 +143,6 @@ const ThemeSettings = () => {
 
       if (response && response.success) {
         toast.success("Cài đặt giao diện đã được lưu");
-        // Make sure Redux has the latest settings
         dispatch(setThemeSettings(themeData));
       } else {
         toast.error("Không thể lưu cài đặt giao diện");
@@ -169,7 +156,7 @@ const ThemeSettings = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-8 space-y-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+    <div className="w-full max-w-2xl mx-auto p-8 space-y-10 ">
       <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">
         Cài Đặt Giao Diện
       </h1>
@@ -181,9 +168,9 @@ const ThemeSettings = () => {
         <div className="grid grid-cols-3 gap-3">
           <button
             type="button"
-            className={`p-4 rounded-md flex flex-col items-center justify-center border transition-all ${
+            className={`p-4 rounded-md flex flex-col items-center justify-center transition-all ${
               themeData.appearance === "light"
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-gray-800 dark:text-white"
+                ? "border-blue-500 bg-blue-50  dark:bg-blue-900/50 text-gray-800 dark:text-white"
                 : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
             }`}
             onClick={() => handleChange("appearance", "light")}
@@ -195,7 +182,7 @@ const ThemeSettings = () => {
             type="button"
             className={`p-4 rounded-md flex flex-col items-center justify-center border transition-all ${
               themeData.appearance === "dark"
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-gray-800 dark:text-white"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50 text-black dark:text-white"
                 : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
             }`}
             onClick={() => handleChange("appearance", "dark")}

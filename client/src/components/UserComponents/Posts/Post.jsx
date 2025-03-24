@@ -23,9 +23,7 @@ import { getCommentManager } from "../../../socket/commentManager";
 import InvalidPostFallback from "./InvalidPostFallback";
 import formatTime from "../../../utils/formatTime";
 
-// Wrapper component để xử lý việc kiểm tra bài viết ẩn
 const PostWrapper = ({ data, isSavedPost = false }) => {
-  // Kiểm tra xem bài viết có bị ẩn không
   const hiddenPosts = useSelector(
     (state) => state.hiddenPosts?.hiddenPosts || []
   );
@@ -581,10 +579,10 @@ const Post = ({ data, isSavedPost = false }) => {
           <div className="flex items-center space-x-1">
             <Heart
               onClick={handleLike}
-              className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
+              className={` cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
                 likeLoading ? "opacity-50" : ""
               }`}
-              color={likeState.isLiked ? "red" : "black"}
+              color={likeState.isLiked ? "red" : "white"}
               fill={likeState.isLiked ? "red" : "none"}
               size={23}
               strokeWidth={1}

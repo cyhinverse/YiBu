@@ -2,9 +2,9 @@ import { X, Plus } from "lucide-react";
 
 const CommentHeader = ({ commentsCount, onAddComment, onClose }) => {
   return (
-    <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50">
+    <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 bg-black">
       <div className="flex items-center space-x-2">
-        <span className="font-bold text-xl text-gray-800">Comments</span>
+        <span className="font-bold text-xl text-white">Comments</span>
         <div className="bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded-full">
           {commentsCount}
         </div>
@@ -15,7 +15,7 @@ const CommentHeader = ({ commentsCount, onAddComment, onClose }) => {
           onClick={onAddComment}
         >
           <Plus size={16} />
-          <span>Add Comment</span>
+          <span>Add </span>
         </button>
         <button
           className="p-2 hover:bg-white/80 rounded-full transition-all duration-200 text-gray-500 hover:text-gray-700"

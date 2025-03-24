@@ -4,13 +4,13 @@ import { Outlet } from "react-router-dom";
 
 const SettingsLayout = () => {
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900 py-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-1">
-            <SideBarSettings />
-          </div>
-          <div className="md:col-span-3 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+    <div className="w-[95vw] h-[86vh] m-auto rounded-xl mt-5   ">
+      <div className="h-[100%]  grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-1 h-full">
+          <SideBarSettings />
+        </div>
+        <div className="md:col-span-3 shadow-lg rounded-xl p-5 bg-white dark:bg-gray-800 overflow-hidden h-full flex flex-col border border-gray-200 dark:border-gray-700">
+          <div className="overflow-y-auto hide-scroll flex-1 pr-2">
             <Outlet />
           </div>
         </div>
