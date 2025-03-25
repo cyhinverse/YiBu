@@ -260,8 +260,19 @@ const AdminService = {
   // Admin logs
   getSystemLogs: async (page = 1, limit = 10, filter = {}) => {
     try {
+      // Xây dựng tham số truy vấn
+      const params = { page, limit };
+
+      // Thêm các bộ lọc nếu có
+      if (filter.level) params.level = filter.level;
+      if (filter.module) params.module = filter.module;
+      if (filter.action) params.action = filter.action;
+      if (filter.details) params.details = filter.details;
+      if (filter.startDate) params.startDate = filter.startDate;
+      if (filter.endDate) params.endDate = filter.endDate;
+
       const response = await api.get(ADMIN_API_ENDPOINTS.GET_SYSTEM_LOGS, {
-        params: { page, limit, ...filter },
+        params,
       });
       return response.data;
     } catch (error) {

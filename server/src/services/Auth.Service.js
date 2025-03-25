@@ -8,6 +8,7 @@ import {
   GenerateAccessToken,
   GenerateRefreshToken,
 } from "../helpers/GenerateTokens.js";
+import LogService from "./logService.js";
 
 class AuthService {
   async registerUser(name, email, password, username = null) {
@@ -41,6 +42,41 @@ class AuthService {
       });
       await newUser.save();
 
+      // Create profile
+      const profile = new Profile({
+        user: newUser._id,
+        bio: "",
+        location: "",
+        website: "",
+        social: {
+          twitter: "",
+          facebook: "",
+          instagram: "",
+          linkedin: "",
+        },
+      });
+
+      // Save profile
+      await profile.save();
+
+      // Update user with profile reference
+      newUser.profile = profile._id;
+      await newUser.save();
+
+      // Log user registration
+      await LogService.info(
+        "User Registration",
+        `New user registered: ${newUser.email}`,
+        {
+          user: newUser._id,
+          module: "auth",
+          metadata: {
+            username: newUser.username,
+            name: newUser.name,
+          },
+        }
+      );
+
       return {
         name,
         email,
@@ -56,13 +92,52 @@ class AuthService {
     // Tìm user theo email
     const user = await Users.findOne({ email });
     if (!user) {
-      throw new Error("Email hoặc mật khẩu không chính xác");
+      throw new Error("Invalid email or password");
+    }
+
+    // Kiểm tra xem user có bị khóa không
+    if (user.isBanned) {
+      const banReason = user.banReason || "violating our terms of service";
+      const banMessage = user.banExpiration
+        ? `Your account is temporarily banned until ${new Date(
+            user.banExpiration
+          ).toLocaleDateString()} for ${banReason}`
+        : `Your account has been permanently banned for ${banReason}`;
+
+      // Log failed login attempt for banned user
+      await LogService.warning(
+        "Failed Login Attempt",
+        `Banned user attempted to login: ${user.email}`,
+        {
+          user: user._id,
+          module: "auth",
+          metadata: {
+            reason: "banned_user",
+            banExpiration: user.banExpiration,
+            banReason: user.banReason,
+          },
+        }
+      );
+
+      throw new Error(banMessage);
     }
 
     // Kiểm tra mật khẩu
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      throw new Error("Email hoặc mật khẩu không chính xác");
+      // Log failed login attempt
+      await LogService.warning(
+        "Failed Login Attempt",
+        `Invalid password for user: ${user.email}`,
+        {
+          user: user._id,
+          module: "auth",
+          metadata: {
+            reason: "invalid_password",
+          },
+        }
+      );
+      throw new Error("Invalid email or password");
     }
 
     // Xác định quyền admin
@@ -101,6 +176,16 @@ class AuthService {
       userData.interests = userProfile.interests || "";
     }
 
+    // Log successful login
+    await LogService.info(
+      "User Login",
+      `User logged in successfully: ${user.email}`,
+      {
+        user: user._id,
+        module: "auth",
+      }
+    );
+
     return {
       userData,
       accessToken,
@@ -136,6 +221,10 @@ class AuthService {
 
   async logoutUser(userId) {
     await RefreshToken.deleteMany({ userId });
+    await LogService.info("User Logout", `User logged out successfully`, {
+      user: userId,
+      module: "auth",
+    });
     return true;
   }
 

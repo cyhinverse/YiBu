@@ -90,7 +90,7 @@ const CommentManagement = () => {
 
       if (response && response.code === 1) {
         // Remove comment from local state
-        setComments(
+    setComments(
           comments.filter((comment) => comment._id !== selectedComment._id)
         );
         alert("Xóa bình luận thành công");

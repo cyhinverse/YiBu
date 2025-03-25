@@ -1,6 +1,7 @@
 import User from "../../models/mongodb/Users.js";
 import Post from "../../models/mongodb/Posts.js";
 import Comment from "../../models/mongodb/Comments.js";
+import SystemLog from "../../models/mongodb/SystemLogs.js";
 import mongoose from "mongoose";
 
 export const AdminController = {
@@ -831,112 +832,68 @@ export const AdminController = {
 
   getSystemLogs: async (req, res) => {
     try {
-      // Dữ liệu mẫu cho logs hệ thống
-      const mockLogs = [
-        {
-          _id: "61a5e4b0c9f3a5d8b4a6d8e4",
-          action: "User Login",
-          user: {
-            _id: "60d1f3a5e4b0a6d8b4c9f3a1",
-            username: "user1",
-          },
-          details: "User logged in successfully",
-          ip: "192.168.1.1",
-          userAgent:
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          timestamp: "2023-06-10T08:30:00Z",
-          level: "info",
-        },
-        {
-          _id: "61a5e4b0c9f3a5d8b4a6d8e5",
-          action: "Post Created",
-          user: {
-            _id: "60d1f3a5e4b0a6d8b4c9f3a2",
-            username: "user2",
-          },
-          details: "New post created with ID 60d1f3a5e4b0a6d8b4c9f3b1",
-          ip: "192.168.1.2",
-          userAgent:
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-          timestamp: "2023-06-10T09:15:00Z",
-          level: "info",
-        },
-        {
-          _id: "61a5e4b0c9f3a5d8b4a6d8e6",
-          action: "User Banned",
-          user: {
-            _id: "60d1f3a5e4b0a6d8b4c9f3a7",
-            username: "admin1",
-          },
-          details:
-            "Admin banned user 60d1f3a5e4b0a6d8b4c9f3a6 for posting spam",
-          ip: "192.168.1.3",
-          userAgent:
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          timestamp: "2023-06-10T11:45:00Z",
-          level: "warning",
-        },
-        {
-          _id: "61a5e4b0c9f3a5d8b4a6d8e7",
-          action: "System Error",
-          details: "Database connection timeout at main server",
-          timestamp: "2023-06-10T14:30:00Z",
-          level: "error",
-        },
-        {
-          _id: "61a5e4b0c9f3a5d8b4a6d8e8",
-          action: "Comment Deleted",
-          user: {
-            _id: "60d1f3a5e4b0a6d8b4c9f3a7",
-            username: "admin1",
-          },
-          details:
-            "Admin deleted comment 60d1f3a5e4b0a6d8b4c9f3b2 for violating community guidelines",
-          ip: "192.168.1.3",
-          userAgent:
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          timestamp: "2023-06-10T16:20:00Z",
-          level: "info",
-        },
-      ];
-
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
-      const total = mockLogs.length;
+      const skip = (page - 1) * limit;
 
-      // Filter by level if provided
-      let filteredLogs = mockLogs;
+      // Xây dựng query
+      const query = {};
+
+      // Lọc theo level nếu được cung cấp
       if (req.query.level) {
-        filteredLogs = mockLogs.filter((log) => log.level === req.query.level);
+        query.level = req.query.level;
       }
 
-      // Filter by date range if provided
-      if (req.query.startDate && req.query.endDate) {
-        const startDate = new Date(req.query.startDate);
-        const endDate = new Date(req.query.endDate);
-        filteredLogs = filteredLogs.filter((log) => {
-          const logDate = new Date(log.timestamp);
-          return logDate >= startDate && logDate <= endDate;
-        });
+      // Lọc theo module nếu được cung cấp
+      if (req.query.module) {
+        query.module = req.query.module;
       }
 
-      // Filter by action if provided
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (req.query.startDate || req.query.endDate) {
+        query.createdAt = {};
+        
+        if (req.query.startDate) {
+          query.createdAt.$gte = new Date(req.query.startDate);
+        }
+        
+        if (req.query.endDate) {
+          const endDate = new Date(req.query.endDate);
+          endDate.setHours(23, 59, 59, 999); // Kết thúc của ngày
+          query.createdAt.$lte = endDate;
+        }
+      }
+
+      // Lọc theo action nếu được cung cấp
       if (req.query.action) {
-        filteredLogs = filteredLogs.filter((log) =>
-          log.action.toLowerCase().includes(req.query.action.toLowerCase())
-        );
+        query.action = { $regex: req.query.action, $options: 'i' };
       }
+
+      // Lọc theo chi tiết
+      if (req.query.details) {
+        query.details = { $regex: req.query.details, $options: 'i' };
+      }
+
+      // Lấy logs từ database và tổng số bản ghi phù hợp
+      const [logs, total] = await Promise.all([
+        SystemLog.find(query)
+          .populate('user', 'username name avatar')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        SystemLog.countDocuments(query)
+      ]);
 
       return res.status(200).json({
         code: 1,
         message: "System logs retrieved successfully",
         data: {
-          logs: filteredLogs,
+          logs,
           pagination: {
-            total: filteredLogs.length,
+            total,
             page,
             limit,
-            totalPages: Math.ceil(filteredLogs.length / limit),
+            totalPages: Math.ceil(total / limit),
           },
         },
       });

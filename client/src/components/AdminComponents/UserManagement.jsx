@@ -340,7 +340,7 @@ const UserManagement = () => {
           if (response && response.code === 1) {
             // Update the user in local state
             setUsers((users) =>
-              users.map((user) =>
+      users.map((user) =>
                 user._id === userId ? { ...user, isBanned: false } : user
               )
             );
@@ -521,7 +521,7 @@ const UserManagement = () => {
             <div className="h-8 w-8 border-4 border-t-blue-500 border-b-blue-500 border-l-transparent border-r-transparent rounded-full animate-spin"></div>
             <span className="ml-2 text-gray-600">
               Đang tải dữ liệu người dùng...
-            </span>
+                    </span>
           </div>
         )}
 
