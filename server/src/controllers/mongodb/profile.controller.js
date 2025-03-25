@@ -1,4 +1,4 @@
-import Profiles from "../../models/mongodb/Profiles.js";
+import ProfileService from "../../services/Profile.service.js";
 
 const ProfileController = {
   GET_PROFILE_BY_ID: async (req, res) => {
@@ -10,18 +10,27 @@ const ProfileController = {
           message: "User ID is required!",
         });
       }
-      const profile = await Profiles.findById(id).populate("userId").lean();
-      if (!profile) {
-        return res.status(404).json({
+
+      try {
+        const profile = await ProfileService.getProfileById(id);
+
+        res.status(200).json({
           code: 0,
-          message: "Profile not found!",
+          message: "Get profile successfully!",
+          data: profile,
         });
+      } catch (error) {
+        if (
+          error.message === "Profile not found" ||
+          error.message === "Profile ID is required"
+        ) {
+          return res.status(404).json({
+            code: 0,
+            message: "Profile not found!",
+          });
+        }
+        throw error;
       }
-      res.status(200).json({
-        code: 0,
-        message: "Get profile successfully!",
-        data: profile,
-      });
     } catch (error) {
       res.status(500).json({
         code: 0,

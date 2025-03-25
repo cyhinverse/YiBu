@@ -31,8 +31,20 @@ const Login = () => {
           console.log("Dữ liệu user sau khi login:", res.user);
           localStorage.setItem("user", JSON.stringify(res.user));
           dispatch(login(res.user));
+
+          // Kiểm tra nếu người dùng là admin thì chuyển hướng đến trang admin
+          const isAdmin = res.user.isAdmin || res.user.role === "admin";
+          if (isAdmin) {
+            console.log("User is admin, redirecting to admin dashboard");
+            navigator("/admin");
+          } else {
+            // Nếu không phải admin, chuyển hướng đến trang chủ
+            navigator("/");
+          }
+        } else {
+          // Nếu không có dữ liệu người dùng, chuyển hướng đến trang chủ
+          navigator("/");
         }
-        navigator("/");
       }
     } catch (error) {
       console.log("Error::", error);

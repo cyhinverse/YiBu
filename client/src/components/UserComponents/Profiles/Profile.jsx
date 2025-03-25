@@ -52,21 +52,12 @@ const Profile = () => {
   // Lấy dữ liệu like từ Redux store
   const likeData = useSelector((state) => state.like?.likesByPost || {});
 
-  // Xác định ID của người dùng hiện tại từ nhiều cấu trúc dữ liệu có thể có
+  // Hàm trợ giúp để lấy ID người dùng từ currentUser
   const getCurrentUserId = () => {
-    if (!currentUser) return null;
-
-    // Thử các cấu trúc dữ liệu khác nhau
-    if (currentUser._id) return String(currentUser._id);
-    if (currentUser.id) return String(currentUser.id);
-    if (currentUser.user?._id) return String(currentUser.user._id);
-    if (currentUser.user?.id) return String(currentUser.user.id);
-    if (currentUser.data?._id) return String(currentUser.data._id);
-    if (currentUser.data?.id) return String(currentUser.data.id);
-
-    return null;
+    return currentUser?._id || currentUser?.user?._id;
   };
 
+  // Xác định ID của người dùng hiện tại từ nhiều cấu trúc dữ liệu có thể có
   const currentUserId = getCurrentUserId();
 
   // Xác định userId để lấy thông tin, nếu không có từ URL thì dùng người dùng hiện tại
@@ -208,7 +199,8 @@ const Profile = () => {
   });
 
   const handleFollowToggle = async () => {
-    if (!currentUser?.user?._id) {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
       toast.error("Vui lòng đăng nhập để thực hiện chức năng này");
       return;
     }
@@ -225,7 +217,7 @@ const Profile = () => {
         toast.success("Đã theo dõi thành công");
       }
 
-      const currentUserRes = await User.GET_USER_BY_ID(currentUser.user._id);
+      const currentUserRes = await User.GET_USER_BY_ID(currentUserId);
       if (currentUserRes?.data) {
         dispatch(getUserById(currentUserRes.data));
       }
@@ -247,7 +239,10 @@ const Profile = () => {
     console.log("Current user data:", currentUser);
     console.log("Target user data:", user);
 
-    if (!currentUser?.user?._id) {
+    // Kiểm tra cấu trúc của currentUser
+    const currentUserId = currentUser?._id || currentUser?.user?._id;
+
+    if (!currentUserId) {
       console.log("Error: No current user found");
       toast.error("Vui lòng đăng nhập để nhắn tin");
       navigate("/auth/login");
@@ -263,7 +258,7 @@ const Profile = () => {
       return;
     }
 
-    if (targetUserId === currentUser.user._id) {
+    if (targetUserId === currentUserId) {
       console.log("Error: Cannot message self");
       toast.error("Bạn không thể nhắn tin với chính mình");
       return;
@@ -291,8 +286,9 @@ const Profile = () => {
 
   // Thêm hàm xử lý like
   const handleLikePost = async (postId) => {
+    const currentUserId = getCurrentUserId();
     try {
-      if (!currentUser?.user?._id) {
+      if (!currentUserId) {
         toast.error("Vui lòng đăng nhập để thực hiện chức năng này");
         return;
       }
@@ -311,6 +307,7 @@ const Profile = () => {
 
   // Khởi tạo trạng thái like cho các bài viết
   useEffect(() => {
+    const currentUserId = getCurrentUserId();
     // Chỉ chạy khi đã có dữ liệu bài viết
     if (posts && posts.length > 0) {
       const fetchLikeData = async () => {
@@ -325,7 +322,7 @@ const Profile = () => {
             const likeCounts = countResponse.data.data || {};
 
             // Lấy trạng thái like của người dùng hiện tại cho từng bài viết
-            if (currentUser?.user?._id) {
+            if (currentUserId) {
               postIds.forEach(async (postId) => {
                 try {
                   const statusResponse = await Like.GET_LIKE_STATUS(postId);
@@ -357,16 +354,17 @@ const Profile = () => {
 
       fetchLikeData();
     }
-  }, [posts, currentUser?.user?._id, dispatch]);
+  }, [posts, dispatch]);
 
   // Fetch liked posts
   useEffect(() => {
+    const currentUserId = getCurrentUserId();
     const fetchLikedPosts = async () => {
       // Chỉ hiển thị bài viết đã thích nếu người dùng đang xem profile của chính họ
       if (
         activeTab === "likes" &&
         currentUserId === profileUserId &&
-        currentUser?.user?._id
+        currentUserId
       ) {
         setLikedPostsLoading(true);
         try {
@@ -475,7 +473,7 @@ const Profile = () => {
     fetchLikedPosts();
   }, [
     activeTab,
-    currentUser?.user?._id,
+    currentUserId,
     posts,
     currentUserId,
     profileUserId,

@@ -12,6 +12,8 @@ import routerSavePost from "./routes/mongodb/savepost.router.js";
 import routerNotification from "./routes/mongodb/notification.router.js";
 import routerComment from "./routes/mongodb/comment.router.js";
 import routerUserSettings from "./routes/mongodb/userSettings.router.js";
+import routerAdmin from "./routes/mongodb/admin.router.js";
+import routerReports from "./routes/mongodb/reports.router.js";
 import { initSocket } from "./socket.js";
 import http from "http";
 
@@ -33,6 +35,7 @@ app.use(
       "http://localhost:9258",
       "http://localhost:5173",
       "http://localhost:3000",
+      process.env.CLIENT_URL || "http://localhost:9258",
     ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
@@ -41,6 +44,7 @@ app.use(
   })
 );
 
+// Đăng ký routes
 app.use("/api/auth", routerAuth);
 app.use("/api/v1", routerPosts);
 app.use("/user", routerUser);
@@ -51,6 +55,16 @@ app.use("/api/savepost", routerSavePost);
 app.use("/api/notifications", routerNotification);
 app.use("/api/comments", routerComment);
 app.use("/api/settings", routerUserSettings);
+app.use("/api/admin", routerAdmin);
+app.use("/api/reports", routerReports);
+
+// Log 404 for unmatched routes
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.url}`,
+  });
+});
 
 CheckConnectionToMongoDB()
   .then(() => {

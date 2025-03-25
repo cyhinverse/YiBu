@@ -1,6 +1,6 @@
 import express from "express";
 import NotificationController from "../../controllers/mongodb/notification.controller.js";
-import { verifyToken } from "../../middleware/auth.middleware.js";
+import { verifyToken } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
 

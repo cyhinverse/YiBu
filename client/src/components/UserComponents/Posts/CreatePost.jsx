@@ -7,7 +7,7 @@ const CreatePost = () => {
   const user = useSelector((state) => state?.auth?.user);
   return (
     <>
-      <div className="w-full bg-white border-b border-gray-300 dark:bg-black  p-4 transition-all duration-300 ">
+      <div className="w-full bg-white border-b border-gray-300   p-4 transition-all duration-300 ">
         <div className="flex items-center">
           <div className="relative">
             <img

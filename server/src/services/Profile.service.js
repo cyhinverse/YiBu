@@ -1,4 +1,4 @@
-import Profile from "../models/Profile.js";
+import Profile from "../models/mongodb/Profiles.js";
 
 class ProfileService {
   static async findProfileByUserId(userId) {
@@ -17,6 +17,25 @@ class ProfileService {
       return profile;
     } catch (error) {
       console.error("Database error in findProfileByUserId:", error);
+      throw new Error("Error finding profile");
+    }
+  }
+
+  static async getProfileById(id) {
+    try {
+      if (!id) {
+        throw new Error("Profile ID is required");
+      }
+
+      const profile = await Profile.findById(id).populate("userId").lean();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      return profile;
+    } catch (error) {
+      console.error("Database error in getProfileById:", error);
       throw new Error("Error finding profile");
     }
   }

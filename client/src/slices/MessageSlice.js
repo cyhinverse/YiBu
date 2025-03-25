@@ -93,6 +93,13 @@ const messageSlice = createSlice({
     addMessage: (state, action) => {
       const { conversationId, message } = action.payload;
 
+      // Kiểm tra tính hợp lệ của tin nhắn
+      if (!message || !message._id) {
+        console.warn("addMessage: Invalid message format", message);
+        return;
+      }
+
+      // Đảm bảo mảng tin nhắn của cuộc trò chuyện tồn tại
       if (!state.messages[conversationId]) {
         state.messages[conversationId] = [];
       }
@@ -109,6 +116,49 @@ const messageSlice = createSlice({
         state.messages[conversationId].sort(
           (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
         );
+      }
+
+      // Cập nhật cuộc trò chuyện nếu đây là tin nhắn mới nhất
+      const relevantConversation = state.conversations.find(
+        (c) => c._id === conversationId || c.otherUser?._id === conversationId
+      );
+
+      if (relevantConversation) {
+        const messageTime = new Date(message.createdAt).getTime();
+        const latestMessageTime = relevantConversation.latestMessage
+          ? new Date(relevantConversation.latestMessage.createdAt).getTime()
+          : 0;
+
+        // Chỉ cập nhật nếu tin nhắn này mới hơn tin nhắn hiện tại
+        if (!latestMessageTime || messageTime >= latestMessageTime) {
+          relevantConversation.latestMessage = message;
+
+          // Tăng số tin nhắn chưa đọc nếu người dùng hiện tại là người nhận và tin nhắn chưa đọc
+          if (
+            message.receiver?._id === state.currentUser?._id &&
+            !message.isRead
+          ) {
+            relevantConversation.unreadCount =
+              (relevantConversation.unreadCount || 0) + 1;
+          }
+
+          // Cập nhật tổng số tin nhắn chưa đọc
+          state.unreadCount = state.conversations.reduce(
+            (total, conv) => total + (conv.unreadCount || 0),
+            0
+          );
+
+          // Sắp xếp lại cuộc trò chuyện để tin nhắn mới nhất lên đầu
+          state.conversations.sort((a, b) => {
+            const timeA = a.latestMessage
+              ? new Date(a.latestMessage.createdAt).getTime()
+              : 0;
+            const timeB = b.latestMessage
+              ? new Date(b.latestMessage.createdAt).getTime()
+              : 0;
+            return timeB - timeA;
+          });
+        }
       }
     },
 

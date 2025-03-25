@@ -39,9 +39,16 @@ const PostWrapper = ({ data, isSavedPost = false }) => {
 const Post = ({ data, isSavedPost = false }) => {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth?.user);
-  const { avatar } = data.user;
+
+  // Kiểm tra user và avatar có tồn tại không
+  const userData = data?.user || {};
+  const avatar =
+    userData?.avatar ||
+    "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1";
+
   console.log(`Check avatar every user:::`, avatar);
   console.log(`Check data currentUser`, data);
+
   const likeState = useSelector((state) => {
     return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
   });
@@ -424,10 +431,7 @@ const Post = ({ data, isSavedPost = false }) => {
         <div className="flex space-x-2 relative">
           <img
             className="h-[35px] w-[35px] object-cover rounded-full cursor-pointer"
-            src={
-              avatar ||
-              "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1"
-            }
+            src={avatar}
             alt="Profile"
           />
           <div className="flex gap-3 justify-start items-start">

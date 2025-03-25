@@ -467,11 +467,15 @@ const MessageDetail = React.memo(() => {
       const token = localStorage.getItem("accessToken");
 
       if (!token) {
+        console.log("No access token found, redirecting to login");
+        toast.error("Vui lòng đăng nhập để sử dụng tính năng nhắn tin");
         navigate("/auth/login");
         return;
       }
 
+      // Nếu có token nhưng không có dữ liệu người dùng, thử lấy từ localStorage
       if (!user || !user._id) {
+        console.log("Token exists but no user data in Redux state");
         const storedUser = localStorage.getItem("user");
 
         if (storedUser) {
@@ -479,16 +483,26 @@ const MessageDetail = React.memo(() => {
             const parsedUser = JSON.parse(storedUser);
             console.log("Found user data in local storage:", parsedUser._id);
 
-            if (!window.reduxUserRestored) {
-              window.reduxUserRestored = true;
-              window.location.reload();
-            }
+            // Đợi một chút để đảm bảo dữ liệu được tải vào Redux
+            setTimeout(() => {
+              // Chỉ tải lại trang nếu vẫn không có dữ liệu người dùng sau delay
+              if (!user || !user._id) {
+                if (!window.reduxUserRestored) {
+                  window.reduxUserRestored = true;
+                  // Thay vì reload, chỉ hiển thị thông báo
+                  console.log("Waiting for user data to load...");
+                  // Không chuyển hướng đến trang đăng nhập nếu đang chờ dữ liệu
+                }
+              }
+            }, 2000);
           } catch (_error) {
             console.error("Error parsing stored user data:", _error);
             toast.error("Có lỗi xảy ra, vui lòng đăng nhập lại");
             navigate("/auth/login");
           }
         } else {
+          // Chỉ chuyển hướng khi không có dữ liệu người dùng trong localStorage
+          console.log("No user data found in localStorage");
           toast.error("Phiên đăng nhập đã hết hạn");
           navigate("/auth/login");
         }
@@ -497,7 +511,12 @@ const MessageDetail = React.memo(() => {
       }
     };
 
-    checkAuthAndData();
+    // Thêm timeout để đảm bảo dữ liệu Redux đã được tải
+    const authCheckTimeout = setTimeout(() => {
+      checkAuthAndData();
+    }, 500);
+
+    return () => clearTimeout(authCheckTimeout);
   }, [user, navigate]);
 
   useEffect(() => {
@@ -684,6 +703,104 @@ const MessageDetail = React.memo(() => {
     console.log("useEffect cleanup running, leaving MessageDetail component");
   }, []);
 
+  useEffect(() => {
+    if (!userId || !user?._id) return;
+
+    console.log("Setting up message socket handlers");
+
+    // Đăng ký xử lý tin nhắn mới
+    const handleNewMessage = (data) => {
+      console.log("New message received from socket in MessageDetail:", data);
+
+      // Xác định cấu trúc đúng của tin nhắn
+      const message = data.message || data;
+
+      if (!message || !message._id) {
+        console.warn("Received invalid message data:", data);
+        return;
+      }
+
+      // Thêm tin nhắn vào danh sách nếu liên quan đến cuộc trò chuyện hiện tại
+      const isRelevantToCurrentConversation =
+        (message.sender?._id === user._id &&
+          message.receiver?._id === userId) ||
+        (message.sender?._id === userId && message.receiver?._id === user._id);
+
+      if (isRelevantToCurrentConversation) {
+        console.log("Adding new message to current conversation:", message);
+
+        // Thêm tin nhắn vào danh sách hiển thị
+        addMessages(message);
+
+        // Tự động đánh dấu đã đọc nếu người nhận là người dùng hiện tại
+        if (message.receiver?._id === user._id && !message.isRead) {
+          markMessagesAsRead([message._id]);
+        }
+
+        // Cuộn xuống để hiển thị tin nhắn mới
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    };
+
+    // Đăng ký sự kiện nhận tin nhắn mới từ messageManager
+    const unsubscribeNewMessage = messageManager.onNewMessage(handleNewMessage);
+
+    // Đăng ký phòng chat để nhận tin nhắn
+    const roomId = [userId, user._id].sort().join("-");
+    messageManager.joinRoom(roomId);
+    messageManager.joinRoom(user._id);
+
+    return () => {
+      // Hủy đăng ký khi component unmount
+      unsubscribeNewMessage();
+      messageManager.leaveRoom(roomId);
+      messageManager.leaveRoom(user._id);
+    };
+  }, [userId, user, addMessages, scrollToBottom]);
+
+  const markMessagesAsRead = async (messageIds) => {
+    if (!messageIds?.length || !userId || !user?._id) return;
+
+    try {
+      console.log("Marking messages as read:", messageIds);
+      const token = validateToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/messages/read`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ messageIds }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.code === 1) {
+          // Cập nhật trạng thái tin nhắn trong danh sách hiện tại
+          setMessages((prevMessages) =>
+            prevMessages.map((msg) =>
+              messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg
+            )
+          );
+
+          // Emit socket event để thông báo cho người gửi
+          messageManager.markAsRead({
+            messageIds,
+            senderId: userId,
+            receiverId: user._id,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col justify-around bg-white rounded-tr-2xl rounded-br-2xl overflow-hidden border-b border-gray-300">
       <MessageHeader
@@ -748,6 +865,7 @@ const MessageDetail = React.memo(() => {
 
           const token = localStorage.getItem("accessToken");
           if (!token) {
+            console.log("No access token available for sending message");
             toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
             navigate("/auth/login");
             return;
@@ -760,6 +878,7 @@ const MessageDetail = React.memo(() => {
               receiverId: userId,
               senderId: user?._id || null,
               content: messageText.trim(),
+              media: null, // Đảm bảo gửi null thay vì mảng rỗng
             };
 
             if (imageFile) {
@@ -800,6 +919,8 @@ const MessageDetail = React.memo(() => {
               });
             }
 
+            console.log("Sending message data:", messageData);
+
             const response = await fetch(
               `${import.meta.env.VITE_API_BASE_URL}/api/messages/send`,
               {
@@ -812,35 +933,47 @@ const MessageDetail = React.memo(() => {
               }
             );
 
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("API error:", response.status, errorText);
+              throw new Error(
+                `Error ${response.status}: ${errorText || "Unknown error"}`
+              );
+            }
+
             const data = await response.json();
 
             if (data.code === 1) {
               const newMessage = data.data;
+
+              // Thêm tin nhắn vào danh sách hiện tại ngay lập tức
               addMessages(newMessage);
 
+              // Cập nhật giao diện ngay lập tức
+              setInitialLoadComplete(true);
+              setTimeout(() => scrollToBottom(), 100);
+
+              // Gửi tin nhắn qua socket
               if (user && user._id) {
+                console.log("Sending message via socket:", newMessage);
                 messageManager.sendMessage({
                   message: newMessage,
                   receiverId: userId,
                   senderId: user._id,
                 });
-              }
 
-              setInitialLoadComplete(true);
-              setTimeout(() => scrollToBottom(), 100);
-
-              if (user?.isFallbackUser) {
-                toast.success(
-                  "Tin nhắn đã gửi. Đang làm mới trang để hiển thị chính xác."
-                );
-                setTimeout(() => window.location.reload(), 2000);
+                // Cập nhật danh sách cuộc trò chuyện
+                setTimeout(() => fetchMessages(userId, 1), 500);
               }
             } else {
+              console.error("API returned error:", data);
               toast.error(data.message || "Could not send message");
             }
           } catch (error) {
             console.error("Error sending message:", error);
-            toast.error("Error sending message. Please try again.");
+            toast.error(
+              `Lỗi khi gửi tin nhắn: ${error.message || "Vui lòng thử lại"}`
+            );
           } finally {
             setSendingMessage(false);
           }
@@ -863,6 +996,7 @@ const MessageDetail = React.memo(() => {
 
               const token = localStorage.getItem("accessToken");
               if (!token) {
+                console.log("No access token available for sending message");
                 toast.error(
                   "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
                 );
@@ -877,6 +1011,7 @@ const MessageDetail = React.memo(() => {
                   receiverId: userId,
                   senderId: user?._id || null,
                   content: messageText.trim(),
+                  media: null, // Đảm bảo gửi null thay vì mảng rỗng
                 };
 
                 if (imageFile) {
@@ -917,6 +1052,8 @@ const MessageDetail = React.memo(() => {
                   });
                 }
 
+                console.log("Sending message data:", messageData);
+
                 const response = await fetch(
                   `${import.meta.env.VITE_API_BASE_URL}/api/messages/send`,
                   {
@@ -929,35 +1066,47 @@ const MessageDetail = React.memo(() => {
                   }
                 );
 
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error("API error:", response.status, errorText);
+                  throw new Error(
+                    `Error ${response.status}: ${errorText || "Unknown error"}`
+                  );
+                }
+
                 const data = await response.json();
 
                 if (data.code === 1) {
                   const newMessage = data.data;
+
+                  // Thêm tin nhắn vào danh sách hiện tại ngay lập tức
                   addMessages(newMessage);
 
+                  // Cập nhật giao diện ngay lập tức
+                  setInitialLoadComplete(true);
+                  setTimeout(() => scrollToBottom(), 100);
+
+                  // Gửi tin nhắn qua socket
                   if (user && user._id) {
+                    console.log("Sending message via socket:", newMessage);
                     messageManager.sendMessage({
                       message: newMessage,
                       receiverId: userId,
                       senderId: user._id,
                     });
-                  }
 
-                  setInitialLoadComplete(true);
-                  setTimeout(() => scrollToBottom(), 100);
-
-                  if (user?.isFallbackUser) {
-                    toast.success(
-                      "Tin nhắn đã gửi. Đang làm mới trang để hiển thị chính xác."
-                    );
-                    setTimeout(() => window.location.reload(), 2000);
+                    // Cập nhật danh sách cuộc trò chuyện
+                    setTimeout(() => fetchMessages(userId, 1), 500);
                   }
                 } else {
+                  console.error("API returned error:", data);
                   toast.error(data.message || "Could not send message");
                 }
               } catch (error) {
                 console.error("Error sending message:", error);
-                toast.error("Error sending message. Please try again.");
+                toast.error(
+                  `Lỗi khi gửi tin nhắn: ${error.message || "Vui lòng thử lại"}`
+                );
               } finally {
                 setSendingMessage(false);
               }

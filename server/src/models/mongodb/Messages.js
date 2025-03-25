@@ -5,7 +5,7 @@ const MessageSchema = new Schema(
     sender: { type: Types.ObjectId, ref: "User", required: true },
     receiver: { type: Types.ObjectId, ref: "User", required: true },
     content: { type: String, required: false },
-    media: { type: String, required: false },
+    media: { type: String, required: false, default: null },
     isRead: { type: Boolean, default: false },
   },
   {

@@ -26,10 +26,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (
-      (error.response?.status === 403 || error.response?.status === 401) &&
-      !originalRequest._retry
-    ) {
+    // Xử lý lỗi 401 - Unauthorized
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
@@ -48,6 +46,23 @@ api.interceptors.response.use(
         }
 
         return Promise.reject(refreshError);
+      }
+    }
+
+    // Xử lý lỗi 403 - Forbidden (không có quyền admin)
+    if (error.response?.status === 403) {
+      console.error("Access forbidden:", error.response.data.message);
+
+      // Thêm thông báo cho người dùng biết họ không có quyền
+      if (error.response.data.message.includes("Admin privileges required")) {
+        // Có thể chuyển đến trang thông báo lỗi riêng thay vì đăng nhập lại
+        const currentPath = window.location.pathname;
+        if (currentPath.includes("/admin")) {
+          window.location.href = "/access-denied";
+          return Promise.reject(
+            new Error("Bạn không có quyền truy cập trang quản trị")
+          );
+        }
       }
     }
 

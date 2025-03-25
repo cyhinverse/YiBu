@@ -29,11 +29,14 @@ import AuthLayout from "./pages/AuthPage/AuthLayout";
 import React, { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
+import AdminRoute from "./pages/AuthPage/AdminRoute";
 import AdminPage from "./pages/AdminPage/AdminPage";
+import AccessDenied from "./pages/ErrorPages/AccessDenied";
 import { SocketProvider } from "./contexts/SocketContext";
 import { getLikeManager } from "./socket/likeManager";
 import { getNotificationManager } from "./socket/notificationManager";
 import { useSelector } from "react-redux";
+import { OnlineUsersProvider } from "./contexts/OnlineUsersContext";
 
 const App = () => {
   const currentUser = useSelector((state) => state.auth?.user);
@@ -153,7 +156,9 @@ const App = () => {
             path={`${ROUTES.HOME}`}
             element={
               <SocketProvider>
-                <UserLayout />
+                <OnlineUsersProvider>
+                  <UserLayout />
+                </OnlineUsersProvider>
               </SocketProvider>
             }
           >
@@ -187,6 +192,11 @@ const App = () => {
           </Route>
         </Route>
 
+        {/* Admin Routes - Protected by AdminRoute */}
+        <Route element={<AdminRoute />}>
+          <Route path="admin" element={<AdminPage />} />
+        </Route>
+
         <Route path={`${ROUTES.AUTH}`} element={<AuthLayout />}>
           <Route index element={<Login />} />
           <Route path="login" element={<Login />} />
@@ -194,8 +204,8 @@ const App = () => {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="verify-code" element={<EnterCode />} />
         </Route>
-        <Route path="admin" element={<AdminPage />} />
 
+        <Route path="access-denied" element={<AccessDenied />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Outlet />

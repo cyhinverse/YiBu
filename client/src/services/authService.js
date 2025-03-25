@@ -13,10 +13,31 @@ const Auth = {
   },
   register: async (data) => {
     try {
+      // Log để debug
+      console.log("Sending register data:", data);
+
       const res = await api.post(AUTH_API_ENDPOINTS.REGISTER, data);
-      return { data: res.data, status: res.status };
+      console.log("Register response:", res);
+
+      // Trả về đúng format mà component Register.jsx đang mong đợi
+      return {
+        data: res.data,
+        status: res.status,
+      };
     } catch (error) {
       console.log(`Register failed !`, error.response?.data || error.message);
+      // Log error để debug
+      if (error.response) {
+        console.log(
+          "Server responded with:",
+          error.response.status,
+          error.response.data
+        );
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+      } else {
+        console.log("Error setting up request:", error.message);
+      }
       throw error;
     }
   },

@@ -10,8 +10,6 @@ const ProtectedRoute = () => {
     if (isAuthenticated === undefined) return;
     if (!isAuthenticated || !user) {
       navigate("/auth/login", { replace: true });
-    } else if (user?.role === "admin") {
-      navigate("/admin", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 

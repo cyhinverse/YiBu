@@ -8,13 +8,17 @@ import {
   Edit,
   Trash2,
   X,
+  Flag,
 } from "lucide-react";
 import CommentReply from "./CommentReply";
 import ReplyInput from "./ReplyInput";
 import CommentDecoration from "./CommentDecoration";
+import { ReportCommentModal } from "../../../UserComponents/Report";
+import reportService from "../../../../services/reportService";
 import { useSelector } from "react-redux";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { toast } from "react-hot-toast";
 
 const CustomModal = ({
   title,
@@ -105,6 +109,7 @@ const CommentItem = ({
   const [showOptions, setShowOptions] = useState(false);
   const { current: currentUser } = useSelector((state) => state.user);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   const isOwner = currentUser?._id === comment.user?._id;
 
@@ -147,6 +152,18 @@ const CommentItem = ({
 
   const toggleOptions = () => {
     setShowOptions(!showOptions);
+  };
+
+  const handleSubmitReport = async (reportData) => {
+    try {
+      await reportService.createReport(reportData);
+      toast.success("Báo cáo đã được gửi thành công");
+      return true;
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast.error("Không thể gửi báo cáo. Vui lòng thử lại sau.");
+      return false;
+    }
   };
 
   return (
@@ -217,47 +234,62 @@ const CommentItem = ({
                       <Clock size={12} className="mr-1 text-gray-400" />{" "}
                       {formattedTime}
                     </span>
-                    {isOwner && (
-                      <div className="relative">
-                        <button
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                          onClick={toggleOptions}
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
+                    <div className="relative">
+                      <button
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={toggleOptions}
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
 
-                        {showOptions && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
-                            <ul className="py-1">
+                      {showOptions && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                          <ul className="py-1">
+                            {isOwner ? (
+                              <>
+                                <li>
+                                  <button
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                    onClick={() => {
+                                      setIsEditing(true);
+                                      setShowOptions(false);
+                                    }}
+                                  >
+                                    <Edit size={14} className="mr-2" />
+                                    Chỉnh sửa bình luận
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                                    onClick={() => {
+                                      setDeleteModalVisible(true);
+                                      setShowOptions(false);
+                                    }}
+                                  >
+                                    <Trash2 size={14} className="mr-2" />
+                                    Xóa bình luận
+                                  </button>
+                                </li>
+                              </>
+                            ) : (
                               <li>
                                 <button
-                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                  className="flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-gray-100 w-full text-left"
                                   onClick={() => {
-                                    setIsEditing(true);
+                                    setReportModalVisible(true);
                                     setShowOptions(false);
                                   }}
                                 >
-                                  <Edit size={14} className="mr-2" />
-                                  Chỉnh sửa bình luận
+                                  <Flag size={14} className="mr-2" />
+                                  Báo cáo bình luận
                                 </button>
                               </li>
-                              <li>
-                                <button
-                                  className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
-                                  onClick={() => {
-                                    setDeleteModalVisible(true);
-                                    setShowOptions(false);
-                                  }}
-                                >
-                                  <Trash2 size={14} className="mr-2" />
-                                  Xóa bình luận
-                                </button>
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <p className="text-gray-700 leading-relaxed">
@@ -339,6 +371,14 @@ const CommentItem = ({
           Hành động này không thể hoàn tác.
         </p>
       </CustomModal>
+
+      {/* Modal báo cáo */}
+      <ReportCommentModal
+        isOpen={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        comment={comment}
+        onSubmitReport={handleSubmitReport}
+      />
     </div>
   );
 };

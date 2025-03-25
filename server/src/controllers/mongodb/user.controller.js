@@ -3,34 +3,12 @@ import User from "../../models/mongodb/Users.js";
 import Profiles from "../../models/mongodb/Profiles.js";
 import Message from "../../models/mongodb/Messages.js";
 import { CatchError } from "../../configs/CatchError.js";
+import UserService from "../../services/User.Service.js";
 
 const UserController = {
   GET_TOP_USERS_BY_LIKES: async (req, res) => {
     try {
-      const topUsers = await User.aggregate([
-        {
-          $lookup: {
-            from: "posts",
-            localField: "_id",
-            foreignField: "userId",
-            as: "posts",
-          },
-        },
-        {
-          $addFields: {
-            totalLikes: { $sum: "$posts.likes" },
-          },
-        },
-        { $sort: { totalLikes: -1 } },
-        { $limit: 10 },
-        {
-          $project: {
-            name: 1,
-            email: 1,
-            totalLikes: 1,
-          },
-        },
-      ]);
+      const topUsers = await UserService.getTopUsersByLikes();
 
       return res.status(200).json({
         code: 1,
@@ -50,68 +28,7 @@ const UserController = {
       const id = req.params.id;
       console.log(`Check id user by server :::`, id);
 
-      if (!id) {
-        return res.status(400).json({
-          code: 0,
-          message: "User ID is required!",
-        });
-      }
-
-      let user = await User.findById(id)
-        .populate("profile")
-        .select("-password")
-        .lean();
-
-      console.log(`Check data:::`, user);
-
-      if (!user) {
-        return res.status(404).json({
-          code: 0,
-          message: "User not found!",
-        });
-      }
-
-      if (!user.profile) {
-        const newProfile = await Profiles.create({ userId: user._id });
-        await User.findByIdAndUpdate(id, { profile: newProfile._id });
-        user.profile = newProfile;
-      }
-
-      if (!user.following) {
-        await User.findByIdAndUpdate(id, { following: [] });
-        user.following = [];
-      }
-      if (!user.followers) {
-        await User.findByIdAndUpdate(id, { followers: [] });
-        user.followers = [];
-      }
-
-      const posts = await mongoose
-        .model("Post")
-        .find({ user: id })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      const postIds = posts.map((post) => post._id);
-      const likesCount = await mongoose.model("Like").countDocuments({
-        post: { $in: postIds },
-      });
-
-      const enhancedUserData = {
-        ...user,
-        stats: {
-          postsCount: posts.length,
-          likesCount: likesCount,
-          followersCount: user.followers.length,
-          followingCount: user.following.length,
-        },
-        posts: posts.map((post) => ({
-          _id: post._id,
-          caption: post.caption,
-          media: post.media,
-          createdAt: post.createdAt,
-        })),
-      };
+      const enhancedUserData = await UserService.getUserById(id);
 
       return res.json({
         code: 1,
@@ -120,6 +37,19 @@ const UserController = {
       });
     } catch (error) {
       console.error("Error in Get_User_By_Id:", error);
+
+      if (error.message === "User ID is required!") {
+        return res.status(400).json({
+          code: 0,
+          message: error.message,
+        });
+      } else if (error.message === "User not found!") {
+        return res.status(404).json({
+          code: 0,
+          message: error.message,
+        });
+      }
+
       return res.status(500).json({
         code: 0,
         message: error.message,
@@ -132,44 +62,7 @@ const UserController = {
       const currentUserId = req.user.id;
       console.log("Current user ID:", currentUserId);
 
-      const users = await User.find({
-        _id: { $ne: currentUserId },
-      }).select("avatar email createdAt");
-
-      console.log("Found users:", users);
-
-      const usersWithLastMessage = await Promise.all(
-        users.map(async (user) => {
-          const lastMessage = await Message.findOne({
-            $or: [
-              { sender: currentUserId, receiver: user._id },
-              { sender: user._id, receiver: currentUserId },
-            ],
-          })
-            .sort({ createdAt: -1 })
-            .select("content createdAt isRead");
-
-          const unreadCount = await Message.countDocuments({
-            sender: user._id,
-            receiver: currentUserId,
-            isRead: false,
-          });
-
-          return {
-            _id: user._id,
-            avatar: user.avatar || "https://via.placeholder.com/150",
-            email: user.email,
-            lastMessage: lastMessage
-              ? {
-                  content: lastMessage.content,
-                  time: lastMessage.createdAt,
-                  isRead: lastMessage.isRead,
-                }
-              : null,
-            unreadCount,
-          };
-        })
-      );
+      const usersWithLastMessage = await UserService.getAllUsers(currentUserId);
 
       console.log("Users with messages:", usersWithLastMessage);
 
@@ -192,28 +85,10 @@ const UserController = {
       const { query } = req.query;
       const currentUserId = req.user.id;
 
-      if (!query) {
-        return res.status(400).json({
-          success: false,
-          message: "Search query is required",
-        });
-      }
-
-      const users = await User.find({
-        $and: [
-          { _id: { $ne: currentUserId } },
-          {
-            $or: [{ email: { $regex: query, $options: "i" } }],
-          },
-        ],
-      }).select("avatar email createdAt");
-
-      const formattedUsers = users.map((user) => ({
-        _id: user._id,
-        avatar: user.avatar || "https://via.placeholder.com/150",
-        email: user.email,
-        createdAt: user.createdAt,
-      }));
+      const formattedUsers = await UserService.searchUsers(
+        query,
+        currentUserId
+      );
 
       res.status(200).json({
         success: true,
@@ -221,6 +96,14 @@ const UserController = {
       });
     } catch (error) {
       console.error("Error in searchUsers:", error);
+
+      if (error.message === "Search query is required") {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to search users",
@@ -234,33 +117,28 @@ const UserController = {
       const { targetUserId } = req.params;
       const currentUserId = req.user.id;
 
-      const currentUser = await User.findById(currentUserId);
-      if (!currentUser) {
-        return res.status(404).json({
-          success: false,
-          message: "Không tìm thấy người dùng hiện tại",
-        });
-      }
+      const isFollowing = await UserService.checkFollowStatus(
+        currentUserId,
+        targetUserId
+      );
 
-      if (!currentUser.following) {
-        await User.findByIdAndUpdate(currentUserId, { following: [] });
-        return res.status(200).json({
-          success: true,
-          isFollowing: false,
-        });
-      }
-
-      const isFollowing = currentUser.following.includes(targetUserId);
-
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
-        isFollowing,
+        isFollowing: isFollowing,
       });
     } catch (error) {
       console.error("Error in checkFollowStatus:", error);
-      res.status(500).json({
+
+      if (error.message === "Không tìm thấy người dùng hiện tại") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
         success: false,
-        message: "Không thể kiểm tra trạng thái theo dõi",
+        message: "Failed to check follow status",
         error: error.message,
       });
     }

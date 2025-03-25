@@ -11,8 +11,27 @@ const PostSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true, collection: "Posts" }
+  { 
+    timestamps: true, 
+    collection: "Posts",
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+// Thêm virtual field cho likes
+PostSchema.virtual('likes', {
+  ref: 'Like',
+  localField: '_id',
+  foreignField: 'post'
+});
+
+// Thêm virtual field cho comments
+PostSchema.virtual('comments', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'post'
+});
 
 const Post = mongoose.model("Post", PostSchema);
 export default Post;

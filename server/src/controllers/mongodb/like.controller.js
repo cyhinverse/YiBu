@@ -1,4 +1,5 @@
 import { CatchError } from "../../configs/CatchError.js";
+import LikeService from "../../services/Like.service.js";
 import Likes from "../../models/mongodb/Likes.js";
 import Post from "../../models/mongodb/Posts.js";
 import Notification from "../../models/mongodb/Notifications.js";
@@ -54,133 +55,67 @@ const LikeController = {
           });
         }
 
-        // Kiểm tra nếu like đã tồn tại
-        console.log("Checking if like already exists...");
-        const exists = await Likes.findOne({
-          user: userObjectId,
-          post: postObjectId,
-        }).session(session);
-
-        console.log("Existing like:", exists);
-
-        if (exists) {
-          console.log("Like already exists, aborting");
-          await session.abortTransaction();
-          session.endSession();
-          return res.status(400).json({
-            code: 2,
-            message: "You already liked this post",
-          });
-        }
-
-        // Kiểm tra post tồn tại
-        console.log("Checking if post exists...");
-        const post = await Post.findById(postObjectId).session(session);
-
-        console.log("Post found:", post ? "Yes" : "No");
-
-        if (!post) {
-          console.log("Post not found, aborting");
-          await session.abortTransaction();
-          session.endSession();
-          return res.status(404).json({
-            code: 0,
-            message: "Post not found",
-          });
-        }
+        // Sử dụng service để xử lý việc tạo like
+        const { newLike, post, likeCount } = await LikeService.createLike(
+          userId,
+          postId,
+          session,
+          req.user
+        );
 
         const postOwner = post.user.toString();
         console.log("Post owner ID:", postOwner);
-
-        console.log("Creating new like...");
-        const newLike = new Likes({
-          user: userObjectId,
-          post: postObjectId,
-        });
-        console.log("New like object:", newLike);
-
-        try {
-          await newLike.save({ session });
-          console.log("Like saved successfully");
-        } catch (saveError) {
-          console.error("Error saving like:", saveError);
-          throw saveError;
-        }
-
-        console.log("Counting likes for post...");
-        const likeCount = await Likes.countDocuments({
-          post: postObjectId,
-        }).session(session);
-        console.log("Like count:", likeCount);
 
         if (userId !== postOwner) {
           console.log("Creating notification for post owner...");
           const username = req.user.username || "Một người dùng";
           const notificationContent = `${username} đã thích bài viết của bạn`;
 
-          // Tạo thông báo để lưu vào database
-          const notification = new Notification({
+          // Tạo thông báo
+          const notification = await LikeService.createNotification(
+            postOwner,
+            userId,
+            notificationContent,
+            postObjectId,
+            session
+          );
+
+          // Tạo payload cho socket notification
+          const notificationPayload = {
+            _id: notification._id.toString(),
             recipient: postOwner,
-            sender: userId,
+            sender: {
+              _id: userId,
+              username: req.user.username,
+              name: req.user.username,
+              avatar: req.user.avatar || "https://via.placeholder.com/40",
+            },
             type: "like",
             content: notificationContent,
-            post: postObjectId,
+            post: {
+              _id: postId,
+              caption: post.caption,
+              media: post.media && post.media.length > 0 ? [post.media[0]] : [],
+            },
             isRead: false,
-          });
+            createdAt: notification.createdAt || new Date(),
+            updatedAt: notification.updatedAt || new Date(),
+          };
 
+          // Gửi thông báo bằng nhiều cách khác nhau
           try {
-            // Lưu thông báo vào database
-            await notification.save({ session });
-            console.log("Notification saved successfully to database");
-
-            // Tạo payload cho socket notification
-            const notificationPayload = {
-              _id: notification._id.toString(),
-              recipient: postOwner,
-              sender: {
-                _id: userId,
-                username: req.user.username,
-                name: req.user.username,
-                avatar: req.user.avatar || "https://via.placeholder.com/40",
-              },
-              type: "like",
-              content: notificationContent,
-              post: {
-                _id: postId,
-                caption: post.caption,
-                media:
-                  post.media && post.media.length > 0 ? [post.media[0]] : [],
-              },
-              isRead: false,
-              createdAt: notification.createdAt || new Date(),
-              updatedAt: notification.updatedAt || new Date(),
-            };
-
-            // Gửi thông báo bằng nhiều cách khác nhau để tăng khả năng nhận
-            try {
-              // 1. Gửi trực tiếp đến phòng của người nhận
-              io.to(postOwner).emit("notification:new", notificationPayload);
-
-              // 2. Gửi qua sự kiện cụ thể theo user
-              io.emit(`user:${postOwner}:notification`, notificationPayload);
-
-              // 3. Gửi bằng event tổng quát với custom event
-              io.emit(`notification:to:${postOwner}`, notificationPayload);
-
-              console.log(
-                `Notification sent through multiple channels to ${postOwner}:`,
-                notificationPayload
-              );
-            } catch (socketError) {
-              console.error(
-                "Error sending notification via socket:",
-                socketError
-              );
-              // Lỗi gửi thông báo không nên ngăn cản tiến trình chính
-            }
-          } catch (notifError) {
-            console.error("Error saving notification:", notifError);
-            // Tiếp tục mặc dù thông báo lỗi - không gây cản trở giao dịch
+            io.to(postOwner).emit("notification:new", notificationPayload);
+            io.emit(`user:${postOwner}:notification`, notificationPayload);
+            io.emit(`notification:to:${postOwner}`, notificationPayload);
+            console.log(
+              `Notification sent through multiple channels to ${postOwner}:`,
+              notificationPayload
+            );
+          } catch (socketError) {
+            console.error(
+              "Error sending notification via socket:",
+              socketError
+            );
           }
         }
 
@@ -196,7 +131,7 @@ const LikeController = {
           console.log("Session ended");
         }
 
-        // Gửi thông báo realtime qua socket với định dạng mới
+        // Gửi thông báo realtime qua socket
         const socketPayload = {
           postId,
           userId,
@@ -210,15 +145,8 @@ const LikeController = {
         // Phát sóng đến tất cả kết nối trong phòng post
         try {
           io.to(`post:${postId}`).emit("post:like:update", socketPayload);
-          console.log(
-            `Socket event post:like:update emitted to room post:${postId}`
-          );
-
-          // Thêm phát sóng toàn cục để đảm bảo tất cả người dùng đang xem bài viết nhận được cập nhật
           io.emit(`post:${postId}:like:update`, socketPayload);
-          console.log(
-            `Socket event post:${postId}:like:update emitted globally`
-          );
+          console.log(`Socket events emitted for post:${postId}`);
         } catch (socketError) {
           console.error("Error emitting socket event:", socketError);
         }
@@ -266,29 +194,17 @@ const LikeController = {
       session.startTransaction();
 
       try {
-        const exists = await Likes.findOne({
-          user: userId,
-          post: postId,
-        }).session(session);
-        if (!exists) {
-          await session.abortTransaction();
-          session.endSession();
-          return res.status(400).json({
-            code: 2,
-            message: "You have not liked this post",
-          });
-        }
-
-        await Likes.deleteOne({ _id: exists._id }).session(session);
-
-        const likeCount = await Likes.countDocuments({ post: postId }).session(
+        // Sử dụng service để xóa like
+        const { likeCount } = await LikeService.deleteLike(
+          userId,
+          postId,
           session
         );
 
         await session.commitTransaction();
         session.endSession();
 
-        // Gửi thông báo realtime qua socket với định dạng mới
+        // Gửi thông báo realtime qua socket
         const socketPayload = {
           postId,
           userId,
@@ -299,18 +215,10 @@ const LikeController = {
 
         console.log("Emitting unlike update via socket:", socketPayload);
 
-        // Phát sóng đến tất cả kết nối trong phòng post
+        // Phát sóng đến tất cả kết nối
         try {
           io.to(`post:${postId}`).emit("post:like:update", socketPayload);
-          console.log(
-            `Socket event post:like:update emitted to room post:${postId}`
-          );
-
-          // Thêm phát sóng toàn cục để đảm bảo tất cả người dùng đang xem bài viết nhận được cập nhật
           io.emit(`post:${postId}:like:update`, socketPayload);
-          console.log(
-            `Socket event post:${postId}:like:update emitted globally`
-          );
         } catch (socketError) {
           console.error("Error emitting socket event:", socketError);
         }
@@ -353,19 +261,21 @@ const LikeController = {
     }
 
     try {
-      const like = await Likes.findOne({ user: userId, post: postId });
-
-      const likeCount = await Likes.countDocuments({ post: postId });
+      // Sử dụng service để lấy trạng thái like
+      const { isLiked, count } = await LikeService.getLikeStatus(
+        userId,
+        postId
+      );
 
       console.log(
-        `[Server] Like status for post ${postId}, user ${userId}: isLiked=${!!like}, count=${likeCount}`
+        `[Server] Like status for post ${postId}, user ${userId}: isLiked=${isLiked}, count=${count}`
       );
 
       return res.status(200).json({
         code: 1,
         data: {
-          isLiked: !!like,
-          count: likeCount,
+          isLiked,
+          count,
         },
       });
     } catch (error) {
@@ -394,28 +304,11 @@ const LikeController = {
         (id) => new mongoose.Types.ObjectId(id)
       );
 
-      const likeCounts = await Likes.aggregate([
-        {
-          $match: {
-            post: { $in: sanitizedPostIds },
-          },
-        },
-        {
-          $group: {
-            _id: "$post",
-            count: { $sum: 1 },
-            likedByUser: {
-              $sum: {
-                $cond: [
-                  { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
-                  1,
-                  0,
-                ],
-              },
-            },
-          },
-        },
-      ]);
+      // Sử dụng service để lấy like từ các post
+      const likeCounts = await LikeService.getAllLikesFromPosts(
+        sanitizedPostIds,
+        userId
+      );
 
       const formattedResults = postIds.reduce((acc, postId) => {
         const postLikes = likeCounts.find(
@@ -464,104 +357,58 @@ const LikeController = {
       session.startTransaction();
 
       try {
-        const postObjectId = new mongoose.Types.ObjectId(postId);
-        const userObjectId = new mongoose.Types.ObjectId(userId);
+        // Sử dụng service để toggle like
+        const { post, action, message, likeCount } =
+          await LikeService.toggleLike(userId, postId, session, req.user);
 
-        // Kiểm tra xem bài viết có tồn tại không
-        const post = await Post.findById(postObjectId).session(session);
-        if (!post) {
-          await session.abortTransaction();
-          session.endSession();
-          return res.status(404).json({
-            code: 0,
-            message: "Post not found",
-          });
-        }
+        // Tạo thông báo nếu đang thực hiện like và người like không phải chủ bài viết
+        const postOwner = post.user.toString();
+        if (action === "like" && userId !== postOwner) {
+          const username = req.user.username || "Một người dùng";
+          const notificationContent = `${username} đã thích bài viết của bạn`;
 
-        // Kiểm tra nếu like đã tồn tại
-        const existingLike = await Likes.findOne({
-          user: userObjectId,
-          post: postObjectId,
-        }).session(session);
+          // Tạo thông báo
+          const notification = await LikeService.createNotification(
+            postOwner,
+            userId,
+            notificationContent,
+            new mongoose.Types.ObjectId(postId),
+            session
+          );
 
-        let action = "";
-        let message = "";
+          // Payload cho socket
+          const notificationPayload = {
+            _id: notification._id.toString(),
+            recipient: postOwner,
+            sender: {
+              _id: userId,
+              username: req.user.username,
+              name: req.user.username,
+              avatar: req.user.avatar || "https://via.placeholder.com/40",
+            },
+            type: "like",
+            content: notificationContent,
+            post: {
+              _id: postId,
+              caption: post.caption,
+              media: post.media && post.media.length > 0 ? [post.media[0]] : [],
+            },
+            isRead: false,
+            createdAt: notification.createdAt || new Date(),
+            updatedAt: notification.updatedAt || new Date(),
+          };
 
-        // Nếu đã like thì bỏ like, nếu chưa thì thêm like
-        if (existingLike) {
-          // Bỏ like
-          await Likes.findByIdAndDelete(existingLike._id).session(session);
-          action = "unlike";
-          message = "Unliked successfully";
-        } else {
-          // Thêm like
-          const newLike = new Likes({
-            user: userObjectId,
-            post: postObjectId,
-          });
-          await newLike.save({ session });
-
-          // Tạo thông báo nếu người like không phải là chủ bài đăng
-          const postOwner = post.user.toString();
-          if (userId !== postOwner) {
-            const username = req.user.username || "Một người dùng";
-            const notificationContent = `${username} đã thích bài viết của bạn`;
-
-            // Tạo thông báo
-            const notification = new Notification({
-              recipient: postOwner,
-              sender: userId,
-              type: "like",
-              content: notificationContent,
-              post: postObjectId,
-              isRead: false,
-            });
-
-            await notification.save({ session });
-
-            // Payload cho socket
-            const notificationPayload = {
-              _id: notification._id.toString(),
-              recipient: postOwner,
-              sender: {
-                _id: userId,
-                username: req.user.username,
-                name: req.user.username,
-                avatar: req.user.avatar || "https://via.placeholder.com/40",
-              },
-              type: "like",
-              content: notificationContent,
-              post: {
-                _id: postId,
-                caption: post.caption,
-                media:
-                  post.media && post.media.length > 0 ? [post.media[0]] : [],
-              },
-              isRead: false,
-              createdAt: notification.createdAt || new Date(),
-              updatedAt: notification.updatedAt || new Date(),
-            };
-
-            // Gửi thông báo qua socket
-            try {
-              io.to(postOwner).emit("notification:new", notificationPayload);
-              io.emit(`user:${postOwner}:notification`, notificationPayload);
-            } catch (socketError) {
-              console.error(
-                "Error sending notification via socket:",
-                socketError
-              );
-            }
+          // Gửi thông báo qua socket
+          try {
+            io.to(postOwner).emit("notification:new", notificationPayload);
+            io.emit(`user:${postOwner}:notification`, notificationPayload);
+          } catch (socketError) {
+            console.error(
+              "Error sending notification via socket:",
+              socketError
+            );
           }
-
-          action = "like";
-          message = "Liked successfully";
         }
-
-        // Đếm số lượng like hiện tại
-        const likeCount = await Likes.countDocuments({
-          post: postObjectId,
-        }).session(session);
 
         await session.commitTransaction();
         session.endSession();
@@ -609,35 +456,15 @@ const LikeController = {
     const userId = req.user.id;
 
     try {
-      // Tìm tất cả like của người dùng
-      const userLikes = await Likes.find({
-        user: new mongoose.Types.ObjectId(userId),
-      }).sort({ createdAt: -1 });
-
-      if (!userLikes || userLikes.length === 0) {
-        return res.status(200).json({
-          code: 1,
-          message: "No liked posts found",
-          posts: [],
-        });
-      }
-
-      // Lấy id của tất cả bài viết đã thích
-      const postIds = userLikes.map((like) => like.post);
-
-      // Tìm các bài viết từ id
-      const likedPosts = await Post.find({
-        _id: { $in: postIds },
-      })
-        .populate({
-          path: "user",
-          select: "name avatar",
-        })
-        .sort({ createdAt: -1 });
+      // Sử dụng service để lấy các post đã like
+      const likedPosts = await LikeService.getLikedPosts(userId);
 
       return res.status(200).json({
         code: 1,
-        message: "Liked posts retrieved successfully",
+        message:
+          likedPosts.length === 0
+            ? "No liked posts found"
+            : "Liked posts retrieved successfully",
         posts: likedPosts,
       });
     } catch (error) {

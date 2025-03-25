@@ -1,5 +1,5 @@
 import { CatchError } from "../../configs/CatchError.js";
-import Notification from "../../models/mongodb/Notifications.js";
+import NotificationService from "../../services/Notification.service.js";
 import { io } from "../../socket.js";
 
 const createNotification = CatchError(async (req, res) => {
@@ -8,42 +8,42 @@ const createNotification = CatchError(async (req, res) => {
 
   const { recipient, sender, type, content, post, comment } = req.body;
 
-  if (!recipient || !type || !content) {
-    console.log("Missing required fields:", {
-      hasRecipient: !!recipient,
-      hasType: !!type,
-      hasContent: !!content,
+  try {
+    const notification = await NotificationService.createNotification(
+      recipient,
+      sender || req.user.id,
+      type,
+      content,
+      post,
+      comment
+    );
+
+    io.to(recipient.toString()).emit("notification:new", notification);
+
+    res.status(201).json({
+      code: 1,
+      message: "Đã tạo thông báo",
+      notification,
     });
-    return res.status(400).json({
-      code: 0,
-      message: "Thiếu thông tin cần thiết",
-      details: {
-        recipient: recipient ? "provided" : "missing",
-        type: type ? "provided" : "missing",
-        content: content ? "provided" : "missing",
-      },
-    });
+  } catch (error) {
+    if (error.message === "Thiếu thông tin cần thiết") {
+      console.log("Missing required fields:", {
+        hasRecipient: !!recipient,
+        hasType: !!type,
+        hasContent: !!content,
+      });
+      return res.status(400).json({
+        code: 0,
+        message: error.message,
+        details: {
+          recipient: recipient ? "provided" : "missing",
+          type: type ? "provided" : "missing",
+          content: content ? "provided" : "missing",
+        },
+      });
+    }
+    throw error;
   }
-
-  const notification = await Notification.create({
-    recipient,
-    sender: sender || req.user.id,
-    type,
-    content,
-    post,
-    comment,
-    isRead: false,
-  });
-
-  await notification.populate("sender", "name avatar");
-
-  io.to(recipient.toString()).emit("notification:new", notification);
-
-  res.status(201).json({
-    code: 1,
-    message: "Đã tạo thông báo",
-    notification,
-  });
 }, "Create notification failed");
 
 const NotificationController = {
@@ -53,77 +53,23 @@ const NotificationController = {
     const userId = req.user.id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
 
     console.log(
       `Fetching notifications for user ${userId}, page ${page}, limit ${limit}`
     );
 
-    const totalNotifications = await Notification.countDocuments({
-      recipient: userId,
-    });
-    const totalPages = Math.ceil(totalNotifications / limit);
-
     try {
-      const notifications = await Notification.find({ recipient: userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("sender", "username name avatar")
-        .populate("post", "caption media")
-        .populate("comment", "content");
-
-      console.log(`Found ${notifications.length} notifications`);
-
-      const processedNotifications = notifications.map((notification) => {
-        const notificationObj = notification.toObject();
-
-        if (!notificationObj.sender) {
-          notificationObj.sender = {
-            _id: notification.sender || "unknown",
-            username: "Người dùng",
-            name: "Người dùng",
-            avatar: "https://via.placeholder.com/40",
-          };
-        } else if (notificationObj.sender) {
-          if (!notificationObj.sender.username && notificationObj.sender.name) {
-            notificationObj.sender.username = notificationObj.sender.name;
-          }
-          if (!notificationObj.sender.name && notificationObj.sender.username) {
-            notificationObj.sender.name = notificationObj.sender.username;
-          }
-        }
-
-        if (notificationObj.post) {
-          if (!notificationObj.post.media) {
-            notificationObj.post.media = [];
-          }
-        }
-
-        if (
-          notificationObj.type === "save" &&
-          !notificationObj.content.includes("đã lưu bài viết")
-        ) {
-          notificationObj.content = `${
-            notificationObj.sender.username ||
-            notificationObj.sender.name ||
-            "Người dùng"
-          } đã lưu bài viết của bạn`;
-        }
-
-        return notificationObj;
-      });
+      const result = await NotificationService.getNotifications(
+        userId,
+        page,
+        limit
+      );
+      console.log(`Found ${result.notifications.length} notifications`);
 
       res.json({
         code: 1,
-        notifications: processedNotifications,
-        pagination: {
-          page,
-          limit,
-          totalNotifications,
-          totalPages,
-          hasMore: page < totalPages,
-        },
+        notifications: result.notifications,
+        pagination: result.pagination,
       });
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -139,39 +85,32 @@ const NotificationController = {
     const { notificationId } = req.params;
     const userId = req.user.id;
 
-    const notification = await Notification.findOneAndUpdate(
-      {
-        _id: notificationId,
-        recipient: userId,
-      },
-      { isRead: true },
-      { new: true }
-    );
+    try {
+      const notification = await NotificationService.markAsRead(
+        notificationId,
+        userId
+      );
 
-    if (!notification) {
-      return res.status(404).json({
-        code: 0,
-        message: "Thông báo không tồn tại",
+      res.json({
+        code: 1,
+        message: "Đã đánh dấu đã đọc",
+        notification,
       });
+    } catch (error) {
+      if (error.message === "Thông báo không tồn tại") {
+        return res.status(404).json({
+          code: 0,
+          message: error.message,
+        });
+      }
+      throw error;
     }
-
-    res.json({
-      code: 1,
-      message: "Đã đánh dấu đã đọc",
-      notification,
-    });
   }, "Mark notification as read failed"),
 
   markAllAsRead: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    await Notification.updateMany(
-      {
-        recipient: userId,
-        isRead: false,
-      },
-      { isRead: true }
-    );
+    await NotificationService.markAllAsRead(userId);
 
     res.json({
       code: 1,
@@ -183,31 +122,28 @@ const NotificationController = {
     const { notificationId } = req.params;
     const userId = req.user.id;
 
-    const notification = await Notification.findOneAndDelete({
-      _id: notificationId,
-      recipient: userId,
-    });
+    try {
+      await NotificationService.deleteNotification(notificationId, userId);
 
-    if (!notification) {
-      return res.status(404).json({
-        code: 0,
-        message: "Thông báo không tồn tại",
+      res.json({
+        code: 1,
+        message: "Đã xóa thông báo",
       });
+    } catch (error) {
+      if (error.message === "Thông báo không tồn tại") {
+        return res.status(404).json({
+          code: 0,
+          message: error.message,
+        });
+      }
+      throw error;
     }
-
-    res.json({
-      code: 1,
-      message: "Đã xóa thông báo",
-    });
   }, "Delete notification failed"),
 
   getUnreadCount: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    const unreadCount = await Notification.countDocuments({
-      recipient: userId,
-      isRead: false,
-    });
+    const unreadCount = await NotificationService.getUnreadCount(userId);
 
     res.json({
       code: 1,

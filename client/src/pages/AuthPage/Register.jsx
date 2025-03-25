@@ -12,6 +12,7 @@ const Register = () => {
 
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
   });
@@ -26,7 +27,12 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.password) {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.username
+    ) {
       toast.error("Please fill all fields!");
       return;
     }
@@ -43,7 +49,7 @@ const Register = () => {
       }
     } catch (error) {
       console.error("Lỗi đăng ký", error);
-      toast.error("Something went wrong!");
+      toast.error(error.response?.data?.message || "Something went wrong!");
     }
   };
 
@@ -69,7 +75,7 @@ const Register = () => {
             <div className="space-y-4">
               <div className="transform transition-all duration-300 hover:scale-[1.02]">
                 <label
-                  htmlFor="username"
+                  htmlFor="name"
                   className="text-sm font-medium text-gray-700 animate-fade-in"
                 >
                   Full Name
@@ -82,6 +88,24 @@ const Register = () => {
                   onChange={handleChange}
                   className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
                   placeholder="John Doe"
+                />
+              </div>
+
+              <div className="transform transition-all duration-300 hover:scale-[1.02]">
+                <label
+                  htmlFor="username"
+                  className="text-sm font-medium text-gray-700 animate-fade-in"
+                >
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
+                  placeholder="johndoe123"
                 />
               </div>
 

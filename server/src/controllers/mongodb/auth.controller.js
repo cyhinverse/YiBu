@@ -11,40 +11,48 @@ import UserService from "../../services/User.Service.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import Profile from "../../models/mongodb/Profiles.js";
+import AuthService from "../../services/Auth.Service.js";
 
 const AuthController = {
   Register: async (req, res) => {
     try {
-      const { name, email, password } = req.body;
+      console.log("Received register request:", req.body);
+      const { name, email, password, username } = req.body;
+
       if (!name || !password || !email) {
         return res.status(400).json({
           code: 0,
-          message: "Please fill all fields",
+          message: "Please fill all required fields",
         });
       }
 
-      const oldUser = await UserService.findUserByEmail(email);
-      if (oldUser) {
-        return res.status(400).json({
-          code: 0,
-          message: "Email already in use.",
+      try {
+        const user = await AuthService.registerUser(
+          name,
+          email,
+          password,
+          username
+        );
+        return res.status(201).json({
+          code: 1,
+          message: "User created successfully",
+          user,
         });
+      } catch (error) {
+        if (
+          error.message === "Email already in use." ||
+          error.message ===
+            "Username already in use. Please choose another one."
+        ) {
+          return res.status(400).json({
+            code: 0,
+            message: error.message,
+          });
+        }
+        throw error;
       }
-
-      // Tạo user mới
-      const NewUser = new Users({
-        name,
-        password: await HashPasswordForUser(password),
-        email,
-      });
-      await NewUser.save();
-
-      return res.status(201).json({
-        code: 1,
-        message: "User created successfully",
-        user: { name, email },
-      });
     } catch (e) {
+      console.error("Registration error:", e);
       return res.status(500).json({
         code: -1,
         message: "Server error",
@@ -64,55 +72,24 @@ const AuthController = {
         });
       }
 
-      const user = await Users.findOne({ email });
-      if (!user) {
+      try {
+        const { userData, accessToken } = await AuthService.loginUser(
+          email,
+          password
+        );
+
+        return res.status(200).json({
+          code: 1,
+          message: "Login successful",
+          user: userData,
+          accessToken,
+        });
+      } catch (error) {
         return res.status(401).json({
           success: false,
-          message: "Email hoặc mật khẩu không chính xác",
+          message: error.message,
         });
       }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          message: "Email hoặc mật khẩu không chính xác",
-        });
-      }
-
-      const payload = {
-        id: user._id,
-        role: user.role,
-      };
-
-      const accessToken = GenerateAccessToken(payload);
-      const refreshToken = GenerateRefreshToken(payload);
-
-      const newToken = new RefreshToken({
-        token: refreshToken,
-        userId: user._id,
-      });
-      await newToken.save();
-
-      const userProfile = await Profile.findOne({ userId: user._id });
-
-      const userData = user.toObject();
-      delete userData.password;
-
-      if (userProfile) {
-        userData.bio = userProfile.bio || "";
-        userData.gender = userProfile.gender || "other";
-        userData.birthday = userProfile.birthday || null;
-        userData.website = userProfile.website || "";
-        userData.interests = userProfile.interests || "";
-      }
-
-      return res.status(200).json({
-        code: 1,
-        message: "Login successful",
-        user: userData,
-        accessToken,
-      });
     } catch (error) {
       console.error("Login error:", error);
       return res.status(500).json({
@@ -121,40 +98,25 @@ const AuthController = {
       });
     }
   },
+
   RefreshToken: async (req, res) => {
     try {
       const user = req.user;
-      let refreshTokenDoc = await RefreshToken.findOne({ userId: user.id });
 
-      if (!refreshTokenDoc) {
+      try {
+        const { accessToken } = await AuthService.refreshUserToken(user.id);
+
+        return res.status(200).json({
+          code: 1,
+          message: "Refresh token successfully!",
+          accessToken,
+        });
+      } catch (error) {
         return res.status(400).json({
           code: 0,
-          message: "Refresh token not found",
+          message: error.message,
         });
       }
-
-      const latestToken = Array.isArray(refreshTokenDoc.token)
-        ? refreshTokenDoc.token[refreshTokenDoc.token.length - 1]
-        : refreshTokenDoc.token;
-
-      const decoded = jwt.verify(latestToken, process.env.REFRESH_TOKEN_SECRET);
-
-      const accessToken = GenerateAccessToken(decoded);
-      const newRefreshToken = GenerateRefreshToken(decoded);
-
-      refreshTokenDoc.token.push(newRefreshToken);
-
-      if (refreshTokenDoc.token.length > 5) {
-        refreshTokenDoc.token.shift();
-      }
-
-      await refreshTokenDoc.save();
-
-      return res.status(200).json({
-        code: 1,
-        message: "Refresh token successfully!",
-        accessToken,
-      });
     } catch (error) {
       console.error("Refresh token error:", error);
       return res.status(500).json({
@@ -167,7 +129,8 @@ const AuthController = {
   Logout: async (req, res) => {
     try {
       const user = req.user;
-      await RefreshToken.deleteMany({ userId: user.id });
+      await AuthService.logoutUser(user.id);
+
       return res.status(200).json({
         code: 1,
         message: "Logout successful",
@@ -194,33 +157,25 @@ const AuthController = {
         });
       }
 
-      // Check if email is already in use
-      const existingUser = await UserService.findUserByEmail(email);
-      if (existingUser && existingUser._id.toString() !== userId) {
-        return res.status(400).json({
-          code: 0,
-          message: "Email is already in use",
+      try {
+        await AuthService.updateUserEmail(userId, email);
+
+        return res.status(200).json({
+          code: 1,
+          message: "Email updated successfully",
         });
+      } catch (error) {
+        if (
+          error.message === "Email is already in use" ||
+          error.message === "User not found"
+        ) {
+          return res.status(400).json({
+            code: 0,
+            message: error.message,
+          });
+        }
+        throw error;
       }
-
-      // Update the user's email
-      const user = await Users.findByIdAndUpdate(
-        userId,
-        { email },
-        { new: true }
-      );
-
-      if (!user) {
-        return res.status(404).json({
-          code: 0,
-          message: "User not found",
-        });
-      }
-
-      return res.status(200).json({
-        code: 1,
-        message: "Email updated successfully",
-      });
     } catch (error) {
       console.error("Update email error:", error);
       return res.status(500).json({
@@ -242,39 +197,29 @@ const AuthController = {
         });
       }
 
-      // Get the user
-      const user = await Users.findById(userId);
-      if (!user) {
-        return res.status(404).json({
-          code: 0,
-          message: "User not found",
+      try {
+        await AuthService.updateUserPassword(
+          userId,
+          currentPassword,
+          newPassword
+        );
+
+        return res.status(200).json({
+          code: 1,
+          message: "Password updated successfully",
         });
+      } catch (error) {
+        if (
+          error.message === "Current password is incorrect" ||
+          error.message === "User not found"
+        ) {
+          return res.status(400).json({
+            code: 0,
+            message: error.message,
+          });
+        }
+        throw error;
       }
-
-      // Verify current password
-      const isPasswordValid = await checkComparePassword(
-        currentPassword,
-        user.password
-      );
-
-      if (!isPasswordValid) {
-        return res.status(400).json({
-          code: 0,
-          message: "Current password is incorrect",
-        });
-      }
-
-      // Hash the new password
-      const hashedPassword = await HashPasswordForUser(newPassword);
-
-      // Update the password
-      user.password = hashedPassword;
-      await user.save();
-
-      return res.status(200).json({
-        code: 1,
-        message: "Password updated successfully",
-      });
     } catch (error) {
       console.error("Update password error:", error);
       return res.status(500).json({
@@ -397,24 +342,35 @@ const AuthController = {
 
   DeleteAccount: async (req, res) => {
     try {
+      const { password } = req.body;
       const userId = req.user.id;
 
-      // Delete refresh tokens
-      await RefreshToken.deleteMany({ userId });
-
-      // Delete the user
-      const user = await Users.findByIdAndDelete(userId);
-      if (!user) {
-        return res.status(404).json({
+      if (!password) {
+        return res.status(400).json({
           code: 0,
-          message: "User not found",
+          message: "Password is required to delete account",
         });
       }
 
-      return res.status(200).json({
-        code: 1,
-        message: "Account deleted successfully",
-      });
+      try {
+        await AuthService.deleteUserAccount(userId, password);
+
+        return res.status(200).json({
+          code: 1,
+          message: "Account deleted successfully",
+        });
+      } catch (error) {
+        if (
+          error.message === "Password is incorrect" ||
+          error.message === "User not found"
+        ) {
+          return res.status(400).json({
+            code: 0,
+            message: error.message,
+          });
+        }
+        throw error;
+      }
     } catch (error) {
       console.error("Delete account error:", error);
       return res.status(500).json({

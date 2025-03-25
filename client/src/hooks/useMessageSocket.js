@@ -96,11 +96,30 @@ export const useMessageSocket = (chatPartnerId = null, options = {}) => {
     if (!user || !user._id || !chatPartnerId || !messageIds.length)
       return false;
 
-    return messageManager.markAsRead({
+    console.log(`Marking messages as read in socket: ${messageIds.join(", ")}`);
+
+    // Đảm bảo roomId đã được thiết lập
+    if (!roomId) {
+      console.warn("Room ID not set when trying to mark messages as read");
+      const newRoomId = [user._id, chatPartnerId].sort().join("-");
+      setRoomId(newRoomId);
+
+      // Đảm bảo đã tham gia phòng
+      messageManager.joinRoom(newRoomId);
+    }
+
+    // Gửi yêu cầu đánh dấu tin nhắn đã đọc
+    const success = messageManager.markAsRead({
       messageIds,
       senderId: chatPartnerId,
       receiverId: user._id,
     });
+
+    if (!success) {
+      console.error("Failed to send markAsRead message via socket");
+    }
+
+    return success;
   };
 
   return {

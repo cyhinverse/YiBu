@@ -71,6 +71,8 @@ const AccountSettings = () => {
     const getUserData = () => {
       // Try to get user data from Redux store
       if (auth && auth.user) {
+        console.log("Auth state from Redux:", auth);
+
         // Check for different possible structures of user data
         if (auth.user.email) {
           setUserData(auth.user);
@@ -90,6 +92,16 @@ const AccountSettings = () => {
             auth.user.data.email
           );
           return;
+        } else {
+          // Set fallback data to avoid errors
+          console.log("No email found in user data, using fallback");
+          setUserData({
+            email: "user@example.com", // Fallback email
+            isVerified: false,
+            name: "User",
+            ...auth.user, // Preserve other properties
+          });
+          return;
         }
       }
 
@@ -98,6 +110,7 @@ const AccountSettings = () => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
+          console.log("User from localStorage (parsed):", parsedUser);
 
           // Check for different possible structures in localStorage too
           if (parsedUser.email) {
@@ -118,6 +131,16 @@ const AccountSettings = () => {
               parsedUser.data.email
             );
             return;
+          } else {
+            // Set fallback data to avoid errors
+            console.log("No email found in localStorage, using fallback");
+            setUserData({
+              email: "user@example.com", // Fallback email
+              isVerified: false,
+              name: "User",
+              ...parsedUser, // Preserve other properties
+            });
+            return;
           }
         }
 
@@ -126,9 +149,13 @@ const AccountSettings = () => {
         console.error("Error parsing user data from localStorage:", error);
       }
 
-      console.error(
-        "No valid user data with email found in Redux or localStorage"
-      );
+      // Set fallback data when no user data is found
+      console.log("No valid user data found, using fallback");
+      setUserData({
+        email: "user@example.com",
+        isVerified: false,
+        name: "User",
+      });
     };
 
     getUserData();
@@ -157,15 +184,18 @@ const AccountSettings = () => {
   const getUserEmail = () => {
     if (!userData) return "Loading email...";
 
+    // Check for email property in different structures
     if (userData.email) return userData.email;
     if (userData.user && userData.user.email) return userData.user.email;
     if (userData.data && userData.data.email) return userData.data.email;
 
     // If we still don't have an email, try directly from Redux or localStorage
-    if (auth && auth.user) {
-      if (auth.user.email) return auth.user.email;
-      if (auth.user.user && auth.user.user.email) return auth.user.user.email;
-      if (auth.user.data && auth.user.data.email) return auth.user.data.email;
+    if (auth) {
+      if (auth.user && auth.user.email) return auth.user.email;
+      if (auth.user && auth.user.user && auth.user.user.email)
+        return auth.user.user.email;
+      if (auth.user && auth.user.data && auth.user.data.email)
+        return auth.user.data.email;
     }
 
     try {

@@ -1,6 +1,6 @@
 import express from "express";
 import SavePostController from "../../controllers/mongodb/savepost.controller.js";
-import { verifyToken } from "../../middleware/auth.middleware.js";
+import { verifyToken } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
 

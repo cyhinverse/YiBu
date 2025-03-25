@@ -1,7 +1,11 @@
 import React from "react";
 import { ArrowLeft, Phone, Video, Info } from "lucide-react";
+import { useOnlineUsers } from "../../../../contexts/OnlineUsersContext";
 
 const MessageHeader = ({ receiverUser, goBack }) => {
+  const { isUserOnline } = useOnlineUsers();
+  const isOnline = receiverUser?._id ? isUserOnline(receiverUser._id) : false;
+
   return (
     <div className="px-4 py-[13px] border-b border-gray-200 flex items-center justify-between bg-white shadow-sm flex-shrink-0">
       <div className="flex items-center">
@@ -19,7 +23,7 @@ const MessageHeader = ({ receiverUser, goBack }) => {
               alt={receiverUser?.name || "User"}
               className="w-11 h-11 rounded-full object-cover border border-gray-200"
             />
-            {receiverUser?.online && (
+            {isOnline && (
               <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             )}
           </div>
@@ -28,7 +32,7 @@ const MessageHeader = ({ receiverUser, goBack }) => {
               {receiverUser?.name || "User"}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
-              {receiverUser?.online ? "Đang hoạt động" : "Không hoạt động"}
+              {isOnline ? "Đang hoạt động" : "Không hoạt động"}
             </p>
           </div>
         </div>

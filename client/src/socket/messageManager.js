@@ -20,7 +20,17 @@ class MessageManager {
     // Lắng nghe sự kiện tin nhắn mới
     socket.on("new_message", (data) => {
       console.log("messageManager received new_message:", data);
-      this.callbacks.onNewMessage.forEach((callback) => callback(data));
+      // Đảm bảo dữ liệu đúng định dạng trước khi gửi cho các callbacks
+      const message = data.message || data;
+
+      // Broadcast sự kiện đến tất cả callbacks đã đăng ký
+      this.callbacks.onNewMessage.forEach((callback) => {
+        try {
+          callback(message);
+        } catch (error) {
+          console.error("Error in onNewMessage callback:", error);
+        }
+      });
     });
 
     // Lắng nghe sự kiện đánh dấu đã đọc

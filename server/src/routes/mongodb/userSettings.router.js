@@ -1,6 +1,6 @@
 import express from "express";
 import UserSettingsController from "../../controllers/mongodb/userSettings.controller.js";
-import { verifyToken } from "../../middleware/auth.middleware.js";
+import { verifyToken } from "../../middlewares/auth.middleware.js";
 import upload from "../../middlewares/multerUpload.js";
 
 const router = express.Router();

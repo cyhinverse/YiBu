@@ -9,6 +9,7 @@ export const initSocket = (server) => {
         "http://localhost:9258",
         "http://localhost:5173",
         "http://localhost:3000",
+        process.env.CLIENT_URL || "http://localhost:9258",
       ],
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
@@ -19,6 +20,34 @@ export const initSocket = (server) => {
 
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
+
+    // Lưu trạng thái người dùng khi kết nối
+    let userId = null;
+
+    socket.on("register_user", (data) => {
+      try {
+        if (!data || !data.userId) {
+          console.error("Invalid user registration data:", data);
+          socket.emit("error", { message: "Invalid user registration data" });
+          return;
+        }
+
+        userId = data.userId.toString();
+        socket.join(userId);
+
+        // Thông báo người dùng online
+        io.emit("user_status_update", {
+          userId,
+          status: "online",
+          timestamp: new Date(),
+        });
+
+        console.log(`User ${userId} is now online with socket ${socket.id}`);
+      } catch (error) {
+        console.error("Error registering user:", error);
+      }
+    });
+
     socket.emit("connection_established", { message: "Kết nối thành công" });
 
     socket.on("join_room", (roomId) => {
@@ -382,8 +411,20 @@ export const initSocket = (server) => {
       console.error("Socket error from client:", error);
     });
 
+    // Xử lý khi người dùng ngắt kết nối
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
+
+      if (userId) {
+        // Thông báo người dùng offline
+        io.emit("user_status_update", {
+          userId,
+          status: "offline",
+          timestamp: new Date(),
+        });
+
+        console.log(`User ${userId} is now offline`);
+      }
     });
   });
 

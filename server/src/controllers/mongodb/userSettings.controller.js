@@ -1,5 +1,5 @@
 import { CatchError } from "../../configs/CatchError.js";
-import UserSettings from "../../models/mongodb/UserSettings.js";
+import UserSettingsService from "../../services/UserSettings.service.js";
 import User from "../../models/mongodb/Users.js";
 import Profile from "../../models/mongodb/Profiles.js";
 
@@ -8,12 +8,7 @@ const UserSettingsController = {
   getUserSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    let userSettings = await UserSettings.findOne({ userId });
-
-    // Nếu chưa có, tạo mới với cài đặt mặc định
-    if (!userSettings) {
-      userSettings = await UserSettings.create({ userId });
-    }
+    const userSettings = await UserSettingsService.getUserSettings(userId);
 
     res.status(200).json({
       success: true,
@@ -28,11 +23,10 @@ const UserSettingsController = {
     console.log("Request files:", req.files);
 
     let updatedFields = {};
+    let avatarUrl = null;
 
     // Nếu có file avatar từ multer (req.file) hoặc express-fileupload (req.files)
     if ((req.file && req.file.path) || (req.files && req.files.avatar)) {
-      let avatarUrl;
-
       // Xử lý trường hợp sử dụng multer với cloudinary
       if (req.file && req.file.path) {
         console.log("Đã nhận file từ multer:", req.file);
@@ -43,33 +37,14 @@ const UserSettingsController = {
       else if (req.files && req.files.avatar) {
         const avatar = req.files.avatar;
         console.log("Đã nhận file từ express-fileupload:", avatar.name);
-
-        // Log chi tiết về file
         console.log("File size:", avatar.size);
         console.log("File mime type:", avatar.mimetype);
 
-        // Kiểm tra kích thước file (10MB)
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-        if (avatar.size > MAX_FILE_SIZE) {
-          const sizeMB = (avatar.size / (1024 * 1024)).toFixed(2);
-          const message = `Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`;
-          console.error(message);
-          return res.status(400).json({
-            success: false,
-            message: message,
-          });
-        }
-
-        // Upload file lên Cloudinary thay vì lưu cục bộ
         try {
-          const cloudinary = (await import("../../configs/cloudinaryConfig.js"))
-            .default;
-          const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
-            folder: "avatars",
-            public_id: `avatar_${userId}_${Date.now()}`,
-            resource_type: "image",
-          });
-          avatarUrl = result.secure_url;
+          avatarUrl = await UserSettingsService.uploadAvatarToCloudinary(
+            avatar,
+            userId
+          );
           console.log("Avatar uploaded to Cloudinary:", avatarUrl);
         } catch (error) {
           console.error("Error uploading to Cloudinary:", error);
@@ -81,12 +56,7 @@ const UserSettingsController = {
         }
       }
 
-      // Lưu URL avatar vào updatedFields
-      if (avatarUrl) {
-        updatedFields.avatar = avatarUrl;
-      }
-
-      // Save avatar info if provided
+      // Lưu thông tin avatar vào updatedFields
       if (req.body.avatarInfo) {
         updatedFields.avatarInfo = req.body.avatarInfo;
         console.log("Thông tin ảnh đại diện:", req.body.avatarInfo);
@@ -117,348 +87,191 @@ const UserSettingsController = {
 
     console.log("Fields to update:", updatedFields);
 
-    // Find or create Profile
-    let profile = await Profile.findOne({ userId });
-    if (!profile) {
-      profile = new Profile({ userId });
-    }
-
-    // Update profile fields
-    Object.keys(updatedFields).forEach((key) => {
-      if (key !== "name" && key !== "avatar") {
-        // These go to User model
-        if (key === "birthday" && updatedFields[key]) {
-          profile[key] = new Date(updatedFields[key]);
-        } else {
-          profile[key] = updatedFields[key];
-        }
-      }
-    });
-
-    await profile.save();
-
-    // Update name and avatar in User model
-    let userData = null;
-    try {
-      const userUpdateFields = {};
-      if (updatedFields.name !== undefined)
-        userUpdateFields.name = updatedFields.name;
-      if (updatedFields.avatar !== undefined)
-        userUpdateFields.avatar = updatedFields.avatar;
-
-      if (Object.keys(userUpdateFields).length > 0) {
-        userData = await User.findByIdAndUpdate(userId, userUpdateFields, {
-          new: true,
-        }).select("name username email avatar");
-
-        console.log("Cập nhật user:", userData);
-      } else {
-        userData = await User.findById(userId).select(
-          "name username email avatar"
-        );
-      }
-    } catch (error) {
-      console.error("Lỗi khi cập nhật thông tin user:", error);
-      throw error;
-    }
-
-    // Create full user data object to return
-    const fullUserData = {
-      ...userData._doc,
-      bio: profile.bio,
-      birthday: profile.birthday,
-      gender: profile.gender,
-      website: profile.website,
-      interests: profile.interests,
-    };
+    const { profile, userData } =
+      await UserSettingsService.updateProfileSettings(
+        userId,
+        updatedFields,
+        avatarUrl
+      );
 
     res.status(200).json({
       success: true,
       message: "Cập nhật thông tin hồ sơ thành công",
       profile,
-      userData: fullUserData,
+      userData,
     });
   }, "Failed to update profile settings"),
 
   // Cập nhật cài đặt quyền riêng tư
   updatePrivacySettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const {
-      profileVisibility,
-      postVisibility,
-      messagePermission,
-      searchVisibility,
-      activityStatus,
-    } = req.body;
+    const privacySettings = {
+      profileVisibility: req.body.profileVisibility,
+      postVisibility: req.body.postVisibility,
+      messagePermission: req.body.messagePermission,
+      searchVisibility: req.body.searchVisibility,
+      activityStatus: req.body.activityStatus,
+    };
 
-    let userSettings = await UserSettings.findOne({ userId });
-
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
-    }
-
-    // Cập nhật các trường privacy
-    if (profileVisibility !== undefined)
-      userSettings.privacy.profileVisibility = profileVisibility;
-    if (postVisibility !== undefined)
-      userSettings.privacy.postVisibility = postVisibility;
-    if (messagePermission !== undefined)
-      userSettings.privacy.messagePermission = messagePermission;
-    if (searchVisibility !== undefined)
-      userSettings.privacy.searchVisibility = searchVisibility;
-    if (activityStatus !== undefined)
-      userSettings.privacy.activityStatus = activityStatus;
-
-    await userSettings.save();
+    const updatedPrivacySettings =
+      await UserSettingsService.updatePrivacySettings(userId, privacySettings);
 
     res.status(200).json({
       success: true,
       message: "Cập nhật cài đặt quyền riêng tư thành công",
-      privacySettings: userSettings.privacy,
+      privacySettings: updatedPrivacySettings,
     });
   }, "Failed to update privacy settings"),
 
   // Cập nhật cài đặt thông báo
   updateNotificationSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const {
-      email,
-      push,
-      newFollower,
-      likes,
-      comments,
-      mentions,
-      directMessages,
-      systemUpdates,
-    } = req.body;
-
-    let userSettings = await UserSettings.findOne({ userId });
-
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
-    }
-
-    // Update email and push notification settings
-    if (email !== undefined) {
-      userSettings.notifications.emailNotifications.enabled = email;
-    }
-
-    if (push !== undefined) {
-      userSettings.notifications.pushNotifications.enabled = push;
-    }
-
-    // Update specific notification types
-    if (newFollower !== undefined) {
-      userSettings.notifications.pushNotifications.follows = newFollower;
-    }
-
-    if (likes !== undefined) {
-      userSettings.notifications.pushNotifications.likes = likes;
-    }
-
-    if (comments !== undefined) {
-      userSettings.notifications.pushNotifications.comments = comments;
-    }
-
-    if (mentions !== undefined) {
-      // Add mentions field if it doesn't exist yet
-      if (
-        !userSettings.notifications.pushNotifications.hasOwnProperty("mentions")
-      ) {
-        userSettings.notifications.pushNotifications.mentions = mentions;
-      } else {
-        userSettings.notifications.pushNotifications.mentions = mentions;
-      }
-    }
-
-    if (directMessages !== undefined) {
-      userSettings.notifications.pushNotifications.messages = directMessages;
-    }
-
-    if (systemUpdates !== undefined) {
-      userSettings.notifications.emailNotifications.accountUpdates =
-        systemUpdates;
-    }
-
-    await userSettings.save();
-
-    // Format the response to match the client-side structure
-    const formattedSettings = {
-      email: userSettings.notifications.emailNotifications.enabled,
-      push: userSettings.notifications.pushNotifications.enabled,
-      newFollower: userSettings.notifications.pushNotifications.follows,
-      likes: userSettings.notifications.pushNotifications.likes,
-      comments: userSettings.notifications.pushNotifications.comments,
-      mentions: userSettings.notifications.pushNotifications.mentions || false,
-      directMessages: userSettings.notifications.pushNotifications.messages,
-      systemUpdates:
-        userSettings.notifications.emailNotifications.accountUpdates,
+    const notificationSettings = {
+      email: req.body.email,
+      push: req.body.push,
+      newFollower: req.body.newFollower,
+      likes: req.body.likes,
+      comments: req.body.comments,
+      mentions: req.body.mentions,
+      directMessages: req.body.directMessages,
+      systemUpdates: req.body.systemUpdates,
     };
+
+    const updatedNotificationSettings =
+      await UserSettingsService.updateNotificationSettings(
+        userId,
+        notificationSettings
+      );
 
     res.status(200).json({
       success: true,
       message: "Cập nhật cài đặt thông báo thành công",
-      notificationSettings: formattedSettings,
+      notificationSettings: updatedNotificationSettings,
     });
   }, "Failed to update notification settings"),
 
   // Cập nhật cài đặt bảo mật
   updateSecuritySettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { twoFactorEnabled, loginAlerts, trustedDevices, securityQuestions } =
-      req.body;
+    const securitySettings = {
+      twoFactorEnabled: req.body.twoFactorEnabled,
+      loginAlerts: req.body.loginAlerts,
+      trustedDevices: req.body.trustedDevices,
+      securityQuestions: req.body.securityQuestions,
+    };
 
-    let userSettings = await UserSettings.findOne({ userId });
+    try {
+      const updatedSecuritySettings =
+        await UserSettingsService.updateSecuritySettings(
+          userId,
+          securitySettings
+        );
 
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật cài đặt bảo mật thành công",
+        securitySettings: updatedSecuritySettings,
+      });
+    } catch (error) {
+      console.error("Lỗi khi cập nhật cài đặt bảo mật:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi cập nhật cài đặt bảo mật: " + error.message,
+      });
     }
-
-    // Cập nhật các trường security
-    if (twoFactorEnabled !== undefined)
-      userSettings.security.twoFactorEnabled = twoFactorEnabled;
-    if (loginAlerts !== undefined)
-      userSettings.security.loginAlerts = loginAlerts;
-
-    // Cập nhật trusted devices
-    if (trustedDevices) {
-      if (Array.isArray(trustedDevices)) {
-        userSettings.security.trustedDevices = trustedDevices;
-      }
-    }
-
-    // Cập nhật security questions
-    if (securityQuestions) {
-      if (Array.isArray(securityQuestions)) {
-        userSettings.security.securityQuestions = securityQuestions;
-      }
-    }
-
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Cập nhật cài đặt bảo mật thành công",
-      securitySettings: userSettings.security,
-    });
   }, "Failed to update security settings"),
 
   // Cập nhật cài đặt nội dung
   updateContentSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { language, contentVisibility, autoplayEnabled, contentFilters } =
-      req.body;
+    const contentSettings = {
+      language: req.body.language,
+      contentVisibility: req.body.contentVisibility,
+      autoplayEnabled: req.body.autoplayEnabled,
+      contentFilters: req.body.contentFilters,
+    };
 
-    let userSettings = await UserSettings.findOne({ userId });
+    try {
+      const updatedContentSettings =
+        await UserSettingsService.updateContentSettings(
+          userId,
+          contentSettings
+        );
 
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật cài đặt nội dung thành công",
+        contentSettings: updatedContentSettings,
+      });
+    } catch (error) {
+      console.error("Lỗi khi cập nhật cài đặt nội dung:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi cập nhật cài đặt nội dung: " + error.message,
+      });
     }
-
-    // Cập nhật các trường content
-    if (language !== undefined) userSettings.content.language = language;
-    if (contentVisibility !== undefined)
-      userSettings.content.contentVisibility = contentVisibility;
-    if (autoplayEnabled !== undefined)
-      userSettings.content.autoplayEnabled = autoplayEnabled;
-
-    // Cập nhật content filters
-    if (contentFilters) {
-      if (contentFilters.adult !== undefined)
-        userSettings.content.contentFilters.adult = contentFilters.adult;
-      if (contentFilters.violence !== undefined)
-        userSettings.content.contentFilters.violence = contentFilters.violence;
-      if (contentFilters.hate !== undefined)
-        userSettings.content.contentFilters.hate = contentFilters.hate;
-    }
-
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Cập nhật cài đặt nội dung thành công",
-      contentSettings: userSettings.content,
-    });
   }, "Failed to update content settings"),
 
   // Cập nhật cài đặt giao diện
   updateThemeSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { appearance, primaryColor, fontSize } = req.body;
+    const themeSettings = {
+      appearance: req.body.appearance,
+      primaryColor: req.body.primaryColor,
+      fontSize: req.body.fontSize,
+    };
 
-    let userSettings = await UserSettings.findOne({ userId });
+    try {
+      const updatedThemeSettings =
+        await UserSettingsService.updateThemeSettings(userId, themeSettings);
 
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật cài đặt giao diện thành công",
+        themeSettings: updatedThemeSettings,
+      });
+    } catch (error) {
+      console.error("Lỗi khi cập nhật cài đặt giao diện:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi cập nhật cài đặt giao diện: " + error.message,
+      });
     }
-
-    // Cập nhật các trường theme
-    if (appearance !== undefined) userSettings.theme.appearance = appearance;
-    if (primaryColor !== undefined)
-      userSettings.theme.primaryColor = primaryColor;
-    if (fontSize !== undefined) userSettings.theme.fontSize = fontSize;
-
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Cập nhật cài đặt giao diện thành công",
-      themeSettings: userSettings.theme,
-    });
   }, "Failed to update theme settings"),
 
   // API để thêm thiết bị được tin cậy
   addTrustedDevice: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { deviceId, deviceName } = req.body;
+    const deviceData = {
+      deviceId: req.body.deviceId,
+      deviceName: req.body.deviceName,
+    };
 
-    if (!deviceId || !deviceName) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu thông tin thiết bị",
+    try {
+      const trustedDevices = await UserSettingsService.addTrustedDevice(
+        userId,
+        deviceData
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Thêm thiết bị được tin cậy thành công",
+        trustedDevices: trustedDevices,
       });
-    }
-
-    let userSettings = await UserSettings.findOne({ userId });
-
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
-    }
-
-    // Kiểm tra xem thiết bị đã tồn tại chưa
-    const deviceExists = userSettings.security.trustedDevices.some(
-      (device) => device.deviceId === deviceId
-    );
-
-    if (deviceExists) {
-      // Cập nhật ngày sử dụng gần nhất
-      userSettings.security.trustedDevices =
-        userSettings.security.trustedDevices.map((device) => {
-          if (device.deviceId === deviceId) {
-            return {
-              ...device,
-              deviceName,
-              lastUsed: new Date(),
-            };
-          }
-          return device;
+    } catch (error) {
+      if (error.message === "Thiếu thông tin thiết bị") {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
         });
-    } else {
-      // Thêm thiết bị mới
-      userSettings.security.trustedDevices.push({
-        deviceId,
-        deviceName,
-        lastUsed: new Date(),
+      }
+
+      console.error("Lỗi khi thêm thiết bị tin cậy:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi thêm thiết bị tin cậy: " + error.message,
       });
     }
-
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Thêm thiết bị được tin cậy thành công",
-      trustedDevices: userSettings.security.trustedDevices,
-    });
   }, "Failed to add trusted device"),
 
   // API để xóa thiết bị được tin cậy
@@ -466,43 +279,42 @@ const UserSettingsController = {
     const userId = req.user.id;
     const { deviceId } = req.params;
 
-    if (!deviceId) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu thông tin thiết bị",
-      });
-    }
-
-    let userSettings = await UserSettings.findOne({ userId });
-
-    if (!userSettings) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy cài đặt người dùng",
-      });
-    }
-
-    // Xóa thiết bị
-    userSettings.security.trustedDevices =
-      userSettings.security.trustedDevices.filter(
-        (device) => device.deviceId !== deviceId
+    try {
+      const trustedDevices = await UserSettingsService.removeTrustedDevice(
+        userId,
+        deviceId
       );
 
-    await userSettings.save();
+      res.status(200).json({
+        success: true,
+        message: "Xóa thiết bị được tin cậy thành công",
+        trustedDevices: trustedDevices,
+      });
+    } catch (error) {
+      if (error.message === "Thiếu thông tin thiết bị") {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      } else if (error.message === "Không tìm thấy cài đặt người dùng") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
 
-    res.status(200).json({
-      success: true,
-      message: "Xóa thiết bị được tin cậy thành công",
-      trustedDevices: userSettings.security.trustedDevices,
-    });
+      console.error("Lỗi khi xóa thiết bị tin cậy:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi xóa thiết bị tin cậy: " + error.message,
+      });
+    }
   }, "Failed to remove trusted device"),
 
   // API để chặn người dùng
   blockUser: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { blockedUserId } = req.body;
-
-    console.log("Yêu cầu chặn user:", { userId, blockedUserId });
 
     if (!blockedUserId) {
       return res.status(400).json({
@@ -512,61 +324,35 @@ const UserSettingsController = {
     }
 
     try {
-      // Tạo query để tìm kiếm user
-      const query = {
-        $or: [{ email: blockedUserId }, { username: blockedUserId }],
-      };
+      const blockedUsers = await UserSettingsService.updateBlockedUsers(
+        userId,
+        "block",
+        blockedUserId
+      );
 
-      // Kiểm tra nếu blockedUserId có thể là một ObjectId hợp lệ
-      const mongoose = (await import("mongoose")).default;
-      if (mongoose.Types.ObjectId.isValid(blockedUserId)) {
-        query.$or.push({ _id: blockedUserId });
-      }
-
-      console.log("Query tìm kiếm user:", JSON.stringify(query));
-
-      // Kiểm tra người dùng tồn tại
-      const blockedUser = await User.findOne(query);
-
-      console.log("Kết quả tìm kiếm user:", blockedUser);
-
-      if (!blockedUser) {
+      res.status(200).json({
+        success: true,
+        message: "Chặn người dùng thành công",
+        blockList: blockedUsers,
+      });
+    } catch (error) {
+      if (error.message === "User ID to block/unblock is required") {
+        return res.status(400).json({
+          success: false,
+          message: "Thiếu ID người dùng cần chặn",
+        });
+      } else if (error.message === "User is already blocked") {
+        return res.status(400).json({
+          success: false,
+          message: "Người dùng này đã bị chặn",
+        });
+      } else if (error.message === "Không tìm thấy người dùng cần chặn") {
         return res.status(404).json({
           success: false,
           message: "Không tìm thấy người dùng cần chặn",
         });
       }
 
-      let userSettings = await UserSettings.findOne({ userId });
-
-      if (!userSettings) {
-        userSettings = new UserSettings({ userId });
-      }
-
-      const actualBlockedUserId = blockedUser._id.toString();
-
-      // Kiểm tra xem đã chặn chưa
-      const alreadyBlocked = userSettings.privacy.blockList.some(
-        (id) => id.toString() === actualBlockedUserId
-      );
-
-      if (alreadyBlocked) {
-        return res.status(400).json({
-          success: false,
-          message: "Người dùng này đã bị chặn",
-        });
-      }
-
-      // Thêm vào danh sách chặn
-      userSettings.privacy.blockList.push(actualBlockedUserId);
-      await userSettings.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Chặn người dùng thành công",
-        blockList: userSettings.privacy.blockList,
-      });
-    } catch (error) {
       console.error("Lỗi khi chặn người dùng:", error);
       return res.status(500).json({
         success: false,
@@ -587,52 +373,57 @@ const UserSettingsController = {
       });
     }
 
-    let userSettings = await UserSettings.findOne({ userId });
+    try {
+      const blockedUsers = await UserSettingsService.updateBlockedUsers(
+        userId,
+        "unblock",
+        blockedUserId
+      );
 
-    if (!userSettings) {
-      return res.status(404).json({
+      res.status(200).json({
+        success: true,
+        message: "Bỏ chặn người dùng thành công",
+        blockList: blockedUsers,
+      });
+    } catch (error) {
+      if (error.message === "User ID to block/unblock is required") {
+        return res.status(400).json({
+          success: false,
+          message: "Thiếu ID người dùng cần bỏ chặn",
+        });
+      } else if (error.message === "Không tìm thấy người dùng cần bỏ chặn") {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy người dùng cần bỏ chặn",
+        });
+      }
+
+      console.error("Lỗi khi bỏ chặn người dùng:", error);
+      return res.status(500).json({
         success: false,
-        message: "Không tìm thấy cài đặt người dùng",
+        message: "Lỗi server khi bỏ chặn người dùng: " + error.message,
       });
     }
-
-    // Xóa khỏi danh sách chặn
-    userSettings.privacy.blockList = userSettings.privacy.blockList.filter(
-      (id) => id.toString() !== blockedUserId
-    );
-
-    await userSettings.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Bỏ chặn người dùng thành công",
-      blockList: userSettings.privacy.blockList,
-    });
   }, "Failed to unblock user"),
 
   // API để lấy danh sách chặn
   getBlockList: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    let userSettings = await UserSettings.findOne({ userId }).populate({
-      path: "privacy.blockList",
-      select: "username name avatar",
-    });
+    try {
+      const blockedUsers = await UserSettingsService.getBlockedUsers(userId);
 
-    if (!userSettings) {
-      userSettings = new UserSettings({ userId });
-      await userSettings.save();
-
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
-        blockList: [],
+        blockList: blockedUsers,
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách chặn:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server khi lấy danh sách chặn: " + error.message,
       });
     }
-
-    res.status(200).json({
-      success: true,
-      blockList: userSettings.privacy.blockList,
-    });
   }, "Failed to get block list"),
 };
 

@@ -84,6 +84,9 @@ const useMessages = () => {
         if (message.receiver._id === userId && !message.isRead) {
           markMessagesAsRead([message._id]);
         }
+
+        // Cập nhật danh sách cuộc trò chuyện để hiển thị tin nhắn mới nhất
+        fetchConversations();
       }
     };
 
@@ -306,27 +309,42 @@ const useMessages = () => {
 
     try {
       dispatch(setLoading({ type: "sending", value: true }));
+
+      // Chuẩn bị dữ liệu tin nhắn
       const messageData = {
-        receiver: selectedUser._id,
+        receiverId: selectedUser._id,
         content: content.trim(),
       };
 
+      console.log("Sending new message:", messageData);
+
+      // Gửi tin nhắn qua API
       const response = await MessageService.sendMessage(messageData);
 
       if (response?.success && response.data) {
+        console.log("Message sent successfully:", response.data);
+
+        // Tạo đối tượng tin nhắn mới để hiển thị ngay trên UI
         const newMessage = {
           ...response.data,
-          sender: userId,
-          receiver: selectedUser._id,
+          sender: { _id: userId },
+          receiver: { _id: selectedUser._id },
           createdAt: new Date().toISOString(),
           isRead: false,
         };
 
-        dispatch(addMessage(newMessage));
+        // Thêm tin nhắn vào danh sách tin nhắn hiện tại
+        dispatch(
+          addMessage({
+            conversationId: selectedUser._id,
+            message: newMessage,
+          })
+        );
 
-        // Update conversation list
+        // Cập nhật cuộc trò chuyện trong danh sách
         const updatedConversation = {
           otherUser: selectedUser,
+          _id: selectedUser._id,
           lastMessage: {
             _id: newMessage._id,
             content: newMessage.content,
@@ -336,10 +354,11 @@ const useMessages = () => {
           unreadCount: 0,
         };
 
+        // Cập nhật danh sách cuộc trò chuyện với tin nhắn mới nhất
         dispatch(addConversation(updatedConversation));
 
-        // Emit socket event if socket is connected
-        if (isConnected) {
+        // Gọi socketManager để gửi tin nhắn qua socket
+        if (isConnected && socket) {
           console.log("Emitting send_message via socket:", {
             message: newMessage,
             receiverId: selectedUser._id,
@@ -351,9 +370,17 @@ const useMessages = () => {
             receiverId: selectedUser._id,
             senderId: userId,
           });
+
+          // Force cập nhật danh sách tin nhắn
+          setTimeout(() => fetchConversations(), 300);
         } else {
           console.warn("Socket not connected, message sent via API only");
+          // Vẫn làm mới danh sách cuộc trò chuyện ngay cả khi socket không kết nối
+          fetchConversations();
         }
+      } else {
+        console.error("Failed to send message:", response);
+        toast.error("Không thể gửi tin nhắn");
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -406,45 +433,52 @@ const useMessages = () => {
 
     try {
       console.log("Marking messages as read:", messageIds);
+
+      // Optimistically update local state first to improve UI responsiveness
+      messageIds.forEach((id) => dispatch(markMessageAsRead(id)));
+
+      // Find and update the current conversation in local state
+      const currentConversation = conversations.find(
+        (c) => c.otherUser?._id === selectedUser._id
+      );
+
+      if (currentConversation) {
+        const updatedConversation = {
+          ...currentConversation,
+          unreadCount: 0, // Reset the unread count
+        };
+
+        // Update conversation in Redux store
+        dispatch(addConversation(updatedConversation));
+      }
+
+      // Now send the update to the server
       const response = await MessageService.markAsRead(messageIds);
 
       if (response?.success && response.data?.modifiedCount > 0) {
-        // Update local state for successfully marked messages
-        messageIds.forEach((id) => dispatch(markMessageAsRead(id)));
-
-        // Update conversation unread count
-        const currentConversation = conversations.find(
-          (c) => c.otherUser._id === selectedUser._id
+        console.log(
+          `Successfully marked ${response.data.modifiedCount} messages as read on server`
         );
 
-        if (currentConversation) {
-          const updatedConversation = {
-            ...currentConversation,
-            unreadCount: Math.max(
-              0,
-              (currentConversation.unreadCount || 0) -
-                response.data.modifiedCount
-            ),
-          };
-          dispatch(addConversation(updatedConversation));
-        }
-
-        // Emit socket event for successfully marked messages if socket is connected
-        if (isConnected) {
+        // Emit socket event for real-time updates if socket is connected
+        if (isConnected && socket) {
           console.log("Emitting mark_as_read via socket:", {
             messageIds,
-            receiverId: selectedUser._id,
-            senderId: userId,
+            receiverId: userId,
+            senderId: selectedUser._id,
             count: response.data.modifiedCount,
           });
 
           socket.emit("mark_as_read", {
             messageIds,
-            receiverId: selectedUser._id,
-            senderId: userId,
+            receiverId: userId,
+            senderId: selectedUser._id,
             count: response.data.modifiedCount,
           });
         }
+
+        // Force refresh conversations list to ensure UI is up to date
+        fetchConversations();
       } else {
         console.warn("Failed to mark some or all messages as read:", response);
       }

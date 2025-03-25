@@ -357,15 +357,15 @@ const PrivacySettings = () => {
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-sm text-blue-800">
             <span className="font-medium">Hướng dẫn:</span> Bạn có thể chặn
-            người dùng bằng cách nhập email, tên người dùng (username) hoặc ID
-            của họ vào ô bên dưới.
+            người dùng bằng cách nhập email, tên người dùng (username), tên hiển
+            thị (name) hoặc ID của họ vào ô bên dưới.
           </p>
         </div>
 
         <form onSubmit={handleBlockUser} className="flex gap-2 mb-4">
           <input
             type="text"
-            placeholder="Nhập email hoặc ID người dùng"
+            placeholder="Nhập email, tên người dùng hoặc ID"
             value={newBlockUser}
             onChange={(e) => setNewBlockUser(e.target.value)}
             className="flex-1 p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"

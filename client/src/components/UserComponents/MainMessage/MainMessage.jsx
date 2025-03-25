@@ -14,10 +14,13 @@ import {
 } from "lucide-react";
 import { messageManager } from "../../../socket/messageManager";
 import { toast } from "react-hot-toast";
+import { useOnlineUsers } from "../../../contexts/OnlineUsersContext";
+import MessageService from "../../../services/messageService";
 
 const MainMessage = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const { isUserOnline } = useOnlineUsers();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,54 +57,76 @@ const MainMessage = () => {
 
   const handleNewMessage = useCallback(
     (data) => {
-      if (data && data.message) {
-        setConversations((prevConversations) => {
-          const message = data.message;
-          const otherUserId =
-            message.sender._id === user._id
-              ? message.receiver._id
-              : message.sender._id;
+      console.log("MainMessage handling new message:", data);
 
-          const conversationExists = prevConversations.some(
-            (conv) => conv._id.toString() === otherUserId.toString()
-          );
+      if (!data) return;
 
-          if (conversationExists) {
-            return prevConversations
-              .map((conv) => {
-                if (conv._id.toString() === otherUserId.toString()) {
-                  return {
-                    ...conv,
-                    latestMessage: message,
-                    unreadCount:
-                      message.receiver._id === user._id && !message.isRead
-                        ? conv.unreadCount + 1
-                        : conv.unreadCount,
-                  };
-                }
-                return conv;
-              })
-              .sort(
-                (a, b) =>
-                  new Date(b.latestMessage.createdAt) -
-                  new Date(a.latestMessage.createdAt)
-              );
-          } else {
-            const newConversation = {
-              _id: otherUserId,
-              user:
-                message.sender._id === user._id
-                  ? message.receiver
-                  : message.sender,
-              latestMessage: message,
-              unreadCount:
-                message.receiver._id === user._id && !message.isRead ? 1 : 0,
-            };
+      const message = data.message || data;
 
-            return [newConversation, ...prevConversations];
-          }
-        });
+      if (!message || !message._id) {
+        console.warn("Invalid message format received:", data);
+        return;
       }
+
+      setConversations((prevConversations) => {
+        const otherUserId =
+          message.sender._id === user._id
+            ? message.receiver._id
+            : message.sender._id;
+
+        const conversationExists = prevConversations.some(
+          (conv) => conv._id.toString() === otherUserId.toString()
+        );
+
+        let updatedConversations;
+
+        if (conversationExists) {
+          updatedConversations = prevConversations.map((conv) => {
+            if (conv._id.toString() === otherUserId.toString()) {
+              const newUnreadCount =
+                message.receiver._id === user._id && !message.isRead
+                  ? (conv.unreadCount || 0) + 1
+                  : conv.unreadCount || 0;
+
+              return {
+                ...conv,
+                latestMessage: message,
+                unreadCount: newUnreadCount,
+                timestamp: new Date(message.createdAt).getTime(),
+              };
+            }
+            return conv;
+          });
+        } else {
+          const otherUser =
+            message.sender._id === user._id ? message.receiver : message.sender;
+
+          const newConversation = {
+            _id: otherUserId,
+            user: otherUser,
+            latestMessage: message,
+            unreadCount:
+              message.receiver._id === user._id && !message.isRead ? 1 : 0,
+            timestamp: new Date(message.createdAt).getTime(),
+          };
+
+          updatedConversations = [newConversation, ...prevConversations];
+        }
+
+        return updatedConversations.sort((a, b) => {
+          const timeA =
+            a.timestamp ||
+            (a.latestMessage
+              ? new Date(a.latestMessage.createdAt).getTime()
+              : 0);
+          const timeB =
+            b.timestamp ||
+            (b.latestMessage
+              ? new Date(b.latestMessage.createdAt).getTime()
+              : 0);
+          return timeB - timeA;
+        });
+      });
     },
     [user]
   );
@@ -420,28 +445,14 @@ const MainMessage = () => {
         return;
       }
 
-      const userId = conversationToDelete._id;
-
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/messages/conversation/${userId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const otherUserId = conversationToDelete._id;
+      console.log(
+        `Attempting to delete conversation with user: ${otherUserId}`
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete conversation");
-      }
+      const response = await MessageService.deleteConversation(otherUserId);
 
-      const data = await response.json();
-
-      if (data.code === 1) {
+      if (response.success) {
         setConversations(
           conversations.filter((conv) => conv._id !== conversationToDelete._id)
         );
@@ -455,7 +466,8 @@ const MainMessage = () => {
 
         toast.success("Đã xóa cuộc trò chuyện");
       } else {
-        toast.error(data.message || "Không thể xóa cuộc trò chuyện");
+        console.error("Delete conversation failed:", response);
+        toast.error(response.message || "Không thể xóa cuộc trò chuyện");
       }
     } catch (err) {
       console.error("Error deleting conversation:", err);
@@ -581,8 +593,8 @@ const MainMessage = () => {
                     {searchResults.map((user) => (
                       <div
                         key={user._id}
+                        className="flex items-center p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors"
                         onClick={() => handleSelectUser(user)}
-                        className="flex items-center p-2.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-all duration-200"
                       >
                         <div className="relative">
                           <img
@@ -592,7 +604,7 @@ const MainMessage = () => {
                             alt={user.username}
                             className="w-12 h-12 rounded-full object-cover mr-3 border border-gray-200"
                           />
-                          {user.online && (
+                          {isUserOnline(user._id) && (
                             <div className="absolute bottom-0.5 right-3.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                           )}
                         </div>
@@ -668,7 +680,7 @@ const MainMessage = () => {
                           alt={conversation.user?.username}
                           className="w-13 h-13 rounded-full object-cover mr-3 border border-gray-200 shadow-sm"
                         />
-                        {conversation.user.online && (
+                        {isUserOnline(conversation._id) && (
                           <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
                         )}
                       </div>

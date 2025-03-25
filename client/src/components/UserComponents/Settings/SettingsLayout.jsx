@@ -9,7 +9,7 @@ const SettingsLayout = () => {
         <div className="md:col-span-1 h-full">
           <SideBarSettings />
         </div>
-        <div className="md:col-span-3 shadow-lg rounded-xl p-5 bg-white dark:bg-gray-800 overflow-hidden h-full flex flex-col border border-gray-200 dark:border-gray-700">
+        <div className="md:col-span-3 shadow-lg rounded-xl p-5 bg-white overflow-hidden h-full flex flex-col border border-gray-200 dark:border-gray-700">
           <div className="overflow-y-auto hide-scroll flex-1 pr-2">
             <Outlet />
           </div>

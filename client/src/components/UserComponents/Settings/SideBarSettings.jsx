@@ -1,15 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import {
-  Settings,
-  User,
-  Shield,
-  Bell,
-  Globe,
-  Palette,
-  HelpCircle,
-  Lock,
-} from "lucide-react";
+import { Settings, User, Shield, Bell, Palette } from "lucide-react";
 
 const menuItems = [
   {
@@ -42,10 +33,8 @@ const menuItems = [
 
 const SideBarSettings = () => {
   return (
-    <div className="h-full overflow-hidden bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border border-gray-200 dark:border-gray-700 flex flex-col">
-      <h2 className="text-2xl font-bold mb-4 text-purple-700 dark:text-purple-400">
-        Settings
-      </h2>
+    <div className="h-full overflow-hidden rounded-xl shadow-lg p-5 border border-gray-200 dark:border-gray-700 flex flex-col">
+      <h2 className="text-2xl font-bold mb-4  ">Settings</h2>
       <div className="overflow-y-auto hide-scroll flex-1">
         <ul className="space-y-2">
           {menuItems.map((item, index) => (
@@ -53,20 +42,16 @@ const SideBarSettings = () => {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center p-3 rounded-lg cursor-pointer 
+                  `flex items-center p-3 rounded-lg cursor-pointer
                   transition-all duration-300 ease-in-out
-                  ${
-                    isActive
-                      ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
-                      : "hover:bg-purple-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
-                  }`
+                  ${isActive ? " dark:opacity-55 " : "hover:opacity-55 "}`
                 }
               >
                 <span
                   className={`mr-3 transition-colors duration-300 ${
                     window.location.pathname === item.path
-                      ? "text-purple-700 dark:text-purple-400"
-                      : "text-purple-600 dark:text-purple-500"
+                      ? "text-purple-700 dark:text-purple-300"
+                      : "text-purple-600 dark:text-purple-400"
                   }`}
                 >
                   {item.icon}
