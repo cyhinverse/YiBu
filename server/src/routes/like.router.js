@@ -1,21 +1,21 @@
 import express from "express";
-import LikeController from "../controllers/mongodb/like.controller.js";
+import PostController from "../controllers/post.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 router.use(verifyToken);
 
-router.post("/create", LikeController.CreateLike);
+router.post("/create", PostController.CreateLike);
 
-router.post("/delete", LikeController.DeleteLike);
+router.post("/delete", PostController.DeleteLike);
 
-router.get("/status/:postId", LikeController.GetLikeStatus);
+router.get("/status/:postId", PostController.GetLikeStatus);
 
-router.post("/get-all", LikeController.GetAllLikeFromPosts);
+router.post("/get-all", PostController.GetAllLikeFromPosts);
 
-router.post("/toggle", LikeController.ToggleLike);
+router.post("/toggle", PostController.ToggleLike);
 
-router.get("/liked-posts", LikeController.GetLikedPosts);
+router.get("/liked-posts", PostController.GetLikedPosts);
 
 export default router;

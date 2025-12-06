@@ -1,4 +1,5 @@
-import User from "../models/mongodb/Users.js";
+import User from "../models/User.js";
+import logger from "../configs/logger.js";
 
 /**
  * Middleware to check if the authenticated user is an admin
@@ -35,7 +36,7 @@ export const adminMiddleware = async (req, res, next) => {
     // User is admin, continue to the next middleware or route handler
     next();
   } catch (error) {
-    console.error("Admin middleware error:", error);
+    logger.error("Admin middleware error:", error);
     return res.status(500).json({
       code: 0,
       message: "Server error while checking admin privileges.",

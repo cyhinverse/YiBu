@@ -1,20 +1,20 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import Users from "../models/mongodb/Users.js";
-import RefreshToken from "../models/mongodb/RefreshToken.js";
-import Profile from "../models/mongodb/Profiles.js";
+import config from "../configs/config.js";
+import User from "../models/User.js";
+import RefreshToken from "../models/RefreshToken.js";
 import HashPasswordForUser from "../helpers/HashPassword.js";
 import {
   GenerateAccessToken,
   GenerateRefreshToken,
 } from "../helpers/GenerateTokens.js";
-import LogService from "./logService.js";
+import logger from "../configs/logger.js";
 
 class AuthService {
   async registerUser(name, email, password, username = null) {
     try {
       // Kiểm tra xem email đã tồn tại chưa
-      const oldUser = await Users.findOne({ email });
+      const oldUser = await User.findOne({ email });
       if (oldUser) {
         throw new Error("Email already in use.");
       }
@@ -25,7 +25,7 @@ class AuthService {
         username = email.split("@")[0] + Math.floor(Math.random() * 1000);
 
         // Kiểm tra xem username đã tồn tại chưa
-        const existingUsername = await Users.findOne({ username });
+        const existingUsername = await User.findOne({ username });
         if (existingUsername) {
           // Nếu đã tồn tại, thêm thêm số ngẫu nhiên
           username = username + Math.floor(Math.random() * 1000);
@@ -34,46 +34,28 @@ class AuthService {
 
       // Tạo user mới
       const hashedPassword = await HashPasswordForUser(password);
-      const newUser = new Users({
+      const newUser = new User({
         name,
         username,
         password: hashedPassword,
         email,
+        profile: {
+          bio: "",
+          website: "",
+          interests: "",
+          // Social links logic can be added if needed, schema supports embedded profile
+        }
       });
-      await newUser.save();
-
-      // Create profile
-      const profile = new Profile({
-        user: newUser._id,
-        bio: "",
-        location: "",
-        website: "",
-        social: {
-          twitter: "",
-          facebook: "",
-          instagram: "",
-          linkedin: "",
-        },
-      });
-
-      // Save profile
-      await profile.save();
-
-      // Update user with profile reference
-      newUser.profile = profile._id;
       await newUser.save();
 
       // Log user registration
-      await LogService.info(
-        "User Registration",
+      logger.info(
         `New user registered: ${newUser.email}`,
         {
           user: newUser._id,
           module: "auth",
-          metadata: {
-            username: newUser.username,
-            name: newUser.name,
-          },
+          username: newUser.username,
+          name: newUser.name,
         }
       );
 
@@ -83,39 +65,36 @@ class AuthService {
         username,
       };
     } catch (error) {
-      console.error("Register user error:", error);
+      logger.error("Register user error:", error);
       throw error;
     }
   }
 
   async loginUser(email, password) {
     // Tìm user theo email
-    const user = await Users.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       throw new Error("Invalid email or password");
     }
 
     // Kiểm tra xem user có bị khóa không
-    if (user.isBanned) {
-      const banReason = user.banReason || "violating our terms of service";
-      const banMessage = user.banExpiration
+    if (user.moderation?.isBanned) {
+      const banReason = user.moderation.banReason || "violating our terms of service";
+      const banMessage = user.moderation.banExpiration
         ? `Your account is temporarily banned until ${new Date(
-            user.banExpiration
+            user.moderation.banExpiration
           ).toLocaleDateString()} for ${banReason}`
         : `Your account has been permanently banned for ${banReason}`;
 
       // Log failed login attempt for banned user
-      await LogService.warning(
-        "Failed Login Attempt",
+      logger.warn(
         `Banned user attempted to login: ${user.email}`,
         {
           user: user._id,
           module: "auth",
-          metadata: {
-            reason: "banned_user",
-            banExpiration: user.banExpiration,
-            banReason: user.banReason,
-          },
+          reason: "banned_user",
+          banExpiration: user.moderation.banExpiration,
+          banReason: user.moderation.banReason,
         }
       );
 
@@ -126,15 +105,12 @@ class AuthService {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       // Log failed login attempt
-      await LogService.warning(
-        "Failed Login Attempt",
+      logger.warn(
         `Invalid password for user: ${user.email}`,
         {
           user: user._id,
           module: "auth",
-          metadata: {
-            reason: "invalid_password",
-          },
+          reason: "invalid_password",
         }
       );
       throw new Error("Invalid email or password");
@@ -161,24 +137,12 @@ class AuthService {
     });
     await newToken.save();
 
-    // Lấy thông tin profile
-    const userProfile = await Profile.findOne({ userId: user._id });
-
-    // Tạo user data để trả về
+    // Tạo user data để trả về (đã bao gồm profile embedded)
     const userData = user.toObject();
     delete userData.password;
 
-    if (userProfile) {
-      userData.bio = userProfile.bio || "";
-      userData.gender = userProfile.gender || "other";
-      userData.birthday = userProfile.birthday || null;
-      userData.website = userProfile.website || "";
-      userData.interests = userProfile.interests || "";
-    }
-
     // Log successful login
-    await LogService.info(
-      "User Login",
+    logger.info(
       `User logged in successfully: ${user.email}`,
       {
         user: user._id,
@@ -203,7 +167,7 @@ class AuthService {
       ? refreshTokenDoc.token[refreshTokenDoc.token.length - 1]
       : refreshTokenDoc.token;
 
-    const decoded = jwt.verify(latestToken, process.env.REFRESH_TOKEN_SECRET);
+    const decoded = jwt.verify(latestToken, config.jwt.refreshSecret);
 
     const accessToken = GenerateAccessToken(decoded);
     const newRefreshToken = GenerateRefreshToken(decoded);
@@ -221,7 +185,7 @@ class AuthService {
 
   async logoutUser(userId) {
     await RefreshToken.deleteMany({ userId });
-    await LogService.info("User Logout", `User logged out successfully`, {
+    logger.info(`User logged out successfully`, {
       user: userId,
       module: "auth",
     });
@@ -230,13 +194,13 @@ class AuthService {
 
   async updateUserEmail(userId, email) {
     // Kiểm tra xem email đã được sử dụng chưa
-    const existingUser = await Users.findOne({ email });
+    const existingUser = await User.findOne({ email });
     if (existingUser && existingUser._id.toString() !== userId) {
       throw new Error("Email is already in use");
     }
 
     // Cập nhật email
-    const user = await Users.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       userId,
       { email },
       { new: true }
@@ -251,7 +215,7 @@ class AuthService {
 
   async updateUserPassword(userId, currentPassword, newPassword) {
     // Lấy thông tin user
-    const user = await Users.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -274,7 +238,7 @@ class AuthService {
 
   async deleteUserAccount(userId, password) {
     // Tìm user
-    const user = await Users.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -286,8 +250,7 @@ class AuthService {
     }
 
     // Xóa tài khoản
-    await Users.findByIdAndDelete(userId);
-    await Profile.findOneAndDelete({ userId });
+    await User.findByIdAndDelete(userId);
     await RefreshToken.deleteMany({ userId });
 
     return true;
@@ -295,11 +258,51 @@ class AuthService {
 
   async verifyToken(token) {
     try {
-      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      const decoded = jwt.verify(token, config.jwt.accessSecret);
       return decoded;
     } catch (error) {
       throw new Error("Invalid token");
     }
+  }
+  async connectSocialAccount(userId, provider) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.connectedAccounts) {
+      user.connectedAccounts = [];
+    }
+
+    if (user.connectedAccounts.includes(provider)) {
+      throw new Error(`${provider} account is already connected`);
+    }
+
+    user.connectedAccounts.push(provider);
+    await user.save();
+    return user;
+  }
+
+  async verifyAccount(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.isVerified) {
+      throw new Error("Account is already verified");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        verificationRequested: true,
+        verificationRequestDate: new Date(),
+      },
+      { new: true, runValidators: false }
+    );
+    
+    return updatedUser;
   }
 }
 

@@ -1,6 +1,7 @@
-import Message from "../models/mongodb/Messages.js";
-import User from "../models/mongodb/Users.js";
+import Message from "../models/Message.js";
+import User from "../models/User.js";
 import mongoose from "mongoose";
+import logger from "../configs/logger.js";
 
 class MessageService {
   static async getConversations(userId) {
@@ -45,10 +46,10 @@ class MessageService {
         $project: {
           _id: 1,
           user: {
-            _id: 1,
-            name: 1,
-            username: 1,
-            avatar: 1,
+            _id: "$user._id",
+            name: "$user.name",
+            username: "$user.username",
+            avatar: "$user.profile.avatar",
           },
           latestMessage: {
             _id: 1,
@@ -101,7 +102,7 @@ class MessageService {
               username: userData.username || "User",
               name: userData.name || "Unknown",
               avatar:
-                userData.avatar ||
+                userData.profile?.avatar ||
                 conversation.user?.avatar ||
                 "https://via.placeholder.com/40",
             };
@@ -123,7 +124,7 @@ class MessageService {
             }
           }
         } catch (err) {
-          console.error("Error fetching complete user data:", err);
+          logger.error("Error fetching complete user data:", err);
           // Đảm bảo có giá trị mặc định khi có lỗi
           if (
             !conversation.user ||
@@ -167,8 +168,8 @@ class MessageService {
       ],
     })
       .sort({ createdAt: 1 })
-      .populate("sender", "username name avatar")
-      .populate("receiver", "username name avatar");
+      .populate("sender", "username name profile.avatar")
+      .populate("receiver", "username name profile.avatar");
 
     // Mark unread messages as read
     await Message.updateMany(
@@ -231,8 +232,8 @@ class MessageService {
     await message.save();
 
     // Populate sender and receiver information
-    await message.populate("sender", "username name avatar");
-    await message.populate("receiver", "username name avatar");
+    await message.populate("sender", "username name profile.avatar");
+    await message.populate("receiver", "username name profile.avatar");
 
     return message;
   }
@@ -310,8 +311,8 @@ class MessageService {
     }
 
     const message = await Message.findById(messageId)
-      .populate("sender", "username name avatar")
-      .populate("receiver", "username name avatar");
+      .populate("sender", "username name profile.avatar")
+      .populate("receiver", "username name profile.avatar");
 
     if (!message) {
       throw new Error("Message not found");

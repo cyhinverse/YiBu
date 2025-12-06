@@ -1,4 +1,5 @@
-import Notification from "../models/mongodb/Notifications.js";
+import Notification from "../models/Notification.js";
+import { getPaginationResponse } from "../helpers/pagination.js";
 
 class NotificationService {
   static async createNotification(
@@ -23,7 +24,7 @@ class NotificationService {
       isRead: false,
     });
 
-    await notification.populate("sender", "name avatar");
+    await notification.populate("sender", "name profile.avatar");
 
     return notification;
   }
@@ -40,7 +41,7 @@ class NotificationService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("sender", "username name avatar")
+      .populate("sender", "username name profile.avatar")
       .populate("post", "caption media")
       .populate("comment", "content");
 
@@ -83,15 +84,11 @@ class NotificationService {
       return notificationObj;
     });
 
+    const { pagination } = getPaginationResponse({ data: processedNotifications, total: totalNotifications, page, limit });
+
     return {
       notifications: processedNotifications,
-      pagination: {
-        page,
-        limit,
-        totalNotifications,
-        totalPages,
-        hasMore: page < totalPages,
-      },
+      pagination,
     };
   }
 

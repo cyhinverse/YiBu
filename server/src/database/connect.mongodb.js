@@ -1,21 +1,20 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
-dotenv.config();
+import logger from "../configs/logger.js";
 
-const ConnectToMongodb = async () => {
-  if (!process.env.MONGO_URI) {
-    throw new Error("Error file config .env not found");
+const ConnectToMongodb = async (uri) => {
+  if (!uri) {
+    throw new Error("MongoDB URI is undefined in configuration");
   }
   try {
-    const connect = await mongoose.connect(process.env.MONGO_URI, {
+    const connect = await mongoose.connect(uri, {
       autoCreate: true,
       autoIndex: true,
     });
     if (connect) {
-      console.log(`MongoDB connected to mongodb `);
+      logger.info(`MongoDB connected to: ${connect.connection.host}`);
     }
   } catch (error) {
-    console.error("Error: ", error);
+    logger.error("MongoDB connection error: ", error);
     process.exit(1);
   }
 };

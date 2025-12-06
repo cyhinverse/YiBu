@@ -1,81 +1,43 @@
-import express from "express";
-import dotenv from "dotenv";
-import CheckConnectionToMongoDB from "./configs/StartServer.js";
-import cors from "cors";
-import routerPosts from "./routes/mongodb/post.router.js";
-import routerAuth from "./routes/mongodb/auth.router.js";
-import routerUser from "./routes/mongodb/user.router.js";
-import routerLike from "./routes/like.router.js";
-import routerProfile from "./routes/mongodb/profile.router.js";
-import routerMessage from "./routes/mongodb/message.router.js";
-import routerSavePost from "./routes/mongodb/savepost.router.js";
-import routerNotification from "./routes/mongodb/notification.router.js";
-import routerComment from "./routes/mongodb/comment.router.js";
-import routerUserSettings from "./routes/mongodb/userSettings.router.js";
-import routerAdmin from "./routes/mongodb/admin.router.js";
-import routerReports from "./routes/mongodb/reports.router.js";
-import { initSocket } from "./socket.js";
 import http from "http";
+import config from "./configs/config.js";
+import app from "./app.js";
+import ConnectToMongodb from "./database/connect.mongodb.js";
+import { initSocket } from "./socket/index.js";
+import logger from "./configs/logger.js";
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const startServer = async () => {
+  try {
+    // Connect to Database
+    await ConnectToMongodb(config.mongodb.uri);
 
-const environment =
-  process.env.NODE_ENV === "production"
-    ? ".env.production"
-    : ".env.development";
-dotenv.config({ path: environment });
-
-const PORT = process.env.PORT || 5000;
-
-app.use(
-  cors({
-    origin: [
-      "http://localhost:9258",
-      "http://localhost:5173",
-      "http://localhost:3000",
-      process.env.CLIENT_URL || "http://localhost:9258",
-    ],
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true,
-    optionsSuccessStatus: 200,
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// Đăng ký routes
-app.use("/api/auth", routerAuth);
-app.use("/api/v1", routerPosts);
-app.use("/user", routerUser);
-app.use("/api/like", routerLike);
-app.use("/profile", routerProfile);
-app.use("/api/messages", routerMessage);
-app.use("/api/savepost", routerSavePost);
-app.use("/api/notifications", routerNotification);
-app.use("/api/comments", routerComment);
-app.use("/api/settings", routerUserSettings);
-app.use("/api/admin", routerAdmin);
-app.use("/api/reports", routerReports);
-
-// Log 404 for unmatched routes
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.url}`,
-  });
-});
-
-CheckConnectionToMongoDB()
-  .then(() => {
+    // Create HTTP Server
     const server = http.createServer(app);
+
+    // Initialize Socket.IO
     initSocket(server);
 
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    // Start Listening
+    server.listen(config.port, () => {
+      logger.info(
+        `Server running in ${config.env} mode on port ${config.port}`
+      );
+      logger.info(
+        "Server Started",
+        {
+          module: "system",
+          details: `Server started successfully on port ${config.port}`,
+        }
+      );
     });
-  })
-  .catch((error) => {
-    console.error("Server failed to start:", error);
+  } catch (error) {
+    logger.error("Failed to start server:", error);
+    logger.error("Server Startup Failed", {
+      module: "system",
+      message: error.message,
+      stack: error.stack,
+    });
     process.exit(1);
-  });
+  }
+};
+
+startServer();

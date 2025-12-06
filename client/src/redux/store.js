@@ -21,7 +21,7 @@ const hiddenPostsPersistConfig = {
 
 // Cấu hình persist cho reportedPosts reducer
 const reportedPostsPersistConfig = {
-  key: "reportedPosts", 
+  key: "reportedPosts",
   storage,
   whitelist: ["reportedPosts"], // Chỉ persist danh sách bài viết đã báo cáo
 };

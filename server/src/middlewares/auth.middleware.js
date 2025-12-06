@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import config from "../configs/config.js";
+import logger from "../configs/logger.js";
 
 const VerifyToken = {
   VerifyAccessToken: (req, res, next) => {
@@ -17,9 +19,9 @@ const VerifyToken = {
           .json({ code: 0, message: "Access token is missing" });
       }
 
-      jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+      jwt.verify(accessToken, config.jwt.accessSecret, (err, user) => {
         if (err) {
-          console.error("JWT Verify Error:", err.message);
+          logger.error("JWT Verify Error:", err.message);
           return res
             .status(403)
             .json({ code: 0, message: "Token is not valid" });
@@ -29,7 +31,7 @@ const VerifyToken = {
         next();
       });
     } catch (error) {
-      console.error("Unexpected error in token verification:", error);
+      logger.error("Unexpected error in token verification:", error);
       return res
         .status(500)
         .json({ code: 0, message: "Internal Server Error" });
