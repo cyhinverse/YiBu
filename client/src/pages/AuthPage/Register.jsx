@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { register } from "../../slices/AuthSlice";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { register } from "../../redux/slices/AuthSlice";
+import { useNavigate, Link } from "react-router-dom";
 import Auth from "../../services/authService";
 import toast from "react-hot-toast";
+import { Button, Input, Card } from "../../components/Common";
 
 const Register = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -37,6 +38,7 @@ const Register = () => {
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await Auth.register(formData);
 
@@ -50,125 +52,104 @@ const Register = () => {
     } catch (error) {
       console.error("Lỗi đăng ký", error);
       toast.error(error.response?.data?.message || "Something went wrong!");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
-      <div className="bg-white/95 backdrop-blur-sm w-full max-w-4xl p-8 rounded-2xl shadow-2xl flex flex-col md:flex-row animate-fadeIn hover:shadow-3xl transition-shadow duration-300">
-        <div className="w-full md:w-1/2 flex items-center justify-center mb-8 md:mb-0">
-          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 animate-slideLeft">
-            Yibu
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary via-primary to-accent p-4">
+      <Card className="w-full max-w-5xl flex flex-col md:flex-row !p-0 overflow-hidden shadow-3xl bg-white/90 dark:bg-black/90 backdrop-blur-md border-0">
+        
+        {/* Left Side - Brand / Info */}
+        <div className="w-full md:w-5/12 bg-gradient-to-br from-secondary/10 to-primary/10 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden order-1 md:order-1">
+          <div className="absolute inset-0 bg-grid-slate-900/[0.04] bg-[bottom_1px_center] dark:bg-grid-slate-400/[0.05] [mask-image:linear-gradient(0deg,transparent,black)]"></div>
+          
+          <h1 className="text-5xl font-black font-heading text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary animate-fade-in-up mb-6 relative z-10">
+            Join Yibu
           </h1>
+          <p className="text-text-secondary text-lg relative z-10 animate-fade-in delay-100">
+            Be part of a community that celebrates creativity and connection.
+          </p>
         </div>
-        <div className="w-full md:w-1/2 space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 animate-bounce-in">
+
+        {/* Right Side - Form */}
+        <div className="w-full md:w-7/12 p-8 md:p-12 order-2 md:order-2">
+          <div className="space-y-2 mb-8 text-center md:text-left">
+            <h2 className="text-3xl font-bold font-heading text-text-primary animate-fade-in">
               Create Account
-            </h1>
-            <p className="text-gray-500 animate-fade-in">
-              Join our community today
+            </h2>
+            <p className="text-text-secondary animate-fade-in delay-75">
+               Start your journey with us today
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                <label
-                  htmlFor="name"
-                  className="text-sm font-medium text-gray-700 animate-fade-in"
-                >
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
-                  placeholder="John Doe"
-                />
-              </div>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Full Name"
+                type="text"
+                name="name"
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={handleChange}
+                className="animate-slideUp delay-100"
+              />
 
-              <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                <label
-                  htmlFor="username"
-                  className="text-sm font-medium text-gray-700 animate-fade-in"
-                >
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
-                  placeholder="johndoe123"
-                />
-              </div>
-
-              <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700 animate-fade-in"
-                >
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700 animate-fade-in"
-                >
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
+              <Input
+                label="Username"
+                type="text"
+                name="username"
+                placeholder="johndoe123"
+                value={formData.username}
+                onChange={handleChange}
+                className="animate-slideUp delay-100"
+              />
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-xl font-medium 
-              hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
-              transition-all duration-300 shadow-lg shadow-purple-500/30 
-              hover:shadow-xl hover:shadow-purple-500/40 hover:scale-[1.02] 
-              active:scale-95"
-            >
-              Sign up
-            </button>
+            <Input
+              label="Email Address"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              className="animate-slideUp delay-150"
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              className="animate-slideUp delay-200"
+            />
+
+            <div className="pt-4 animate-slideUp delay-300">
+              <Button
+                type="submit"
+                variant="gradient"
+                className="w-full py-3 shadow-xl shadow-secondary/20 bg-gradient-to-r from-secondary to-primary"
+                isLoading={isLoading}
+              >
+                Sign up
+              </Button>
+            </div>
           </form>
 
-          <p className="text-center text-sm text-gray-600 animate-fade-in">
+          <p className="mt-8 text-center text-sm text-text-secondary animate-fade-in delay-500">
             Already have an account?{" "}
             <Link
               to="/auth/login"
-              className="font-medium text-purple-500 hover:text-purple-600 transition-colors duration-300 hover:scale-110 inline-block"
+              className="font-bold text-secondary hover:text-secondary/80 transition-colors"
             >
               Sign in
             </Link>
           </p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

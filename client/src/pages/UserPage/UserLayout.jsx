@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Outlet } from "react-router-dom";
-import { Navigate } from "../../components/UserComponents";
+import Navigate from "../../components/layout/Navigate/Navigate";
 import { useSelector } from "react-redux";
 import { useSocketContext } from "../../contexts/SocketContext";
 

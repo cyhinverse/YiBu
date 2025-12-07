@@ -1,58 +1,54 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import savePostReducer from "../slices/SavePostSlice";
-import hiddenPostsReducer from "../slices/HiddenPostsSlice";
-import reportedPostsReducer from "../slices/ReportPostsSlice";
+import authReducer from "./slices/AuthSlice.js";
+import userReducer from "./slices/UserSlice.js";
+import postReducer from "./slices/PostSlice.js";
+import likeReducer from "./slices/LikeSlice.js";
+import messageReducer from "./slices/MessageSlice.js";
+import savePostReducer from "./slices/SavePostSlice.js";
+import notificationReducer from "./slices/NotificationSlice.js";
+import hiddenPostsReducer from "./slices/HiddenPostsSlice.js";
+import reportedPostsReducer from "./slices/ReportPostsSlice.js";
 
-// Cấu hình persist cho savePost reducer
-const savePostPersistConfig = {
-  key: "savePost",
+const persistConfig = {
+  key: "root",
   storage,
-  whitelist: ["savedPosts", "savedStatus"], // Chỉ persist các field này
+  whitelist: [
+    "auth",
+    "user",
+    "post",
+    "like",
+    "message",
+    "savePost",
+    "notification",
+    "hiddenPosts",
+    "reportedPosts",
+  ],
 };
 
-// Cấu hình persist cho hiddenPosts reducer
-const hiddenPostsPersistConfig = {
-  key: "hiddenPosts",
-  storage,
-  whitelist: ["hiddenPosts"], // Chỉ persist danh sách bài viết đã ẩn
-};
+const rootReducer = combineReducers({
+  auth: authReducer,
+  user: userReducer,
+  post: postReducer,
+  like: likeReducer,
+  message: messageReducer,
+  savePost: savePostReducer,
+  notification: notificationReducer,
+  hiddenPosts: hiddenPostsReducer,
+  reportedPosts: reportedPostsReducer,
+});
 
-// Cấu hình persist cho reportedPosts reducer
-const reportedPostsPersistConfig = {
-  key: "reportedPosts",
-  storage,
-  whitelist: ["reportedPosts"], // Chỉ persist danh sách bài viết đã báo cáo
-};
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-const persistedSavePostReducer = persistReducer(
-  savePostPersistConfig,
-  savePostReducer
-);
-
-const persistedHiddenPostsReducer = persistReducer(
-  hiddenPostsPersistConfig,
-  hiddenPostsReducer
-);
-
-const persistedReportedPostsReducer = persistReducer(
-  reportedPostsPersistConfig,
-  reportedPostsReducer
-);
-
-export const store = configureStore({
-  reducer: {
-    savePost: persistedSavePostReducer,
-    hiddenPosts: persistedHiddenPostsReducer,
-    reportedPosts: persistedReportedPostsReducer,
-  },
+const store = configureStore({
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
-      },
+      serializableCheck: false,
     }),
 });
 
-export const persistor = persistStore(store);
+const persistor = persistStore(store);
+
+export { store, persistor };

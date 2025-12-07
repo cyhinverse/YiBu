@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import MainMessage from "../../components/UserComponents/MainMessage/MainMessage";
+import MainMessage from "../../components/features/chat/MainMessage";
 
 function Message() {
   const location = useLocation();

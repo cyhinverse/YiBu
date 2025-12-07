@@ -1,266 +1,131 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import io from "socket.io-client";
 import { toast } from "react-hot-toast";
-import { addMessage, markMessagesAsRead } from "../slices/MessageSlice";
-import { addNotification } from "../slices/NotificationSlice";
+import { addMessage, markMessagesAsRead } from "../redux/slices/MessageSlice";
+import { addNotification } from "../redux/slices/NotificationSlice";
+import { setPostLikeStatus } from "../redux/slices/LikeSlice";
+
+const SOCKET_URL = "http://localhost:9785";
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 const useSocket = (userId) => {
   const socketRef = useRef(null);
   const dispatch = useDispatch();
   const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 3;
   const [isConnected, setIsConnected] = useState(false);
   const activeRooms = useRef(new Set());
+  const [onlineUsers, setOnlineUsers] = useState({});
 
   useEffect(() => {
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
-    const connectSocket = () => {
-      try {
-        console.log("Initializing socket connection for user:", userId);
+    console.log("Initializing socket connection for user:", userId);
 
-        socketRef.current = io("http://localhost:9785", {
-          withCredentials: true,
-          reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          reconnectionAttempts: maxReconnectAttempts,
-          extraHeaders: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+    const socket = io(SOCKET_URL, {
+      withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      extraHeaders: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
 
-        socketRef.current.on("connect", () => {
-          console.log(
-            "Socket connected successfully with ID:",
-            socketRef.current.id
-          );
-          reconnectAttempts.current = 0;
-          setIsConnected(true);
+    socketRef.current = socket;
 
-          // Tự động tham gia vào phòng cá nhân
-          socketRef.current.emit("join_room", userId);
-          activeRooms.current.add(userId);
+    // Connection events
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      reconnectAttempts.current = 0;
+      setIsConnected(true);
+      
+      // Join self room and rejoin active rooms
+      socket.emit("join_room", userId);
+      activeRooms.current.add(userId);
+      activeRooms.current.forEach((room) => {
+        if (room !== userId) socket.emit("join_room", room);
+      });
+    });
 
-          // Tham gia lại các phòng đã tham gia trước đó
-          if (activeRooms.current.size > 1) {
-            console.log(
-              "Rejoining previous rooms:",
-              Array.from(activeRooms.current)
-            );
-            activeRooms.current.forEach((roomId) => {
-              if (roomId !== userId) {
-                socketRef.current.emit("join_room", roomId);
-              }
-            });
-          }
-        });
-
-        socketRef.current.on("disconnect", (reason) => {
-          console.log("Socket disconnected:", reason);
-          setIsConnected(false);
-
-          if (reason === "io server disconnect") {
-            // Máy chủ đã ngắt kết nối có chủ ý, cần kết nối lại thủ công
-            setTimeout(() => {
-              socketRef.current.connect();
-            }, 1000);
-          }
-        });
-
-        socketRef.current.on("connect_error", (error) => {
-          console.error("Socket connection error:", error);
-          setIsConnected(false);
-          reconnectAttempts.current++;
-
-          if (reconnectAttempts.current >= maxReconnectAttempts) {
-            toast.error("Không thể kết nối tới server chat");
-          }
-        });
-
-        socketRef.current.on("new_message", (message) => {
-          console.log("New message received via socket:", message);
-          if (message && message._id) {
-            dispatch(addMessage(message));
-
-            if (message.sender !== userId) {
-              // Lấy tên người gửi nếu có
-              const senderName =
-                message.sender?.firstName ||
-                message.sender?.name ||
-                "Người dùng";
-              toast.success(`Tin nhắn mới từ ${senderName}`);
-            }
-          }
-        });
-
-        socketRef.current.on("message_read", (data) => {
-          console.log("Message read event received:", data);
-          if (data && data.messageId) {
-            dispatch(
-              markMessagesAsRead({
-                messageIds: [data.messageId],
-                conversationId: data.conversationId || data.roomId,
-              })
-            );
-          }
-        });
-
-        socketRef.current.on("user_typing", (data) => {
-          console.log("User typing event received:", data);
-        });
-
-        socketRef.current.on("user_stop_typing", (data) => {
-          console.log("User stop typing event received:", data);
-        });
-
-        socketRef.current.on("notification:new", (notification) => {
-          console.log("Received new notification via socket:", notification);
-
-          // Kiểm tra dữ liệu notification
-          if (!notification || !notification._id) {
-            console.error("Received invalid notification:", notification);
-            toast.error("Có lỗi khi nhận thông báo");
-            return;
-          }
-
-          // Dispatch để cập nhật UI
-          try {
-            // Kiểm tra xem thông báo có đầy đủ thông tin không
-            // Nếu thiếu thông tin của sender hoặc post, có thể cần refresh lại từ server
-            const hasFullData =
-              notification.sender?._id &&
-              (notification.type !== "like" || notification.post?._id);
-
-            if (hasFullData) {
-              dispatch(addNotification(notification));
-            } else {
-              console.log(
-                "Notification missing full data, refreshing from server..."
-              );
-              // Tìm phương thức refresh thông báo từ context hoặc service
-              // Ví dụ: NotificationService.refreshNotifications();
-              // Hoặc sử dụng event để yêu cầu component tự refresh
-              document.dispatchEvent(new CustomEvent("refresh:notifications"));
-            }
-
-            // Tạo tin nhắn toast có thêm thông tin về post nếu là thông báo like
-            let toastMessage = notification.content || "Bạn có thông báo mới";
-
-            if (notification.type === "like" && notification.post?.caption) {
-              toastMessage += ` - "${notification.post.caption.substring(
-                0,
-                20
-              )}${notification.post.caption.length > 20 ? "..." : ""}"`;
-            }
-
-            // Hiển thị toast với nội dung
-            toast.success(toastMessage, {
-              duration: 5000,
-              icon: "🔔",
-            });
-
-            // Log để debug
-            console.log("Notification added to store:", notification);
-          } catch (error) {
-            console.error("Error processing notification:", error);
-            toast.error("Có lỗi khi xử lý thông báo");
-          }
-        });
-
-        socketRef.current.on("error", (error) => {
-          console.error("Socket error:", error);
-          toast.error("Lỗi kết nối chat");
-        });
-
-        // Lắng nghe sự kiện xác nhận kết nối
-        socketRef.current.on("connection_established", (data) => {
-          console.log("Socket connection established:", data);
-        });
-      } catch (error) {
-        console.error("Error initializing socket:", error);
-        setIsConnected(false);
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+      setIsConnected(false);
+      if (reason === "io server disconnect") {
+        setTimeout(() => socket.connect(), 1000);
       }
-    };
+    });
 
-    connectSocket();
+    socket.on("connect_error", (err) => {
+      console.error("Socket error:", err);
+      setIsConnected(false);
+      reconnectAttempts.current++;
+      if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
+        toast.error("Không thể kết nối tới server chat");
+      }
+    });
+
+    // Register Business Logic Handlers
+    registerMessageHandlers(socket, dispatch, userId);
+    registerNotificationHandlers(socket, dispatch);
+    registerLikeHandlers(socket, dispatch, userId);
+    registerUserStatusHandlers(socket, setOnlineUsers);
 
     return () => {
-      if (socketRef.current) {
-        console.log("Cleaning up socket connection");
-        // Rời khỏi tất cả các phòng đã tham gia
-        activeRooms.current.forEach((roomId) => {
-          if (socketRef.current.connected) {
-            socketRef.current.emit("leave_room", roomId);
-          }
+      if (socket) {
+        activeRooms.current.forEach((room) => {
+            if(socket.connected) socket.emit("leave_room", room);
         });
         activeRooms.current.clear();
-
-        socketRef.current.disconnect();
+        socket.disconnect();
         socketRef.current = null;
         setIsConnected(false);
       }
     };
   }, [userId, dispatch]);
 
-  const joinRoom = (roomId) => {
+  const joinRoom = useCallback((roomId) => {
     if (!roomId) return;
-
-    if (!socketRef.current?.connected) {
-      console.warn("Socket not connected, cannot join room:", roomId);
-      // Lưu trữ phòng để tham gia sau khi kết nối lại
-      activeRooms.current.add(roomId);
-      return;
+    if (socketRef.current?.connected) {
+      console.log("Joining room:", roomId);
+      socketRef.current.emit("join_room", roomId);
     }
-
-    console.log("Joining room:", roomId);
-    socketRef.current.emit("join_room", roomId);
     activeRooms.current.add(roomId);
-  };
+  }, []);
 
-  const leaveRoom = (roomId) => {
+  const leaveRoom = useCallback((roomId) => {
     if (!roomId) return;
-
     activeRooms.current.delete(roomId);
-
-    if (!socketRef.current?.connected) {
-      console.warn("Socket not connected, room will be left when reconnected");
-      return;
+    if (socketRef.current?.connected) {
+      console.log("Leaving room:", roomId);
+      socketRef.current.emit("leave_room", roomId);
     }
+  }, []);
 
-    console.log("Leaving room:", roomId);
-    socketRef.current.emit("leave_room", roomId);
-  };
-
-  const sendMessage = (messageData) => {
-    if (!socketRef.current?.connected) {
-      console.warn("Socket not connected, cannot send message via socket");
-      return false;
-    }
-
-    if (!messageData) {
-      console.warn("No message data provided");
-      return false;
-    }
-
-    console.log("Sending message via socket:", messageData);
-    socketRef.current.emit("send_message", messageData);
+  const sendMessage = useCallback((data) => {
+    if (!socketRef.current?.connected) return false;
+    socketRef.current.emit("send_message", data);
     return true;
-  };
+  }, []);
 
-  const emitEvent = (eventName, data) => {
-    if (!socketRef.current?.connected) {
-      console.warn(`Socket not connected, cannot emit event: ${eventName}`);
-      return false;
-    }
-
-    console.log(`Emitting ${eventName} event:`, data);
-    socketRef.current.emit(eventName, data);
+  const emitEvent = useCallback((event, data) => {
+    if (!socketRef.current?.connected) return false;
+    socketRef.current.emit(event, data);
     return true;
-  };
+  }, []);
+
+  const joinPostRoom = useCallback((postId) => {
+    if (!postId) return;
+    joinRoom(`post:${postId}`);
+    emitEvent("post:like:listen", postId);
+  }, [joinRoom, emitEvent]);
+
+  const emitLikeAction = useCallback((postId, action) => {
+    emitEvent("post:like", { postId, userId, action });
+  }, [emitEvent, userId]);
+
+  const isUserOnline = useCallback((uid) => !!onlineUsers[uid], [onlineUsers]);
 
   return {
     socket: socketRef.current,
@@ -268,8 +133,81 @@ const useSocket = (userId) => {
     leaveRoom,
     sendMessage,
     emitEvent,
+    joinPostRoom,
+    emitLikeAction,
     isConnected,
+    onlineUsers,
+    isUserOnline
   };
+};
+
+/* --- Event Handlers Helpers --- */
+
+const registerMessageHandlers = (socket, dispatch, userId) => {
+  socket.on("new_message", (message) => {
+    if (!message?._id) return;
+    console.log("New message:", message);
+    dispatch(addMessage(message));
+    if (message.sender !== userId) {
+      const senderName = message.sender?.firstName || message.sender?.name || "Người dùng";
+      toast.success(`Tin nhắn mới từ ${senderName}`);
+    }
+  });
+
+  socket.on("message_read", (data) => {
+    if (data?.messageId) {
+       dispatch(markMessagesAsRead({ 
+           messageIds: [data.messageId], 
+           conversationId: data.conversationId || data.roomId 
+       }));
+    }
+  });
+
+  socket.on("user_typing", (data) => console.log("User typing:", data));
+  socket.on("user_stop_typing", (data) => console.log("User stop typing:", data));
+};
+
+const registerNotificationHandlers = (socket, dispatch) => {
+  socket.on("notification:new", (notification) => {
+    if (!notification?._id) return;
+    
+    const hasFullData = notification.sender?._id && (notification.type !== "like" || notification.post?._id);
+    if (hasFullData) {
+      dispatch(addNotification(notification));
+    } else {
+      document.dispatchEvent(new CustomEvent("refresh:notifications"));
+    }
+
+    let msg = notification.content || "Bạn có thông báo mới";
+    if (notification.type === "like" && notification.post?.caption) {
+      msg += ` - "${notification.post.caption.substring(0, 20)}..."`;
+    }
+    toast.success(msg, { icon: "🔔" });
+  });
+};
+
+const registerLikeHandlers = (socket, dispatch, currentUserId) => {
+  socket.on("post:like:update", ({ postId, count, userId }) => {
+    if (userId === currentUserId) return;
+    dispatch(setPostLikeStatus({ postId, count, isLiked: undefined }));
+  });
+};
+
+const registerUserStatusHandlers = (socket, setOnlineUsers) => {
+  socket.on("get_users_online", (users) => {
+    console.log("Online users:", users);
+    const map = {};
+    if (Array.isArray(users)) users.forEach(id => map[id] = true);
+    else Object.assign(map, users || {});
+    setOnlineUsers(map);
+  });
+
+  socket.on("user_status_change", ({ userId, status }) => {
+    setOnlineUsers(prev => ({ ...prev, [userId]: status === "online" }));
+  });
+  
+  // Initial Request
+  socket.emit("get_online_users");
 };
 
 export default useSocket;

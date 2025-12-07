@@ -1,514 +1,277 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import useSocket from "./useSocket";
-import MessageService from "../services/messageService";
-import UserService from "../services/userService";
-import {
-  setLoading,
-  setError,
-  setConversations,
-  setCurrentMessages,
-  addMessage,
-  setSelectedUser,
-  markMessageAsRead,
-  updatePagination,
-  addConversation,
-} from "../slices/MessageSlice";
+import { messageManager } from "../socket/messageManager";
+import { useSocketContext } from "../contexts/SocketContext";
 
-const useMessages = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const currentUser = useSelector((state) => state.auth?.user);
-  const userId = currentUser?.user?._id; // Lấy ID người dùng một cách nhất quán
-  const messageState = useSelector((state) => state.message) || {};
+const PAGE_SIZE = 10;
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
-  const {
-    conversations = [],
-    currentMessages = [],
-    selectedUser = null,
-    loading = {
-      conversations: false,
-      messages: false,
-      sending: false,
-    },
-    pagination = {
-      page: 1,
-      limit: 20,
-      hasMore: true,
-    },
-  } = messageState;
+export const useMessages = (currentUserId, receiverId) => {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [sending, setSending] = useState(false);
+  
+  const messagesEndRef = useRef(null);
+  const messagesRef = useRef([]); // To access state in listeners
+  const { socket, isConnected } = useSocketContext();
 
-  const [allUsers, setAllUsers] = useState([]);
-
-  const { socket, joinRoom, leaveRoom, sendMessage, isConnected } =
-    useSocket(userId);
-
-  // Fetch conversations on mount
+  // Keep ref in sync
   useEffect(() => {
-    if (!userId) return;
-    console.log("Fetching conversations for user:", userId);
-    fetchConversations();
-    fetchUsers();
-  }, [userId]);
+    messagesRef.current = messages;
+  }, [messages]);
 
-  // Handle socket events
-  useEffect(() => {
-    if (!socket || !selectedUser || !userId) return;
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
 
-    // Tham gia cả hai hướng của phòng chat để đảm bảo nhận tin nhắn
-    const roomId1 = `chat_${userId}_${selectedUser._id}`;
-    const roomId2 = `chat_${selectedUser._id}_${userId}`;
-
-    console.log("Joining chat rooms:", roomId1, roomId2);
-    joinRoom(roomId1);
-    joinRoom(roomId2);
-
-    // Thiết lập handler cho tin nhắn mới
-    const handleNewMessage = (message) => {
-      console.log("New message received via socket:", message);
-      if (!message || !message._id) return;
-
-      // Thêm tin nhắn mới vào danh sách nếu liên quan đến người dùng hiện tại và người dùng đã chọn
-      const isRelevantMessage =
-        (message.sender._id === userId &&
-          message.receiver._id === selectedUser._id) ||
-        (message.sender._id === selectedUser._id &&
-          message.receiver._id === userId);
-
-      if (isRelevantMessage) {
-        dispatch(addMessage(message));
-
-        // Tự động đánh dấu tin nhắn đã đọc nếu người dùng hiện tại là người nhận
-        if (message.receiver._id === userId && !message.isRead) {
-          markMessagesAsRead([message._id]);
-        }
-
-        // Cập nhật danh sách cuộc trò chuyện để hiển thị tin nhắn mới nhất
-        fetchConversations();
-      }
-    };
-
-    // Đăng ký handler
-    socket.on("new_message", handleNewMessage);
-
-    // Cleanup khi unmount hoặc khi selectedUser thay đổi
-    return () => {
-      leaveRoom(roomId1);
-      leaveRoom(roomId2);
-      socket.off("new_message", handleNewMessage);
-    };
-  }, [socket, selectedUser, userId, dispatch]);
-
-  const fetchConversations = async () => {
-    if (!userId) {
-      console.warn("[DEBUG] fetchConversations called without userId");
-      return;
+  const validateToken = useCallback(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return null;
     }
+    return token;
+  }, []);
+
+  // --- Fetching Logic ---
+  const fetchMessages = useCallback(async (pageNum = 1, isLoadMore = false) => {
+    if (!currentUserId || !receiverId) return;
+    
+    const token = validateToken();
+    if (!token) return;
 
     try {
-      dispatch(setLoading({ type: "conversations", value: true }));
-      console.log("[DEBUG] Fetching conversations for userId:", userId);
-
-      const response = await MessageService.getConversations();
-      console.log("[DEBUG] Raw API response:", response);
-
-      if (response?.success && Array.isArray(response.data)) {
-        console.log(
-          "[DEBUG] API returned",
-          response.data.length,
-          "conversations"
-        );
-
-        if (response.data.length > 0) {
-          // Để debug, log mẫu conversation đầu tiên
-          console.log(
-            "[DEBUG] First conversation sample:",
-            JSON.stringify(response.data[0], null, 2)
-          );
-
-          // Kiểm tra tính hợp lệ của mỗi cuộc trò chuyện
-          const validConversations = response.data.filter(
-            (conv) => conv && conv.otherUser && conv.otherUser._id
-          );
-
-          if (validConversations.length !== response.data.length) {
-            console.warn(
-              "[DEBUG] Filtered out",
-              response.data.length - validConversations.length,
-              "invalid conversations"
-            );
-          }
-
-          // Log để debug otherUser
-          if (validConversations.length > 0) {
-            console.log(
-              "[DEBUG] First valid otherUser:",
-              validConversations[0].otherUser
-            );
-          }
-
-          console.log(
-            "[DEBUG] Valid conversations count:",
-            validConversations.length
-          );
-
-          dispatch(setConversations(validConversations));
-        } else {
-          console.log("[DEBUG] No conversations found in API response");
-          dispatch(setConversations([]));
+      if (!isLoadMore) setLoading(true);
+      
+      const response = await fetch(
+        `${API_URL}/api/messages/${receiverId}?page=${pageNum}&limit=${PAGE_SIZE}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
         }
-      } else {
-        console.warn("[DEBUG] Invalid API response format:", response);
-        dispatch(setConversations([]));
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch messages");
+
+      const data = await response.json();
+      if (data.code === 1) {
+        const newMsgs = data.data || [];
+        
+        if (newMsgs.length < PAGE_SIZE) setHasMore(false);
+
+        setMessages(prev => {
+          if (!isLoadMore) return newMsgs;
+          // Deduplicate based on _id
+          const existingIds = new Set(prev.map(m => m._id));
+          const unique = newMsgs.filter(m => !existingIds.has(m._id));
+          return [...unique, ...prev];
+        });
+
+        if (!isLoadMore) {
+          setTimeout(() => scrollToBottom("auto"), 100);
+        }
       }
-    } catch (error) {
-      console.error("[DEBUG] Error fetching conversations:", error);
-      dispatch(setError(error.message));
-      toast.error("Không thể tải danh sách cuộc trò chuyện");
-      dispatch(setConversations([]));
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
     } finally {
-      dispatch(setLoading({ type: "conversations", value: false }));
+      if (!isLoadMore) setLoading(false);
     }
-  };
+  }, [currentUserId, receiverId, validateToken, scrollToBottom]);
 
-  const fetchUsers = async () => {
-    if (!userId) return;
+  const loadMore = useCallback(async () => {
+    if (!hasMore) return;
+    const nextPage = page + 1;
+    await fetchMessages(nextPage, true);
+    setPage(nextPage);
+  }, [hasMore, page, fetchMessages]);
 
+  // --- Actions ---
+  const sendMessage = useCallback(async (content, imageFile) => {
+    if ((!content && !imageFile) || !receiverId || !currentUserId) return;
+    if (receiverId === currentUserId) {
+        toast.error("Cannot send message to yourself");
+        return;
+    }
+
+    const token = validateToken();
+    if (!token) return;
+
+    setSending(true);
     try {
-      console.log("[DEBUG] Fetching all users...");
-      const response = await UserService.getAllUsers();
-      console.log("[DEBUG] Users API response:", response);
-
-      if (response?.success && response?.data) {
-        console.log("[DEBUG] Found users:", response.data.length);
-        setAllUsers(response.data);
-      } else {
-        console.warn("[DEBUG] No users found or invalid response:", response);
+      let mediaUrl = null;
+      
+      // Upload Image if exists
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("media", imageFile);
+        const uploadRes = await fetch(`${API_URL}/api/messages/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.code === 1) mediaUrl = uploadData.data.mediaUrl;
       }
-    } catch (error) {
-      console.error("[DEBUG] Error fetching users:", error);
-    }
-  };
 
-  const fetchMessages = async (targetUserId, page = 1) => {
-    if (!userId || !targetUserId) {
-      console.warn(
-        "[DEBUG] Missing user IDs for fetchMessages - currentUser:",
-        userId,
-        "targetUser:",
-        targetUserId
-      );
-      return;
-    }
-
-    try {
-      dispatch(setLoading({ type: "messages", value: true }));
-
-      console.log(
-        "[DEBUG] Fetching messages between users:",
-        userId,
-        "and",
-        targetUserId,
-        "page:",
-        page
-      );
-
-      const response = await MessageService.getMessages(
-        targetUserId,
-        page,
-        pagination.limit
-      );
-      console.log("[DEBUG] Raw Messages API response:", response);
-
-      if (response?.success && response?.data?.messages) {
-        const { messages, pagination: pagingInfo } = response.data;
-        console.log(
-          "[DEBUG] Messages API returned",
-          messages.length,
-          "messages"
-        );
-
-        // Log first message sample
-        if (messages.length > 0) {
-          console.log(
-            "[DEBUG] First message sample:",
-            JSON.stringify(messages[0], null, 2)
-          );
-        } else {
-          console.log("[DEBUG] No messages found between users");
-        }
-
-        // Lọc tin nhắn trùng lặp nếu đang tải thêm (không phải trang đầu tiên)
-        const filteredMessages =
-          page === 1
-            ? messages
-            : messages.filter(
-                (msg) => !currentMessages.some((m) => m._id === msg._id)
-              );
-
-        console.log(
-          "[DEBUG] After filtering duplicates:",
-          filteredMessages.length,
-          "new messages"
-        );
-
-        // Cập nhật tin nhắn và phân trang
-        if (page === 1) {
-          dispatch(setCurrentMessages(messages));
-        } else {
-          dispatch(
-            setCurrentMessages([...currentMessages, ...filteredMessages])
-          );
-        }
-
-        dispatch(
-          updatePagination({
-            page: pagingInfo?.page || page,
-            hasMore: pagingInfo?.hasMore || false,
-          })
-        );
-
-        // Tìm các tin nhắn chưa đọc để đánh dấu
-        const unreadMessages = messages.filter(
-          (msg) =>
-            msg.sender._id !== userId && // Tin nhắn từ người khác gửi cho mình
-            !msg.isRead // Chưa đọc
-        );
-
-        console.log(
-          "[DEBUG] Found",
-          unreadMessages.length,
-          "unread messages to mark as read"
-        );
-
-        if (unreadMessages.length > 0) {
-          markMessagesAsRead(unreadMessages.map((msg) => msg._id));
-        }
-      } else {
-        console.warn("[DEBUG] Invalid messages response format:", response);
-
-        if (page === 1) {
-          dispatch(setCurrentMessages([]));
-        }
-      }
-    } catch (error) {
-      console.error("[DEBUG] Error fetching messages:", error);
-      toast.error("Không thể tải tin nhắn");
-    } finally {
-      dispatch(setLoading({ type: "messages", value: false }));
-    }
-  };
-
-  const sendNewMessage = async (content) => {
-    if (!selectedUser?._id || !content.trim() || !userId) {
-      toast.error("Không thể gửi tin nhắn");
-      return;
-    }
-
-    try {
-      dispatch(setLoading({ type: "sending", value: true }));
-
-      // Chuẩn bị dữ liệu tin nhắn
+      // Send Message
       const messageData = {
-        receiverId: selectedUser._id,
-        content: content.trim(),
+        receiverId,
+        senderId: currentUserId,
+        content: content?.trim(),
+        media: mediaUrl
       };
 
-      console.log("Sending new message:", messageData);
+      const res = await fetch(`${API_URL}/api/messages/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(messageData)
+      });
 
-      // Gửi tin nhắn qua API
-      const response = await MessageService.sendMessage(messageData);
+      const data = await res.json();
+      if (data.code === 1) {
+        const newMessage = data.data;
+        setMessages(prev => [...prev, newMessage]);
+        setTimeout(() => scrollToBottom(), 100);
 
-      if (response?.success && response.data) {
-        console.log("Message sent successfully:", response.data);
-
-        // Tạo đối tượng tin nhắn mới để hiển thị ngay trên UI
-        const newMessage = {
-          ...response.data,
-          sender: { _id: userId },
-          receiver: { _id: selectedUser._id },
-          createdAt: new Date().toISOString(),
-          isRead: false,
-        };
-
-        // Thêm tin nhắn vào danh sách tin nhắn hiện tại
-        dispatch(
-          addMessage({
-            conversationId: selectedUser._id,
-            message: newMessage,
-          })
-        );
-
-        // Cập nhật cuộc trò chuyện trong danh sách
-        const updatedConversation = {
-          otherUser: selectedUser,
-          _id: selectedUser._id,
-          lastMessage: {
-            _id: newMessage._id,
-            content: newMessage.content,
-            createdAt: newMessage.createdAt,
-            senderId: userId,
-          },
-          unreadCount: 0,
-        };
-
-        // Cập nhật danh sách cuộc trò chuyện với tin nhắn mới nhất
-        dispatch(addConversation(updatedConversation));
-
-        // Gọi socketManager để gửi tin nhắn qua socket
-        if (isConnected && socket) {
-          console.log("Emitting send_message via socket:", {
-            message: newMessage,
-            receiverId: selectedUser._id,
-            senderId: userId,
-          });
-
-          sendMessage({
-            message: newMessage,
-            receiverId: selectedUser._id,
-            senderId: userId,
-          });
-
-          // Force cập nhật danh sách tin nhắn
-          setTimeout(() => fetchConversations(), 300);
-        } else {
-          console.warn("Socket not connected, message sent via API only");
-          // Vẫn làm mới danh sách cuộc trò chuyện ngay cả khi socket không kết nối
-          fetchConversations();
-        }
-      } else {
-        console.error("Failed to send message:", response);
-        toast.error("Không thể gửi tin nhắn");
+        // Emit Socket
+        messageManager.sendMessage({
+          message: newMessage,
+          receiverId,
+          senderId: currentUserId
+        });
+        
+        return true; // Success
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Không thể gửi tin nhắn");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send message");
     } finally {
-      dispatch(setLoading({ type: "sending", value: false }));
+      setSending(false);
     }
-  };
+    return false;
+  }, [currentUserId, receiverId, validateToken, scrollToBottom]);
 
-  const selectUser = (user) => {
-    if (!user || !user._id) {
-      console.warn("[DEBUG] Invalid user object:", user);
-      return;
-    }
-
-    const targetUserId = user._id;
-    console.log("[DEBUG] Selecting user:", targetUserId, user.email);
-
-    // Lưu người dùng đang chọn vào state
-    dispatch(setSelectedUser(user));
-
-    // Kiểm tra nếu đã chọn cùng một người dùng, không cần tải lại tin nhắn
-    if (selectedUser && selectedUser._id === targetUserId) {
-      console.log("[DEBUG] Same user already selected, not reloading messages");
-      return;
-    }
-
-    // Khởi tạo phòng chat
-    const roomId = [userId, targetUserId].sort().join("_");
-    joinRoom(roomId);
-    console.log("[DEBUG] Joined room:", roomId);
-
-    // Reset và tải tin nhắn
-    dispatch(setCurrentMessages([]));
-    dispatch(updatePagination({ page: 1, hasMore: true }));
-    fetchMessages(targetUserId, 1);
-
-    // Lưu lại lịch sử trong URL
-    navigate(`/messages/${targetUserId}`, {
-      state: { selectedUser: user },
-      replace: true,
-    });
-  };
-
-  const markMessagesAsRead = async (messageIds) => {
-    if (!messageIds?.length || !selectedUser?._id || !userId) {
-      console.warn("Invalid parameters for marking messages as read");
-      return;
-    }
+  const deleteMessage = useCallback(async (messageId) => {
+    const token = validateToken();
+    if (!token) return;
 
     try {
-      console.log("Marking messages as read:", messageIds);
+      // Optimistic upate
+      const previousMessages = messages;
+      setMessages(prev => prev.filter(m => m._id !== messageId));
 
-      // Optimistically update local state first to improve UI responsiveness
-      messageIds.forEach((id) => dispatch(markMessageAsRead(id)));
+      const res = await fetch(`${API_URL}/api/messages/${messageId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      // Find and update the current conversation in local state
-      const currentConversation = conversations.find(
-        (c) => c.otherUser?._id === selectedUser._id
-      );
-
-      if (currentConversation) {
-        const updatedConversation = {
-          ...currentConversation,
-          unreadCount: 0, // Reset the unread count
-        };
-
-        // Update conversation in Redux store
-        dispatch(addConversation(updatedConversation));
+      if (!res.ok) {
+        setMessages(previousMessages); // Revert
+        throw new Error("Failed to delete");
       }
 
-      // Now send the update to the server
-      const response = await MessageService.markAsRead(messageIds);
-
-      if (response?.success && response.data?.modifiedCount > 0) {
-        console.log(
-          `Successfully marked ${response.data.modifiedCount} messages as read on server`
-        );
-
-        // Emit socket event for real-time updates if socket is connected
-        if (isConnected && socket) {
-          console.log("Emitting mark_as_read via socket:", {
-            messageIds,
-            receiverId: userId,
-            senderId: selectedUser._id,
-            count: response.data.modifiedCount,
-          });
-
-          socket.emit("mark_as_read", {
-            messageIds,
-            receiverId: userId,
-            senderId: selectedUser._id,
-            count: response.data.modifiedCount,
-          });
-        }
-
-        // Force refresh conversations list to ensure UI is up to date
-        fetchConversations();
-      } else {
-        console.warn("Failed to mark some or all messages as read:", response);
-      }
-    } catch (error) {
-      console.error("Error marking messages as read:", error);
-      toast.error("Không thể đánh dấu tin nhắn đã đọc");
+      // Socket notify
+       messageManager.deleteMessage({
+         messageId,
+         senderId: currentUserId,
+         receiverId
+       });
+       
+       toast.success("Message deleted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not delete message");
     }
-  };
+  }, [currentUserId, receiverId, messages, validateToken]);
 
-  const loadMoreMessages = async () => {
-    if (!selectedUser || !pagination.hasMore || loading.messages) return;
+   const markRead = useCallback(async (messageIds) => {
+    if (!messageIds?.length) return;
+    const token = validateToken();
+    if (!token) return;
 
-    const nextPage = pagination.page + 1;
-    console.log("Loading more messages, page:", nextPage);
-    fetchMessages(selectedUser._id, nextPage);
-  };
+    // Optimistic
+    setMessages(prev => prev.map(m => messageIds.includes(m._id) ? {...m, isRead: true} : m));
+
+    try {
+        await fetch(`${API_URL}/api/messages/read`, {
+             method: "PUT",
+             headers: {
+                 "Content-Type": "application/json",
+                 Authorization: `Bearer ${token}` 
+             },
+             body: JSON.stringify({ messageIds })
+        });
+        
+        messageManager.markAsRead({
+            messageIds,
+            senderId: receiverId, // Sender of the msg is the receiver of the read receipt
+            receiverId: currentUserId // We are reading it
+        });
+    } catch(err) {
+        console.error("Mark read error", err);
+    }
+  }, [currentUserId, receiverId, validateToken]);
+
+  // --- Real-time Updates ---
+  useEffect(() => {
+    if (!socket || !receiverId) return;
+    
+    // Using messageManager listeners as per original code, or we can use socket.on directy
+    const handleNewMessage = (data) => {
+        const msg = data.message || data;
+        if (!msg._id) return;
+        
+        // Check if relevant to this chat
+        const isRelevant = (msg.sender?._id === receiverId && msg.receiver?._id === currentUserId) || 
+                           (msg.sender?._id === currentUserId && msg.receiver?._id === receiverId);
+                           
+        if (isRelevant) {
+             setMessages(prev => {
+                 if (prev.find(m => m._id === msg._id)) return prev;
+                 return [...prev, msg];
+             });
+             if (msg.sender?._id === receiverId && !msg.isRead) {
+                 markRead([msg._id]);
+             }
+             setTimeout(() => scrollToBottom(), 100);
+        }
+    };
+    
+    const unsub = messageManager.onNewMessage(handleNewMessage);
+    
+    // Join room for this specific pair
+    const pairRoomId = [currentUserId, receiverId].sort().join("-");
+    messageManager.joinRoom(pairRoomId);
+
+    return () => {
+        unsub();
+        messageManager.leaveRoom(pairRoomId);
+    };
+  }, [socket, receiverId, currentUserId, scrollToBottom, markRead]);
+
+  // Initial load
+  useEffect(() => {
+      setPage(1);
+      setMessages([]);
+      fetchMessages(1, false);
+  }, [receiverId]); // fetch when receiver changes
 
   return {
-    conversations,
-    currentMessages,
-    selectedUser,
+    messages,
     loading,
-    pagination,
-    sendNewMessage,
-    selectUser,
-    markMessagesAsRead,
-    loadMoreMessages,
-    allUsers,
-    fetchUsers,
+    error,
+    sending,
+    hasMore,
+    messagesEndRef,
+    loadMore,
+    sendMessage,
+    deleteMessage,
+    refresh: () => fetchMessages(1, false)
   };
 };
-
-export default useMessages;

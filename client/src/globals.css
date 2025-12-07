@@ -1,0 +1,119 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+@import "tailwindcss";
+
+
+
+@layer base {
+  :root {
+    /* Brand Colors - Light */
+    --color-primary: #7c3aed; /* violet-600 */
+    --color-primary-foreground: #ffffff;
+
+    --color-secondary: #d946ef; /* fuchsia-500 */
+    --color-secondary-foreground: #ffffff;
+
+    --color-accent: #06b6d4; /* cyan-500 */
+    --color-accent-foreground: #ffffff;
+
+    /* Semantic */
+    --color-success: #10b981; /* emerald-500 */
+    --color-error: #f43f5e; /* rose-500 */
+    --color-warning: #f59e0b; /* amber-500 */
+    --color-info: #0ea5e9; /* sky-500 */
+
+    /* Neutrals / Surface - Light */
+    --color-background: #f9fafb; /* gray-50 */
+    --color-surface: #ffffff;
+    --color-surface-highlight: #f3f4f6; /* gray-100 */
+
+    --color-text-primary: #111827; /* gray-900 */
+    --color-text-secondary: #6b7280; /* gray-500 */
+  }
+
+  .dark {
+    /* Brand Colors - Dark */
+    --color-primary: #8b5cf6; /* violet-500 */
+    --color-primary-foreground: #ffffff;
+
+    --color-secondary: #e879f9; /* fuchsia-400 */
+    --color-secondary-foreground: #000000;
+
+    --color-accent: #22d3ee; /* cyan-400 */
+    --color-accent-foreground: #000000;
+
+    /* Neutrals / Surface - Dark */
+    --color-background: #030712; /* gray-950 */
+    --color-surface: #111827; /* gray-900 */
+    --color-surface-highlight: #1f2937; /* gray-800 */
+
+    --color-text-primary: #f9fafb; /* gray-50 */
+    --color-text-secondary: #9ca3af; /* gray-400 */
+
+    /* Semantic Adjustments for Dark Mode if needed */
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans transition-colors duration-300 antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Common Animation Classes */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out forwards;
+  }
+
+  .animate-dropdown {
+    animation: dropdownIn 0.2s ease-out forwards;
+  }
+
+  /* Utility aliases for backward compatibility or shortcuts */
+  .bg-card {
+    @apply bg-surface border border-surface-highlight shadow-sm;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dropdownIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

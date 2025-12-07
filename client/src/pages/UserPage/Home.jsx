@@ -1,5 +1,5 @@
 import React from "react";
-import { Contents } from "../../components/UserComponents";
+import Contents from "../../components/features/feed/Contents/Contents";
 
 const Home = () => {
   return (

@@ -1,55 +1,37 @@
-import { useState } from "react";
-import AdminSidebar from "../../components/AdminComponents/AdminSidebar";
-import AdminHeader from "../../components/AdminComponents/AdminHeader";
-import AdminDashboard from "../../components/AdminComponents/AdminDashboard";
-import UserManagement from "../../components/AdminComponents/UserManagement";
-import PostManagement from "../../components/AdminComponents/PostManagement";
-import CommentManagement from "../../components/AdminComponents/CommentManagement";
-import ReportManagement from "../../components/AdminComponents/ReportManagement";
-import InteractionManagement from "../../components/AdminComponents/InteractionManagement";
-import BannedAccounts from "../../components/AdminComponents/BannedAccounts";
-import RevenueManagement from "../../components/AdminComponents/RevenueManagement";
-import AdminSettings from "../../components/AdminComponents/AdminSettings";
-import AdminLogs from "../../components/AdminComponents/AdminLogs";
+import React, { useState } from "react";
+import AdminLayout from "../../components/Admin/Layout/AdminLayout";
+import Dashboard from "../../components/Admin/Dashboard/Dashboard";
+import Users from "../../components/Admin/Users/Users";
+import Posts from "../../components/Admin/Content/Posts";
+import Comments from "../../components/Admin/Content/Comments";
+import Reports from "../../components/Admin/Content/Reports";
+import Interactions from "../../components/Admin/Content/Interactions";
+import BannedAccounts from "../../components/Admin/Users/BannedAccounts";
+import { Logs, Settings, Revenue } from "../../components/Admin/System";
 
 const AdminPage = () => {
   const [activePage, setActivePage] = useState("dashboard");
 
   const renderContent = () => {
     switch (activePage) {
-      case "dashboard":
-        return <AdminDashboard />;
-      case "users":
-        return <UserManagement />;
-      case "posts":
-        return <PostManagement />;
-      case "comments":
-        return <CommentManagement />;
-      case "reports":
-        return <ReportManagement />;
-      case "interactions":
-        return <InteractionManagement />;
-      case "banned":
-        return <BannedAccounts />;
-      case "revenue":
-        return <RevenueManagement />;
-      case "settings":
-        return <AdminSettings />;
-      case "adminlogs":
-        return <AdminLogs />;
-      default:
-        return <AdminDashboard />;
+      case "dashboard": return <Dashboard />;
+      case "users": return <Users />;
+      case "posts": return <Posts />;
+      case "comments": return <Comments />;
+      case "reports": return <Reports />;
+      case "interactions": return <Interactions />;
+      case "banned": return <BannedAccounts />;
+      case "revenue": return <Revenue />;
+      case "settings": return <Settings />;
+      case "adminlogs": return <Logs />;
+      default: return <Dashboard />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
-      <AdminSidebar activePage={activePage} setActivePage={setActivePage} />
-      <div className="flex-1 flex flex-col">
-        <AdminHeader activePage={activePage} />
-        <main className="p-4 flex-1 overflow-auto">{renderContent()}</main>
-      </div>
-    </div>
+    <AdminLayout activePage={activePage} setActivePage={setActivePage}>
+      {renderContent()}
+    </AdminLayout>
   );
 };
 
