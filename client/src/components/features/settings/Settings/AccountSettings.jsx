@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Auth from "../../../services/authService";
 import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
-import { logout, login } from "../../../slices/AuthSlice";
-import { useNavigate } from "react-router-dom";
-
-// Import các component con đã tách
 import {
-  EmailSection,
   PasswordSection,
   VerificationSection,
   AccountActionsSection,
@@ -53,13 +46,13 @@ const AccountSettings = () => {
 
   // Additional debugging at component initialization
   useEffect(() => {
-    console.log("Auth state from Redux:", auth);
+    // console.log("Auth state from Redux:", auth);
     try {
       const storedUserStr = localStorage.getItem("user");
-      console.log("User from localStorage (raw):", storedUserStr);
+      // console.log("User from localStorage (raw):", storedUserStr);
       if (storedUserStr) {
         const parsedUser = JSON.parse(storedUserStr);
-        console.log("User from localStorage (parsed):", parsedUser);
+        // console.log("User from localStorage (parsed):", parsedUser);
       }
     } catch (error) {
       console.error("Error debugging localStorage:", error);
@@ -71,26 +64,20 @@ const AccountSettings = () => {
     const getUserData = () => {
       // Try to get user data from Redux store
       if (auth && auth.user) {
-        console.log("Auth state from Redux:", auth);
+        // console.log("Auth state from Redux:", auth);
 
         // Check for different possible structures of user data
         if (auth.user.email) {
           setUserData(auth.user);
-          console.log("Found user email in auth.user:", auth.user.email);
+          // console.log("Found user email in auth.user:", auth.user.email);
           return;
         } else if (auth.user.user && auth.user.user.email) {
           setUserData(auth.user.user);
-          console.log(
-            "Found user email in auth.user.user:",
-            auth.user.user.email
-          );
+          // console.log("Found user email in auth.user.user:", auth.user.user.email);
           return;
         } else if (auth.user.data && auth.user.data.email) {
           setUserData(auth.user.data);
-          console.log(
-            "Found user email in auth.user.data:",
-            auth.user.data.email
-          );
+          // console.log("Found user email in auth.user.data:", auth.user.data.email);
           return;
         } else {
           // Set fallback data to avoid errors
@@ -110,26 +97,20 @@ const AccountSettings = () => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          console.log("User from localStorage (parsed):", parsedUser);
+          // console.log("User from localStorage (parsed):", parsedUser);
 
           // Check for different possible structures in localStorage too
           if (parsedUser.email) {
             setUserData(parsedUser);
-            console.log("Found user email in localStorage:", parsedUser.email);
+            // console.log("Found user email in localStorage:", parsedUser.email);
             return;
           } else if (parsedUser.user && parsedUser.user.email) {
             setUserData(parsedUser.user);
-            console.log(
-              "Found user email in localStorage.user:",
-              parsedUser.user.email
-            );
+            // console.log("Found user email in localStorage.user:", parsedUser.user.email);
             return;
           } else if (parsedUser.data && parsedUser.data.email) {
             setUserData(parsedUser.data);
-            console.log(
-              "Found user email in localStorage.data:",
-              parsedUser.data.email
-            );
+            // console.log("Found user email in localStorage.data:", parsedUser.data.email);
             return;
           } else {
             // Set fallback data to avoid errors
@@ -163,7 +144,7 @@ const AccountSettings = () => {
 
   // Effect to update UI when auth state changes
   useEffect(() => {
-    console.log("Auth or userData changed, updating UI");
+    // console.log("Auth or userData changed, updating UI");
 
     // Update email display in real-time
     const emailElement = document.querySelector(".account-email-display");
@@ -175,7 +156,7 @@ const AccountSettings = () => {
         currentEmail !== "Loading email..."
       ) {
         emailElement.textContent = currentEmail;
-        console.log("Updated email display to:", currentEmail);
+        // console.log("Updated email display to:", currentEmail);
       }
     }
   }, [userData, auth?.user]);
@@ -259,8 +240,8 @@ const AccountSettings = () => {
 
     setIsUpdatingEmail(true);
     try {
-      // Call the actual Auth.updateEmail method
-      const res = await Auth.updateEmail(newEmail);
+      // Call the actual Auth.updateEmail method via redux
+      const res = await dispatch(updateEmail(newEmail)).unwrap();
 
       if (res.code === 1) {
         toast.success(res.message || "Email updated successfully!");
@@ -338,7 +319,7 @@ const AccountSettings = () => {
       }
     } catch (error) {
       console.log(`Error updating email: ${error}`);
-      toast.error("Failed to update email");
+      toast.error(error.message || "Failed to update email");
     } finally {
       setIsUpdatingEmail(false);
     }
@@ -404,12 +385,12 @@ const AccountSettings = () => {
 
       setIsUpdatingPassword(true);
 
-      const response = await Auth.updatePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
+      const response = await dispatch(updatePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      })).unwrap();
 
-      if (response.success) {
+      if (response.code === 1 || response.success) { // Based on backend typically returning code 1
         // Hiển thị thông báo thành công
         setSuccessMessage("Mật khẩu đã được cập nhật thành công");
         setShowSuccessNotification(true);
@@ -425,8 +406,10 @@ const AccountSettings = () => {
       }
     } catch (error) {
       console.error("Error updating password:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật mật khẩu");
-      if (error.response?.data?.message === "Current password is incorrect") {
+      toast.error(error.message || "Có lỗi xảy ra khi cập nhật mật khẩu");
+      
+      const errorMessage = error.message || error.response?.data?.message;
+      if (errorMessage === "Current password is incorrect" || (typeof errorMessage === 'string' && errorMessage.includes("current"))) {
         setPasswordErrors({
           currentPassword: "Mật khẩu hiện tại không chính xác",
         });
@@ -440,7 +423,7 @@ const AccountSettings = () => {
   const handleVerifyAccount = async () => {
     try {
       setIsVerifying(true);
-      const response = await Auth.verifyAccount();
+      const response = await dispatch(verifyAccount()).unwrap();
 
       if (response.success) {
         toast.success(
@@ -460,6 +443,7 @@ const AccountSettings = () => {
     } catch (error) {
       console.error("Error sending verification email:", error);
       toast.error(
+        error.message ||
         "Có lỗi xảy ra khi gửi email xác thực. Vui lòng thử lại sau."
       );
     } finally {
@@ -471,10 +455,10 @@ const AccountSettings = () => {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      const res = await Auth.deleteAccount();
+      const res = await dispatch(deleteAccount()).unwrap();
       if (res.code === 1) {
         toast.success(res.message || "Account deleted successfully");
-        dispatch(logout());
+        dispatch(logoutSlice());
         navigate("/auth/login");
       } else {
         toast.error(res.message || "Failed to delete account");
@@ -482,7 +466,7 @@ const AccountSettings = () => {
       }
     } catch (error) {
       console.log(`Error deleting account: ${error}`);
-      toast.error("Failed to delete account");
+      toast.error(error.message || "Failed to delete account");
       setShowDeleteModal(false);
     } finally {
       setIsDeleting(false);
@@ -492,14 +476,10 @@ const AccountSettings = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      const res = await Auth.logout();
-      if (res.code === 1) {
-        toast.success(res.message || "Logout successful");
-        dispatch(logout());
-        navigate("/auth/login");
-      } else {
-        toast.error(res.message || "Logout failed!");
-      }
+      await dispatch(logoutAction()); // It might not return anything
+      toast.success("Logout successful");
+      dispatch(logoutSlice());
+      navigate("/auth/login");
     } catch (error) {
       console.log(`Error ${error}`);
       toast.error("Something went wrong!");

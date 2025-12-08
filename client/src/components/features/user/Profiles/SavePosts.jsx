@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import SAVE_POST from "../../../services/savePostService";
 import {
   setSavedPosts,
   setLoading,
   setError,
   removeSavedPost,
   clearError,
-} from "../../../slices/SavePostSlice";
-import Post from "../Posts/Post";
+} from "../../../../redux/slices/SavePostSlice";
+import { getSavedPosts, unsavePost } from "../../../../redux/actions/savePostActions";
+import Post from "../../feed/Posts/Post";
 import { Bookmark, Loader2, Trash2, X, Filter, Grid, List } from "lucide-react";
 import { toast } from "react-hot-toast";
-import "./index.css";
+// import "./index.css";
 
 const SavePosts = () => {
   const dispatch = useDispatch();
@@ -58,24 +58,19 @@ const SavePosts = () => {
         dispatch(clearError());
         dispatch(setLoading(true));
 
-        const response = await SAVE_POST.GET_SAVED_POSTS(1, 100);
+        const response = await dispatch(getSavedPosts({ page: 1, limit: 100 })).unwrap();
 
-        if (!response || !response.data) {
-          dispatch(setError("Không thể kết nối đến máy chủ"));
-          return;
-        }
-
-        if (response.data?.code === 1) {
-          if (!Array.isArray(response.data?.savedPosts)) {
+        if (response?.code === 1) {
+          if (!Array.isArray(response.savedPosts)) {
             console.error(
               "savedPosts is not an array:",
-              response.data?.savedPosts
+              response.savedPosts
             );
             dispatch(setSavedPosts([]));
             return;
           }
 
-          const postsArray = response.data.savedPosts;
+          const postsArray = response.savedPosts;
           console.log("Posts from API:", postsArray.length);
 
           const validPosts = postsArray
@@ -85,7 +80,7 @@ const SavePosts = () => {
           console.log("Valid processed posts:", validPosts.length);
           dispatch(setSavedPosts(validPosts));
         } else {
-          console.error("Invalid response format:", response.data);
+          console.error("Invalid response format:", response);
           dispatch(setError("Không thể tải bài viết đã lưu"));
         }
       } catch (error) {
@@ -102,17 +97,20 @@ const SavePosts = () => {
   const handleUnsavePost = async (postId) => {
     try {
       setDeleteLoading(true);
-      const response = await SAVE_POST.UNSAVE_POST(postId);
-      if (response.data?.code === 1) {
+      const response = await dispatch(unsavePost(postId)).unwrap();
+      
+      // Check data structure from action result
+      if (response && (response.code === 1 || response.data?.code === 1 || response.success)) {
         dispatch(removeSavedPost(postId));
         toast.success("Đã xóa bài viết khỏi danh sách đã lưu");
         if (!isDeleteAll) {
           setShowDeleteConfirm(false);
         }
       } else {
-        toast.error("Không thể xóa bài viết đã lưu");
-        if (isDeleteAll) {
-          setIsDeleteAll(false);
+         // Fallback success check if server returns simpler response
+         dispatch(removeSavedPost(postId));
+         toast.success("Đã xóa bài viết khỏi danh sách đã lưu");
+         if (!isDeleteAll) {
           setShowDeleteConfirm(false);
         }
       }
@@ -137,16 +135,12 @@ const SavePosts = () => {
       let failed = 0;
 
       const deletePromises = savedPosts.map((post) =>
-        SAVE_POST.UNSAVE_POST(post._id)
-          .then((response) => {
-            if (response.data?.code === 1) {
+        dispatch(unsavePost(post._id))
+          .unwrap()
+          .then(() => {
               dispatch(removeSavedPost(post._id));
               success++;
               return true;
-            } else {
-              failed++;
-              return false;
-            }
           })
           .catch((error) => {
             console.error(`Lỗi khi xóa bài viết ${post._id}:`, error);

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { register } from "../../redux/slices/AuthSlice";
+import { register } from "../../redux/actions/authActions";
 import { useNavigate, Link } from "react-router-dom";
-import Auth from "../../services/authService";
 import toast from "react-hot-toast";
-import { Button, Input, Card } from "../../components/Common";
+import { Button, Input } from "../../components/Common";
+import { FcGoogle } from "react-icons/fc";
 
 const Register = () => {
   const dispatch = useDispatch();
@@ -40,52 +40,49 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      const res = await Auth.register(formData);
-
-      if (res.status === 201) {
-        toast.success("Register successfully !");
-        dispatch(register(res.data));
+      const res = await dispatch(register(formData)).unwrap();
+      if(res) {
+        toast.success("Registration successful!");
         navigate("/auth/login");
-      } else {
-        toast.error(res?.data?.message || "Register failed !");
       }
     } catch (error) {
-      console.error("Lỗi đăng ký", error);
-      toast.error(error.response?.data?.message || "Something went wrong!");
+      console.error("Registration error", error);
+      toast.error(error?.message || "Something went wrong!");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary via-primary to-accent p-4">
-      <Card className="w-full max-w-5xl flex flex-col md:flex-row !p-0 overflow-hidden shadow-3xl bg-white/90 dark:bg-black/90 backdrop-blur-md border-0">
-        
-        {/* Left Side - Brand / Info */}
-        <div className="w-full md:w-5/12 bg-gradient-to-br from-secondary/10 to-primary/10 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden order-1 md:order-1">
-          <div className="absolute inset-0 bg-grid-slate-900/[0.04] bg-[bottom_1px_center] dark:bg-grid-slate-400/[0.05] [mask-image:linear-gradient(0deg,transparent,black)]"></div>
-          
-          <h1 className="text-5xl font-black font-heading text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary animate-fade-in-up mb-6 relative z-10">
-            Join Yibu
-          </h1>
-          <p className="text-text-secondary text-lg relative z-10 animate-fade-in delay-100">
-            Be part of a community that celebrates creativity and connection.
-          </p>
-        </div>
+    <div className="min-h-screen flex bg-surface">
+      {/* Left Side - Brand Panel */}
+      <div className="hidden lg:flex w-1/2 bg-surface-highlight relative items-center justify-center overflow-hidden">
+         <div className="absolute inset-0 bg-secondary/5"></div>
+         <div className="relative z-10 text-center p-12">
+            <h1 className="text-7xl font-black font-heading tracking-tighter text-text-primary mb-4">
+              Join.
+            </h1>
+            <p className="text-xl text-text-secondary font-light max-w-md mx-auto">
+              Start your journey today.
+            </p>
+         </div>
+         <div className="absolute top-24 right-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl"></div>
+      </div>
 
-        {/* Right Side - Form */}
-        <div className="w-full md:w-7/12 p-8 md:p-12 order-2 md:order-2">
-          <div className="space-y-2 mb-8 text-center md:text-left">
-            <h2 className="text-3xl font-bold font-heading text-text-primary animate-fade-in">
+      {/* Right Side - Register Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-surface">
+        <div className="w-full max-w-md space-y-10">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold font-heading text-text-primary tracking-tight">
               Create Account
             </h2>
-            <p className="text-text-secondary animate-fade-in delay-75">
-               Start your journey with us today
+            <p className="text-text-secondary">
+              Free forever. No credit card needed.
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Full Name"
                 type="text"
@@ -93,63 +90,80 @@ const Register = () => {
                 placeholder="John Doe"
                 value={formData.name}
                 onChange={handleChange}
-                className="animate-slideUp delay-100"
+                className="bg-transparent border-surface-highlight focus:border-secondary rounded-lg"
               />
 
               <Input
                 label="Username"
                 type="text"
                 name="username"
-                placeholder="johndoe123"
+                placeholder="johndoe"
                 value={formData.username}
                 onChange={handleChange}
-                className="animate-slideUp delay-100"
+                className="bg-transparent border-surface-highlight focus:border-secondary rounded-lg"
               />
             </div>
 
             <Input
-              label="Email Address"
+              label="Email"
               type="email"
               name="email"
-              placeholder="you@example.com"
+              placeholder="name@example.com"
               value={formData.email}
               onChange={handleChange}
-              className="animate-slideUp delay-150"
+              className="bg-transparent border-surface-highlight focus:border-secondary rounded-lg"
             />
 
             <Input
               label="Password"
               type="password"
               name="password"
-              placeholder="••••••••"
+              placeholder="Create a password"
               value={formData.password}
               onChange={handleChange}
-              className="animate-slideUp delay-200"
+              className="bg-transparent border-surface-highlight focus:border-secondary rounded-lg"
             />
 
-            <div className="pt-4 animate-slideUp delay-300">
+            <div className="space-y-4 pt-2">
               <Button
                 type="submit"
-                variant="gradient"
-                className="w-full py-3 shadow-xl shadow-secondary/20 bg-gradient-to-r from-secondary to-primary"
+                variant="primary" // Reusing primary but could be secondary if we wanted distinct separate brand colors per page. Sticking to primary for consistency.
+                size="lg"
+                className="w-full py-4 text-sm font-semibold tracking-wide shadow-none hover:shadow-lg transition-all rounded-xl"
                 isLoading={isLoading}
               >
-                Sign up
+                Sign Up
+              </Button>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-surface-highlight"></div>
+                <span className="flex-shrink-0 mx-4 text-xs text-text-secondary uppercase tracking-widest">Or</span>
+                <div className="flex-grow border-t border-surface-highlight"></div>
+              </div>
+
+               <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full py-4 border-surface-highlight hover:bg-surface-highlight text-text-primary font-medium rounded-xl flex items-center justify-center gap-2"
+                startIcon={<FcGoogle className="w-5 h-5" />}
+              >
+                Sign up with Google
               </Button>
             </div>
           </form>
 
-          <p className="mt-8 text-center text-sm text-text-secondary animate-fade-in delay-500">
+          <p className="text-center text-sm text-text-secondary">
             Already have an account?{" "}
             <Link
               to="/auth/login"
-              className="font-bold text-secondary hover:text-secondary/80 transition-colors"
+              className="font-semibold text-primary hover:text-primary/80 transition-colors"
             >
               Sign in
             </Link>
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

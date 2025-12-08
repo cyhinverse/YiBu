@@ -9,8 +9,7 @@ import {
   Share2,
   X,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
+import { formatDistanceToNow } from "../../../../../utils/dateUtils";
 
 // Custom Modal component
 const CustomModal = ({
@@ -85,10 +84,7 @@ const CommentReply = ({
 
   // Format thời gian
   const formattedTime = reply.createdAt
-    ? formatDistanceToNow(new Date(reply.createdAt), {
-        addSuffix: true,
-        locale: vi,
-      })
+    ? formatDistanceToNow(new Date(reply.createdAt))
     : "Vừa xong";
 
   const handleUpdate = async () => {

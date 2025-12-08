@@ -8,20 +8,21 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PostOption from "./PostOption";
-import Like from "../../../services/likeService";
+import { createLike, deleteLike, getLikeStatus, getAllLikes } from "../../../../redux/actions/likeActions";
+import { checkSavedStatus as checkSavedStatusAction, savePost, unsavePost } from "../../../../redux/actions/savePostActions";
 import "./index.css";
 
 import CommentModel from "../Comment/CommentModel";
 import ShowImagePost from "./ShowImagePost";
 import ShowVideoPost from "./ShowVideoPost";
-import { setPostLikeStatus } from "../../../slices/LikeSlice";
-import SAVE_POST from "../../../services/savePostService";
-import { setSavedStatus } from "../../../slices/SavePostSlice";
+import { updateLikeLocal } from "../../../../redux/slices/LikeSlice";
+import { setSavedStatusLocal as setSavedStatus } from "../../../../redux/slices/SavePostSlice";
 import { toast } from "react-hot-toast";
-import { getLikeManager } from "../../../socket/likeManager";
-import { getCommentManager } from "../../../socket/commentManager";
+// import { getLikeManager } from "../../../socket/likeManager";
+// import { getCommentManager } from "../../../socket/commentManager";
+import { useSocketContext } from "../../../../contexts/SocketContext";
 import InvalidPostFallback from "./InvalidPostFallback";
-import formatTime from "../../../utils/formatTime";
+import formatTime from "../../../../utils/formatTime";
 
 const PostWrapper = ({ data, isSavedPost = false }) => {
   const hiddenPosts = useSelector(
@@ -46,8 +47,8 @@ const Post = ({ data, isSavedPost = false }) => {
     userData?.avatar ||
     "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1";
 
-  console.log(`Check avatar every user:::`, avatar);
-  console.log(`Check data currentUser`, data);
+  // console.log(`Check avatar every user:::`, avatar);
+  // console.log(`Check data currentUser`, data);
 
   const likeState = useSelector((state) => {
     return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
@@ -70,12 +71,14 @@ const Post = ({ data, isSavedPost = false }) => {
   const isProcessingLike = useRef(false);
   const [commentCount, setCommentCount] = useState(0);
   const [postId, setPostId] = useState(null);
-  const commentManager = getCommentManager();
+  // const commentManager = getCommentManager();
 
   const isValidData = !!(data && data._id);
 
   const userId =
     currentUser?._id || currentUser?.user?._id || currentUser?.data?._id;
+
+  const { joinPostRoom, emitLikeAction, socket } = useSocketContext() || {};
 
   const user = data?.user || {
     name: "Người dùng không xác định",
@@ -121,7 +124,7 @@ const Post = ({ data, isSavedPost = false }) => {
       const postId = data._id;
       if (!postId) return;
 
-      const response = await SAVE_POST.CHECK_SAVED_STATUS(postId);
+      const response = await dispatch(checkSavedStatusAction(postId)).unwrap();
       if (response && response.data && response.data.code === 1) {
         dispatch(setSavedStatus({ postId, status: response.data.isSaved }));
       }
@@ -142,33 +145,16 @@ const Post = ({ data, isSavedPost = false }) => {
 
     let isMounted = true;
     const postId = data._id;
-    const likeManager = getLikeManager();
 
     const fetchLikeData = async () => {
       try {
         setLikeLoading(true);
-        const [statusResponse, countResponse] = await Promise.all([
-          Like.GET_LIKE_STATUS(postId),
-          Like.GET_ALL_LIKES([postId]),
+        // Using redux actions directly
+        await Promise.all([
+          dispatch(getLikeStatus(postId)).unwrap(),
+          dispatch(getAllLikes([postId])).unwrap(),
         ]);
-
-        if (!isMounted) return;
-
-        if (
-          statusResponse?.data?.code === 1 &&
-          countResponse?.data?.code === 1
-        ) {
-          const isLiked = statusResponse.data.data?.isLiked || false;
-          const count = countResponse.data.data?.[postId]?.count || 0;
-
-          dispatch(
-            setPostLikeStatus({
-              postId,
-              isLiked,
-              count,
-            })
-          );
-        }
+        
       } catch (error) {
         console.error(`[Post ${postId}] Error fetching like data:`, error);
       } finally {
@@ -178,13 +164,9 @@ const Post = ({ data, isSavedPost = false }) => {
       }
     };
 
-    if (likeManager) {
+    if (joinPostRoom) {
       // console.log(`[Post ${postId}] Joining post room for realtime updates`);
-      likeManager.joinPostRoom(postId);
-    } else {
-      console.warn(
-        `[Post ${postId}] likeManager not available, can't join room`
-      );
+      joinPostRoom(postId);
     }
 
     fetchLikeData();
@@ -192,27 +174,30 @@ const Post = ({ data, isSavedPost = false }) => {
     return () => {
       isMounted = false;
     };
-  }, [dispatch, isValidData, data?._id, currentUser?.user?._id]);
+  }, [dispatch, isValidData, data?._id, currentUser?.user?._id, joinPostRoom]);
 
   useEffect(() => {
-    if (isValidData) {
-      commentManager.joinPostRoom(data._id);
+    if (isValidData && socket) {
+      
+      // Temporary logic for real-time comments directly via socket if needed
+      // Previous commentManager is removed. Refactor to use socket.on if needed here or move to global listener.
+      // For now, we will rely on fetching or implement simpler listeners if critical.
+      // commentManager.joinPostRoom(data._id);
+      
+      const handleNewComment = (newComment) => {
+          if (newComment.postId === data._id) {
+               setCommentCount(prev => prev + 1);
+          }
+      }
 
-      const unregisterNewComment =
-        commentManager.registerNewCommentHandler(handleCommentUpdate);
-      const unregisterUpdateComment =
-        commentManager.registerUpdateCommentHandler(handleCommentUpdate);
-      const unregisterDeleteComment =
-        commentManager.registerDeleteCommentHandler(handleCommentUpdate);
+      socket.on("new_comment", handleNewComment);
 
       return () => {
-        unregisterNewComment();
-        unregisterUpdateComment();
-        unregisterDeleteComment();
-        commentManager.leavePostRoom(data._id);
+        socket.off("new_comment", handleNewComment);
+        // commentManager.leavePostRoom(data._id);
       };
     }
-  }, [data._id]);
+  }, [data._id, isValidData, socket]);
 
   const handleCommentUpdate = (eventData) => {
     if (
@@ -223,13 +208,8 @@ const Post = ({ data, isSavedPost = false }) => {
     }
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!isValidData || likeLoading || !userId) {
-      console.log("[Like Debug] Cannot like:", {
-        isValidData,
-        likeLoading,
-        userId,
-      });
       return;
     }
 
@@ -244,14 +224,7 @@ const Post = ({ data, isSavedPost = false }) => {
         ? likeState.count + 1
         : Math.max(0, likeState.count - 1);
 
-      console.log("[Like Debug] Attempting to like/unlike:", {
-        postId,
-        oldState,
-        newIsLiked,
-        newCount,
-        userId,
-      });
-
+      // Optimistic update
       dispatch(
         setPostLikeStatus({
           postId,
@@ -260,40 +233,31 @@ const Post = ({ data, isSavedPost = false }) => {
         })
       );
 
-      const likeManager = getLikeManager();
-      if (likeManager) {
-        likeManager.emitLikeAction(
+      if (emitLikeAction) {
+        emitLikeAction(
           postId,
-          userId,
-          newIsLiked ? "like" : "unlike"
+          (newIsLiked ? "like" : "unlike")
         );
       }
 
-      console.log("[Like Debug] Calling API:", {
-        endpoint: newIsLiked ? "CREATE_LIKE" : "DELETE_LIKE",
-        data: { postId },
-      });
+      // API Call
+      const action = newIsLiked ? createLike({ postId }) : deleteLike({ postId });
+      const response = await dispatch(action).unwrap();
 
-      const apiCall = newIsLiked ? Like.CREATE_LIKE : Like.DELETE_LIKE;
-      apiCall({ postId })
-        .then((response) => {
-          console.log("[Like Debug] API response:", response);
-
-          if (!response || response.data?.code !== 1) {
-            console.warn(
-              "[Like Debug] API returned non-success code:",
-              response?.data
-            );
-            dispatch(
-              setPostLikeStatus({
-                postId,
-                isLiked: oldState.isLiked,
-                count: oldState.count,
-              })
-            );
-          } else {
-            const serverCount = response.data?.data?.likeCount || newCount;
-            if (serverCount !== newCount) {
+      // Check response if needed
+      if (!response || (response.code !== 1 && (!response.data || response.data.code !== 1))) {
+          // Revert if failed
+           dispatch(
+            setPostLikeStatus({
+              postId,
+              isLiked: oldState.isLiked,
+              count: oldState.count,
+            })
+          );
+      } else {
+        // Success - server might return new count
+        const serverCount = response.data?.likeCount || newCount;
+         if (serverCount !== newCount) {
               dispatch(
                 setPostLikeStatus({
                   postId,
@@ -301,30 +265,9 @@ const Post = ({ data, isSavedPost = false }) => {
                   count: serverCount,
                 })
               );
-            }
-          }
-        })
-        .catch((error) => {
-          console.error(`[Post ${postId}] Like action failed:`, error);
-          console.error("[Like Debug] Error details:", {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            message: error.message,
-          });
+         }
+      }
 
-          dispatch(
-            setPostLikeStatus({
-              postId,
-              isLiked: oldState.isLiked,
-              count: oldState.count,
-            })
-          );
-        })
-        .finally(() => {
-          isProcessingLike.current = false;
-          setLikeLoading(false);
-        });
     } catch (error) {
       console.error(`[Post ${data._id}] Like action failed:`, error);
       dispatch(
@@ -334,6 +277,7 @@ const Post = ({ data, isSavedPost = false }) => {
           count: likeState.count,
         })
       );
+    } finally {
       isProcessingLike.current = false;
       setLikeLoading(false);
     }
@@ -367,10 +311,11 @@ const Post = ({ data, isSavedPost = false }) => {
         throw new Error("ID bài viết không hợp lệ");
       }
 
-      const apiCall = savedStatus ? SAVE_POST.UNSAVE_POST : SAVE_POST.SAVE_POST;
-      const response = await apiCall(postId);
+      const action = savedStatus ? unsavePost(postId) : savePost(postId);
+      const response = await dispatch(action).unwrap();
+      const responseCode = response.code || (response.data && response.data.code);
 
-      if (response && response.data && response.data.code === 1) {
+      if (responseCode === 1) {
         dispatch(
           setSavedStatus({
             postId,
@@ -379,13 +324,13 @@ const Post = ({ data, isSavedPost = false }) => {
         );
         toast.success(savedStatus ? "Đã bỏ lưu bài viết" : "Đã lưu bài viết");
       } else {
-        console.error("Lỗi khi lưu bài viết:", response?.data);
-        toast.error(response?.data?.message || "Có lỗi xảy ra");
+        console.error("Lỗi khi lưu bài viết:", response);
+        toast.error(response?.message || "Có lỗi xảy ra");
       }
     } catch (error) {
       console.error("Lỗi khi lưu/bỏ lưu bài viết:", error);
       toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi lưu bài viết"
+        error.message || "Có lỗi xảy ra khi lưu bài viết"
       );
     } finally {
       setSaveLoading(false);

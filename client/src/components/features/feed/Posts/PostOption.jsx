@@ -1,16 +1,14 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
+import { Save, Flag, X, Trash, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
-import POST from "../../../services/postService";
-import { removePost } from "../../../slices/PostSlice";
-import { hidePost } from "../../../slices/HiddenPostsSlice";
-import { reportPost } from "../../../slices/ReportPostsSlice";
-import SAVE_POST from "../../../services/savePostService";
-import { setSavedStatus } from "../../../slices/SavePostSlice";
-import { X, AlertTriangle, Flag, Save, Trash } from "lucide-react";
+import { deletePost, reportPost as reportPostAction } from "../../../../redux/actions/postActions";
+import { savePost, unsavePost } from "../../../../redux/actions/savePostActions";
+import { removePostLocal } from "../../../../redux/slices/PostSlice";
+import { setSavedStatusLocal as setSavedStatus } from "../../../../redux/slices/SavePostSlice";
 
-const PostOption = ({ show, postId, postUserId }) => {
+const PostOption = ({ postId, postUserId, show }) => {
   const dispatch = useDispatch();
   const location = useLocation();
   const currentUser = useSelector((state) => state.auth?.user);
@@ -63,10 +61,12 @@ const PostOption = ({ show, postId, postUserId }) => {
         throw new Error("ID bài viết không hợp lệ");
       }
 
-      const apiCall = savedStatus ? SAVE_POST.UNSAVE_POST : SAVE_POST.SAVE_POST;
-      const response = await apiCall(postId);
+      const action = savedStatus ? unsavePost(postId) : savePost(postId);
+      const response = await dispatch(action).unwrap();
 
-      if (response && response.data && response.data.code === 1) {
+      const responseCode = response.code || (response.data && response.data.code);
+
+      if (responseCode === 1) {
         dispatch(
           setSavedStatus({
             postId,
@@ -75,13 +75,13 @@ const PostOption = ({ show, postId, postUserId }) => {
         );
         toast.success(savedStatus ? "Đã bỏ lưu bài viết" : "Đã lưu bài viết");
       } else {
-        console.error("Lỗi khi lưu bài viết:", response?.data);
-        toast.error(response?.data?.message || "Có lỗi xảy ra");
+        console.error("Lỗi khi lưu bài viết:", response);
+        toast.error(response?.message || "Có lỗi xảy ra");
       }
     } catch (error) {
       console.error("Lỗi khi lưu/bỏ lưu bài viết:", error);
       toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi lưu bài viết"
+        error.message || "Có lỗi xảy ra khi lưu bài viết"
       );
     } finally {
       setIsLoading(false);
@@ -96,17 +96,21 @@ const PostOption = ({ show, postId, postUserId }) => {
 
     try {
       setIsLoading(true);
-      const response = await POST.REPORT_POST(postId, reportReason);
+      const response = await dispatch(reportPostAction({ postId, reason: reportReason })).unwrap();
 
       if (response && response.code === 1) {
-        dispatch(reportPost({ postId, reason: reportReason }));
+        // dispatch(reportPost({ postId, reason: reportReason })); // No such reducer, thunk handles it? 
+        // Actually reportPost thunk returns data, but usage implies we want to update local state? 
+        // PostSlice currently doesn't handle reportPost.fulfilled. 
+        // If reporting implies hiding or flagging, we might need a reducer. 
+        // But for now, removing the invalid dispatch is the priority.
         toast.success("Báo cáo bài viết thành công");
       } else {
         toast.error(response?.message || "Báo cáo bài viết thất bại");
       }
     } catch (error) {
       console.error("Lỗi khi báo cáo bài viết:", error);
-      dispatch(reportPost({ postId, reason: reportReason }));
+      // dispatch(reportPost({ postId, reason: reportReason }));
       toast.success("Đã ghi nhận báo cáo của bạn");
     } finally {
       setIsLoading(false);
@@ -116,14 +120,16 @@ const PostOption = ({ show, postId, postUserId }) => {
 
   const handleHidePost = () => {
     try {
-      const result = POST.saveHiddenPost(postId);
-
-      if (result) {
-        dispatch(hidePost(postId));
-        toast.success("Đã ẩn bài viết");
-      } else {
-        toast.error("Không thể ẩn bài viết");
+      // Logic from legacy service: save to localStorage
+      // We do it here directly as services are removed
+      const hiddenPosts = JSON.parse(localStorage.getItem('hiddenPosts')) || [];
+      if (!hiddenPosts.includes(postId)) {
+        hiddenPosts.push(postId);
+        localStorage.setItem('hiddenPosts', JSON.stringify(hiddenPosts));
       }
+
+      dispatch(removePostLocal(postId));
+      toast.success("Đã ẩn bài viết");
     } catch (error) {
       console.error("Lỗi khi ẩn bài viết:", error);
       toast.error("Có lỗi xảy ra khi ẩn bài viết");
@@ -133,13 +139,9 @@ const PostOption = ({ show, postId, postUserId }) => {
   const handleDeletePost = async () => {
     try {
       setIsLoading(true);
-      const response = await POST.DELETE_POST(postId);
-      if (response && response.code === 1) {
-        toast.success("Xóa bài viết thành công");
-        dispatch(removePost(postId));
-      } else {
-        toast.error("Xóa bài viết thất bại");
-      }
+      await dispatch(deletePost(postId)).unwrap();
+      toast.success("Xóa bài viết thành công");
+      // dispatch(removePost(postId)); // Handled by extraReducers
     } catch (error) {
       console.error("Error deleting post:", error);
       toast.error("Xóa bài viết thất bại");

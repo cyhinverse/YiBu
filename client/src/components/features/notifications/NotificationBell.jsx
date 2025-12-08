@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { useSelector } from "react-redux";
 import NotificationPanel from "./NotificationPanel";
-import { getNotificationManager } from "../../../socket/notificationManager";
+// import { getNotificationManager } from "../../../socket/notificationManager";
 import { toast } from "react-hot-toast";
 
 const NotificationBell = () => {
@@ -16,18 +16,18 @@ const NotificationBell = () => {
   useEffect(() => {
     if (!currentUser?.user?._id) return;
 
-    // Khởi tạo notification manager
-    const notificationManager = getNotificationManager();
-    if (!notificationManager) {
-      console.warn(
-        "[NotificationBell] Failed to initialize notification manager"
-      );
-      return;
-    }
+    // Khởi tạo notification manager - REMOVED (Socket handled in context)
+    // const notificationManager = getNotificationManager();
+    // if (!notificationManager) {
+    //   console.warn(
+    //     "[NotificationBell] Failed to initialize notification manager"
+    //   );
+    //   return;
+    // }
 
-    // Đăng ký nhận thông báo
-    notificationManager.registerForNotifications(currentUser.user._id);
-    console.log("[NotificationBell] Registered for notifications");
+    // Đăng ký nhận thông báo - REMOVED (Handled by useSocket)
+    // notificationManager.registerForNotifications(currentUser.user._id);
+    console.log("[NotificationBell] Notification system active");
 
     // Yêu cầu quyền thông báo trên trình duyệt nếu cần
     if (

@@ -9,16 +9,9 @@ import {
   Filter,
   FileText,
 } from "lucide-react";
-import NOTIFICATION from "../../../services/notificationService";
-import {
-  setNotifications,
-  markAsRead,
-  markAllAsRead,
-  setLoading,
-  setError,
-} from "../../../slices/NotificationSlice";
-import { formatDistanceToNowStrict } from "date-fns";
-import { vi } from "date-fns/locale";
+import { getNotifications, markAsRead as markAsReadAction, markAllAsRead as markAllAsReadAction } from "../../../redux/actions/notificationActions";
+// Redundant manual imports removed
+import { formatDistanceToNow } from "../../../utils/dateUtils";
 import { toast } from "react-hot-toast";
 
 const NotificationPanel = () => {
@@ -34,23 +27,26 @@ const NotificationPanel = () => {
   const fetchNotifications = useCallback(
     async () => {
     try {
-      dispatch(setLoading(true));
-      const response = await NOTIFICATION.GET_NOTIFICATIONS();
+      // dispatch(setLoading(true)); // Handled by getNotifications.pending
+      // Replaced service call with action dispatch
+      const response = await dispatch(getNotifications()).unwrap();
 
-      if (response.data?.code === 1) {
-        dispatch(setNotifications(response.data.notifications));
+      // Assuming action payload structure
+      if (response && response.notifications) {
+        // setNotifications is handled by extraReducers usually, but if not:
+        // dispatch(setNotifications(response.notifications)); // Handled by getNotifications.fulfilled
         setConnectionIssue(false);
         setLastUpdated(Date.now());
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      if (error.code === "ERR_NETWORK" || error.response?.status === 404) {
-        setConnectionIssue(true);
-        toast.error("Không thể kết nối đến server thông báo");
+      // Simplified error handling
+      if (error?.code === "ERR_NETWORK") {
+         setConnectionIssue(true);
       }
-      dispatch(setError("Không thể tải thông báo"));
+      // dispatch(setError(error?.message || "Không thể tải thông báo")); // Handled by getNotifications.rejected
     } finally {
-      dispatch(setLoading(false));
+      // dispatch(setLoading(false)); // Handled by getNotifications.fulfilled/rejected
     }
   }, [dispatch]);
 
@@ -75,10 +71,8 @@ const NotificationPanel = () => {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      const response = await NOTIFICATION.MARK_AS_READ(notificationId);
-      if (response.data?.code === 1) {
-        dispatch(markAsRead(notificationId));
-      }
+      await dispatch(markAsReadAction(notificationId)).unwrap();
+      // dispatch(markAsRead(notificationId)); // Redundant if extraReducer handles it
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -86,24 +80,19 @@ const NotificationPanel = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const response = await NOTIFICATION.MARK_ALL_AS_READ();
-      if (response.data?.code === 1) {
-        dispatch(markAllAsRead());
-        toast.success("Đã đánh dấu tất cả là đã đọc");
-      }
+      await dispatch(markAllAsReadAction()).unwrap();
+      // No need to dispatch slice action if thunk handles state update via extraReducers
+      // or if we want local toggle, we should have a reducer for it.
+      // Checking slice, it has extraReducers for markAllAsRead.fulfilled
+      // So we don't need double dispatch.
+      toast.success("Đã đánh dấu tất cả là đã đọc");
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
   };
 
   const formatTime = (date) => {
-    const formattedRelative = formatDistanceToNowStrict(new Date(date), {
-      addSuffix: true,
-      locale: vi,
-    });
-    return formattedRelative.includes("dưới 1 phút trước")
-      ? "Vừa xong"
-      : formattedRelative;
+    return formatDistanceToNow(new Date(date));
   };
 
   const filteredNotifications = notifications.filter((notification) => {

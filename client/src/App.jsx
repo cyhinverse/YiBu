@@ -9,10 +9,8 @@ import {
   ProfileLayout,
   SavePosts,
 } from "./components/features/user/Profiles";
-import {
-  MainMessage,
-  MessageDetail,
-} from "./components/features/chat/MainMessage";
+import MainMessage from "./components/features/chat/MainMessage";
+import MessageDetail from "./components/features/chat/MessageDetail";
 import Login from "./pages/AuthPage/Login";
 import Register from "./pages/AuthPage/Register";
 import {
@@ -28,7 +26,6 @@ import NotFound from "./pages/NotFound/NotFound";
 import ForgotPassword from "./pages/AuthPage/ForgotPassword";
 import EnterCode from "./pages/AuthPage/EnterCode";
 import AuthLayout from "./pages/AuthPage/AuthLayout";
-import React from "react";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
 import AdminRoute from "./pages/AuthPage/AdminRoute";
@@ -36,9 +33,8 @@ import AdminPage from "./pages/AdminPage/AdminPage";
 import AccessDenied from "./pages/ErrorPages/AccessDenied";
 import { SocketProvider } from "./contexts/SocketContext";
 import { useSelector } from "react-redux";
-
-
 import { useTheme } from "./hooks/useTheme";
+import React from "react";
 
 const App = () => {
   const userSettings = useSelector((state) => state.user?.settings);
@@ -48,7 +44,7 @@ const App = () => {
   return (
     <>
       <Routes>
-        <Route element={<ProtectedRoute />}>
+        <Route element={<ProtectedRoute />} >
           <Route
             path={`${ROUTES.HOME}`}
             element={

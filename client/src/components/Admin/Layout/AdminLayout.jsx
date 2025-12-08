@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../../actions/auth";
+import { logout } from "../../../redux/actions/authActions";
 
 const AdminLayout = ({ children, activePage, setActivePage }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

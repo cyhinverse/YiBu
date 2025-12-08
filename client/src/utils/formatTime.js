@@ -1,13 +1,9 @@
-import { formatDistanceToNowStrict } from "date-fns";
-import { vi } from "date-fns/locale";
+import { formatDistanceToNow } from "./dateUtils";
 
 const formatTime = (date) => {
   if (!date) return "Không xác định";
   try {
-    const formattedRelative = formatDistanceToNowStrict(new Date(date), {
-      addSuffix: true,
-      locale: vi,
-    });
+    const formattedRelative = formatDistanceToNow(new Date(date));
     return formattedRelative.includes("dưới 1 phút trước")
       ? "Vừa xong"
       : formattedRelative;

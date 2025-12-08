@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import NotificationTest from "../Notification/NotificationTest";
-import UserSettingsService from "../../../services/userSettingsService";
+// import NotificationTest from "../Notification/NotificationTest";
+// import UserSettingsService from "../../../services/userSettingsService";
+import { useDispatch } from "react-redux";
+import { getUserSettings, updateNotificationSettings } from "../../../../redux/actions/userActions";
 import { toast } from "react-toastify";
 
 const NotificationSettings = () => {
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [notificationData, setNotificationData] = useState({
     pushEnabled: true,
@@ -22,13 +25,15 @@ const NotificationSettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await UserSettingsService.getAllSettings();
+      const response = await dispatch(getUserSettings()).unwrap();
       if (
         response.success &&
         response.userSettings &&
         response.userSettings.notification
       ) {
         setNotificationData(response.userSettings.notification);
+      } else if (response.data && response.data.userSettings && response.data.userSettings.notification) {
+          setNotificationData(response.data.userSettings.notification);
       }
     } catch (error) {
       console.error("Lỗi khi lấy cài đặt thông báo:", error);
@@ -60,8 +65,12 @@ const NotificationSettings = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await UserSettingsService.updateNotificationSettings(notificationData);
-      toast.success("Cài đặt thông báo đã được lưu");
+      const response = await dispatch(updateNotificationSettings(notificationData)).unwrap();
+      if (response && (response.success || response.code === 1)) {
+        toast.success("Cài đặt thông báo đã được lưu");
+      } else {
+        toast.error("Không thể lưu cài đặt thông báo");
+      }
     } catch (error) {
       console.error("Lỗi khi cập nhật thông báo:", error);
       toast.error("Lỗi khi lưu cài đặt");
@@ -166,7 +175,7 @@ const NotificationSettings = () => {
       </div>
 
       {/* Thêm component test thông báo */}
-      <NotificationTest />
+      {/* <NotificationTest /> */}
     </div>
   );
 };

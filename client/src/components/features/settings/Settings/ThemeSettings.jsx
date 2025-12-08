@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import UserSettingsService from "../../../services/userSettingsService";
+// import UserSettingsService from "../../../services/userSettingsService";
+import { getUserSettings, updateThemeSettings } from "../../../../redux/actions/userActions";
 import { toast } from "react-hot-toast";
-import { setThemeSettings } from "../../../slices/UserSlice";
+import { setThemeSettings } from "../../../../redux/slices/UserSlice";
 import { Sun, Moon, Monitor, Save } from "lucide-react";
 
 const ThemeSettings = () => {
@@ -25,7 +26,7 @@ const ThemeSettings = () => {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        const response = await UserSettingsService.getAllSettings();
+        const response = await dispatch(getUserSettings()).unwrap();
         if (
           response.success &&
           response.userSettings &&
@@ -33,6 +34,10 @@ const ThemeSettings = () => {
         ) {
           const serverTheme = response.userSettings.theme;
           setThemeData(serverTheme);
+          dispatch(setThemeSettings(serverTheme));
+        } else if (response.data && response.data.userSettings && response.data.userSettings.theme) {
+          const serverTheme = response.data.userSettings.theme;
+           setThemeData(serverTheme);
           dispatch(setThemeSettings(serverTheme));
         }
       } catch (error) {
@@ -45,7 +50,7 @@ const ThemeSettings = () => {
     if (!theme) {
       fetchSettings();
     }
-  }, [dispatch]);
+  }, [dispatch]); // Removed theme from dependency to avoid loop if not handled carefully, or check if ok. Original had dispatch only but logic suggests theme check inside.
 
   useEffect(() => {
     applyThemeToDocument(themeData);
@@ -76,50 +81,30 @@ const ThemeSettings = () => {
   const applyThemeToDocument = (theme) => {
     console.log("ThemeSettings: Applying theme to document", theme);
 
-    console.log(
-      "ThemeSettings: Current classList before change:",
-      document.documentElement.className
-    );
-
     if (theme.appearance === "light") {
       document.documentElement.classList.remove("dark");
       document.documentElement.classList.add("light");
-      console.log(
-        "ThemeSettings: Applied light mode, classList after:",
-        document.documentElement.className
-      );
     } else if (theme.appearance === "dark") {
       document.documentElement.classList.remove("light");
       document.documentElement.classList.add("dark");
-      console.log(
-        "ThemeSettings: Applied dark mode, classList after:",
-        document.documentElement.className
-      );
     } else if (theme.appearance === "system") {
       const prefersDark = window.matchMedia(
         "(prefers-color-scheme: dark)"
       ).matches;
-      console.log("ThemeSettings: System prefers dark?", prefersDark);
 
       document.documentElement.classList.remove(prefersDark ? "light" : "dark");
       document.documentElement.classList.add(prefersDark ? "dark" : "light");
-      console.log(
-        "ThemeSettings: Applied system preference mode, classList after:",
-        document.documentElement.className
-      );
     }
 
     document.documentElement.style.setProperty(
       "--primary-color",
       theme.primaryColor
     );
-    console.log("ThemeSettings: Applied primary color:", theme.primaryColor);
 
     let rootFontSize = "16px";
     if (theme.fontSize === "small") rootFontSize = "14px";
     if (theme.fontSize === "large") rootFontSize = "18px";
     document.documentElement.style.fontSize = rootFontSize;
-    console.log("ThemeSettings: Applied font size:", rootFontSize);
   };
 
   const handleChange = (name, value) => {
@@ -139,9 +124,9 @@ const ThemeSettings = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const response = await UserSettingsService.updateThemeSettings(themeData);
+      const response = await dispatch(updateThemeSettings(themeData)).unwrap();
 
-      if (response && response.success) {
+      if (response && (response.success || response.code === 1)) {
         toast.success("Cài đặt giao diện đã được lưu");
         dispatch(setThemeSettings(themeData));
       } else {

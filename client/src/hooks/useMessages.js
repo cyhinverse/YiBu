@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { messageManager } from "../socket/messageManager";
 import { useSocketContext } from "../contexts/SocketContext";
 
 const PAGE_SIZE = 10;
@@ -16,7 +15,9 @@ export const useMessages = (currentUserId, receiverId) => {
   
   const messagesEndRef = useRef(null);
   const messagesRef = useRef([]); // To access state in listeners
-  const { socket, isConnected } = useSocketContext();
+  
+  // --- socket context ---
+  const { socket, isConnected, joinRoom, leaveRoom } = useSocketContext();
 
   // Keep ref in sync
   useEffect(() => {
@@ -140,11 +141,13 @@ export const useMessages = (currentUserId, receiverId) => {
         setTimeout(() => scrollToBottom(), 100);
 
         // Emit Socket
-        messageManager.sendMessage({
-          message: newMessage,
-          receiverId,
-          senderId: currentUserId
-        });
+        if (socket) {
+             socket.emit("send_message", {
+               message: newMessage,
+               receiverId,
+               senderId: currentUserId
+             });
+        }
         
         return true; // Success
       }
@@ -155,7 +158,7 @@ export const useMessages = (currentUserId, receiverId) => {
       setSending(false);
     }
     return false;
-  }, [currentUserId, receiverId, validateToken, scrollToBottom]);
+  }, [currentUserId, receiverId, validateToken, scrollToBottom, socket]);
 
   const deleteMessage = useCallback(async (messageId) => {
     const token = validateToken();
@@ -177,18 +180,21 @@ export const useMessages = (currentUserId, receiverId) => {
       }
 
       // Socket notify
-       messageManager.deleteMessage({
-         messageId,
-         senderId: currentUserId,
-         receiverId
-       });
+      if (socket) {
+          // Assuming event name is delete_message
+          socket.emit("delete_message", {
+             messageId,
+             senderId: currentUserId,
+             receiverId
+          });
+      }
        
        toast.success("Message deleted");
     } catch (err) {
       console.error(err);
       toast.error("Could not delete message");
     }
-  }, [currentUserId, receiverId, messages, validateToken]);
+  }, [currentUserId, receiverId, messages, validateToken, socket]);
 
    const markRead = useCallback(async (messageIds) => {
     if (!messageIds?.length) return;
@@ -208,21 +214,23 @@ export const useMessages = (currentUserId, receiverId) => {
              body: JSON.stringify({ messageIds })
         });
         
-        messageManager.markAsRead({
-            messageIds,
-            senderId: receiverId, // Sender of the msg is the receiver of the read receipt
-            receiverId: currentUserId // We are reading it
-        });
+        if (socket) {
+            // Using message_read to be consistent with listener
+            socket.emit("message_read", {
+                messageIds,
+                senderId: receiverId, 
+                receiverId: currentUserId 
+            });
+        }
     } catch(err) {
         console.error("Mark read error", err);
     }
-  }, [currentUserId, receiverId, validateToken]);
+  }, [currentUserId, receiverId, validateToken, socket]);
 
   // --- Real-time Updates ---
   useEffect(() => {
     if (!socket || !receiverId) return;
     
-    // Using messageManager listeners as per original code, or we can use socket.on directy
     const handleNewMessage = (data) => {
         const msg = data.message || data;
         if (!msg._id) return;
@@ -243,17 +251,17 @@ export const useMessages = (currentUserId, receiverId) => {
         }
     };
     
-    const unsub = messageManager.onNewMessage(handleNewMessage);
+    socket.on("new_message", handleNewMessage);
     
     // Join room for this specific pair
     const pairRoomId = [currentUserId, receiverId].sort().join("-");
-    messageManager.joinRoom(pairRoomId);
+    joinRoom(pairRoomId);
 
     return () => {
-        unsub();
-        messageManager.leaveRoom(pairRoomId);
+        socket.off("new_message", handleNewMessage);
+        leaveRoom(pairRoomId);
     };
-  }, [socket, receiverId, currentUserId, scrollToBottom, markRead]);
+  }, [socket, receiverId, currentUserId, scrollToBottom, markRead, joinRoom, leaveRoom]);
 
   // Initial load
   useEffect(() => {

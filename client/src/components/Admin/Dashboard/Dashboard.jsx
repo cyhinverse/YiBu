@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Users, FileText, MessageSquare, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
-import AdminService from "../../../services/adminService";
+
 
 const StatCard = ({ title, value, icon: Icon, color, trend }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -13,49 +13,32 @@ const StatCard = ({ title, value, icon: Icon, color, trend }) => (
         <Icon size={24} className="text-white" />
       </div>
     </div>
-    {trend && (
+    {trend !== undefined && (
       <div className="mt-4 flex items-center text-sm">
-        <span className={`flex items-center ${trend >= 0 ? "text-green-600" : "text-red-600"}`}>
-          {trend >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+        {trend > 0 ? (
+          <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
+        ) : trend < 0 ? (
+          <ArrowDown className="h-4 w-4 text-red-500 mr-1" />
+        ) : null}
+        <span className={trend > 0 ? "text-green-500" : trend < 0 ? "text-red-500" : "text-gray-500"}>
           {Math.abs(trend)}%
         </span>
-        <span className="text-gray-400 ml-2">vs last month</span>
+        <span className="ml-1 text-gray-500">so với tháng trước</span>
       </div>
     )}
   </div>
 );
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    users: { total: 0, new: 0 },
-    content: { posts: 0, comments: 0 },
-    revenue: { total: 0 }
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await AdminService.getDashboardStats("week");
-        if (response && response.code === 1) {
-          setStats(response.data);
-        }
-      } catch (error) {
-        console.error("Failed to load dashboard stats", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
-
-  if (loading) return <div className="p-4">Loading dashboard...</div>;
+  // Mock data for stats (would come from API)
+  const stats = {
+    users: { total: 10534, new: 156 },
+    content: { posts: 4521, comments: 12430 },
+    revenue: { total: 25400, growth: 15 }
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Tổng Quan Hệ Thống</h2>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Tổng Người Dùng" 

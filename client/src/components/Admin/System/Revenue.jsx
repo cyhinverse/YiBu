@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { DollarSign, TrendingUp, CreditCard } from "lucide-react";
-import AdminService from "../../../services/adminService";
+// import AdminService from "../../../services/adminService";
 import { toast } from "react-hot-toast";
 
 const RevenueCard = ({ title, amount, subtext, color }) => (

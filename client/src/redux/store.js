@@ -1,6 +1,8 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
+import adminReducer from "./slices/AdminSlice.js";
+import commentReducer from "./slices/CommentSlice.js";
 import authReducer from "./slices/AuthSlice.js";
 import userReducer from "./slices/UserSlice.js";
 import postReducer from "./slices/PostSlice.js";
@@ -16,8 +18,10 @@ const persistConfig = {
   storage,
   whitelist: [
     "auth",
+    "admin",
     "user",
     "post",
+    "comment",
     "like",
     "message",
     "savePost",
@@ -29,8 +33,10 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  admin: adminReducer,
   user: userReducer,
   post: postReducer,
+  comment: commentReducer,
   like: likeReducer,
   message: messageReducer,
   savePost: savePostReducer,

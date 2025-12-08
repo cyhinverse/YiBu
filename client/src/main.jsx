@@ -4,7 +4,7 @@ import "./globals.css";
 import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
-import { store, persistor } from "./utils/configureStore.js";
+import { store, persistor } from "./redux/store.js";
 import { PersistGate } from "redux-persist/integration/react";
 
 // Kiểm tra dark mode từ localStorage khi trang tải

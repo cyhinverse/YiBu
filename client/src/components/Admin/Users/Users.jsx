@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Search, Filter, MoreVertical, Eye, Ban, Trash2, CheckCircle } from "lucide-react";
-import AdminService from "../../../services/adminService";
+import { useDispatch } from "react-redux";
+import { getAllUsersAdmin, banUser } from "../../../redux/actions/adminActions";
 import { AdminTable, StatusBadge, AdminModal } from "../Shared";
 import { toast } from "react-hot-toast";
 
 const Users = () => {
+  const dispatch = useDispatch();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -20,7 +22,7 @@ const Users = () => {
   const fetchUsers = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const response = await AdminService.getAllUsers(page, 10, filter);
+      const response = await dispatch(getAllUsersAdmin({ page, limit: 10, filter })).unwrap();
       if (response && response.code === 1) {
         setUsers(response.data.users);
         setPagination({
@@ -33,7 +35,7 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [dispatch, filter]);
 
   useEffect(() => {
     // Debounce search
@@ -60,7 +62,12 @@ const Users = () => {
 
   const handleBanUser = async () => {
     try {
-      await AdminService.banUser(selectedUser._id, banReason, parseInt(banDuration));
+      await dispatch(banUser({ 
+        userId: selectedUser._id, 
+        reason: banReason, 
+        duration: parseInt(banDuration) 
+      })).unwrap();
+      
       toast.success("User banned successfully");
       setShowBanModal(false);
       fetchUsers(pagination.currentPage);

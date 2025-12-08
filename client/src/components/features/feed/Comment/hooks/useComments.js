@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import COMMENT from "../../../../services/commentService";
-import { useSelector } from "react-redux";
-import { getCommentManager } from "../../../../socket/commentManager";
+import { useDispatch, useSelector } from "react-redux";
+import { useSocketContext } from "../../../../../contexts/SocketContext";
+import {
+  createComment,
+  getCommentsByPost,
+  updateComment,
+  deleteComment,
+} from "../../../../../redux/actions/commentActions";
 
 export const useComments = (initialComments = [], postId = null) => {
   const [comments, setComments] = useState(initialComments);
@@ -11,8 +16,9 @@ export const useComments = (initialComments = [], postId = null) => {
   const [error, setError] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
 
-  const { current: currentUser } = useSelector((state) => state.user);
-  const commentManager = getCommentManager();
+  const dispatch = useDispatch();
+  const { socket } = useSocketContext();
+  const { user: currentUser } = useSelector((state) => state.auth);
 
   // Keep a ref to comments to access the latest value in socket handlers without triggering re-renders
   const commentsRef = useRef(comments);
@@ -147,33 +153,25 @@ export const useComments = (initialComments = [], postId = null) => {
 
   // Tham gia room của bài viết khi component được mount
   useEffect(() => {
-    if (postId) {
-      commentManager.joinPostRoom(postId);
+    if (postId && socket) {
+      socket.emit("join_post", postId);
 
       // Đăng ký lắng nghe các sự kiện comment
-      const unregisterNewComment = commentManager.registerNewCommentHandler(
-        handleRealTimeNewComment
-      );
-      const unregisterUpdateComment =
-        commentManager.registerUpdateCommentHandler(
-          handleRealTimeUpdateComment
-        );
-      const unregisterDeleteComment =
-        commentManager.registerDeleteCommentHandler(
-          handleRealTimeDeleteComment
-        );
+      socket.on("new_comment", handleRealTimeNewComment);
+      socket.on("update_comment", handleRealTimeUpdateComment);
+      socket.on("delete_comment", handleRealTimeDeleteComment);
 
       return () => {
         // Hủy đăng ký khi component unmount
-        unregisterNewComment();
-        unregisterUpdateComment();
-        unregisterDeleteComment();
-        commentManager.leavePostRoom(postId);
+        socket.off("new_comment", handleRealTimeNewComment);
+        socket.off("update_comment", handleRealTimeUpdateComment);
+        socket.off("delete_comment", handleRealTimeDeleteComment);
+        socket.emit("leave_post", postId);
       };
     }
   }, [
     postId,
-    commentManager,
+    socket,
     handleRealTimeNewComment,
     handleRealTimeUpdateComment,
     handleRealTimeDeleteComment,
@@ -184,10 +182,11 @@ export const useComments = (initialComments = [], postId = null) => {
 
     setLoading(true);
     try {
-      const response = await COMMENT.GET_COMMENTS_BY_POST(postId);
-      if (response?.code === 1) {
-        setComments(response.comments);
-        setCommentCount(response.commentCount || 0);
+      const result = await dispatch(getCommentsByPost(postId)).unwrap();
+      if (result && result.comments) {
+        setComments(result.comments);
+        // Assuming response might have count, otherwise calc
+        setCommentCount(result.comments.length || 0); 
       }
     } catch (err) {
       setError("Không thể tải bình luận. Vui lòng thử lại sau.");
@@ -195,7 +194,7 @@ export const useComments = (initialComments = [], postId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [postId]);
+  }, [postId, dispatch]);
 
   // Lấy comments khi có postId
   useEffect(() => {
@@ -208,24 +207,26 @@ export const useComments = (initialComments = [], postId = null) => {
     if (text.trim() === "") return;
 
     try {
-      const response = await COMMENT.CREATE_COMMENT({
-        content: text,
-        postId: postId,
-        parentComment: null,
-      });
+      const result = await dispatch(
+        createComment({
+          content: text,
+          postId: postId,
+          parentComment: null,
+        })
+      ).unwrap();
 
-      if (response?.code === 1) {
+      if (result) {
         // Cập nhật comments với comment mới từ server
         const newComment = {
-          ...response.comment,
+          ...result,
           replies: [],
         };
 
         // Không cần setComments ở đây vì sẽ nhận qua socket
         // setComments([newComment, ...comments]);
 
-        // Cập nhật count
-        setCommentCount(response.commentCount || 0);
+        // Cập nhật count locally if needed or rely on socket
+        // setCommentCount(prev => prev + 1);
 
         return newComment;
       }
@@ -252,22 +253,21 @@ export const useComments = (initialComments = [], postId = null) => {
         return await handleAddComment(text);
       }
 
-      const response = await COMMENT.CREATE_COMMENT({
-        content: text,
-        postId: postId,
-        parentComment: parentId,
-      });
+      const result = await dispatch(
+        createComment({
+          content: text,
+          postId: postId,
+          parentComment: parentId,
+        })
+      ).unwrap();
 
-      if (response?.code === 1) {
+      if (result) {
         // Không cần cập nhật UI ở đây vì sẽ nhận qua socket
 
         setReply(null);
         setReplyToChild(null);
 
-        // Cập nhật count
-        setCommentCount(response.commentCount || 0);
-
-        return response.comment;
+        return result;
       }
     } catch (err) {
       setError("Không thể trả lời bình luận. Vui lòng thử lại.");
@@ -282,15 +282,15 @@ export const useComments = (initialComments = [], postId = null) => {
     if (text.trim() === "") return false;
 
     try {
-      const response = await COMMENT.UPDATE_COMMENT(commentId, {
-        content: text,
-      });
+      await dispatch(
+        updateComment({
+          commentId,
+          data: { content: text },
+        })
+      ).unwrap();
 
-      if (response?.code === 1) {
-        // Không cần cập nhật UI ở đây vì sẽ nhận qua socket
-        return true;
-      }
-      return false;
+      // Không cần cập nhật UI ở đây vì sẽ nhận qua socket
+      return true;
     } catch (err) {
       setError("Không thể cập nhật bình luận. Vui lòng thử lại.");
       console.error("Lỗi khi cập nhật bình luận:", err);
@@ -310,17 +310,10 @@ export const useComments = (initialComments = [], postId = null) => {
     }
 
     try {
-      const response = await COMMENT.DELETE_COMMENT(commentId);
+      await dispatch(deleteComment(commentId)).unwrap();
 
-      if (response?.code === 1) {
-        // Không cần cập nhật UI ở đây vì sẽ nhận qua socket
-
-        // Cập nhật count
-        setCommentCount(response.commentCount || 0);
-
-        return true;
-      }
-      return false;
+      // Không cần cập nhật UI ở đây vì sẽ nhận qua socket
+      return true;
     } catch (err) {
       setError("Không thể xóa bình luận. Vui lòng thử lại.");
       console.error("Lỗi khi xóa bình luận:", err);

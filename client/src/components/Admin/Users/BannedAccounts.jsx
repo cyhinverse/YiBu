@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import AdminService from "../../../services/adminService";
+import { useDispatch } from "react-redux";
+import { getBannedAccounts, unbanUser } from "../../../redux/actions/adminActions";
 import { AdminTable, StatusBadge } from "../Shared";
 import { toast } from "react-hot-toast";
 
 const BannedAccounts = () => {
+    const dispatch = useDispatch();
     const [bannedUsers, setBannedUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -11,7 +13,7 @@ const BannedAccounts = () => {
     const fetchBanned = useCallback(async (page = 1) => {
         setLoading(true);
         try {
-            const response = await AdminService.getBannedAccounts(page, 10);
+            const response = await dispatch(getBannedAccounts({ page, limit: 10 })).unwrap();
             if (response && response.code === 1) {
                 setBannedUsers(response.data.users || []); // Assuming API structure
                 setPagination({
@@ -24,14 +26,14 @@ const BannedAccounts = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [dispatch]);
 
     useEffect(() => { fetchBanned(); }, [fetchBanned]);
 
     const handleUnban = async (userId) => {
         if(window.confirm("Unban this user?")) {
             try {
-                await AdminService.unbanUser(userId);
+                await dispatch(unbanUser(userId)).unwrap();
                 toast.success("User unbanned");
                 fetchBanned(pagination.currentPage);
             } catch (error) {

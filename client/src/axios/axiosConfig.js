@@ -1,5 +1,5 @@
 import axios from "axios";
-import Auth from "../services/authService";
+// import Auth from "../services/authService";
 
 const backendUrl = "http://localhost:9785";
 const api = axios.create({
@@ -31,8 +31,10 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshResponse = await Auth.refreshToken();
-        const newAccessToken = refreshResponse.accessToken;
+        const refreshResponse = await axios.post(`${backendUrl}/api/auth/refresh-token`, {}, { 
+          withCredentials: true 
+        });
+        const newAccessToken = refreshResponse.data.accessToken;
 
         localStorage.setItem("accessToken", newAccessToken);
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;

@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import io from "socket.io-client";
 import { toast } from "react-hot-toast";
-import { addMessage, markMessagesAsRead } from "../redux/slices/MessageSlice";
+import { addMessage } from "../redux/slices/MessageSlice";
+import { markAsRead as markMessagesAsRead } from "../redux/actions/messageActions";
 import { addNotification } from "../redux/slices/NotificationSlice";
-import { setPostLikeStatus } from "../redux/slices/LikeSlice";
+import { updateLikeLocal } from "../redux/slices/LikeSlice";
 
 const SOCKET_URL = "http://localhost:9785";
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -156,10 +157,7 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
 
   socket.on("message_read", (data) => {
     if (data?.messageId) {
-       dispatch(markMessagesAsRead({ 
-           messageIds: [data.messageId], 
-           conversationId: data.conversationId || data.roomId 
-       }));
+       dispatch(markMessagesAsRead([data.messageId]));
     }
   });
 
@@ -189,7 +187,7 @@ const registerNotificationHandlers = (socket, dispatch) => {
 const registerLikeHandlers = (socket, dispatch, currentUserId) => {
   socket.on("post:like:update", ({ postId, count, userId }) => {
     if (userId === currentUserId) return;
-    dispatch(setPostLikeStatus({ postId, count, isLiked: undefined }));
+    dispatch(updateLikeLocal({ postId, count, isLiked: undefined }));
   });
 };
 

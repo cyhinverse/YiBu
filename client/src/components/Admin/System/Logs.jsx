@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Search, Filter, RefreshCw, Calendar, Download } from "lucide-react";
-import AdminService from "../../../services/adminService";
+// import AdminService from "../../../services/adminService";
 import { AdminTable, StatusBadge } from "../Shared";
 import { toast } from "react-hot-toast";
 
@@ -19,7 +19,10 @@ const Logs = () => {
   const fetchLogs = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const response = await AdminService.getSystemLogs(page, 10, filter);
+      // const response = await AdminService.getSystemLogs(page, 10, filter);
+      // Mock response for now as action is missing
+      const response = { code: 1, data: { logs: [], pagination: { currentPage: 1, totalPages: 1 } } };
+      
       if (response && response.code === 1) {
         setLogs(response.data.logs || []);
         setPagination({

@@ -1,4 +1,3 @@
-import React from "react";
 import SideBarProfile from "./SideBarProfile";
 import { Outlet } from "react-router-dom";
 

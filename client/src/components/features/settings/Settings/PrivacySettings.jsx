@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
-import UserSettingsService from "../../../services/userSettingsService";
-import { toast } from "react-toastify";
+// import UserSettingsService from "../../../services/userSettingsService";
+import { toast } from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import {
+  getUserSettings,
+  updatePrivacySettings,
+  getBlockList,
+  blockUser,
+  unblockUser,
+  searchUsers
+} from "../../../../redux/actions/userActions";
 import {
   User,
   Shield,
@@ -12,6 +21,7 @@ import {
 } from "lucide-react";
 
 const PrivacySettings = () => {
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [blockListLoading, setBlockListLoading] = useState(false);
   const [privacyData, setPrivacyData] = useState({
@@ -34,14 +44,17 @@ const PrivacySettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await UserSettingsService.getAllSettings();
-      console.log("Received settings:", response);
+      const response = await dispatch(getUserSettings()).unwrap();
+      // console.log("Received settings:", response);
       if (
         response.success &&
         response.userSettings &&
         response.userSettings.privacy
       ) {
         setPrivacyData(response.userSettings.privacy);
+      } else if (response.data && response.data.userSettings && response.data.userSettings.privacy) {
+         // handle case where response might be wrapped
+          setPrivacyData(response.data.userSettings.privacy);
       }
     } catch (error) {
       console.error("Lỗi khi lấy cài đặt quyền riêng tư:", error);
@@ -54,10 +67,12 @@ const PrivacySettings = () => {
   const fetchBlockList = async () => {
     try {
       setBlockListLoading(true);
-      const response = await UserSettingsService.getBlockList();
-      console.log("Block list response:", response);
+      const response = await dispatch(getBlockList()).unwrap();
+      // console.log("Block list response:", response);
       if (response.success && response.blockList) {
         setBlockedUsers(response.blockList);
+      } else if (response.data && response.data.blockList) {
+          setBlockedUsers(response.data.blockList);
       }
     } catch (error) {
       console.error("Lỗi khi lấy danh sách chặn:", error);
@@ -80,19 +95,17 @@ const PrivacySettings = () => {
       setLoading(true);
       setActiveSection("saving");
 
-      console.log("Saving privacy settings:", privacyData);
-      const response = await UserSettingsService.updatePrivacySettings(
-        privacyData
-      );
+      // console.log("Saving privacy settings:", privacyData);
+      const response = await dispatch(updatePrivacySettings(privacyData)).unwrap();
 
-      if (response.success) {
+      if (response.success || response.code === 1) {
         toast.success("Cài đặt quyền riêng tư đã được lưu");
       } else {
         toast.error(response.message || "Lỗi khi lưu cài đặt");
       }
     } catch (error) {
       console.error("Lỗi khi cập nhật quyền riêng tư:", error);
-      toast.error("Lỗi khi lưu cài đặt");
+      toast.error(error.message || "Lỗi khi lưu cài đặt");
     } finally {
       setLoading(false);
       setActiveSection(null);
@@ -108,11 +121,47 @@ const PrivacySettings = () => {
 
     try {
       setBlockListLoading(true);
-      console.log("Gửi yêu cầu chặn user:", newBlockUser);
+      // console.log("Gửi yêu cầu chặn user:", newBlockUser);
+      let userIdToBlock = newBlockUser.trim();
 
-      const response = await UserSettingsService.blockUser(newBlockUser);
+      // Check if input is likely an ID (24 hex chars)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(userIdToBlock);
+      
+      if (!isObjectId) {
+          // It's likely a username or email, search for the user first
+          try {
+             const searchRes = await dispatch(searchUsers(userIdToBlock)).unwrap();
+             // Assuming searchUsers returns { data: [...] } or [...]
+             const users = Array.isArray(searchRes) ? searchRes : (searchRes.data || []);
+             
+             // Simple exact match logic or pick first
+             const foundUser = users.find(u => 
+                (u.email === userIdToBlock) || 
+                (u.username === userIdToBlock)
+             );
 
-      if (response.success) {
+             if (foundUser) {
+                 userIdToBlock = foundUser._id || foundUser.id;
+             } else if (users.length > 0) {
+                 // If no exact match but results exist, take the first one?
+                 // Or warn user to be specific.
+                 // For safety, let's pick the first one but maybe notify user?
+                //  toast("Tìm thấy nhiều kết quả, chọn kết quả đầu tiên: " + users[0].name);
+                 userIdToBlock = users[0]._id || users[0].id;
+             } else {
+                 toast.error("Không tìm thấy người dùng này.");
+                 setBlockListLoading(false);
+                 return;
+             }
+          } catch(searchErr) {
+              console.error("Lỗi khi tìm người dùng:", searchErr);
+              // Fallback to trying as ID if search fails? Unlikely to work but ok.
+          }
+      }
+
+      const response = await dispatch(blockUser({ blockedUserId: userIdToBlock })).unwrap();
+
+      if (response.success || response.code === 1) {
         toast.success("Đã chặn người dùng thành công");
         setNewBlockUser("");
         await fetchBlockList();
@@ -124,6 +173,7 @@ const PrivacySettings = () => {
 
       // Hiển thị thông báo lỗi chi tiết từ API nếu có
       const errorMessage =
+        error.message ||
         error.response?.data?.message ||
         "Không thể chặn người dùng này. Vui lòng kiểm tra lại thông tin.";
 
@@ -136,17 +186,23 @@ const PrivacySettings = () => {
   const handleUnblockUser = async (userId) => {
     try {
       setBlockListLoading(true);
-      const response = await UserSettingsService.unblockUser(userId);
+      const response = await dispatch(unblockUser(userId)).unwrap();
 
-      if (response.success) {
+      if (response && (response.data?.success || response === userId || typeof response === 'string')) { // unblockUser action returns userId on success
         toast.success("Đã bỏ chặn người dùng");
         await fetchBlockList();
       } else {
-        toast.error(response.message || "Không thể bỏ chặn người dùng này");
+         // handle case where action returns full response object
+         if(response.success || response.code === 1) {
+            toast.success("Đã bỏ chặn người dùng");
+            await fetchBlockList();
+         } else {
+             toast.error("Không thể bỏ chặn người dùng này");
+         }
       }
     } catch (error) {
       console.error("Lỗi khi bỏ chặn người dùng:", error);
-      toast.error("Không thể bỏ chặn người dùng này");
+      toast.error(error.message || "Không thể bỏ chặn người dùng này");
     } finally {
       setBlockListLoading(false);
     }

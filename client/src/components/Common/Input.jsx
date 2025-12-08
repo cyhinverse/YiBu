@@ -25,12 +25,12 @@ const Input = forwardRef(
               text-text-primary
               border transition-all duration-200
               rounded-xl
-              focus:ring-2 focus:ring-primary/50 focus:border-primary
+              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
               disabled:opacity-50 disabled:cursor-not-allowed
               placeholder:text-text-secondary/50
               ${icon ? "pl-10 pr-4" : "px-4"}
-              ${error ? "border-error focus:ring-error/50" : "border-transparent"}
-              py-2.5
+              ${error ? "border-error focus:border-error focus:ring-error" : "border-surface-highlight"}
+              py-3
             `}
             {...props}
           />

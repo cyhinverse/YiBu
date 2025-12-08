@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import UserSettingsService from "../../../services/userSettingsService";
+// import UserSettingsService from "../../../services/userSettingsService";
+import { getUserSettings, updateProfileSettings } from "../../../../redux/actions/userActions";
 import { useSelector, useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-import { login } from "../../../slices/AuthSlice";
+import { login } from "../../../../redux/actions/authActions";
 import {
   GenderBirthdayModal,
   InterestsModal,
@@ -64,7 +65,7 @@ const ProfileSettings = () => {
         };
 
         // Thử lấy từ API
-        const response = await UserSettingsService.getAllSettings();
+        const response = await dispatch(getUserSettings()).unwrap();
 
         // Dữ liệu từ API settings
         if (
@@ -74,6 +75,9 @@ const ProfileSettings = () => {
         ) {
           const profile = response.userSettings.profile;
           collectedData = { ...collectedData, ...profile };
+        } else if (response.data && response.data.userSettings && response.data.userSettings.profile) {
+           const profile = response.data.userSettings.profile;
+           collectedData = { ...collectedData, ...profile };
         }
 
         // Kiểm tra cấu trúc dữ liệu userData
@@ -143,26 +147,26 @@ const ProfileSettings = () => {
       } catch (error) {
         console.error("Lỗi khi lấy cài đặt:", error);
         toast.error("Không thể tải thông tin hồ sơ");
-
-        // Nếu có lỗi, vẫn set dữ liệu mẫu để UI không trống
-        const testData = {
-          name: "Nguyễn Văn A",
-          bio: "Đây là bio mẫu để test giao diện, bạn có thể thay đổi nội dung này.",
-          gender: "male",
-          birthday: "1990-01-01",
-          website: "https://example.com",
-          interests: "Lập trình, Đọc sách, Du lịch, Âm nhạc",
-          avatar: "https://via.placeholder.com/150",
-          avatarInfo: "",
-        };
-        setProfileData(testData);
+        
+        // Fallback data
+         const testData = {
+            name: "Nguyễn Văn A",
+            bio: "Đây là bio mẫu để test giao diện, bạn có thể thay đổi nội dung này.",
+            gender: "male",
+            birthday: "1990-01-01",
+            website: "https://example.com",
+            interests: "Lập trình, Đọc sách, Du lịch, Âm nhạc",
+            avatar: "https://via.placeholder.com/150",
+            avatarInfo: "",
+          };
+          setProfileData(testData);
       } finally {
         setInitialLoading(false);
       }
     };
 
     fetchSettings();
-  }, [userData]);
+  }, [userData, dispatch]);
 
   // Bắt đầu chỉnh sửa một phần với modal
   const handleEdit = (field) => {
@@ -263,21 +267,21 @@ const ProfileSettings = () => {
 
       console.log("Dữ liệu sẽ cập nhật (trực tiếp):", dataToUpdate);
 
-      const response = await UserSettingsService.updateProfileSettings(
-        dataToUpdate
-      );
+      const response = await dispatch(updateProfileSettings(dataToUpdate)).unwrap();
 
       console.log("Phản hồi từ server:", response);
 
-      if (response.success) {
+      if (response.success || response.code === 1) {
         // Cập nhật dữ liệu chính
         setProfileData((prev) => ({
           ...prev,
           ...dataToUpdate,
         }));
 
+        const responseUserData = response.userData || (response.data && response.data.userData);
+
         // Cập nhật Redux và localStorage nếu cần
-        if (response.userData) {
+        if (responseUserData) {
           // Lấy user hiện tại từ localStorage
           const storedUser = localStorage.getItem("user");
           if (storedUser) {
@@ -287,7 +291,7 @@ const ProfileSettings = () => {
               // Cập nhật tất cả dữ liệu với thông tin mới từ server
               const updatedUser = {
                 ...parsedUser,
-                ...response.userData,
+                ...responseUserData,
               };
 
               console.log("Cập nhật dữ liệu user:", updatedUser);
@@ -344,7 +348,7 @@ const ProfileSettings = () => {
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
       // Hiển thị toast lỗi
-      showErrorToast("Cập nhật thất bại. Vui lòng thử lại.");
+      showErrorToast(error.message || "Cập nhật thất bại. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }

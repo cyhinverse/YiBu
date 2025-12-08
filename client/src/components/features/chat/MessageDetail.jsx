@@ -2,25 +2,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { 
-  ArrowLeft, Phone, Video, Info, 
+  ArrowLeft, Info, 
   Send, Image as ImageIcon, Smile, 
-  Trash2, MoreVertical, CheckCheck, Loader2
+  Trash2, X, CheckCheck, Loader2
 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 
 import { useMessages } from "../../../hooks/useMessages";
 import { useSocketContext } from "../../../contexts/SocketContext";
-import { Modal } from "../../Common/Modal"; 
+import Modal from "../../Common/Modal"; 
 
 const MessageBubble = React.memo(({ message, isSentByCurrentUser, showAvatar, isConsecutiveMessage, receiverUser, onDelete, formatTime }) => {
-  const [showOptions, setShowOptions] = useState(false);
-
   return (
     <div 
-      className={`group flex mb-1 ${isSentByCurrentUser ? "justify-end" : "justify-start"} ${isConsecutiveMessage ? "mt-0.5" : "mt-3"}`}
-      onMouseLeave={() => setShowOptions(false)}
+      className={`group flex mb-1 w-full ${isSentByCurrentUser ? "justify-end" : "justify-start"} ${isConsecutiveMessage ? "mt-0.5" : "mt-2"}`}
     >
-      <div className={`flex max-w-[75%] ${isSentByCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
+      <div className={`flex max-w-[85%] sm:max-w-[70%] ${isSentByCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
         {/* Avatar */}
         {!isSentByCurrentUser && (
           <div className="w-8 h-8 mr-2 flex-shrink-0">
@@ -28,27 +25,27 @@ const MessageBubble = React.memo(({ message, isSentByCurrentUser, showAvatar, is
               <img
                 src={receiverUser?.avatar || "https://via.placeholder.com/40"}
                 alt={receiverUser?.username}
-                className="w-8 h-8 rounded-full object-cover border border-surface-highlight"
+                className="w-8 h-8 rounded-full object-cover shadow-sm"
               />
             ) : <div className="w-8" />}
           </div>
         )}
 
         {/* Bubble */}
-        <div className={`relative px-4 py-2 rounded-2xl text-sm shadow-sm transition-all
+        <div className={`relative px-4 py-2.5 text-[15px] shadow-sm transition-all break-words
           ${isSentByCurrentUser 
-            ? "bg-primary text-primary-foreground rounded-br-none" 
-            : "bg-surface text-text-primary border border-surface-highlight rounded-bl-none"}
+            ? "bg-primary text-white rounded-[20px] rounded-br-[4px]" 
+            : "bg-surface-highlight text-text-primary rounded-[20px] rounded-bl-[4px]"}
         `}>
           {message.media && (
-              <div className="mb-2 rounded-lg overflow-hidden">
+              <div className="mb-2 rounded-xl overflow-hidden shadow-sm">
                   <img src={message.media} alt="content" className="max-w-full h-auto object-cover" />
               </div>
           )}
           
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
           
-          <div className={`text-[10px] mt-1 flex items-center justify-end opacity-70 ${isSentByCurrentUser ? "text-primary-foreground" : "text-text-secondary"}`}>
+          <div className={`text-[10px] mt-1 flex items-center justify-end font-medium ${isSentByCurrentUser ? "text-white/70" : "text-text-secondary"}`}>
             {formatTime(message.createdAt)}
             {isSentByCurrentUser && message.isRead && (
                <CheckCheck size={12} className="ml-1" />
@@ -59,9 +56,10 @@ const MessageBubble = React.memo(({ message, isSentByCurrentUser, showAvatar, is
           {isSentByCurrentUser && (
              <button
                onClick={() => onDelete(message)}
-               className={`absolute top-1/2 -translate-y-1/2 -left-8 p-1.5 rounded-full bg-surface-highlight text-text-secondary hover:text-error hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity`}
+               className={`absolute top-1/2 -translate-y-1/2 -left-8 p-1.5 rounded-full text-text-secondary hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all`}
+               title="Delete"
              >
-               <Trash2 size={14} />
+               <Trash2 size={15} />
              </button>
           )}
         </div>
@@ -71,7 +69,6 @@ const MessageBubble = React.memo(({ message, isSentByCurrentUser, showAvatar, is
 });
 
 const MessageDetail = () => {
-    // ... (rest of the component logic)
     const { userId: receiverId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
@@ -154,44 +151,42 @@ const MessageDetail = () => {
         }
     };
 
-    if (!currentUserId) return <div className="flex h-full items-center justify-center">Please login</div>;
+    if (!currentUserId) return <div className="flex h-full items-center justify-center text-text-secondary">Please login to chat</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex flex-col h-full bg-surface relative">
             {/* --- HEADER --- */}
-            <div className="h-16 px-4 bg-surface border-b border-surface-highlight flex items-center justify-between shrink-0 z-10">
-                <div className="flex items-center">
-                    <button onClick={() => navigate("/messages")} className="mr-3 p-2 rounded-full hover:bg-surface-highlight md:hidden">
-                        <ArrowLeft size={20}/>
+            <div className="h-[60px] px-4 bg-surface/80 backdrop-blur-md border-b border-surface-highlight flex items-center justify-between shrink-0 sticky top-0 z-20">
+                <div className="flex items-center cursor-pointer" onClick={() => navigate(`/profile/${receiverId}`)}>
+                    <button onClick={(e) => {e.stopPropagation(); navigate("/messages")}} className="mr-2 p-2 rounded-full hover:bg-surface-highlight md:hidden transition-colors">
+                        <ArrowLeft size={20} className="text-text-primary"/>
                     </button>
                     <div className="relative">
                          <img 
                             src={receiverUser?.avatar || "https://via.placeholder.com/40"} 
-                            className="w-10 h-10 rounded-full border border-surface-highlight object-cover" 
+                            className="w-9 h-9 rounded-full border border-surface-highlight object-cover" 
                             alt="avatar"
                          />
-                         {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-surface" />}
+                         {isOnline && <div className="absolute -bottom-0 -right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-surface" />}
                     </div>
-                    <div className="ml-3">
-                        <h3 className="font-semibold text-text-primary">{receiverUser?.username || receiverUser?.name || "User"}</h3>
-                        <span className="text-xs text-text-secondary">{isOnline ? "Active now" : "Offline"}</span>
+                    <div className="ml-3 flex flex-col">
+                        <h3 className="font-bold text-text-primary text-[15px] leading-tight hover:underline">{receiverUser?.username || receiverUser?.name || "User"}</h3>
+                        <span className="text-[12px] text-text-secondary">{isOnline ? "Active now" : "Offline"}</span>
                     </div>
                 </div>
-                <div className="flex space-x-2 text-text-secondary">
-                    <Phone size={20} className="hover:text-primary cursor-pointer"/>
-                    <Video size={20} className="hover:text-primary cursor-pointer"/>
-                    <Info size={20} className="hover:text-primary cursor-pointer"/>
+                <div className="p-2 rounded-full hover:bg-surface-highlight transition-colors cursor-pointer text-text-secondary">
+                    <Info size={20}/>
                 </div>
             </div>
 
             {/* --- MESSAGES LIST --- */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar flex flex-col">
                 {hasMore && (
-                    <div className="flex justify-center mb-4">
+                    <div className="flex justify-center my-4">
                         <button 
                             onClick={loadMore} 
                             disabled={loading}
-                            className="text-xs text-primary font-medium hover:underline"
+                            className="text-xs text-primary font-medium hover:underline bg-surface-highlight/50 px-3 py-1 rounded-full"
                         >
                             {loading ? "Loading..." : "Load older messages"}
                         </button>
@@ -199,90 +194,94 @@ const MessageDetail = () => {
                 )}
                 
                 {loading && !messages.length && (
-                    <div className="flex justify-center mt-10"><Loader2 className="animate-spin text-primary"/></div>
+                    <div className="flex justify-center mt-20"><Loader2 className="animate-spin text-primary"/></div>
                 )}
 
                 {!loading && !messages.length && (
-                     <div className="flex flex-col items-center justify-center h-full text-text-secondary">
-                         <Send size={48} className="mb-2 opacity-20"/>
-                         <p>No messages yet</p>
+                     <div className="flex flex-col items-center justify-center flex-1 text-center px-8 mt-20">
+                         <div className="w-16 h-16 bg-surface-highlight rounded-full flex items-center justify-center mb-4">
+                            <Send size={24} className="text-primary ml-1"/>
+                         </div>
+                         <h3 className="text-xl font-bold text-text-primary mb-1">Start a conversation</h3>
+                         <p className="text-text-secondary text-sm">Say hello to {receiverUser?.name || receiverUser?.username}!</p>
                      </div>
                 )}
 
-                {messages.map((msg, i) => {
-                     const isMe = msg.sender === currentUserId || msg.sender?._id === currentUserId;
-                     const isConsecutive = i > 0 && messages[i-1].sender?._id === msg.sender?._id;
-                     
-                     return (
-                         <MessageBubble 
-                            key={msg._id || i}
-                            message={msg}
-                            isSentByCurrentUser={isMe}
-                            showAvatar={!isConsecutive}
-                            isConsecutiveMessage={isConsecutive}
-                            receiverUser={receiverUser}
-                            onDelete={setMsgToDelete}
-                            formatTime={formatTime}
-                         />
-                     );
-                })}
+                <div className="flex-1 flex flex-col justify-end min-h-0">
+                    {messages.map((msg, i) => {
+                         const isMe = msg.sender === currentUserId || msg.sender?._id === currentUserId;
+                         const isConsecutive = i > 0 && messages[i-1].sender?._id === msg.sender?._id;
+                         
+                         return (
+                             <MessageBubble 
+                                key={msg._id || i}
+                                message={msg}
+                                isSentByCurrentUser={isMe}
+                                showAvatar={!isConsecutive && !isMe}
+                                isConsecutiveMessage={isConsecutive}
+                                receiverUser={receiverUser}
+                                onDelete={setMsgToDelete}
+                                formatTime={formatTime}
+                             />
+                         );
+                    })}
+                </div>
                 <div ref={messagesEndRef} />
             </div>
 
             {/* --- INPUT AREA --- */}
-            <div className="p-3 bg-surface border-t border-surface-highlight shrink-0">
+            <div className="p-3 px-4 bg-surface border-t border-surface-highlight shrink-0">
                 {previewImage && (
-                    <div className="mb-2 relative inline-block">
-                        <img src={previewImage} className="h-20 rounded-lg border border-surface-highlight" alt="preview"/>
+                    <div className="mb-3 relative inline-block animate-in fade-in zoom-in duration-200">
+                        <img src={previewImage} className="h-40 rounded-2xl border border-surface-highlight shadow-md object-cover" alt="preview"/>
                         <button 
                             onClick={() => {setImageFile(null); setPreviewImage(null);}}
-                            className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-0.5"
+                            className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 hover:bg-black transition-colors"
                         >
-                            <Trash2 size={12}/>
+                            <X size={14}/>
                         </button>
                     </div>
                 )}
                 
-                <div className="flex items-end gap-2">
-                    <div className="flex-1 bg-surface-highlight rounded-2xl flex items-center px-2 py-1 relative">
-                        <button onClick={() => fileInputRef.current?.click()} className="p-2 text-text-secondary hover:text-primary">
-                           <ImageIcon size={20}/>
-                        </button>
-                        <input 
-                            ref={fileInputRef} hidden type="file" accept="image/*" onChange={handleImageSelect}
-                        />
-                        
-                        < textarea
-                            value={messageText}
-                            onChange={e => setMessageText(e.target.value)}
-                            onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder="Type a message..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 px-2 text-sm max-h-32 min-h-[40px] text-text-primary placeholder-text-secondary"
-                            rows={1}
-                        />
-
-                        <button onClick={() => setShowEmoji(!showEmoji)} className="p-2 text-text-secondary hover:text-warning">
-                            <Smile size={20} />
-                        </button>
-                        
-                        {showEmoji && (
-                            <div className="absolute bottom-12 right-0 z-50">
-                                <EmojiPicker onEmojiClick={(e) => {
-                                    setMessageText(prev => prev + e.emoji); 
-                                    setShowEmoji(false);
-                                }} />
-                            </div>
-                        )}
-                    </div>
+                <div className="flex items-center gap-2 bg-surface-highlight rounded-3xl px-1 py-1 pr-2 shadow-sm border border-transparent focus-within:border-primary/20 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-full text-primary hover:bg-surface-highlight transition-colors flex items-center justify-center">
+                       <ImageIcon size={20}/>
+                    </button>
+                    <input 
+                        ref={fileInputRef} hidden type="file" accept="image/*" onChange={handleImageSelect}
+                    />
                     
+                     <button onClick={() => setShowEmoji(!showEmoji)} className="p-2.5 rounded-full text-primary hover:bg-surface-highlight transition-colors flex items-center justify-center relative">
+                        <Smile size={20} />
+                    </button>
+
+                    {showEmoji && (
+                        <div className="absolute bottom-[70px] left-4 z-50 shadow-2xl rounded-2xl overflow-hidden border border-surface-highlight">
+                            <EmojiPicker onEmojiClick={(e) => {
+                                setMessageText(prev => prev + e.emoji); 
+                                setShowEmoji(false);
+                            }} />
+                        </div>
+                    )}
+                    
+                    <input
+                        value={messageText}
+                        onChange={e => setMessageText(e.target.value)}
+                        onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                        placeholder="Start a new message"
+                        className="flex-1 bg-transparent border-none focus:ring-0 py-2.5 px-2 text-[15px] text-text-primary placeholder:text-text-secondary outline-none min-w-0"
+                    />
+
                     <button 
                         onClick={handleSend}
                         disabled={sending || (!messageText.trim() && !imageFile)}
-                        className={`p-3 rounded-full flex items-center justify-center transition-colors 
-                            ${sending || (!messageText.trim() && !imageFile) ? "bg-surface-highlight text-text-secondary" : "bg-primary text-primary-foreground hover:bg-primary/90"}
+                        className={`p-2 rounded-full flex items-center justify-center transition-all duration-200
+                            ${sending || (!messageText.trim() && !imageFile) 
+                                ? "opacity-50 cursor-not-allowed text-primary" 
+                                : "text-primary hover:bg-primary/10"}
                         `}
                     >
-                        {sending ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}
+                        {sending ? <Loader2 size={20} className="animate-spin"/> : <Send size={20} className={(!messageText.trim() && !imageFile) ? "ml-0" : "ml-0.5" }/>}
                     </button>
                 </div>
             </div>
@@ -294,11 +293,11 @@ const MessageDetail = () => {
                 title="Delete Message"
                 size="sm"
             >
-                <div className="text-center">
-                    <p className="text-text-secondary mb-6">Are you sure you want to delete this message? This cannot be undone.</p>
-                    <div className="flex justify-end gap-3">
-                         <button onClick={() => setMsgToDelete(null)} className="px-4 py-2 rounded-lg bg-surface-highlight text-text-primary hover:bg-gray-200">Cancel</button>
-                         <button onClick={confirmDelete} className="px-4 py-2 rounded-lg bg-error text-white hover:bg-red-700">Delete</button>
+                <div className="p-4 pt-0 text-center">
+                    <p className="text-text-secondary mb-6 text-sm">Are you sure you want to delete this message? This cannot be undone.</p>
+                    <div className="flex flex-col gap-3">
+                         <button onClick={confirmDelete} className="w-full py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold transition-colors">Delete</button>
+                         <button onClick={() => setMsgToDelete(null)} className="w-full py-2.5 rounded-full border border-surface-highlight hover:bg-surface-highlight text-text-primary font-medium transition-colors">Cancel</button>
                     </div>
                 </div>
             </Modal>

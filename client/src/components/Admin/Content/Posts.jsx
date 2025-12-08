@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Search, Trash2, Eye, CheckCircle } from "lucide-react";
-import AdminService from "../../../services/adminService";
+import { useDispatch } from "react-redux";
+import { getAllPostsAdmin, deletePostAdmin } from "../../../redux/actions/adminActions";
 import { AdminTable, StatusBadge, AdminModal } from "../Shared";
 import { toast } from "react-hot-toast";
 
 const Posts = () => {
+  const dispatch = useDispatch();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -13,7 +15,7 @@ const Posts = () => {
   const fetchPosts = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const response = await AdminService.getAllPosts(page, 10, filter);
+      const response = await dispatch(getAllPostsAdmin({ page, limit: 10, filter })).unwrap();
       if (response && response.code === 1) {
         setPosts(response.data.posts);
         setPagination({
@@ -26,7 +28,7 @@ const Posts = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [dispatch, filter]);
 
   useEffect(() => {
     fetchPosts();
@@ -35,7 +37,7 @@ const Posts = () => {
   const handleDelete = async (postId) => {
       if(window.confirm("Delete this post?")) {
         try {
-            await AdminService.deletePost(postId, "Admin deletion");
+            await dispatch(deletePostAdmin({ postId, reason: "Admin deletion" })).unwrap();
             toast.success("Post deleted");
             fetchPosts(pagination.currentPage);
         } catch (error) {

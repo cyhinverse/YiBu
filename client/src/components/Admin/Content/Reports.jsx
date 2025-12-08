@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
-import AdminService from "../../../services/adminService";
+import { useDispatch } from "react-redux";
+import { getAllReportsAdmin, resolveReport, dismissReport } from "../../../redux/actions/adminActions";
 import { AdminTable, StatusBadge } from "../Shared";
 import { toast } from "react-hot-toast";
 
 const Reports = () => {
+    const dispatch = useDispatch();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -12,7 +14,7 @@ const Reports = () => {
     const fetchReports = useCallback(async (page = 1) => {
         setLoading(true);
         try {
-            const response = await AdminService.getAllReports(page, 10);
+            const response = await dispatch(getAllReportsAdmin({ page, limit: 10 })).unwrap();
             if (response && response.code === 1) {
                 setReports(response.data.reports);
             }
@@ -21,16 +23,16 @@ const Reports = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [dispatch]);
 
     useEffect(() => { fetchReports(); }, [fetchReports]);
 
     const handleAction = async (id, action) => {
         try {
             if (action === 'resolve') {
-                await AdminService.resolveReport(id, 'resolved', 'Admin resolved');
+                await dispatch(resolveReport({ reportId: id, action: 'resolved', notes: 'Admin resolved' })).unwrap();
             } else {
-                await AdminService.dismissReport(id, 'Dismissed');
+                await dispatch(dismissReport({ reportId: id, reason: 'Dismissed' })).unwrap();
             }
             toast.success("Report updated");
             fetchReports(pagination.currentPage);

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Trash2 } from "lucide-react";
-import AdminService from "../../../services/adminService";
+import { useDispatch } from "react-redux";
+import { getAllCommentsAdmin, deleteCommentAdmin } from "../../../redux/actions/adminActions";
 import { AdminTable } from "../Shared";
 import { toast } from "react-hot-toast";
 
 const Comments = () => {
+    const dispatch = useDispatch();
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -12,7 +14,7 @@ const Comments = () => {
     const fetchComments = useCallback(async (page = 1) => {
         setLoading(true);
         try {
-            const response = await AdminService.getAllComments(page, 10);
+            const response = await dispatch(getAllCommentsAdmin({ page, limit: 10 })).unwrap();
             if (response && response.code === 1) {
                 setComments(response.data.comments);
                 setPagination({
@@ -25,7 +27,7 @@ const Comments = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [dispatch]);
 
     useEffect(() => {
         fetchComments();
@@ -34,7 +36,7 @@ const Comments = () => {
     const handleDelete = async (id) => {
         if(window.confirm("Delete this comment?")) {
             try {
-                await AdminService.deleteComment(id, "Admin Action");
+                await dispatch(deleteCommentAdmin({ commentId: id, reason: "Admin Action" })).unwrap();
                 toast.success("Comment deleted");
                 fetchComments(pagination.currentPage);
             } catch (error) {

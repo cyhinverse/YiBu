@@ -1,9 +1,8 @@
-import React, { useEffect, Fragment } from "react";
+import { useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { IoClose } from "react-icons/io5";
-import { Button } from "./Button"; // Assuming Button is in the same directory
 
-const Modal = ({
+export default function Modal({
   isOpen,
   onClose,
   title,
@@ -11,7 +10,7 @@ const Modal = ({
   footer,
   size = "md", // sm, md, lg, xl, full
   closeOnOverlayClick = true,
-}) => {
+}) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -85,4 +84,3 @@ const Modal = ({
   return createPortal(modalContent, document.body);
 };
 
-export { Modal };

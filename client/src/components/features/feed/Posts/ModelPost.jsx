@@ -1,9 +1,9 @@
 import { AudioLines, Image, MapPin, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import POST from "../../../services/postService";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { addPost } from "../../../slices/PostSlice";
+// import { addPost } from "../../../../redux/slices/PostSlice";
+import { createPost } from "../../../../redux/actions/postActions";
 
 const ModelPost = ({ closeModal }) => {
   const [mediaPreviews, setMediaPreviews] = useState([]);
@@ -52,12 +52,12 @@ const ModelPost = ({ closeModal }) => {
         formData.append("media", file);
       });
 
-      const res = await POST.CREATE_POST(formData);
+      const res = await dispatch(createPost(formData)).unwrap();
       console.log(`Check data res:::`, res);
 
       if (res.code === 1) {
         toast.success(res.message, { id: toastId });
-        dispatch(addPost(res.post));
+        // dispatch(addPost(res.post)); // Handled by createPost.fulfilled extraReducer
 
         // Reset form
         setCaption("");
@@ -68,7 +68,7 @@ const ModelPost = ({ closeModal }) => {
       }
     } catch (error) {
       console.error("Error creating post:", error);
-      toast.error("Lỗi khi đăng bài!");
+      toast.error(error.message || error || "Lỗi khi đăng bài!");
     } finally {
       setIsLoading(false);
     }

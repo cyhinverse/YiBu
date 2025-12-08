@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
-import UserSettingsService from "../../../../services/userSettingsService";
+import { toast } from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { updateProfileSettings } from "../../../../../redux/actions/userActions";
 
 const AvatarModal = ({ isOpen, closeModal, currentAvatar, onAvatarChange }) => {
+  const dispatch = useDispatch();
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(currentAvatar || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,17 +98,27 @@ const AvatarModal = ({ isOpen, closeModal, currentAvatar, onAvatarChange }) => {
       }
 
       console.log("Gửi request cập nhật ảnh đại diện");
-      toast.info("Đang tải ảnh lên Cloudinary...");
-      const response = await UserSettingsService.updateProfileSettings(
-        formData
-      );
+      toast.loading("Đang tải ảnh lên Cloudinary...", { id: "avatarUpload" });
+      
+      const response = await dispatch(updateProfileSettings(formData)).unwrap();
       console.log("Kết quả cập nhật avatar:", response);
 
-      if (response.success) {
-        toast.success("Cập nhật avatar thành công!");
+      if (response.success || response.code === 1) {
+        toast.success("Cập nhật avatar thành công!", { id: "avatarUpload" });
+        
+        // Find avatar url in response structure
+        let newAvatarUrl = null;
         if (response.userData && response.userData.avatar) {
-          console.log("Avatar mới:", response.userData.avatar);
-          onAvatarChange(response.userData.avatar);
+          newAvatarUrl = response.userData.avatar;
+        } else if (response.data && response.data.userData && response.data.userData.avatar) {
+          newAvatarUrl = response.data.userData.avatar;
+        } else if (response.data && response.data.avatar) {
+           newAvatarUrl = response.data.avatar; 
+        }
+
+        if (newAvatarUrl) {
+          console.log("Avatar mới:", newAvatarUrl);
+          onAvatarChange(newAvatarUrl);
         } else {
           console.warn("Không có URL avatar mới trong response");
           // Có thể sử dụng URL từ previewUrl nếu server không trả về
@@ -114,11 +126,11 @@ const AvatarModal = ({ isOpen, closeModal, currentAvatar, onAvatarChange }) => {
         }
         closeModal();
       } else {
-        toast.error(response.message || "Cập nhật avatar thất bại!");
+        toast.error(response.message || "Cập nhật avatar thất bại!", { id: "avatarUpload" });
       }
     } catch (error) {
       console.error("Lỗi khi cập nhật avatar:", error);
-      toast.error("Đã xảy ra lỗi khi cập nhật avatar!");
+      toast.error(error.message || "Đã xảy ra lỗi khi cập nhật avatar!", { id: "avatarUpload" });
     } finally {
       setIsSubmitting(false);
     }

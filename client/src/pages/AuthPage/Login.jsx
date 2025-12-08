@@ -2,10 +2,9 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { useDispatch } from "react-redux";
-import Auth from "../../services/authService";
 import toast from "react-hot-toast";
-import { login } from "../../redux/slices/AuthSlice";
-import { Button, Input, Card } from "../../components/Common";
+import { login } from "../../redux/actions/authActions";
+import { Button, Input } from "../../components/Common";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -27,78 +26,70 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await Auth.login(data);
-      if (res.code === 1) {
-        toast.success("Login successfully!");
-        localStorage.setItem("accessToken", res.accessToken);
-
-        if (res.user) {
-          console.log("Dữ liệu user sau khi login:", res.user);
-          localStorage.setItem("user", JSON.stringify(res.user));
-          dispatch(login(res.user));
-
-          // Kiểm tra nếu người dùng là admin thì chuyển hướng đến trang admin
-          const isAdmin = res.user.isAdmin || res.user.role === "admin";
-          if (isAdmin) {
-            console.log("User is admin, redirecting to admin dashboard");
-            navigator("/admin");
-          } else {
-            // Nếu không phải admin, chuyển hướng đến trang chủ
-            navigator("/");
-          }
+      const res = await dispatch(login(data)).unwrap();
+      
+      if (res && (res.code === 1 || res.accessToken)) {
+        toast.success("Welcome back!");
+        
+        const user = res.user || res;
+        
+        const isAdmin = user.isAdmin || user.role === "admin";
+        if (isAdmin) {
+          navigator("/admin");
         } else {
-          // Nếu không có dữ liệu người dùng, chuyển hướng đến trang chủ
           navigator("/");
         }
       }
     } catch (error) {
       console.log("Error::", error);
-      toast.error("Login failed! Please try again.");
+      toast.error(error?.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent p-4">
-      <Card className="w-full max-w-4xl flex flex-col md:flex-row !p-0 overflow-hidden shadow-3xl bg-white/90 dark:bg-black/90 backdrop-blur-md border-0">
-        
-        {/* Left Side - Brand / Info */}
-        <div className="w-full md:w-1/2 bg-gradient-to-br from-primary/10 to-secondary/10 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-slate-900/[0.04] bg-[bottom_1px_center] dark:bg-grid-slate-400/[0.05] [mask-image:linear-gradient(0deg,transparent,black)]"></div>
-          
-          <h1 className="text-6xl font-black font-heading text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary animate-fade-in-up mb-6 relative z-10">
-            Yibu
-          </h1>
-          <p className="text-text-secondary text-lg relative z-10 animate-fade-in delay-100">
-            Connect, share, and inspire in a vibrant community designed for you.
-          </p>
-        </div>
+    <div className="min-h-screen flex bg-surface">
+      {/* Left Side - Brand Panel (Hidden on automated mobile test, visible on desktop) */}
+      <div className="hidden lg:flex w-1/2 bg-surface-highlight relative items-center justify-center overflow-hidden">
+         <div className="absolute inset-0 bg-primary/5"></div>
+         <div className="relative z-10 text-center p-12">
+            <h1 className="text-7xl font-black font-heading tracking-tighter text-text-primary mb-4">
+              Yibu.
+            </h1>
+            <p className="text-xl text-text-secondary font-light max-w-md mx-auto">
+              Simplicity in connection.
+            </p>
+         </div>
+         {/* Minimal Abstract Shape */}
+         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+      </div>
 
-        {/* Right Side - Form */}
-        <div className="w-full md:w-1/2 p-8 md:p-12">
-          <div className="space-y-2 mb-8 text-center md:text-left">
-            <h2 className="text-3xl font-bold font-heading text-text-primary animate-fade-in">
-              Welcome Back
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-surface">
+        <div className="w-full max-w-md space-y-10">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold font-heading text-text-primary tracking-tight">
+              Sign in
             </h2>
-            <p className="text-text-secondary animate-fade-in delay-75">
-              Please sign in to continue
+            <p className="text-text-secondary">
+              Welcome back to Yibu
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handSubmit}>
-            <div className="space-y-4">
+          <form className="space-y-8" onSubmit={handSubmit}>
+            <div className="space-y-6">
               <Input
-                label="Email Address"
+                label="Email"
                 type="email"
                 name="email"
-                placeholder="Enter your email"
+                placeholder="name@example.com"
                 value={data.email}
                 onChange={handleOnchangeValue}
-                className="animate-slideUp delay-100"
+                className="bg-transparent border-surface-highlight focus:border-primary rounded-lg"
               />
               
-              <div>
+              <div className="space-y-2">
                 <Input
                   label="Password"
                   type="password"
@@ -106,12 +97,12 @@ const Login = () => {
                   placeholder="Enter your password"
                   value={data.password}
                   onChange={handleOnchangeValue}
-                  className="animate-slideUp delay-150"
+                  className="bg-transparent border-surface-highlight focus:border-primary rounded-lg"
                 />
-                <div className="flex justify-end mt-2 animate-slideUp delay-200">
+                <div className="flex justify-end">
                    <Link
                     to="/auth/forgot-password"
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                    className="text-sm font-medium text-text-secondary hover:text-primary transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -119,47 +110,46 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 animate-slideUp delay-300">
+            <div className="space-y-4">
               <Button
                 type="submit"
-                variant="gradient"
-                className="w-full py-3 shadow-xl shadow-primary/20"
+                variant="primary"
+                size="lg"
+                className="w-full py-4 text-sm font-semibold tracking-wide shadow-none hover:shadow-lg transition-all rounded-xl"
                 isLoading={isLoading}
               >
-                Sign in
+                Sign In
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-text-secondary/20"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-surface text-text-secondary">Or provided with</span>
-                </div>
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-surface-highlight"></div>
+                <span className="flex-shrink-0 mx-4 text-xs text-text-secondary uppercase tracking-widest">Or</span>
+                <div className="flex-grow border-t border-surface-highlight"></div>
               </div>
 
               <Button
                 type="button"
                 variant="outline"
-                className="w-full py-3 border-surface-highlight bg-surface hover:bg-surface-highlight !text-text-primary"
-                startIcon={<FcGoogle className="w-5 h-5" />}
+                size="lg"
+                className="w-full py-4 border-surface-highlight hover:bg-surface-highlight text-text-primary font-medium rounded-xl flex items-center justify-center gap-2"
               >
-                Continue with Google
+                <FcGoogle className="w-5 h-5" />
+                <span>Google</span>
               </Button>
             </div>
           </form>
 
-          <p className="mt-8 text-center text-sm text-text-secondary animate-fade-in delay-500">
-            Don't have an account?{" "}
+          <p className="text-center text-sm text-text-secondary">
+            No account yet?{" "}
             <Link
               to="/auth/register"
-              className="font-bold text-primary hover:text-primary/80 transition-colors"
+              className="font-semibold text-primary hover:text-primary/80 transition-colors"
             >
-              Create account
+              Sign up
             </Link>
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

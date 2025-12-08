@@ -1,68 +1,82 @@
-import React from "react";
+import  { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button, Input } from "../../components/Common";
 
-const ForgotPassword = () => {
+
+export default function ForgotPassword() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+        setIsLoading(false);
+        navigate("/auth/verify-code"); 
+    }, 1000);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
-      <div className="bg-white/95 backdrop-blur-sm w-full max-w-4xl p-8 rounded-2xl shadow-2xl flex flex-col md:flex-row animate-fadeIn hover:shadow-3xl transition-shadow duration-300">
-        <div className="w-full md:w-1/2 flex items-center justify-center mb-8 md:mb-0">
-          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 animate-slideLeft">
-            Yibu
-          </h1>
-        </div>
-        <div className="w-full md:w-1/2 space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 animate-bounce-in">
-              Forgot Password
+    <div className="min-h-screen flex bg-surface">
+      {/* Left Side - Brand Panel */}
+      <div className="hidden lg:flex w-1/2 bg-surface-highlight relative items-center justify-center overflow-hidden">
+         <div className="absolute inset-0 bg-primary/5"></div>
+         <div className="relative z-10 text-center p-12">
+            <h1 className="text-7xl font-black font-heading tracking-tighter text-text-primary mb-4">
+              Recover.
             </h1>
-            <p className="text-gray-500 animate-slideUp">
+            <p className="text-xl text-text-secondary font-light max-w-md mx-auto">
+              Don't worry, we'll help you get back in.
+            </p>
+         </div>
+         <div className="absolute bottom-24 right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Right Side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-surface">
+        <div className="w-full max-w-md space-y-10">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold font-heading text-text-primary tracking-tight">
+              Forgot Password?
+            </h2>
+            <p className="text-text-secondary">
               Enter your email to reset your password
             </p>
           </div>
 
-          <form className="space-y-6">
-            <div className="space-y-4">
-              <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  className="mt-1 w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:scale-[1.02] hover:shadow-md outline-none"
-                  placeholder="Enter your email"
-                />
-              </div>
-            </div>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-transparent border-surface-highlight focus:border-primary rounded-lg"
+            />
 
-            <button
-              onClick={() => navigate("/auth/verify-code")}
-              type="submit"
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-95"
-            >
-              Reset Password
-            </button>
-          </form>
+            <div className="space-y-4 pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full py-4 text-sm font-semibold tracking-wide shadow-none hover:shadow-lg transition-all rounded-xl"
+                isLoading={isLoading}
+              >
+                Reset Password
+              </Button>
 
-          <div className="text-center">
-            <p className="text-gray-600 transform transition duration-200 hover:translate-y-[-2px]">
-              Remembered your password?{" "}
               <Link
                 to="/auth/login"
-                className="text-purple-600 hover:text-purple-700 font-medium transition-colors duration-200"
+                className="flex items-center justify-center w-full py-4 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
               >
-                Sign in
+                Back to Sign In
               </Link>
-            </p>
-          </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
 };
 
-export default ForgotPassword;

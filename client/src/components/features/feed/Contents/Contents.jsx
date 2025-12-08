@@ -1,122 +1,88 @@
-import React, { useRef, useCallback, useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { CreatePost } from "../Posts";
-import { TrendingTopics } from "../TrendingTopics";
-import TopUser from "../../user/TopUser/TopUser";
+import React, { useEffect, useRef, useCallback } from "react";
+import CreatePost from "../Posts/CreatePost";
 import PostLists from "../Posts/PostLists";
-import POST from "../../../../services/postService";
-import {
-  getAllPost,
-  setLoading,
-  resetPagination,
-} from "../../../../redux/slices/PostSlice";
-import { Card } from "../../../Common";
-
+import TrendingTopics from "../TrendingTopics/TrendingTopics";
+import TopUser from "../../user/TopUser/TopUser";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllPost } from "../../../../redux/actions/postActions";
+import { Search } from "lucide-react";
 
 const Contents = () => {
-  const trendingTopics = [
-    { name: "#ChillCuốiTuần", posts: "12.4K" },
-    { name: "#MondayMood", posts: "8.1K" },
-    { name: "#FoodieLife", posts: "5.9K" },
-    { name: "#CodeNewbie", posts: "3.4K" },
-    { name: "#Travel2025", posts: "10.7K" },
-  ];
-  const contentPost = [
-    { content: "Nguoi anh em o dong nai bat duoc ca sau" },
-    { content: "Mot vu no lon tai cac nha may hat nhan cua my" },
-    { content: "Chi phu cac quoc gia dang yeu cau trong cay" },
-    { content: "Di em gai duoi que" },
-  ];
-
   const dispatch = useDispatch();
-  const { pagination = {}, loading } = useSelector((state) => state.post || {});
-  const observer = useRef();
-  const contentRef = useRef();
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { loading, pagination } = useSelector((state) => state.post);
+  const contentRef = useRef(null);
 
-  const fetchPosts = async (page = 1) => {
-    try {
-      dispatch(setLoading(true));
-      if (page > 1) {
-        setIsLoadingMore(true);
-      }
+  const trendingTopics = [
+    { name: "ChillCuốiTuần", count: "12.4K" },
+    { name: "MondayMood", count: "8.1K" },
+    { name: "FoodieLife", count: "5.9K" },
+    { name: "CodeNewbie", count: "3.4K" },
+    { name: "Travel2025", count: "10.7K" },
+  ];
 
-      if (page > 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+  /* Mock data or selector for TopUser content if needed, previously passed as prop */
+  const contentPost = []; 
 
-      const response = await POST.GET_ALL_USER(page, pagination?.limit || 10);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
 
-      if (response && response.code === 1) {
-        const posts = response.posts || [];
-        const paginationData = response.pagination || {
-          page,
-          limit: pagination?.limit || 10,
-          totalPosts: 0,
-          totalPages: 0,
-          hasMore: false,
-        };
-
-        dispatch(
-          getAllPost({
-            posts,
-            pagination: paginationData,
-          })
-        );
-      } else {
-        console.error("Invalid response format:", response);
-      }
-
-      dispatch(setLoading(false));
-      setIsLoadingMore(false);
+  const fetchPosts = useCallback(
+    async (page) => {
+      try {
+        const response = await dispatch(getAllPost({ page, limit: pagination?.limit || 10 })).unwrap();
+        
+        if (response && response.code === 1) {
+            // response handled
+        } else {
+            console.error("Invalid response format:", response);
+        }
     } catch (error) {
-      console.error("Error fetching posts:", error);
-      dispatch(setLoading(false));
-      setIsLoadingMore(false);
+      console.error("Failed to fetch posts:", error);
     }
-  };
-
-  const lastPostElementRef = useCallback(
-    (node) => {
-      if (loading || isLoadingMore) return;
-
-      if (observer.current) observer.current.disconnect();
-
-      observer.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && pagination?.hasMore) {
-            console.log("Tải thêm bài viết...", pagination.page + 1);
-            fetchPosts((pagination?.page || 0) + 1);
-          }
-        },
-        { threshold: 0.1 }
-      );
-
-      if (node) observer.current.observe(node);
-    },
-    [loading, isLoadingMore, pagination?.hasMore, pagination?.page]
-  );
-
-  useEffect(() => {
-    return () => {
-      dispatch(resetPagination());
-    };
-  }, []);
+  }, [dispatch, pagination?.limit]);
 
   useEffect(() => {
     fetchPosts(1);
-  }, []);
-  return (
-    <div className="w-full max-w-[1600px] mx-auto h-[calc(100vh-80px)] mt-5 flex gap-6 px-4">
-      {/* Left Sidebar */}
-      <div className="hidden md:block md:w-1/4 h-full">
-        <Card className="h-full !p-4 overflow-hidden">
-          <TopUser content={contentPost} />
-        </Card>
-      </div>
+  }, [fetchPosts]);
 
-      {/* Main Feed */}
-      <Card className="w-full md:w-1/2 h-full flex flex-col !p-0 border-surface-highlight bg-surface/80 backdrop-blur-md overflow-hidden">
+  const handleScroll = useCallback(async () => {
+    if (loading || isLoadingMore || !pagination?.hasMore) return;
+
+    if (contentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        setIsLoadingMore(true);
+        await fetchPosts(pagination.page + 1);
+        setIsLoadingMore(false);
+      }
+    }
+  }, [loading, isLoadingMore, pagination, fetchPosts]);
+
+  useEffect(() => {
+    const ref = contentRef.current;
+    if (ref) {
+      ref.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      if (ref) {
+        ref.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [handleScroll]);
+
+  const lastPostElementRef = useCallback(() => {
+     // logic if needed for intersection observer instead of scroll event
+  }, []);
+
+  return (
+    <div className="w-full flex justify-center min-h-screen">
+      
+      {/* Main Feed (Center) */}
+      <div className="w-full flex-1 flex-shrink-0 h-screen flex flex-col bg-surface  shadow-none">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md  px-4 py-3 cursor-pointer" onClick={() => contentRef.current?.scrollTo({top: 0, behavior: 'smooth'})}>
+              <h2 className="text-xl font-bold text-text-primary">Home</h2>
+          </div>
+
         <div
           ref={contentRef}
           className="w-full h-full overflow-y-scroll custom-scrollbar"
@@ -129,21 +95,45 @@ const Contents = () => {
           </div>
 
           {(loading || isLoadingMore) && (
-            <div className="flex justify-center items-center py-4 bg-surface/90 sticky bottom-0 left-0 right-0 backdrop-blur-sm">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
-              <span className="ml-2 text-sm font-medium text-text-secondary">
-                {pagination?.page > 1 ? "Loading more..." : "Loading..."}
-              </span>
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 "></div>
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
-      {/* Right Sidebar */}
-      <div className="hidden md:block md:w-1/4 h-full">
-        <Card className="h-full !p-4 overflow-hidden">
-           <TrendingTopics trendingTopics={trendingTopics} />
-        </Card>
+      {/* Right Sidebar (Search + Trending + Suggested) */}
+      <div className="hidden lg:flex flex-col w-[350px] pl-8 py-4 h-screen gap-6 sticky top-0">
+         
+         {/* Search Input */}
+         <div className="w-full bg-surface-highlight/50 rounded-full h-12 flex items-center px-5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:text-primary transition-all group">
+            <Search className="text-text-secondary group-focus-within:text-primary mr-3 w-5 h-5" />
+            <input 
+                type="text" 
+                placeholder="Search" 
+                className="bg-transparent border-none outline-none text-text-primary placeholder:text-text-secondary w-full"
+            />
+         </div>
+
+         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pb-4">
+            {/* Trending Topics */}
+            <div className="bg-surface-highlight/30 rounded-2xl overflow-hidden  py-2">
+                <TrendingTopics trendingTopics={trendingTopics} />
+            </div>
+
+            {/* Suggested Users */}
+            <div className="bg-surface-highlight/30 rounded-2xl overflow-hidden shadow-md bg-white-500   py-2">
+                <TopUser content={contentPost} />
+            </div>
+
+            {/* Footer Links (Static) */}
+            <div className="px-4 text-xs text-text-secondary flex flex-wrap gap-2 leading-relaxed">
+                <span className="hover:underline cursor-pointer">Terms of Service</span>
+                <span className="hover:underline cursor-pointer">Privacy Policy</span>
+                <span className="hover:underline cursor-pointer">Cookie Policy</span>
+                <span>© 2025 YiBu.</span>
+            </div>
+         </div>
       </div>
     </div>
   );

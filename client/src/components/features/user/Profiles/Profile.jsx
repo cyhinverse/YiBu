@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Settings,
   Edit,
   Camera,
   Link as LinkIcon,
@@ -17,18 +16,17 @@ import {
   Loader,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import PostLists from "../Posts/PostLists";
-import { Post } from "../Posts";
+import PostLists from "../../feed/Posts/PostLists";
+import { Post } from "../../feed/Posts";
 import { useParams, Link as RouterLink, useNavigate } from "react-router-dom";
-import User from "../../../services/userService";
-import { getUserById } from "../../../slices/UserSlice";
-import { formatDistance } from "date-fns";
-import { vi } from "date-fns/locale";
+import { getUserById as getUserByIdAction, checkFollowStatus, followUser, unfollowUser } from "../../../../redux/actions/userActions";
+// import { getUserById } from "../../../../redux/slices/UserSlice";
+import { formatDistance } from "../../../../utils/dateUtils";
 import toast from "react-hot-toast";
-import { ROUTES } from "../../../constants/routes";
-import { getPostUserById } from "../../../slices/PostSlice";
-import { setPostLikeStatus, toggleLike } from "../../../slices/LikeSlice";
-import Like from "../../../services/likeService";
+import { ROUTES } from "../../../../constants/routes";
+import { setUserPosts } from "../../../../redux/slices/PostSlice";
+import { updateLikeLocal } from "../../../../redux/slices/LikeSlice";
+import { toggleLike, getAllLikes, getLikeStatus, getLikedPosts } from "../../../../redux/actions/likeActions";
 
 const Profile = () => {
   const { userId: urlUserId } = useParams();
@@ -53,9 +51,9 @@ const Profile = () => {
   const likeData = useSelector((state) => state.like?.likesByPost || {});
 
   // Hàm trợ giúp để lấy ID người dùng từ currentUser
-  const getCurrentUserId = () => {
+  const getCurrentUserId = useCallback(() => {
     return currentUser?._id || currentUser?.user?._id;
-  };
+  }, [currentUser]);
 
   // Xác định ID của người dùng hiện tại từ nhiều cấu trúc dữ liệu có thể có
   const currentUserId = getCurrentUserId();
@@ -65,25 +63,6 @@ const Profile = () => {
   const profileUserId = userId ? String(userId) : "";
   const isOwnProfile = currentUserId === profileUserId || !urlUserId;
 
-  console.log("Profile - urlUserId:", urlUserId);
-  console.log(
-    "Profile - currentUserId:",
-    currentUserId,
-    "type:",
-    typeof currentUserId
-  );
-  console.log(
-    "Profile - profileUserId:",
-    profileUserId,
-    "type:",
-    typeof profileUserId
-  );
-  console.log(
-    "Profile - isOwnProfile:",
-    isOwnProfile,
-    "Equality check:",
-    currentUserId === profileUserId
-  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -103,9 +82,9 @@ const Profile = () => {
           return;
         }
 
-        const res = await User.GET_USER_BY_ID(userId);
+        const res = await dispatch(getUserByIdAction(userId)).unwrap();
         console.log(`Check data res`, res);
-        dispatch(getUserById(res.data));
+        // dispatch(getUserById(res.data));
         setUserData(res.data);
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -113,9 +92,9 @@ const Profile = () => {
         // Nếu có lỗi nhưng người dùng đã đăng nhập, thử lấy thông tin từ người dùng hiện tại
         if (currentUserId && !urlUserId) {
           try {
-            const res = await User.GET_USER_BY_ID(currentUserId);
+            const res = await dispatch(getUserByIdAction(currentUserId)).unwrap();
             if (res && res.data) {
-              dispatch(getUserById(res.data));
+              // dispatch(getUserById(res.data));
               setUserData(res.data);
             }
           } catch (innerError) {
@@ -130,18 +109,18 @@ const Profile = () => {
   }, [userId, dispatch, currentUserId, urlUserId, navigate]);
 
   useEffect(() => {
-    const checkFollowStatus = async () => {
+    const checkFollowStatusFn = async () => {
       if (currentUserId !== profileUserId && userId && currentUser) {
         try {
-          const res = await User.checkFollowStatus(userId);
+          const res = await dispatch(checkFollowStatus(userId)).unwrap();
           setIsFollowing(res.isFollowing);
         } catch (error) {
           console.error("Error checking follow status:", error);
         }
       }
     };
-    checkFollowStatus();
-  }, [userId, currentUserId, profileUserId, currentUser]);
+    checkFollowStatusFn();
+  }, [userId, currentUserId, profileUserId, currentUser, dispatch]);
 
   // Hàm xử lý dữ liệu bài viết để đảm bảo tương thích với Post component
   const processPostData = useCallback(
@@ -171,7 +150,7 @@ const Profile = () => {
     if (user?.posts && Array.isArray(user.posts)) {
       // Xử lý dữ liệu trước khi cập nhật vào Redux
       const processedPosts = processPostData(user.posts);
-      dispatch(getPostUserById(processedPosts));
+      dispatch(setUserPosts(processedPosts));
     }
   }, [user, dispatch, processPostData]);
 
@@ -193,10 +172,7 @@ const Profile = () => {
   const displayName = userName;
   const bio = user?.profile?.bio || "Chưa có thông tin giới thiệu.";
   const joinDate = user?.createdAt ? new Date(user.createdAt) : new Date();
-  const formattedJoinDate = formatDistance(joinDate, new Date(), {
-    addSuffix: true,
-    locale: vi,
-  });
+  const formattedJoinDate = formatDistance(joinDate, new Date());
 
   const handleFollowToggle = async () => {
     const currentUserId = getCurrentUserId();
@@ -208,21 +184,21 @@ const Profile = () => {
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await User.unfollowUser(userId);
+        await dispatch(unfollowUser(userId)).unwrap();
         setIsFollowing(false);
         toast.success("Đã hủy theo dõi");
       } else {
-        await User.followUser(userId);
+        await dispatch(followUser(userId)).unwrap();
         setIsFollowing(true);
         toast.success("Đã theo dõi thành công");
       }
 
-      const currentUserRes = await User.GET_USER_BY_ID(currentUserId);
+      const currentUserRes = await dispatch(getUserByIdAction(currentUserId)).unwrap();
       if (currentUserRes?.data) {
-        dispatch(getUserById(currentUserRes.data));
+        // dispatch(getUserById(currentUserRes.data));
       }
 
-      const targetUserRes = await User.GET_USER_BY_ID(userId);
+      const targetUserRes = await dispatch(getUserByIdAction(userId)).unwrap();
       if (targetUserRes?.data) {
         setUserData(targetUserRes.data);
       }
@@ -293,14 +269,19 @@ const Profile = () => {
         return;
       }
 
-      dispatch(toggleLike({ postId }));
+      const currentLike = likeData[postId] || { isLiked: false, count: 0 };
+      const newIsLiked = !currentLike.isLiked;
+      const newCount = newIsLiked ? currentLike.count + 1 : currentLike.count - 1;
+
+      dispatch(updateLikeLocal({ postId, isLiked: newIsLiked, count: newCount }));
 
       // Gọi API like
-      await Like.TOGGLE_LIKE(postId);
+      await dispatch(toggleLike(postId)).unwrap();
     } catch (error) {
       console.error("Error toggling like:", error);
-      // Nếu có lỗi, reset trạng thái like
-      dispatch(toggleLike({ postId }));
+      // Nếu có lỗi, reset trạng thái like (revert)
+       const currentLike = likeData[postId] || { isLiked: false, count: 0 };
+       dispatch(updateLikeLocal({ postId, isLiked: currentLike.isLiked, count: currentLike.count })); // Re-dispatch current to be safe, or just ignore if strict revert needed
       toast.error("Có lỗi xảy ra khi thích bài viết");
     }
   };
@@ -316,22 +297,22 @@ const Profile = () => {
           if (!postIds.length) return;
 
           // Lấy số lượng like cho mỗi bài viết
-          const countResponse = await Like.GET_ALL_LIKES(postIds);
+          const countResponse = await dispatch(getAllLikes(postIds)).unwrap();
 
-          if (countResponse?.data?.code === 1) {
-            const likeCounts = countResponse.data.data || {};
+          if (countResponse?.code === 1) {
+            const likeCounts = countResponse.data || {};
 
             // Lấy trạng thái like của người dùng hiện tại cho từng bài viết
             if (currentUserId) {
               postIds.forEach(async (postId) => {
                 try {
-                  const statusResponse = await Like.GET_LIKE_STATUS(postId);
-                  if (statusResponse?.data?.code === 1) {
-                    const isLiked = statusResponse.data.data?.isLiked || false;
+                  const statusResponse = await dispatch(getLikeStatus(postId)).unwrap();
+                  if (statusResponse?.code === 1) {
+                    const isLiked = statusResponse.data?.isLiked || false;
                     const count = likeCounts[postId]?.count || 0;
 
                     dispatch(
-                      setPostLikeStatus({
+                      updateLikeLocal({
                         postId,
                         isLiked,
                         count,
@@ -354,7 +335,7 @@ const Profile = () => {
 
       fetchLikeData();
     }
-  }, [posts, dispatch]);
+  }, [posts, dispatch, getCurrentUserId]);
 
   // Fetch liked posts
   useEffect(() => {
@@ -369,12 +350,12 @@ const Profile = () => {
         setLikedPostsLoading(true);
         try {
           console.log("Fetching liked posts...");
-          const response = await Like.GET_LIKED_POSTS();
+          const response = await dispatch(getLikedPosts()).unwrap();
           console.log("GET_LIKED_POSTS response:", response);
 
-          if (response?.data?.code === 1 && response.data.posts?.length > 0) {
-            console.log("Liked posts data:", response.data.posts);
-            setLikedPosts(response.data.posts || []);
+          if (response?.code === 1 && response.posts?.length > 0) {
+            console.log("Liked posts data:", response.posts);
+            setLikedPosts(response.posts || []);
           } else {
             console.log(
               "No liked posts returned from API or invalid format, using client-side filtering"
@@ -480,6 +461,8 @@ const Profile = () => {
     likeData,
     user,
     processPostData,
+    dispatch,
+    getCurrentUserId
   ]);
 
   if (isLoading) {
