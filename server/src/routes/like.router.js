@@ -6,16 +6,23 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-router.post("/create", PostController.CreateLike);
-
-router.post("/delete", PostController.DeleteLike);
-
-router.get("/status/:postId", PostController.GetLikeStatus);
-
-router.post("/get-all", PostController.GetAllLikeFromPosts);
-
+// ======================================
+// Like Operations
+// ======================================
+router.post("/", PostController.CreateLike);
+router.delete("/", PostController.DeleteLike);
 router.post("/toggle", PostController.ToggleLike);
 
-router.get("/liked-posts", PostController.GetLikedPosts);
+// ======================================
+// Like Status
+// ======================================
+router.get("/status/:postId", PostController.GetLikeStatus);
+router.post("/batch-status", PostController.GetAllLikeFromPosts);
+router.get("/post/:postId/users", PostController.GetPostLikes);
+
+// ======================================
+// User's Liked Posts
+// ======================================
+router.get("/my-likes", PostController.GetLikedPosts);
 
 export default router;

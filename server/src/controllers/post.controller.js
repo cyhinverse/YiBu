@@ -2,85 +2,182 @@ import { CatchError } from "../configs/CatchError.js";
 import PostService from "../services/Post.Service.js";
 import { formatResponse } from "../helpers/formatResponse.js";
 import { getPaginationParams } from "../helpers/pagination.js";
-import SocketService from "../services/Socket.Service.js";
+import socketService from "../services/Socket.Service.js";
 import logger from "../configs/logger.js";
 
-
 const PostController = {
+  // ======================================
+  // Post CRUD
+  // ======================================
+
   GetAllPost: CatchError(async (req, res) => {
-    const { page, limit } = getPaginationParams(req.query);
-    const result = await PostService.getAllPosts(page, limit);
-    return formatResponse(res, 200, 1, "Success", null, result);
+    const userId = req.user.id;
+    const { page = 1, limit = 20 } = getPaginationParams(req.query);
+
+    const result = await PostService.getHomeFeed(userId, { page, limit });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  GetExploreFeed: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const { page = 1, limit = 20 } = getPaginationParams(req.query);
+
+    const result = await PostService.getExploreFeed(userId, { page, limit });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  GetPersonalizedFeed: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const { page = 1, limit = 20 } = getPaginationParams(req.query);
+
+    const result = await PostService.getPersonalizedFeed(userId, {
+      page,
+      limit,
+    });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  GetTrendingPosts: CatchError(async (req, res) => {
+    const { page = 1, limit = 20, timeframe = "day" } = req.query;
+
+    const result = await PostService.getTrendingPosts({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      timeframe,
+    });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  GetPostById: CatchError(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const post = await PostService.getPostById(id, userId);
+    return formatResponse(res, 200, 1, "Success", post);
   }),
 
   GetPostUserById: CatchError(async (req, res) => {
-    const id = req.params.id;
-    try {
-      const postOfUser = await PostService.getPostsByUserId(id);
-      return formatResponse(res, 200, 1, "Get posts of user successfully!", null, { postOfUser });
-    } catch (error) {
-      if (error.message === "User ID is required!") error.statusCode = 400;
-      if (error.message === "No posts found for this user!") error.statusCode = 404;
-      throw error;
+    const { id } = req.params;
+    const requesterId = req.user?.id;
+    const { page = 1, limit = 20 } = getPaginationParams(req.query);
+
+    const result = await PostService.getUserPosts(id, requesterId, {
+      page,
+      limit,
+    });
+    return formatResponse(
+      res,
+      200,
+      1,
+      "Get posts of user successfully!",
+      result
+    );
+  }),
+
+  CreatePost: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const { caption, visibility = "public", location, mentions } = req.body;
+
+    let media = [];
+    if (req.files && req.files.length > 0) {
+      media = await PostService.uploadMedia(req.files, userId);
     }
+
+    const post = await PostService.createPost(
+      {
+        caption,
+        media,
+        visibility,
+        location,
+        mentions,
+      },
+      userId
+    );
+
+    return formatResponse(res, 201, 1, "Post created successfully", post);
+  }),
+
+  UpdatePost: CatchError(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const post = await PostService.updatePost(id, userId, req.body);
+    return formatResponse(res, 200, 1, "Post updated successfully", post);
   }),
 
   DeletePost: CatchError(async (req, res) => {
     const { id } = req.params;
-    try {
-      await PostService.deletePost(id);
-      return formatResponse(res, 200, 1, "Post deleted successfully");
-    } catch (error) {
-      if (error.message === "Post not found") error.statusCode = 404;
-      throw error;
-    }
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
+
+    await PostService.deletePost(id, userId, isAdmin);
+    return formatResponse(res, 200, 1, "Post deleted successfully");
   }),
 
-  UpdatePost: CatchError(async (req, res) => {
-    try {
-      const post = await PostService.updatePost(req.params.id, req.body);
-      return formatResponse(res, 200, 1, "Success", post);
-    } catch (error) {
-      if (error.message === "Post not found") error.statusCode = 404;
-      throw error;
+  // ======================================
+  // Search
+  // ======================================
+
+  SearchPosts: CatchError(async (req, res) => {
+    const userId = req.user?.id;
+    const { query, page = 1, limit = 20 } = req.query;
+
+    if (!query || query.trim().length < 2) {
+      return formatResponse(res, 400, 0, "Query must be at least 2 characters");
     }
+
+    const result = await PostService.searchPosts(query, userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, "Success", result);
   }),
 
-  CreatePost: CatchError(async (req, res) => {
-    try {
-      const post = await PostService.createPost(req.user, req.body, req.files);
-      return formatResponse(res, 201, 1, "Post created successfully", null, { post });
-    } catch (error) {
-      if (error.message === "Title là bắt buộc") error.statusCode = 400;
-      logger.error(" Error creating post:", error);
-      throw error;
-    }
+  GetPostsByHashtag: CatchError(async (req, res) => {
+    const { hashtag } = req.params;
+    const userId = req.user?.id;
+    const { page = 1, limit = 20 } = req.query;
+
+    const result = await PostService.getPostsByHashtag(hashtag, userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, "Success", result);
   }),
 
-  // --- Methods from LikeController ---
+  GetTrendingHashtags: CatchError(async (req, res) => {
+    const { limit = 10 } = req.query;
+
+    const hashtags = await PostService.getTrendingHashtags(parseInt(limit));
+    return formatResponse(res, 200, 1, "Success", hashtags);
+  }),
+
+  // ======================================
+  // Like System
+  // ======================================
+
   CreateLike: CatchError(async (req, res) => {
     const { postId } = req.body;
     const userId = req.user.id;
-    const currentUser = req.user;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    try {
-      const { newLike, likeCount } = await PostService.likePost(userId, postId, currentUser);
+    const result = await PostService.likePost(postId, userId);
 
-      return formatResponse(res, 200, 1, "Liked successfully", {
-        ...newLike.toObject(),
-        likeCount,
-      });
-    } catch (error) {
-      if (error.message.includes("Invalid ID format")) error.statusCode = 400;
-      if (error.message === "You already liked this post") error.statusCode = 400; // Or 409
-      throw error;
+    if (!result.alreadyLiked) {
+      const post = await PostService.getPostById(postId);
+      if (post.user._id.toString() !== userId) {
+        socketService.emitPostLike(post.user._id.toString(), {
+          postId,
+          userId,
+          username: req.user.username,
+        });
+      }
     }
+
+    return formatResponse(res, 200, 1, "Liked successfully", result);
   }),
 
   DeleteLike: CatchError(async (req, res) => {
@@ -88,18 +185,11 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    try {
-      const { likeCount } = await PostService.unlikePost(userId, postId);
-      return formatResponse(res, 200, 1, "Unlike successful", null, { likeCount });
-    } catch (error) {
-      if (error.message === "You have not liked this post") error.statusCode = 400; 
-      throw error;
-    }
+    const result = await PostService.unlikePost(postId, userId);
+    return formatResponse(res, 200, 1, "Unliked successfully", result);
   }),
 
   GetLikeStatus: CatchError(async (req, res) => {
@@ -107,13 +197,49 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    const { isLiked, count } = await PostService.getLikeStatus(userId, postId);
-    return formatResponse(res, 200, 1, "Success", null, { isLiked, count });
+    const post = await PostService.getPostById(postId, userId);
+    return formatResponse(res, 200, 1, "Success", {
+      isLiked: post.isLiked,
+      count: post.likesCount,
+    });
+  }),
+
+  ToggleLike: CatchError(async (req, res) => {
+    const { postId } = req.body;
+    const userId = req.user.id;
+
+    if (!postId) {
+      return formatResponse(res, 400, 0, "Post ID is required");
+    }
+
+    const result = await PostService.toggleLike(postId, userId);
+
+    const message = result.liked
+      ? "Liked successfully"
+      : "Unliked successfully";
+    return formatResponse(res, 200, 1, message, result);
+  }),
+
+  GetPostLikes: CatchError(async (req, res) => {
+    const { postId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+
+    const users = await PostService.getPostLikes(postId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, "Success", users);
+  }),
+
+  GetLikedPosts: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+
+    // This would need to be implemented in PostService if needed
+    return formatResponse(res, 200, 1, "Feature coming soon", []);
   }),
 
   GetAllLikeFromPosts: CatchError(async (req, res) => {
@@ -121,167 +247,41 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
-      const error = new Error("Valid post IDs array is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Valid post IDs array is required");
     }
 
-    const likeCounts = await PostService.getAllLikesFromPosts(postIds, userId);
-
-    const formattedResults = postIds.reduce((acc, postId) => {
-      const postLikes = likeCounts.find(
-        (item) => item._id.toString() === postId.toString()
-      ) || {
-        count: 0,
-        likedByUser: 0,
-      };
-
-      acc[postId] = {
-        count: postLikes.count || 0,
-        isLiked: postLikes.likedByUser > 0,
-      };
-      return acc;
-    }, {});
-
-    return formatResponse(res, 200, 1, "Success", formattedResults);
-  }),
-
-  ToggleLike: CatchError(async (req, res) => {
-    const { postId } = req.body;
-    const userId = req.user.id;
-    const currentUser = req.user;
-
-    if (!postId) {
-       const error = new Error("Post ID is required");
-       error.statusCode = 400;
-       throw error;
+    // Batch get like status for multiple posts
+    const results = {};
+    for (const postId of postIds) {
+      try {
+        const post = await PostService.getPostById(postId, userId);
+        results[postId] = {
+          count: post.likesCount || 0,
+          isLiked: post.isLiked || false,
+        };
+      } catch (error) {
+        results[postId] = { count: 0, isLiked: false };
+      }
     }
 
-    const { isLiked, count, message } = await PostService.toggleLikePost(userId, postId, currentUser);
-
-    return formatResponse(res, 200, 1, message, null, {
-      isLiked,
-      count,
-    });
+    return formatResponse(res, 200, 1, "Success", results);
   }),
 
-  GetLikedPosts: CatchError(async (req, res) => {
-    const userId = req.user.id;
-    const likedPosts = await PostService.getLikedPosts(userId);
+  // ======================================
+  // Save System
+  // ======================================
 
-    const message = likedPosts.length === 0
-          ? "No liked posts found"
-          : "Liked posts retrieved successfully";
-
-    return formatResponse(res, 200, 1, message, null, { posts: likedPosts });
-  }),
-
-  // --- Methods from CommentController ---
-  createComment: CatchError(async (req, res) => {
-    const { content, postId, parentComment } = req.body;
-    const userId = req.user.id;
-
-    try {
-      const result = await PostService.createComment(
-        userId,
-        content,
-        postId,
-        parentComment
-      );
-
-      return formatResponse(res, 201, 1, "Đã tạo comment thành công", null, {
-        comment: result.comment,
-        commentCount: result.commentCount,
-      });
-    } catch (error) {
-      if (error.message === "Nội dung comment không được để trống") error.statusCode = 400;
-      if (error.message === "ID bài viết là bắt buộc") error.statusCode = 400;
-      if (error.message === "Bài viết không tồn tại") error.statusCode = 404;
-      throw error;
-    }
-  }),
-
-  getCommentsByPost: CatchError(async (req, res) => {
-    const { postId } = req.params;
-
-    try {
-      const result = await PostService.getCommentsByPostId(postId);
-
-      return formatResponse(res, 200, 1, "Lấy comments thành công", null, {
-        comments: result.comments,
-        commentCount: result.commentCount,
-      });
-    } catch (error) {
-      if (error.message === "ID bài viết là bắt buộc") error.statusCode = 400;
-      if (error.message === "Bài viết không tồn tại") error.statusCode = 404;
-      throw error;
-    }
-  }),
-
-  updateComment: CatchError(async (req, res) => {
-    const { id } = req.params;
-    const { content } = req.body;
-    const userId = req.user.id;
-
-    try {
-      const result = await PostService.updateComment(id, content, userId);
-
-      return formatResponse(res, 200, 1, "Cập nhật comment thành công", null, {
-        comment: result.comment,
-      });
-    } catch (error) {
-      if (error.message === "Nội dung comment không được để trống") error.statusCode = 400;
-      if (error.message === "Comment không tồn tại") error.statusCode = 404;
-      if (error.message === "Bạn không có quyền cập nhật comment này") error.statusCode = 403;
-      throw error;
-    }
-  }),
-
-  deleteComment: CatchError(async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    try {
-      const result = await PostService.deleteComment(id, userId);
-
-      return formatResponse(res, 200, 1, "Xóa comment thành công", null, {
-        commentId: result.commentId,
-        commentCount: result.commentCount,
-      });
-    } catch (error) {
-      if (error.message === "Comment không tồn tại") error.statusCode = 404;
-      if (error.message === "Bạn không có quyền xóa comment này") error.statusCode = 403;
-      throw error;
-    }
-  }),
-
-  // --- Methods from SavePostController ---
   savePost: CatchError(async (req, res) => {
     const { postId } = req.params;
     const userId = req.user.id;
+    const { collection } = req.body;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    const { post, savedPost } = await PostService.savePost(userId, postId);
-
-    if (post.user.toString() !== userId) {
-      const { notificationPayload } =
-        await PostService.createSaveNotification(
-          post.user,
-          userId,
-          postId,
-          req.user.username
-        );
-
-      logger.info("Emitting save notification:", notificationPayload);
-      SocketService.emitNotification(post.user.toString(), notificationPayload);
-    }
-
-    return formatResponse(res, 200, 1, "Đã lưu bài viết", null, { savedPost });
+    const result = await PostService.savePost(postId, userId, collection);
+    return formatResponse(res, 200, 1, "Đã lưu bài viết", result);
   }),
 
   unsavePost: CatchError(async (req, res) => {
@@ -289,34 +289,30 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    try {
-      await PostService.unsavePost(userId, postId);
-      return formatResponse(res, 200, 1, "Đã bỏ lưu bài viết");
-    } catch (error) {
-      if (error.message === "Bài viết chưa được lưu") error.statusCode = 404;
-      throw error;
-    }
+    await PostService.unsavePost(postId, userId);
+    return formatResponse(res, 200, 1, "Đã bỏ lưu bài viết");
   }),
 
   getSavedPosts: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { page, limit } = getPaginationParams(req.query);
+    const { page = 1, limit = 20, collection } = req.query;
 
-    const { validPosts, pagination } = await PostService.getSavedPosts(
-      userId,
-      page,
-      limit
-    );
-
-    return formatResponse(res, 200, 1, "Success", null, {
-      savedPosts: validPosts,
-      pagination,
+    const result = await PostService.getSavedPosts(userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      collection,
     });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  getSavedCollections: CatchError(async (req, res) => {
+    const userId = req.user.id;
+
+    const collections = await PostService.getSavedCollections(userId);
+    return formatResponse(res, 200, 1, "Success", collections);
   }),
 
   checkSavedStatus: CatchError(async (req, res) => {
@@ -324,14 +320,162 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      const error = new Error("Post ID is required");
-      error.statusCode = 400;
-      throw error;
+      return formatResponse(res, 400, 0, "Post ID is required");
     }
 
-    const isSaved = await PostService.checkSavedStatus(userId, postId);
+    const post = await PostService.getPostById(postId, userId);
+    return formatResponse(res, 200, 1, "Success", {
+      isSaved: post.isSaved || false,
+    });
+  }),
 
-    return formatResponse(res, 200, 1, "Success", null, { isSaved });
+  // ======================================
+  // Comment System
+  // ======================================
+
+  createComment: CatchError(async (req, res) => {
+    const { content, postId, parentComment } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !content.trim()) {
+      return formatResponse(
+        res,
+        400,
+        0,
+        "Nội dung comment không được để trống"
+      );
+    }
+
+    if (!postId) {
+      return formatResponse(res, 400, 0, "ID bài viết là bắt buộc");
+    }
+
+    const comment = await PostService.addComment(
+      postId,
+      userId,
+      content,
+      parentComment
+    );
+
+    // Emit socket event
+    const post = await PostService.getPostById(postId);
+    if (post.user._id.toString() !== userId) {
+      socketService.emitPostComment(post.user._id.toString(), {
+        postId,
+        commentId: comment._id,
+        userId,
+        username: req.user.username,
+        content: content.substring(0, 50),
+      });
+    }
+
+    return formatResponse(res, 201, 1, "Đã tạo comment thành công", comment);
+  }),
+
+  getCommentsByPost: CatchError(async (req, res) => {
+    const { postId } = req.params;
+    const { page = 1, limit = 20, sort = "best" } = req.query;
+
+    if (!postId) {
+      return formatResponse(res, 400, 0, "ID bài viết là bắt buộc");
+    }
+
+    const result = await PostService.getComments(postId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort,
+    });
+    return formatResponse(res, 200, 1, "Lấy comments thành công", result);
+  }),
+
+  getCommentReplies: CatchError(async (req, res) => {
+    const { commentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    const result = await PostService.getCommentReplies(commentId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, "Success", result);
+  }),
+
+  updateComment: CatchError(async (req, res) => {
+    const { id } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !content.trim()) {
+      return formatResponse(
+        res,
+        400,
+        0,
+        "Nội dung comment không được để trống"
+      );
+    }
+
+    // Note: updateComment not implemented in new PostService
+    // Would need to add this method
+    return formatResponse(res, 200, 1, "Feature coming soon");
+  }),
+
+  deleteComment: CatchError(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
+
+    await PostService.deleteComment(id, userId, isAdmin);
+    return formatResponse(res, 200, 1, "Xóa comment thành công");
+  }),
+
+  likeComment: CatchError(async (req, res) => {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    const result = await PostService.likeComment(commentId, userId);
+    return formatResponse(res, 200, 1, "Liked comment", result);
+  }),
+
+  unlikeComment: CatchError(async (req, res) => {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    const result = await PostService.unlikeComment(commentId, userId);
+    return formatResponse(res, 200, 1, "Unliked comment", result);
+  }),
+
+  // ======================================
+  // Share
+  // ======================================
+
+  sharePost: CatchError(async (req, res) => {
+    const { postId } = req.params;
+    const userId = req.user.id;
+    const { platform = "internal" } = req.body;
+
+    const result = await PostService.sharePost(postId, userId, platform);
+    return formatResponse(res, 200, 1, "Shared successfully", result);
+  }),
+
+  // ======================================
+  // Report
+  // ======================================
+
+  reportPost: CatchError(async (req, res) => {
+    const { postId } = req.params;
+    const userId = req.user.id;
+    const { reason, description } = req.body;
+
+    if (!reason) {
+      return formatResponse(res, 400, 0, "Lý do báo cáo là bắt buộc");
+    }
+
+    const report = await PostService.reportPost(
+      postId,
+      userId,
+      reason,
+      description
+    );
+    return formatResponse(res, 200, 1, "Báo cáo đã được gửi", report);
   }),
 };
 

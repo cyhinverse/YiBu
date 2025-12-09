@@ -1,653 +1,748 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
+import UserSettings from "../models/UserSettings.js";
+import Follow from "../models/Follow.js";
+import UserInteraction from "../models/UserInteraction.js";
+import Post from "../models/Post.js";
+import Comment from "../models/Comment.js";
+import Like from "../models/Like.js";
+import SavePost from "../models/SavePost.js";
 import Message from "../models/Message.js";
+import Notification from "../models/Notification.js";
 import logger from "../configs/logger.js";
 
+/**
+ * User Service - Refactored for new model structure
+ *
+ * Key Changes:
+ * 1. Uses Follow model instead of embedded arrays
+ * 2. Uses UserSettings model for settings
+ * 3. Leverages denormalized counters
+ * 4. Integrates with UserInteraction for recommendations
+ */
 class UserService {
   // ======================================
   // User Core Methods
   // ======================================
+
+  /**
+   * Find user by email (for auth)
+   */
   static async findUserByEmail(email) {
-    try {
-      if (!email) {
-        throw new Error("Email is required");
-      }
-
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        logger.error(`No user found with email: ${email}`);
-        return null;
-      }
-
-      return user;
-    } catch (error) {
-      logger.error("Database error in findUserByEmail:", error);
-      throw error;
+    if (!email) {
+      throw new Error("Email is required");
     }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select("+password")
+      .lean();
+
+    return user;
   }
 
-  static async getUserById(userId) {
-    try {
-      if (!userId) {
-        throw new Error("User ID is required!");
-      }
-
-      let user = await User.findById(userId)
-        .select("-password")
-        .lean();
-
-      if (!user) {
-        throw new Error("User not found!");
-      }
-
-      // Ensure embedded fields are present for response consistency
-      if (!user.profile) user.profile = {};
-      if (!user.settings) user.settings = {};
-      if (!user.following) user.following = [];
-      if (!user.followers) user.followers = [];
-
-      const posts = await mongoose
-        .model("Post")
-        .find({ user: userId })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      const postIds = posts.map((post) => post._id);
-      const likesCount = await mongoose.model("Like").countDocuments({
-        post: { $in: postIds },
-      });
-
-      const enhancedUserData = {
-        ...user,
-        stats: {
-          postsCount: posts.length,
-          likesCount: likesCount,
-          followersCount: user.followers.length,
-          followingCount: user.following.length,
-        },
-        posts: posts.map((post) => ({
-          _id: post._id,
-          caption: post.caption,
-          media: post.media,
-          createdAt: post.createdAt,
-        })),
-      };
-
-      return enhancedUserData;
-    } catch (error) {
-      logger.error("Error getting user by ID:", error);
-      throw error;
+  /**
+   * Find user by username
+   */
+  static async getUserByUsername(username) {
+    if (!username) {
+      throw new Error("Username is required");
     }
+
+    const user = await User.findOne({ username: username.toLowerCase() })
+      .select("-loginAttempts")
+      .lean();
+
+    return user;
   }
 
-  static async updateUser(userId, updateData) {
-    try {
-      const user = await User.findByIdAndUpdate(userId, updateData, {
-        new: true,
-      });
-      if (!user) {
-        throw new Error("User not found");
-      }
-      return user;
-    } catch (error) {
-      logger.error("Error updating user:", error);
-      throw error;
+  /**
+   * Get user by ID with full profile data
+   */
+  static async getUserById(userId, requesterId = null) {
+    if (!userId) {
+      throw new Error("User ID is required");
     }
-  }
 
-  static async deleteUser(userId) {
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new Error("User not found");
-      }
+    const user = await User.findById(userId).select("-loginAttempts").lean();
 
-      // Find all posts by this user to clean up related data (comments on posts, etc.)
-      const userPosts = await mongoose.model("Post").find({ user: userId }).select("_id");
-      const userPostIds = userPosts.map(p => p._id);
-
-      await Promise.all([
-        // 1. Clean up data related to User's POSTS
-        mongoose.model("Post").deleteMany({ user: userId }),
-        mongoose.model("Comment").deleteMany({ post: { $in: userPostIds } }), // Comments on user's posts
-        mongoose.model("Like").deleteMany({ post: { $in: userPostIds } }),    // Likes on user's posts
-        mongoose.model("SavePost").deleteMany({ post: { $in: userPostIds } }), // Saves of user's posts
-        mongoose.model("Notification").deleteMany({ post: { $in: userPostIds } }), // Notifications about user's posts
-
-        // 2. Clean up User's OWN activity
-        mongoose.model("Comment").deleteMany({ user: userId }), // User's comments elsewhere
-        mongoose.model("Like").deleteMany({ user: userId }),    // User's likes elsewhere
-        mongoose.model("SavePost").deleteMany({ user: userId }), // User's saved posts
-        mongoose.model("Message").deleteMany({ $or: [{ sender: userId }, { receiver: userId }] }),
-        mongoose.model("Notification").deleteMany({ $or: [{ recipient: userId }, { sender: userId }] }),
-        mongoose.model("Report").deleteMany({ reporter: userId }), // Delete reports made by user? Optional.
-
-        // 3. Remove User from Following/Followers lists
-        User.updateMany({ following: userId }, { $pull: { following: userId } }),
-        User.updateMany({ followers: userId }, { $pull: { followers: userId } })
-      ]);
-
-      // Finally delete the user
-      await User.findByIdAndDelete(userId);
-
-      return user;
-    } catch (error) {
-      logger.error("Error deleting user:", error);
-      throw error;
+    if (!user) {
+      throw new Error("User not found");
     }
-  }
 
-  static async getAllUsers(currentUserId) {
-    try {
-      const users = await User.find({
-        _id: { $ne: currentUserId },
-      }).select("profile.avatar email createdAt");
-
-      const usersWithLastMessage = await Promise.all(
-        users.map(async (user) => {
-          const lastMessage = await Message.findOne({
-            $or: [
-              { sender: currentUserId, receiver: user._id },
-              { sender: user._id, receiver: currentUserId },
-            ],
-          })
-            .sort({ createdAt: -1 })
-            .select("content createdAt isRead");
-
-          const unreadCount = await Message.countDocuments({
-            sender: user._id,
-            receiver: currentUserId,
-            isRead: false,
-          });
-
+    // Check privacy settings if requester is different user
+    if (requesterId && requesterId !== userId.toString()) {
+      if (user.privacy?.profileVisibility === "private") {
+        const isFollowing = await Follow.isFollowing(requesterId, userId);
+        if (!isFollowing) {
           return {
             _id: user._id,
-            avatar: user.profile?.avatar || "https://via.placeholder.com/150",
-            email: user.email,
-            lastMessage: lastMessage
-              ? {
-                  content: lastMessage.content,
-                  time: lastMessage.createdAt,
-                  isRead: lastMessage.isRead,
-                }
-              : null,
-            unreadCount,
+            username: user.username,
+            name: user.name,
+            avatar: user.avatar,
+            verified: user.verified,
+            isPrivate: true,
+            followersCount: user.followersCount,
+            followingCount: user.followingCount,
           };
-        })
-      );
-
-      return usersWithLastMessage;
-    } catch (error) {
-      logger.error("Error getting users:", error);
-      throw error;
-    }
-  }
-
-  static async searchUsers(query, currentUserId) {
-    try {
-      if (!query) {
-        throw new Error("Search query is required");
+        }
       }
-
-      const users = await User.find({
-        $and: [
-          { _id: { $ne: currentUserId } },
-          {
-            $or: [{ email: { $regex: query, $options: "i" } }],
-          },
-        ],
-      }).select("profile.avatar email createdAt");
-
-      const formattedUsers = users.map((user) => ({
-        _id: user._id,
-        avatar: user.profile?.avatar || "https://via.placeholder.com/150",
-        email: user.email,
-        createdAt: user.createdAt,
-      }));
-
-      return formattedUsers;
-    } catch (error) {
-      logger.error("Error searching users:", error);
-      throw error;
-    }
-  }
-
-  static async checkFollowStatus(currentUserId, targetUserId) {
-    try {
-      const currentUser = await User.findById(currentUserId);
-      if (!currentUser) {
-        throw new Error("Không tìm thấy người dùng hiện tại");
-      }
-
-      if (!currentUser.following) {
-        await User.findByIdAndUpdate(currentUserId, { following: [] });
-        return false;
-      }
-
-      return currentUser.following.includes(targetUserId);
-    } catch (error) {
-      logger.error("Error checking follow status:", error);
-      throw error;
-    }
-  }
-
-  static async followUser(currentUserId, targetUserId) {
-    if (targetUserId === currentUserId) {
-      throw new Error("Bạn không thể theo dõi chính mình");
     }
 
-    const targetUser = await User.findById(targetUserId);
-    if (!targetUser) {
-      throw new Error("Không tìm thấy người dùng");
+    // Get follow status if requester provided
+    let isFollowing = false;
+    let followStatus = "none";
+    if (requesterId && requesterId !== userId.toString()) {
+      followStatus = await Follow.getFollowStatus(requesterId, userId);
+      isFollowing = followStatus === "active";
     }
 
-    const currentUser = await User.findById(currentUserId);
-    if (!currentUser) {
-      throw new Error("Không tìm thấy người dùng hiện tại");
-    }
-
-    if (!currentUser.following) currentUser.following = [];
-    if (!targetUser.followers) targetUser.followers = [];
-
-    if (currentUser.following.includes(targetUserId)) {
-      throw new Error("Bạn đã theo dõi người dùng này rồi");
-    }
-
-    await User.findByIdAndUpdate(currentUserId, {
-      $push: { following: targetUserId },
-    });
-
-    await User.findByIdAndUpdate(targetUserId, {
-      $push: { followers: currentUserId },
-    });
-    
-    // Optional: Create notification manually here if not relying on another service
-    
-    return { success: true };
-  }
-
-  static async unfollowUser(currentUserId, targetUserId) {
-    if (targetUserId === currentUserId) {
-      throw new Error("Không thể thực hiện thao tác này");
-    }
-
-    const targetUser = await User.findById(targetUserId);
-    if (!targetUser) {
-      throw new Error("Không tìm thấy người dùng");
-    }
-
-    const currentUser = await User.findById(currentUserId);
-    if (!currentUser) {
-      throw new Error("Không tìm thấy người dùng hiện tại");
-    }
-
-    if (!currentUser.following || !currentUser.following.includes(targetUserId)) {
-      throw new Error("Bạn chưa theo dõi người dùng này");
-    }
-
-    await User.findByIdAndUpdate(currentUserId, {
-      $pull: { following: targetUserId },
-    });
-
-    await User.findByIdAndUpdate(targetUserId, {
-      $pull: { followers: currentUserId },
-    });
-
-    return { success: true };
-  }
-
-  static async getTopUsersByLikes() {
-    try {
-      const topUsers = await User.aggregate([
-        {
-          $lookup: {
-            from: "posts",
-            localField: "_id",
-            foreignField: "userId",
-            as: "posts",
-          },
-        },
-        {
-          $addFields: {
-            totalLikes: { $sum: "$posts.likes" },
-          },
-        },
-        { $sort: { totalLikes: -1 } },
-        { $limit: 10 },
-        {
-          $project: {
-            name: 1,
-            email: 1,
-            totalLikes: 1,
-          },
-        },
-      ]);
-
-      return topUsers;
-    } catch (error) {
-      logger.error("Error getting top users by likes:", error);
-      throw error;
-    }
-  }
-
-  static async getUserByUsername(username) {
-    try {
-      const user = await User.findOne({ username });
-      return user;
-    } catch (error) {
-      logger.error("Error getting user by username:", error);
-      throw error;
-    }
-  }
-
-  static async createUser(userData) {
-    try {
-      const user = await User.create(userData);
-      return user;
-    } catch (error) {
-      logger.error("Error creating user:", error);
-      throw error;
-    }
-  }
-
-  static async getUserByEmail(email) {
-    try {
-      const user = await User.findOne({ email });
-      return user;
-    } catch (error) {
-      logger.error("Error getting user by email:", error);
-      throw error;
-    }
-  }
-
-  // ======================================
-  // Profile Methods (Consolidated)
-  // ======================================
-  static async findProfileByUserId(userId) {
-    try {
-      if (!userId) {
-        throw new Error("User ID is required");
-      }
-
-      const user = await User.findById(userId).select("profile");
-
-      if (!user) {
-        logger.error(`No user found for user ID: ${userId}`);
-        return null;
-      }
-
-      // Emulate standalone profile object structure just in case
-      return { ...user.profile.toObject(), userId: user._id };
-    } catch (error) {
-      logger.error("Database error in findProfileByUserId:", error);
-      throw new Error("Error finding profile");
-    }
-  }
-
-  static async getProfileById(id) {
-    // Assuming id is userId since profiles are embedded 1:1
-    return this.findProfileByUserId(id);
-  }
-
-  static async createProfile(profileData) {
-    // Usually handled at registration, but supportive of updates
-    try {
-        if (!profileData.userId) throw new Error("UserId required");
-        return this.updateProfile(profileData.userId, profileData);
-    } catch (error) {
-      logger.error("Database error in createProfile:", error);
-      throw new Error("Error creating profile");
-    }
-  }
-
-  static async updateProfile(userId, updateData) {
-    try {
-      if (!userId || !updateData) {
-        throw new Error("User ID and update data are required");
-      }
-      
-      const updateQuery = {};
-      Object.keys(updateData).forEach(key => {
-          // Avoid overwriting entire profile object
-          if (key !== 'userId') { 
-            updateQuery[`profile.${key}`] = updateData[key];
-          }
-      });
-
-      const user = await User.findByIdAndUpdate(
-        userId,
-        { $set: updateQuery },
-        { new: true }
-      );
-
-      if (!user) {
-        logger.error(`No user found to update for ID: ${userId}`);
-        return null;
-      }
-
-      return { ...user.profile.toObject(), userId: user._id };
-    } catch (error) {
-      logger.error("Database error in updateProfile:", error);
-      throw new Error("Error updating profile");
-    }
-  }
-
-  static async deleteProfile(userId) {
-     return this.updateProfile(userId, { 
-         bio: "", website: "", interests: "", 
-         avatar: "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1" 
-     });
-  }
-
-  // ======================================
-  // User Settings Methods (Consolidated)
-  // ======================================
-  static async getUserSettings(userId) {
-    const user = await User.findById(userId).select("settings");
-    if (!user) throw new Error("User not found");
-    
-    // Ensure settings object exists
-    if (!user.settings) {
-         // This might trigger a save if we were using a document instance, 
-         // but here we might need an explicit update or just return default structure.
-         return {}; 
-    }
-    return user.settings;
-  }
-
-  static async updateProfileSettings(userId, updatedFields, avatarUrl = null) {
-    const updateSets = {};
-
-    if (avatarUrl) {
-      updateSets["profile.avatar"] = avatarUrl;
-    }
-
-    Object.keys(updatedFields).forEach((key) => {
-      if (key === "name" || key === "username" || key === "email") {
-         updateSets[key] = updatedFields[key];
-      } else if (key === "avatar") {
-         updateSets["profile.avatar"] = updatedFields[key];
-      } else {
-         // Profile fields
-         if (key === "birthday" && updatedFields[key]) {
-           updateSets[`profile.${key}`] = new Date(updatedFields[key]);
-         } else {
-           updateSets[`profile.${key}`] = updatedFields[key];
-         }
-      }
-    });
-
-    const user = await User.findByIdAndUpdate(userId, { $set: updateSets }, { new: true });
-    if (!user) throw new Error("User not found");
-
-    const userData = user.toObject();
     return {
-      profile: userData.profile,
-      userData: userData,
+      ...user,
+      isFollowing,
+      followStatus,
     };
   }
 
+  /**
+   * Get user profile with posts and stats
+   */
+  static async getUserProfile(userId, requesterId = null) {
+    const user = await this.getUserById(userId, requesterId);
+
+    if (user.isPrivate) {
+      return user;
+    }
+
+    // Get recent posts
+    const posts = await Post.find({
+      user: userId,
+      isDeleted: false,
+      visibility:
+        requesterId === userId.toString()
+          ? { $in: ["public", "followers", "private"] }
+          : "public",
+    })
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .select("_id caption media likesCount commentsCount createdAt")
+      .lean();
+
+    return {
+      ...user,
+      posts,
+    };
+  }
+
+  /**
+   * Update user basic info
+   */
+  static async updateUser(userId, updateData) {
+    const {
+      password,
+      email,
+      isAdmin,
+      verified,
+      moderation,
+      metrics,
+      ...safeData
+    } = updateData;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: safeData },
+      { new: true, runValidators: true }
+    ).select("-loginAttempts");
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  /**
+   * Update user profile fields
+   */
+  static async updateProfile(userId, profileData) {
+    const allowedFields = [
+      "name",
+      "bio",
+      "birthday",
+      "gender",
+      "website",
+      "avatar",
+      "interests",
+    ];
+    const updateData = {};
+
+    for (const [key, value] of Object.entries(profileData)) {
+      if (allowedFields.includes(key)) {
+        if (key === "birthday" && value) {
+          updateData[key] = new Date(value);
+        } else if (key === "interests" && typeof value === "string") {
+          updateData[key] = value
+            .split(",")
+            .map((i) => i.trim().toLowerCase())
+            .filter(Boolean);
+        } else {
+          updateData[key] = value;
+        }
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true }
+    ).select("-loginAttempts");
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  /**
+   * Delete user and all associated data
+   */
+  static async deleteUser(userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Get all user's posts for cleanup
+      const userPosts = await Post.find({ user: userId })
+        .select("_id")
+        .session(session);
+      const postIds = userPosts.map((p) => p._id);
+
+      await Promise.all([
+        Post.updateMany({ user: userId }, { isDeleted: true }).session(session),
+        Comment.updateMany({ user: userId }, { isDeleted: true }).session(
+          session
+        ),
+        Like.deleteMany({ user: userId }).session(session),
+        SavePost.deleteMany({ user: userId }).session(session),
+        Follow.deleteMany({
+          $or: [{ follower: userId }, { following: userId }],
+        }).session(session),
+        UserInteraction.deleteMany({ user: userId }).session(session),
+        Message.deleteMany({
+          $or: [{ sender: userId }, { receiver: userId }],
+        }).session(session),
+        Notification.deleteMany({
+          $or: [{ recipient: userId }, { sender: userId }],
+        }).session(session),
+        UserSettings.deleteOne({ user: userId }).session(session),
+        this._updateFollowCountsOnDelete(userId, session),
+      ]);
+
+      await User.findByIdAndDelete(userId).session(session);
+      await session.commitTransaction();
+
+      logger.info(`User ${userId} deleted successfully`);
+      return user;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error("Error deleting user:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async _updateFollowCountsOnDelete(userId, session) {
+    const followers = await Follow.find({ following: userId })
+      .select("follower")
+      .session(session);
+    const following = await Follow.find({ follower: userId })
+      .select("following")
+      .session(session);
+
+    if (followers.length > 0) {
+      const followerIds = followers.map((f) => f.follower);
+      await User.updateMany(
+        { _id: { $in: followerIds } },
+        { $inc: { followingCount: -1 } }
+      ).session(session);
+    }
+
+    if (following.length > 0) {
+      const followingIds = following.map((f) => f.following);
+      await User.updateMany(
+        { _id: { $in: followingIds } },
+        { $inc: { followersCount: -1 } }
+      ).session(session);
+    }
+  }
+
+  // ======================================
+  // Search & Discovery
+  // ======================================
+
+  static async searchUsers(query, currentUserId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    if (!query || query.trim().length < 2) {
+      return { users: [], total: 0 };
+    }
+
+    const settings = await UserSettings.findOne({ user: currentUserId })
+      .select("blockedUsers mutedUsers")
+      .lean();
+
+    const excludeIds = [
+      currentUserId,
+      ...(settings?.blockedUsers || []),
+      ...(settings?.mutedUsers || []),
+    ];
+
+    const searchQuery = {
+      _id: { $nin: excludeIds },
+      isActive: true,
+      "moderation.status": "active",
+      $or: [
+        { username: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    const [users, total] = await Promise.all([
+      User.find(searchQuery)
+        .select("username name avatar verified followersCount bio")
+        .sort({ "metrics.engagementRate": -1, followersCount: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(searchQuery),
+    ]);
+
+    const usersWithStatus = await Promise.all(
+      users.map(async (user) => ({
+        ...user,
+        isFollowing: await Follow.isFollowing(currentUserId, user._id),
+      }))
+    );
+
+    return { users: usersWithStatus, total };
+  }
+
+  static async getRecommendedUsers(userId, limit = 10) {
+    return User.getRecommendedUsers(userId, limit);
+  }
+
+  static async getUsersForChat(currentUserId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+    return Message.getConversations(currentUserId, { page, limit });
+  }
+
+  // ======================================
+  // Follow System
+  // ======================================
+
+  static async followUser(currentUserId, targetUserId) {
+    const result = await Follow.follow(currentUserId, targetUserId);
+
+    if (result.success && result.status === "active") {
+      const currentUser = await User.findById(currentUserId)
+        .select("username name avatar")
+        .lean();
+
+      await Notification.createNotification({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+        content: `${currentUser.username} đã theo dõi bạn`,
+        groupKey: `follow_${targetUserId}`,
+      });
+    }
+
+    return result;
+  }
+
+  static async unfollowUser(currentUserId, targetUserId) {
+    return Follow.unfollow(currentUserId, targetUserId);
+  }
+
+  static async checkFollowStatus(currentUserId, targetUserId) {
+    return Follow.getFollowStatus(currentUserId, targetUserId);
+  }
+
+  static async getFollowers(userId, options = {}) {
+    return Follow.getFollowers(userId, options);
+  }
+
+  static async getFollowing(userId, options = {}) {
+    return Follow.getFollowing(userId, options);
+  }
+
+  static async getMutualFollowers(userId1, userId2, limit = 10) {
+    return Follow.getMutualFollowers(userId1, userId2, limit);
+  }
+
+  static async acceptFollowRequest(userId, followerId) {
+    const result = await Follow.acceptFollowRequest(userId, followerId);
+
+    if (result.success) {
+      await Notification.createNotification({
+        recipient: followerId,
+        sender: userId,
+        type: "follow",
+        content: "đã chấp nhận yêu cầu theo dõi của bạn",
+      });
+    }
+
+    return result;
+  }
+
+  static async rejectFollowRequest(userId, followerId) {
+    return Follow.rejectFollowRequest(userId, followerId);
+  }
+
+  static async getPendingFollowRequests(userId, options = {}) {
+    return Follow.getPendingRequests(userId, options);
+  }
+
+  // ======================================
+  // User Settings
+  // ======================================
+
+  static async getUserSettings(userId) {
+    return UserSettings.getOrCreate(userId);
+  }
+
+  static async updatePrivacySettings(userId, privacySettings) {
+    const { profileVisibility, allowMessages, showActivity } = privacySettings;
+
+    const updateData = {};
+    if (profileVisibility)
+      updateData["privacy.profileVisibility"] = profileVisibility;
+    if (allowMessages) updateData["privacy.allowMessages"] = allowMessages;
+    if (showActivity !== undefined)
+      updateData["privacy.showActivity"] = showActivity;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    const settingsUpdate = {};
+    if (privacySettings.postVisibility)
+      settingsUpdate["privacy.postVisibility"] = privacySettings.postVisibility;
+    if (privacySettings.searchable !== undefined)
+      settingsUpdate["privacy.searchable"] = privacySettings.searchable;
+
+    if (Object.keys(settingsUpdate).length > 0) {
+      await UserSettings.findOneAndUpdate(
+        { user: userId },
+        { $set: settingsUpdate },
+        { upsert: true }
+      );
+    }
+
+    return user?.privacy;
+  }
+
+  static async updateNotificationSettings(userId, notificationSettings) {
+    const settings = await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $set: { notifications: notificationSettings } },
+      { new: true, upsert: true }
+    );
+
+    return settings.notifications;
+  }
+
+  static async updateSecuritySettings(userId, securitySettings) {
+    const { twoFactorEnabled, loginAlerts } = securitySettings;
+
+    const updateData = {};
+    if (twoFactorEnabled !== undefined)
+      updateData["security.twoFactorEnabled"] = twoFactorEnabled;
+    if (loginAlerts !== undefined)
+      updateData["security.loginAlerts"] = loginAlerts;
+
+    const settings = await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $set: updateData },
+      { new: true, upsert: true }
+    );
+
+    return settings.security;
+  }
+
+  static async updateAppearanceSettings(userId, appearanceSettings) {
+    const settings = await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $set: { appearance: appearanceSettings } },
+      { new: true, upsert: true }
+    );
+
+    return settings.appearance;
+  }
+
+  static async updateContentSettings(userId, contentSettings) {
+    const settings = await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $set: { content: contentSettings } },
+      { new: true, upsert: true }
+    );
+
+    return settings.content;
+  }
+
+  // Alias methods for backward compatibility
+  static async updateProfileSettings(userId, updatedFields, avatarUrl = null) {
+    if (avatarUrl) {
+      updatedFields.avatar = avatarUrl;
+    }
+    return this.updateProfile(userId, updatedFields);
+  }
+
+  static async updatePreferences(userId, preferences) {
+    return this.updateContentSettings(userId, preferences);
+  }
+
+  static async updateThemeSettings(userId, themeSettings) {
+    return this.updateAppearanceSettings(userId, themeSettings);
+  }
+
+  static async updateTwoFactorAuth(userId, twoFactorSettings) {
+    return this.updateSecuritySettings(userId, twoFactorSettings);
+  }
+
+  // ======================================
+  // Block & Mute
+  // ======================================
+
+  static async blockUser(userId, targetUserId) {
+    if (userId === targetUserId) {
+      throw new Error("Cannot block yourself");
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      throw new Error("User not found");
+    }
+
+    await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $addToSet: { blockedUsers: targetUserId } },
+      { upsert: true }
+    );
+
+    await Promise.all([
+      Follow.unfollow(userId, targetUserId),
+      Follow.unfollow(targetUserId, userId),
+    ]);
+
+    await UserInteraction.record({
+      user: userId,
+      targetType: "user",
+      targetId: targetUserId,
+      interactionType: "block",
+    });
+
+    return { success: true };
+  }
+
+  static async unblockUser(userId, targetUserId) {
+    await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $pull: { blockedUsers: targetUserId } }
+    );
+
+    return { success: true };
+  }
+
+  static async muteUser(userId, targetUserId) {
+    if (userId === targetUserId) {
+      throw new Error("Cannot mute yourself");
+    }
+
+    await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $addToSet: { mutedUsers: targetUserId } },
+      { upsert: true }
+    );
+
+    await UserInteraction.record({
+      user: userId,
+      targetType: "user",
+      targetId: targetUserId,
+      interactionType: "mute",
+    });
+
+    return { success: true };
+  }
+
+  static async unmuteUser(userId, targetUserId) {
+    await UserSettings.findOneAndUpdate(
+      { user: userId },
+      { $pull: { mutedUsers: targetUserId } }
+    );
+
+    return { success: true };
+  }
+
+  static async getBlockedUsers(userId) {
+    const settings = await UserSettings.findOne({ user: userId })
+      .populate("blockedUsers", "username name avatar")
+      .lean();
+
+    return settings?.blockedUsers || [];
+  }
+
+  static async getMutedUsers(userId) {
+    const settings = await UserSettings.findOne({ user: userId })
+      .populate("mutedUsers", "username name avatar")
+      .lean();
+
+    return settings?.mutedUsers || [];
+  }
+
+  static async isBlocked(userId, targetUserId) {
+    return UserSettings.isBlocked(userId, targetUserId);
+  }
+
+  // Alias for backward compatibility
+  static async updateBlockedUsers(userId, action, blockedUserId) {
+    if (action === "block") {
+      return this.blockUser(userId, blockedUserId);
+    } else if (action === "unblock") {
+      return this.unblockUser(userId, blockedUserId);
+    }
+    throw new Error("Invalid action");
+  }
+
+  // ======================================
+  // Activity & Metrics
+  // ======================================
+
+  static async updateLastActive(userId) {
+    await User.findByIdAndUpdate(userId, { lastActiveAt: new Date() });
+  }
+
+  static async updateUserMetrics(userId) {
+    const user = await User.findById(userId);
+    if (user) {
+      await user.updateEngagementMetrics();
+    }
+  }
+
+  static async getTopUsersByEngagement(limit = 10) {
+    return User.find({
+      isActive: true,
+      "moderation.status": "active",
+    })
+      .sort({ "metrics.engagementRate": -1 })
+      .limit(limit)
+      .select(
+        "username name avatar verified followersCount metrics.engagementRate"
+      )
+      .lean();
+  }
+
+  // Alias for backward compatibility
+  static async getTopUsersByLikes() {
+    return this.getTopUsersByEngagement(10);
+  }
+
+  static async getAllUsers(currentUserId) {
+    return this.getUsersForChat(currentUserId);
+  }
+
+  // ======================================
+  // Avatar Upload
+  // ======================================
+
   static async uploadAvatarToCloudinary(avatar, userId) {
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
     if (avatar.size > MAX_FILE_SIZE) {
       const sizeMB = (avatar.size / (1024 * 1024)).toFixed(2);
       throw new Error(`Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`);
     }
 
     const cloudinary = (await import("../configs/cloudinaryConfig.js")).default;
+
     const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
       folder: "avatars",
       public_id: `avatar_${userId}_${Date.now()}`,
       resource_type: "image",
+      transformation: [
+        { width: 400, height: 400, crop: "fill" },
+        { quality: "auto" },
+      ],
     });
+
+    await User.findByIdAndUpdate(userId, { avatar: result.secure_url });
 
     return result.secure_url;
   }
 
-  static async updatePrivacySettings(userId, privacySettings) {
-    // Map flattened settings to nested structure
-    const updateSets = {};
-    const {
-      profileVisibility,
-      postVisibility,
-      messagePermission,
-      searchVisibility,
-      activityStatus,
-      blockList
-    } = privacySettings;
+  // ======================================
+  // User Creation (for Auth)
+  // ======================================
 
-    if (profileVisibility !== undefined) updateSets["settings.privacy.profileVisibility"] = profileVisibility;
-    if (postVisibility !== undefined) updateSets["settings.privacy.postVisibility"] = postVisibility;
-    if (messagePermission !== undefined) updateSets["settings.privacy.messagePermission"] = messagePermission;
-    if (searchVisibility !== undefined) updateSets["settings.privacy.searchVisibility"] = searchVisibility;
-    if (activityStatus !== undefined) updateSets["settings.privacy.activityStatus"] = activityStatus;
-    // Blocklist logic usually separate, but if present:
-    if (blockList !== undefined) updateSets["settings.privacy.blockList"] = blockList;
+  static async createUser(userData) {
+    const { name, email, password, username } = userData;
 
-    const user = await User.findByIdAndUpdate(userId, { $set: updateSets }, { new: true });
-    return user.settings.privacy;
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      username: username.toLowerCase(),
+    });
+
+    await UserSettings.create({ user: user._id });
+
+    return user;
   }
 
-  static async updateNotificationSettings(userId, notificationSettings) {
-    const updateSets = {};
-    const { email, push, likes, comments, newFollower, directMessages } = notificationSettings;
-
-    if (email !== undefined) updateSets["settings.notifications.emailNotifications.enabled"] = email;
-    if (push !== undefined) updateSets["settings.notifications.pushNotifications.enabled"] = push;
-    
-    // Mapping flat keys to schema keys
-    if (likes !== undefined) updateSets["settings.notifications.pushNotifications.likes"] = likes;
-    if (comments !== undefined) updateSets["settings.notifications.pushNotifications.comments"] = comments;
-    if (newFollower !== undefined) updateSets["settings.notifications.pushNotifications.follows"] = newFollower;
-    if (directMessages !== undefined) updateSets["settings.notifications.pushNotifications.messages"] = directMessages;
-
-    const user = await User.findByIdAndUpdate(userId, { $set: updateSets }, { new: true });
-    return user.settings.notifications;
+  static async getUserByEmail(email) {
+    return this.findUserByEmail(email);
   }
 
-  static async updateTwoFactorAuth(userId, twoFactorSettings) {
-    const { enabled } = twoFactorSettings;
-    if (enabled === undefined) return; // Nothing to update
-    
-    const user = await User.findByIdAndUpdate(
-        userId, 
-        { $set: { "settings.security.twoFactorEnabled": enabled } },
-        { new: true }
-    );
-    return user.settings.security;
+  // Profile methods aliases
+  static async findProfileByUserId(userId) {
+    const user = await User.findById(userId).lean();
+    if (!user) return null;
+    return {
+      userId: user._id,
+      avatar: user.avatar,
+      bio: user.bio,
+      birthday: user.birthday,
+      gender: user.gender,
+      website: user.website,
+      interests: user.interests,
+    };
   }
 
-  static async updatePreferences(userId, preferences) {
-    const { language, theme, fontSize, autoplayVideos, soundEffects } = preferences;
-    const updateSets = {};
-    
-    if (language !== undefined) updateSets["settings.content.language"] = language;
-    if (theme !== undefined) updateSets["settings.theme.appearance"] = theme;
-    if (fontSize !== undefined) updateSets["settings.theme.fontSize"] = fontSize;
-    if (autoplayVideos !== undefined) updateSets["settings.content.autoplayEnabled"] = autoplayVideos;
-    // soundEffects not in my schema overview but safe to ignore if missing
-
-    const user = await User.findByIdAndUpdate(userId, { $set: updateSets }, { new: true });
-    return { ...user.settings.content, ...user.settings.theme };
+  static async getProfileById(userId) {
+    return this.findProfileByUserId(userId);
   }
 
-  static async updateBlockedUsers(userId, action, blockedUserId) {
-    if (!blockedUserId) throw new Error("User ID required");
-    
-    const user = await User.findById(userId);
-    if (!user) throw new Error("User not found");
-
-    if (!user.settings.privacy.blockList) user.settings.privacy.blockList = [];
-    
-    const mongoose = (await import("mongoose")).default;
-    let targetId = blockedUserId;
-
-    if (action === "block") {
-         // Resolve user
-         const query = { $or: [] };
-         if (mongoose.Types.ObjectId.isValid(blockedUserId)) query.$or.push({ _id: blockedUserId });
-         query.$or.push({ email: blockedUserId });
-         query.$or.push({ username: blockedUserId });
-         
-         const target = await User.findOne(query).select("_id");
-         if (!target) throw new Error("Target user not found");
-         targetId = target._id.toString();
-
-         if (!user.settings.privacy.blockList.includes(targetId)) {
-             user.settings.privacy.blockList.push(targetId);
-         } else {
-             throw new Error("Already blocked");
-         }
-    } else if (action === "unblock") {
-        // Resolve ID if needed...
-        if (!mongoose.Types.ObjectId.isValid(blockedUserId)) {
-             const target = await User.findOne({ username: blockedUserId }).select("_id");
-             if (target) targetId = target._id.toString();
-        }
-        
-        user.settings.privacy.blockList = user.settings.privacy.blockList.filter(id => id.toString() !== targetId);
-    }
-    
-    await user.save();
-    
-    // Populate
-    await user.populate("settings.privacy.blockList", "name username email profile.avatar");
-    
-    return user.settings.privacy.blockList.map(u => ({
-        _id: u._id,
-        name: u.name,
-        username: u.username,
-        email: u.email,
-        avatar: u.profile?.avatar
-    }));
+  static async createProfile(profileData) {
+    if (!profileData.userId) throw new Error("UserId required");
+    return this.updateProfile(profileData.userId, profileData);
   }
 
-  static async getBlockedUsers(userId) {
-    const user = await User.findById(userId).populate("settings.privacy.blockList", "name username profile.avatar");
-    return user?.settings?.privacy?.blockList || [];
-  }
-
-  static async updateSecuritySettings(userId, securitySettings) {
-    const updateSets = {};
-    if (securitySettings.loginAlerts !== undefined) 
-        updateSets["settings.security.loginAlerts"] = securitySettings.loginAlerts;
-    if (securitySettings.twoFactorEnabled !== undefined) 
-        updateSets["settings.security.twoFactorEnabled"] = securitySettings.twoFactorEnabled;
-        
-    const user = await User.findByIdAndUpdate(userId, { $set: updateSets }, { new: true });
-    return user.settings.security;
-  }
-
-  // Content/Theme settings aliases mapping to Preferences logic if needed, 
-  // but existing UpdateContentSettings exists.
-  static async updateContentSettings(userId, contentSettings) {
-      // Reusing logic similar to preferences
-      return this.updatePreferences(userId, contentSettings);
-  }
-  
-  static async updateThemeSettings(userId, themeSettings) {
-      return this.updatePreferences(userId, themeSettings);
+  static async deleteProfile(userId) {
+    return this.updateProfile(userId, {
+      bio: "",
+      website: "",
+      interests: [],
+      avatar:
+        "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1",
+    });
   }
 }
 

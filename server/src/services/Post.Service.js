@@ -1,893 +1,1218 @@
 import mongoose from "mongoose";
 import Post from "../models/Post.js";
+import User from "../models/User.js";
+import UserSettings from "../models/UserSettings.js";
 import Comment from "../models/Comment.js";
-import Likes from "../models/Like.js";
+import Like from "../models/Like.js";
 import SavePost from "../models/SavePost.js";
+import Hashtag from "../models/Hashtag.js";
+import UserInteraction from "../models/UserInteraction.js";
+import Follow from "../models/Follow.js";
 import Notification from "../models/Notification.js";
-import Hashtags from "../models/Hashtag.js";
-import SocketService from "./Socket.Service.js";
-import { getPaginationResponse } from "../helpers/pagination.js";
 import logger from "../configs/logger.js";
 
+/**
+ * Post Service - Refactored for new model structure
+ *
+ * Key Changes:
+ * 1. Integrates with UserInteraction for recommendation engine
+ * 2. Uses denormalized counters
+ * 3. Updates hashtag analytics
+ * 4. Uses Post model's ranking methods
+ */
 class PostService {
   // ======================================
-  // Post Core Methods
+  // Post Creation & Update
   // ======================================
-  static async getAllPosts(page = 1, limit = 10) {
+
+  static async createPost(postData, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-      const skip = (page - 1) * limit;
+      const {
+        caption = "",
+        media = [],
+        visibility = "public",
+        location,
+      } = postData;
 
-      const totalPosts = await Post.countDocuments();
-      const totalPages = Math.ceil(totalPosts / limit);
+      const processedHashtags = await this._processHashtags(caption, session);
 
-      const posts = await Post.find()
-        .populate({
-          path: "user",
-          select: "name followers following profile.avatar",
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
+      const post = await Post.create(
+        [
+          {
+            user: userId,
+            caption,
+            media,
+            visibility,
+            location,
+            hashtags: processedHashtags,
+          },
+        ],
+        { session }
+      );
 
-      const { pagination } = getPaginationResponse({ data: posts, total: totalPosts, page, limit });
+      await User.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } }).session(
+        session
+      );
 
-      return {
-        posts,
-        pagination,
-      };
-    } catch (error) {
-      logger.error("Error getting all posts:", error);
-      throw error;
-    }
-  }
+      await session.commitTransaction();
 
-  static async getPostsByUserId(userId) {
-    try {
-      if (!userId) {
-        throw new Error("User ID is required!");
-      }
-
-      const postOfUser = await Post.find({
-        user: new mongoose.Types.ObjectId(userId),
-      })
-        .populate({
-          path: "user",
-          select: "name profile.avatar",
-        })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      if (!postOfUser) {
-        throw new Error("No posts found for this user!");
-      }
-
-      return postOfUser;
-    } catch (error) {
-      logger.error("Error getting posts by user ID:", error);
-      throw error;
-    }
-  }
-
-  static async deletePost(postId) {
-    try {
-      const post = await Post.findByIdAndDelete(postId);
-      if (!post) {
-        throw new Error("Post not found");
-      }
-      return post;
-    } catch (error) {
-      logger.error("Error deleting post:", error);
-      throw error;
-    }
-  }
-
-  static async updatePost(postId, updateData) {
-    try {
-      const post = await Post.findByIdAndUpdate(postId, updateData, {
-        new: true,
-      });
-      if (!post) {
-        throw new Error("Post not found");
-      }
-      return post;
-    } catch (error) {
-      logger.error("Error updating post:", error);
-      throw error;
-    }
-  }
-
-  static async createPost(userData, postData, files) {
-    try {
-      const userObjectId = new mongoose.Types.ObjectId(userData.id);
-      const { caption, tags } = postData;
-
-      if (!caption || caption.trim() === "") {
-        throw new Error("Title là bắt buộc");
-      }
-
-      const mediaPaths = files?.length
-        ? files.map((file) => ({
-            url: file.path,
-            type: file.mimetype.includes("image") ? "image" : "video",
-          }))
-        : [];
-
-      const newPost = new Post({
-        user: userObjectId,
-        caption: caption,
-        media: mediaPaths,
-        tags: Array.isArray(tags) ? tags : [],
-      });
-
-      await newPost.save();
-
-      const populatedPost = await Post.findById(newPost._id)
-        .populate("user", "name followers following profile.avatar")
+      const populatedPost = await Post.findById(post[0]._id)
+        .populate("user", "username name avatar verified")
         .lean();
 
       return populatedPost;
     } catch (error) {
+      await session.abortTransaction();
       logger.error("Error creating post:", error);
       throw error;
+    } finally {
+      session.endSession();
     }
   }
 
-  static async getPostById(postId) {
-    try {
-      const post = await Post.findById(postId)
-        .populate("user", "name followers following profile.avatar")
-        .lean();
-      if (!post) {
-        throw new Error("Post not found");
+  static async _processHashtags(caption, session) {
+    const hashtagRegex = /#(\w+)/g;
+    const matches = caption.match(hashtagRegex);
+
+    if (!matches) return [];
+
+    const tags = [...new Set(matches.map((tag) => tag.slice(1).toLowerCase()))];
+    const processedTags = [];
+
+    for (const tag of tags.slice(0, 30)) {
+      const hashtag = await Hashtag.findOneAndUpdate(
+        { name: tag },
+        {
+          $inc: { postsCount: 1 },
+          $set: { lastUsedAt: new Date() },
+        },
+        { upsert: true, new: true, session }
+      );
+
+      processedTags.push({ tag, hashtagId: hashtag._id });
+    }
+
+    return processedTags;
+  }
+
+  static async updatePost(postId, userId, updateData) {
+    const post = await Post.findOne({
+      _id: postId,
+      user: userId,
+      isDeleted: false,
+    });
+
+    if (!post) {
+      throw new Error("Post not found or unauthorized");
+    }
+
+    const { caption, visibility, location, mentions } = updateData;
+    const allowedUpdates = {};
+
+    if (caption !== undefined) {
+      allowedUpdates.caption = caption;
+
+      const oldTags = post.hashtags.map((h) => h.tag);
+      const newTags = await this._processHashtags(caption, null);
+
+      const removedTags = oldTags.filter(
+        (t) => !newTags.map((n) => n.tag).includes(t)
+      );
+      const addedTags = newTags.filter((n) => !oldTags.includes(n.tag));
+
+      if (removedTags.length > 0) {
+        await Hashtag.updateMany(
+          { name: { $in: removedTags } },
+          { $inc: { postsCount: -1 } }
+        );
       }
+
+      allowedUpdates.hashtags = newTags;
+    }
+
+    if (visibility !== undefined) allowedUpdates.visibility = visibility;
+    if (location !== undefined) allowedUpdates.location = location;
+    if (mentions !== undefined) allowedUpdates.mentions = mentions;
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $set: allowedUpdates },
+      { new: true }
+    ).populate("user", "username name avatar verified");
+
+    return updatedPost;
+  }
+
+  static async deletePost(postId, userId, isAdmin = false) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const query = isAdmin ? { _id: postId } : { _id: postId, user: userId };
+      const post = await Post.findOne(query).session(session);
+
+      if (!post) {
+        throw new Error("Post not found or unauthorized");
+      }
+
+      post.isDeleted = true;
+      await post.save({ session });
+
+      await User.findByIdAndUpdate(post.user, {
+        $inc: { postsCount: -1 },
+      }).session(session);
+
+      if (post.hashtags && post.hashtags.length > 0) {
+        const tags = post.hashtags.map((h) => h.tag);
+        await Hashtag.updateMany(
+          { name: { $in: tags } },
+          { $inc: { postsCount: -1 } }
+        ).session(session);
+      }
+
+      await session.commitTransaction();
       return post;
     } catch (error) {
-      logger.error("Error getting post by ID:", error);
+      await session.abortTransaction();
       throw error;
+    } finally {
+      session.endSession();
     }
   }
 
-  static async deletePost(postId) {
-    try {
-      const post = await Post.findByIdAndDelete(postId);
-      if (!post) {
-        throw new Error("Post not found");
-      }
+  // ======================================
+  // Post Retrieval
+  // ======================================
 
-      // Cleanup related data
-      await Promise.all([
-        Comment.deleteMany({ post: postId }),
-        Likes.deleteMany({ post: postId }),
-        SavePost.deleteMany({ post: postId }),
-        Notification.deleteMany({ post: postId }),
+  static async getPostById(postId, userId = null) {
+    const post = await Post.findOne({ _id: postId, isDeleted: false })
+      .populate("user", "username name avatar verified")
+      .lean();
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    const result = { ...post };
+
+    if (userId) {
+      const [isLiked, isSaved] = await Promise.all([
+        Like.exists({ user: userId, post: postId }),
+        SavePost.exists({ user: userId, post: postId }),
       ]);
 
-      return post;
-    } catch (error) {
-      logger.error("Error deleting post:", error);
-      throw error;
-    }
-  }
+      result.isLiked = !!isLiked;
+      result.isSaved = !!isSaved;
 
-  // ======================================
-  // Comment Methods (Merged from CommentService)
-  // ======================================
-  static async createComment(userId, content, postId, parentComment) {
-    try {
-      if (!content || content.trim() === "") {
-        throw new Error("Nội dung comment không được để trống");
-      }
-
-      if (!postId) {
-        throw new Error("ID bài viết là bắt buộc");
-      }
-
-      // Kiểm tra xem bài viết có tồn tại không
-      const post = await Post.findById(postId);
-      if (!post) {
-        throw new Error("Bài viết không tồn tại");
-      }
-
-      // Tạo comment mới
-      const newComment = new Comment({
-        user: new mongoose.Types.ObjectId(userId),
-        content,
-        post: new mongoose.Types.ObjectId(postId),
-        parentComment: parentComment
-          ? new mongoose.Types.ObjectId(parentComment)
-          : null,
+      await UserInteraction.record({
+        user: userId,
+        targetType: "post",
+        targetId: postId,
+        interactionType: "view",
+        metadata: { viewDuration: 0 },
       });
-
-      await newComment.save();
-
-      // Cập nhật số lượng comment của bài viết
-      const commentCount = await Comment.countDocuments({ post: postId });
-
-      // Truy vấn comment đã tạo với thông tin người dùng
-      const populatedComment = await Comment.findById(newComment._id)
-        .populate({
-          path: "user",
-          select: "name profile.avatar",
-        })
-        .lean();
-
-      // Emit sự kiện "new_comment" qua socket
-      SocketService.emitToRoom(`post:${postId}`, "new_comment", {
-        comment: populatedComment,
-        postId,
-        commentCount,
-        action: "create",
-      });
-
-      return {
-        comment: populatedComment,
-        commentCount,
-      };
-    } catch (error) {
-      logger.error("Error in createComment:", error);
-      throw error;
-    }
-  }
-
-  static async getCommentsByPostId(postId) {
-    try {
-      if (!postId) {
-        throw new Error("ID bài viết là bắt buộc");
-      }
-
-      // Kiểm tra xem bài viết có tồn tại không
-      const post = await Post.findById(postId);
-      if (!post) {
-        throw new Error("Bài viết không tồn tại");
-      }
-
-      // Lấy tất cả comments cho bài viết
-      const comments = await Comment.find({
-        post: new mongoose.Types.ObjectId(postId),
-      })
-        .populate({
-          path: "user",
-          select: "name profile.avatar",
-        })
-        .populate({
-          path: "parentComment",
-          populate: {
-            path: "user",
-            select: "name profile.avatar",
-          },
-        })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      // Tổ chức comments thành cây (root comments và replies)
-      const rootComments = comments.filter((comment) => !comment.parentComment);
-      const replies = comments.filter((comment) => comment.parentComment);
-
-      // Đối với mỗi comment gốc, thêm replies tương ứng
-      const commentTree = rootComments.map((rootComment) => {
-        const commentReplies = replies.filter(
-          (reply) =>
-            reply.parentComment &&
-            reply.parentComment._id.toString() === rootComment._id.toString()
-        );
-        return {
-          ...rootComment,
-          replies: commentReplies,
-        };
-      });
-
-      // Tính tổng số comment (bao gồm cả replies)
-      const commentCount = comments.length;
-
-      return {
-        comments: commentTree,
-        commentCount,
-      };
-    } catch (error) {
-      logger.error("Error in getCommentsByPostId:", error);
-      throw error;
-    }
-  }
-
-  static async updateComment(commentId, content, userId) {
-    try {
-      if (!content || content.trim() === "") {
-        throw new Error("Nội dung comment không được để trống");
-      }
-
-      // Tìm comment cần cập nhật
-      const comment = await Comment.findById(commentId);
-      if (!comment) {
-        throw new Error("Comment không tồn tại");
-      }
-
-      // Kiểm tra xem người dùng có quyền cập nhật comment không
-      if (comment.user.toString() !== userId) {
-        throw new Error("Bạn không có quyền cập nhật comment này");
-      }
-
-      // Cập nhật comment
-      comment.content = content;
-      await comment.save();
-
-      const updatedComment = await Comment.findById(commentId)
-        .populate({
-          path: "user",
-          select: "name profile.avatar",
-        })
-        .lean();
-
-      // Lấy postId từ comment
-      const postId = comment.post.toString();
-
-      // Đếm số lượng comment của bài viết
-      const commentCount = await Comment.countDocuments({ post: postId });
-
-      // Emit sự kiện "update_comment" qua socket
-      SocketService.emitToRoom(`post:${postId}`, "update_comment", {
-        comment: updatedComment,
-        postId,
-        commentCount,
-        action: "update",
-      });
-
-      return {
-        comment: updatedComment,
-        postId,
-      };
-    } catch (error) {
-      logger.error("Error in updateComment:", error);
-      throw error;
-    }
-  }
-
-  static async deleteComment(commentId, userId) {
-    try {
-      // Tìm comment cần xóa
-      const comment = await Comment.findById(commentId);
-      if (!comment) {
-        throw new Error("Comment không tồn tại");
-      }
-
-      // Kiểm tra xem người dùng có quyền xóa comment không
-      if (comment.user.toString() !== userId) {
-        throw new Error("Bạn không có quyền xóa comment này");
-      }
-
-      // Lưu postId trước khi xóa comment
-      const postId = comment.post.toString();
-
-      // Xóa tất cả reply của comment này
-      await Comment.deleteMany({ parentComment: comment._id });
-
-      // Xóa comment
-      await Comment.findByIdAndDelete(commentId);
-
-      // Đếm số lượng comment còn lại của bài viết
-      const commentCount = await Comment.countDocuments({ post: postId });
-
-      // Emit sự kiện "delete_comment" qua socket
-      SocketService.emitToRoom(`post:${postId}`, "delete_comment", {
-        commentId,
-        postId,
-        commentCount,
-        action: "delete",
-      });
-
-      return {
-        commentId,
-        postId,
-        commentCount,
-      };
-    } catch (error) {
-      logger.error("Error in deleteComment:", error);
-      throw error;
-    }
-  }
-
-  // ======================================
-  // Like Methods (Merged from LikeService)
-  // ======================================
-  static async createLike(userId, postId, session, userData) {
-    // Đảm bảo postId và userId là ObjectId hợp lệ
-    const postObjectId = new mongoose.Types.ObjectId(postId);
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-
-    // Kiểm tra nếu like đã tồn tại
-    const exists = await Likes.findOne({
-      user: userObjectId,
-      post: postObjectId,
-    }).session(session);
-
-    if (exists) {
-      throw new Error("You already liked this post");
-    }
-
-    // Kiểm tra post tồn tại
-    const post = await Post.findById(postObjectId).session(session);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    // Tạo like mới
-    const newLike = new Likes({
-      user: userObjectId,
-      post: postObjectId,
-    });
-
-    await newLike.save({ session });
-
-    // Đếm số like
-    const likeCount = await Likes.countDocuments({
-      post: postObjectId,
-    }).session(session);
-
-    // Trả về thông tin cần thiết
-    return {
-      newLike,
-      post,
-      likeCount,
-    };
-  }
-
-  static async deleteLike(userId, postId, session) {
-    // Tìm like hiện tại
-    const like = await Likes.findOne({
-      user: userId,
-      post: postId,
-    }).session(session);
-
-    if (!like) {
-      throw new Error("You have not liked this post");
-    }
-
-    // Xóa like
-    await Likes.deleteOne({ _id: like._id }).session(session);
-
-    // Đếm số like còn lại
-    const likeCount = await Likes.countDocuments({ post: postId }).session(
-      session
-    );
-
-    return { likeCount };
-  }
-
-  static async getLikeStatus(userId, postId) {
-    const like = await Likes.findOne({ user: userId, post: postId });
-    const likeCount = await Likes.countDocuments({ post: postId });
-
-    return {
-      isLiked: !!like,
-      count: likeCount,
-    };
-  }
-
-  static async getAllLikesFromPosts(postIds, userId) {
-    const sanitizedPostIds = postIds.map(
-      (id) => new mongoose.Types.ObjectId(id)
-    );
-
-    const likeCounts = await Likes.aggregate([
-      {
-        $match: {
-          post: { $in: sanitizedPostIds },
-        },
-      },
-      {
-        $group: {
-          _id: "$post",
-          count: { $sum: 1 },
-          likedByUser: {
-            $sum: {
-              $cond: [
-                { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-    ]);
-
-    return likeCounts;
-  }
-
-  static async toggleLike(userId, postId, session, userData) {
-    const postObjectId = new mongoose.Types.ObjectId(postId);
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-
-    // Kiểm tra post tồn tại
-    const post = await Post.findById(postObjectId).session(session);
-    if (!post) {
-      throw new Error("Post not found");
-    }
-
-    // Kiểm tra like hiện tại
-    const existingLike = await Likes.findOne({
-      user: userObjectId,
-      post: postObjectId,
-    }).session(session);
-
-    let action = "";
-    let message = "";
-
-    // Xử lý dựa trên trạng thái hiện tại
-    if (existingLike) {
-      // Bỏ like
-      await Likes.findByIdAndDelete(existingLike._id).session(session);
-      action = "unlike";
-      message = "Unliked successfully";
-    } else {
-      // Thêm like
-      const newLike = new Likes({
-        user: userObjectId,
-        post: postObjectId,
-      });
-      await newLike.save({ session });
-
-      action = "like";
-      message = "Liked successfully";
-    }
-
-    // Đếm lại số like
-    const likeCount = await Likes.countDocuments({
-      post: postObjectId,
-    }).session(session);
-
-    return {
-      post,
-      action,
-      message,
-      likeCount,
-    };
-  }
-
-  static async getLikedPosts(userId) {
-    // Tìm tất cả like của người dùng
-    const userLikes = await Likes.find({
-      user: new mongoose.Types.ObjectId(userId),
-    }).sort({ createdAt: -1 });
-
-    if (!userLikes || userLikes.length === 0) {
-      return [];
-    }
-
-    // Lấy id của các bài viết đã like
-    const postIds = userLikes.map((like) => like.post);
-
-    // Tìm các bài viết
-    const likedPosts = await Post.find({
-      _id: { $in: postIds },
-    })
-      .populate({
-        path: "user",
-        select: "name profile.avatar",
-      })
-      .sort({ createdAt: -1 });
-
-    return likedPosts;
-  }
-
-  static async createNotification(recipient, sender, content, postId, session) {
-    const notification = new Notification({
-      recipient,
-      sender,
-      type: "like",
-      content,
-      post: postId,
-      isRead: false,
-    });
-
-    await notification.save({ session });
-    return notification;
-  }
-
-  // Transactional wrappers for Like actions
-  static async likePost(userId, postId, currentUser) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const { newLike, post, likeCount } = await this.createLike(userId, postId, session);
-      
-      const postOwner = post.user.toString();
-      
-      // Notify if not self-like
-      if (userId !== postOwner) {
-        const username = currentUser.username || "Một người dùng";
-        const notificationContent = `${username} đã thích bài viết của bạn`;
-        
-        const notification = await this.createNotification(
-          postOwner,
-          userId,
-          notificationContent,
-          new mongoose.Types.ObjectId(postId),
-          session
-        );
-
-        const notificationPayload = {
-          _id: notification._id.toString(),
-          recipient: postOwner,
-          sender: {
-            _id: userId,
-            username: currentUser.username,
-            name: currentUser.name || currentUser.username,
-            avatar: currentUser.avatar || "https://via.placeholder.com/40",
-          },
-          type: "like",
-          content: notificationContent,
-          post: {
-            _id: postId,
-            caption: post.caption,
-            media: post.media && post.media.length > 0 ? [post.media[0]] : [],
-          },
-          isRead: false,
-          createdAt: notification.createdAt || new Date(),
-          updatedAt: notification.updatedAt || new Date(),
-        };
-
-        try {
-          SocketService.emitNotification(postOwner, notificationPayload);
-          SocketService.emit(`notification:to:${postOwner}`, notificationPayload);
-        } catch (socketError) {
-          logger.error("Error sending notification via socket:", socketError);
-        }
-      }
-
-      await session.commitTransaction();
-      session.endSession();
-
-      try {
-        SocketService.emitPostLikeUpdate(postId, userId, "like");
-      } catch (socketError) {
-        logger.error("Error emitting socket event:", socketError);
-      }
-
-      logger.info(`[Server] User ${userId} liked post ${postId}. New count: ${likeCount}`);
-      
-      return { newLike, likeCount };
-
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
-  }
-
-  static async unlikePost(userId, postId) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const { likeCount } = await this.deleteLike(userId, postId, session);
-
-      await session.commitTransaction();
-      session.endSession();
-
-      try {
-        SocketService.emitPostLikeUpdate(postId, userId, "unlike");
-      } catch (socketError) {
-        logger.error("Error emitting socket event:", socketError);
-      }
-
-      logger.info(`[Server] User ${userId} unliked post ${postId}. New count: ${likeCount}`);
-      
-      return { likeCount };
-
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
-  }
-
-  static async toggleLikePost(userId, postId, currentUser) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const { post, action, message, likeCount } = await this.toggleLike(userId, postId, session);
-
-      const postOwner = post.user.toString();
-      if (action === "like" && userId !== postOwner) {
-        const username = currentUser.username || "Một người dùng";
-        const notificationContent = `${username} đã thích bài viết của bạn`;
-        
-        const notification = await this.createNotification(
-          postOwner,
-          userId,
-          notificationContent,
-          new mongoose.Types.ObjectId(postId),
-          session
-        );
-
-        const notificationPayload = {
-          _id: notification._id.toString(),
-          recipient: postOwner,
-          sender: {
-             _id: userId,
-             username: currentUser.username,
-             name: currentUser.name || currentUser.username,
-             avatar: currentUser.avatar || "https://via.placeholder.com/40",
-          },
-          type: "like",
-          content: notificationContent,
-          post: {
-             _id: postId,
-             caption: post.caption,
-             media: post.media && post.media.length > 0 ? [post.media[0]] : [],
-          },
-          isRead: false,
-          createdAt: notification.createdAt || new Date(),
-          updatedAt: notification.updatedAt || new Date(),
-        };
-
-        try {
-          SocketService.emitNotification(postOwner, notificationPayload);
-        } catch (socketError) {
-          logger.error("Error sending notification via socket:", socketError);
-        }
-      }
-
-      await session.commitTransaction();
-      session.endSession();
-
-      try {
-        SocketService.emitPostLikeUpdate(postId, userId, action);
-      } catch (socketError) {
-        logger.error("Error emitting socket event:", socketError);
-      }
-
-      return {
-        isLiked: action === "like",
-        count: likeCount,
-        message
-      };
-
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
-  }
-
-  // ======================================
-  // SavePost Methods (Merged from SavePostService)
-  // ======================================
-  static async savePost(userId, postId) {
-    // Kiểm tra post có tồn tại không
-    const post = await Post.findById(postId);
-    if (!post) {
-      throw new Error("Bài viết không tồn tại");
-    }
-
-    // Kiểm tra đã save chưa
-    const existingSave = await SavePost.findOne({
-      user: userId,
-      post: postId,
-    });
-
-    if (existingSave) {
-      throw new Error("Bài viết đã được lưu trước đó");
-    }
-
-    // Lưu bài viết
-    const savedPost = await SavePost.create({ user: userId, post: postId });
-    await savedPost.populate({
-      path: "post",
-      populate: {
-        path: "user",
-        select: "name profile.avatar",
-      },
-    });
-
-    return { post, savedPost };
-  }
-
-  static async createSaveNotification(recipientId, senderId, postId, username) {
-    const notification = await Notification.create({
-      recipient: recipientId,
-      sender: senderId,
-      type: "save",
-      content: "đã lưu bài viết của bạn",
-      post: postId,
-    });
-
-    // Gửi thông báo realtime
-    await notification.populate({
-      path: "sender",
-      select: "username name avatar",
-    });
-
-    // Gửi thông báo đã được populate đầy đủ thông tin
-    await notification.populate({
-      path: "post",
-      select: "caption media",
-    });
-
-    // Tạo object thông báo đầy đủ thông tin để gửi qua socket
-    const notificationPayload = {
-      ...notification.toObject(),
-      content: `${username || "Một người dùng"} đã lưu bài viết của bạn`,
-    };
-
-    return { notification, notificationPayload };
-  }
-
-  static async unsavePost(userId, postId) {
-    const result = await SavePost.findOneAndDelete({
-      user: userId,
-      post: postId,
-    });
-
-    if (!result) {
-      throw new Error("Bài viết chưa được lưu");
     }
 
     return result;
   }
 
-  static async getSavedPosts(userId, page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
+  static async getUserPosts(targetUserId, requesterId = null, options = {}) {
+    const { page = 1, limit = 20 } = options;
 
-    const totalSavedPosts = await SavePost.countDocuments({ user: userId });
+    let visibilityFilter = ["public"];
 
-    const savedPosts = await SavePost.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "post",
-        populate: {
-          path: "user",
-          select: "name profile.avatar",
-        },
-      });
+    if (requesterId) {
+      if (requesterId === targetUserId.toString()) {
+        visibilityFilter = ["public", "followers", "private"];
+      } else {
+        const isFollowing = await Follow.isFollowing(requesterId, targetUserId);
+        if (isFollowing) {
+          visibilityFilter = ["public", "followers"];
+        }
+      }
+    }
 
-    // Lọc ra những bài post không null
-    const validPosts = savedPosts
-      .map((sp) => sp.post)
-      .filter((post) => post !== null);
+    const query = {
+      user: targetUserId,
+      isDeleted: false,
+      visibility: { $in: visibilityFilter },
+    };
 
-    const { pagination } = getPaginationResponse({ data: validPosts, total: totalSavedPosts, page, limit });
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .populate("user", "username name avatar verified")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments(query),
+    ]);
+
+    let postsWithStatus = posts;
+    if (requesterId) {
+      postsWithStatus = await this._addUserStatus(posts, requesterId);
+    }
 
     return {
-      validPosts,
-      pagination,
+      posts: postsWithStatus,
+      total,
+      hasMore: page * limit < total,
     };
   }
 
-  static async checkSavedStatus(userId, postId) {
-    const savedPost = await SavePost.findOne({
-      user: userId,
-      post: postId,
-    });
+  static async _addUserStatus(posts, userId) {
+    const postIds = posts.map((p) => p._id);
 
-    return !!savedPost;
+    const [likes, saves] = await Promise.all([
+      Like.find({ user: userId, post: { $in: postIds } })
+        .select("post")
+        .lean(),
+      SavePost.find({ user: userId, post: { $in: postIds } })
+        .select("post")
+        .lean(),
+    ]);
+
+    const likedSet = new Set(likes.map((l) => l.post.toString()));
+    const savedSet = new Set(saves.map((s) => s.post.toString()));
+
+    return posts.map((post) => ({
+      ...post,
+      isLiked: likedSet.has(post._id.toString()),
+      isSaved: savedSet.has(post._id.toString()),
+    }));
   }
 
   // ======================================
-  // Hashtag Methods (Merged from HashtagService)
+  // Feed & Discovery
   // ======================================
-  static async findHashtagByName(name) {
+
+  static async getHomeFeed(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const settings = await UserSettings.findOne({ user: userId })
+      .select("blockedUsers mutedUsers content")
+      .lean();
+
+    const [following, blockedUsers, mutedUsers] = await Promise.all([
+      Follow.getFollowingIds(userId),
+      settings?.blockedUsers || [],
+      settings?.mutedUsers || [],
+    ]);
+
+    const excludeUsers = [...blockedUsers, ...mutedUsers].map((id) =>
+      id.toString()
+    );
+    const feedUsers = [...following, userId].filter(
+      (id) => !excludeUsers.includes(id.toString())
+    );
+
+    const query = {
+      user: { $in: feedUsers },
+      isDeleted: false,
+      $or: [
+        { user: userId },
+        { visibility: "public" },
+        { visibility: "followers" },
+      ],
+    };
+
+    const posts = await Post.find(query)
+      .populate("user", "username name avatar verified")
+      .sort({ createdAt: -1, engagementScore: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const postsWithStatus = await this._addUserStatus(posts, userId);
+
+    return {
+      posts: postsWithStatus,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  static async getExploreFeed(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const settings = await UserSettings.findOne({ user: userId })
+      .select("blockedUsers mutedUsers")
+      .lean();
+
+    const excludeUsers = [
+      userId,
+      ...(settings?.blockedUsers || []),
+      ...(settings?.mutedUsers || []),
+    ];
+
+    const query = {
+      user: { $nin: excludeUsers },
+      isDeleted: false,
+      visibility: "public",
+      "moderation.status": "approved",
+    };
+
+    const posts = await Post.find(query)
+      .populate("user", "username name avatar verified")
+      .sort({ trendingScore: -1, engagementScore: -1, createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const postsWithStatus = await this._addUserStatus(posts, userId);
+
+    return {
+      posts: postsWithStatus,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  static async getPersonalizedFeed(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const user = await User.findById(userId).select("interests").lean();
+
+    const recentInteractions = await UserInteraction.find({
+      user: userId,
+      interactionType: { $in: ["like", "comment", "share", "save"] },
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    })
+      .sort({ weight: -1 })
+      .limit(50)
+      .lean();
+
+    const interactedPostIds = recentInteractions
+      .filter((i) => i.targetType === "post")
+      .map((i) => i.targetId);
+
+    const interactedPosts = await Post.find({ _id: { $in: interactedPostIds } })
+      .select("hashtags")
+      .lean();
+
+    const interestTags = new Set();
+    interactedPosts.forEach((post) => {
+      post.hashtags?.forEach((h) => interestTags.add(h.tag));
+    });
+    user?.interests?.forEach((interest) =>
+      interestTags.add(interest.toLowerCase())
+    );
+
+    const settings = await UserSettings.findOne({ user: userId })
+      .select("blockedUsers mutedUsers")
+      .lean();
+
+    const excludeUsers = [
+      userId,
+      ...(settings?.blockedUsers || []),
+      ...(settings?.mutedUsers || []),
+    ];
+
+    const query = {
+      user: { $nin: excludeUsers },
+      isDeleted: false,
+      visibility: "public",
+      "moderation.status": "approved",
+    };
+
+    if (interestTags.size > 0) {
+      query["hashtags.tag"] = { $in: [...interestTags] };
+    }
+
+    const posts = await Post.find(query)
+      .populate("user", "username name avatar verified")
+      .sort({ qualityScore: -1, engagementScore: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const postsWithStatus = await this._addUserStatus(posts, userId);
+
+    return {
+      posts: postsWithStatus,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  static async getTrendingPosts(options = {}) {
+    const { page = 1, limit = 20, timeframe = "day" } = options;
+
+    const timeframeDays = { day: 1, week: 7, month: 30 };
+    const days = timeframeDays[timeframe] || 1;
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const posts = await Post.find({
+      isDeleted: false,
+      visibility: "public",
+      "moderation.status": "approved",
+      createdAt: { $gte: startDate },
+    })
+      .populate("user", "username name avatar verified")
+      .sort({ trendingScore: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    return {
+      posts,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  // ======================================
+  // Search
+  // ======================================
+
+  static async searchPosts(query, userId = null, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    if (!query || query.trim().length < 2) {
+      return { posts: [], total: 0 };
+    }
+
+    let excludeUsers = [];
+    if (userId) {
+      const settings = await UserSettings.findOne({ user: userId })
+        .select("blockedUsers mutedUsers")
+        .lean();
+      excludeUsers = [
+        ...(settings?.blockedUsers || []),
+        ...(settings?.mutedUsers || []),
+      ];
+    }
+
+    const searchQuery = {
+      isDeleted: false,
+      visibility: "public",
+      "moderation.status": "approved",
+      user: { $nin: excludeUsers },
+      $or: [
+        { caption: { $regex: query, $options: "i" } },
+        { "hashtags.tag": { $regex: query.replace("#", ""), $options: "i" } },
+      ],
+    };
+
+    const [posts, total] = await Promise.all([
+      Post.find(searchQuery)
+        .populate("user", "username name avatar verified")
+        .sort({ engagementScore: -1, createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments(searchQuery),
+    ]);
+
+    let postsWithStatus = posts;
+    if (userId) {
+      postsWithStatus = await this._addUserStatus(posts, userId);
+    }
+
+    return { posts: postsWithStatus, total, hasMore: page * limit < total };
+  }
+
+  static async getPostsByHashtag(hashtag, userId = null, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const tag = hashtag.replace("#", "").toLowerCase();
+
+    await Hashtag.findOneAndUpdate({ name: tag }, { $inc: { searchCount: 1 } });
+
+    let excludeUsers = [];
+    if (userId) {
+      const settings = await UserSettings.findOne({ user: userId })
+        .select("blockedUsers mutedUsers")
+        .lean();
+      excludeUsers = [
+        ...(settings?.blockedUsers || []),
+        ...(settings?.mutedUsers || []),
+      ];
+    }
+
+    const query = {
+      "hashtags.tag": tag,
+      isDeleted: false,
+      visibility: "public",
+      "moderation.status": "approved",
+      user: { $nin: excludeUsers },
+    };
+
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .populate("user", "username name avatar verified")
+        .sort({ engagementScore: -1, createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments(query),
+    ]);
+
+    let postsWithStatus = posts;
+    if (userId) {
+      postsWithStatus = await this._addUserStatus(posts, userId);
+    }
+
+    return { posts: postsWithStatus, total, hasMore: page * limit < total };
+  }
+
+  static async getTrendingHashtags(limit = 10) {
+    return Hashtag.getTrending(limit);
+  }
+
+  // ======================================
+  // Like System
+  // ======================================
+
+  static async likePost(postId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-      if (!name) {
-        throw new Error("Hashtag name is required");
+      const post = await Post.findOne({
+        _id: postId,
+        isDeleted: false,
+      }).session(session);
+      if (!post) {
+        throw new Error("Post not found");
       }
 
-      const hashtag = await Hashtags.findOne({ name });
-
-      if (!hashtag) {
-        logger.error(`No hashtag found with name: ${name}`);
-        return null;
+      const existingLike = await Like.findOne({
+        user: userId,
+        post: postId,
+      }).session(session);
+      if (existingLike) {
+        await session.commitTransaction();
+        return { success: true, alreadyLiked: true };
       }
 
-      return hashtag;
+      await Like.create([{ user: userId, post: postId, targetType: "post" }], {
+        session,
+      });
+
+      await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } }).session(
+        session
+      );
+
+      await UserInteraction.record({
+        user: userId,
+        targetType: "post",
+        targetId: postId,
+        interactionType: "like",
+      });
+
+      if (post.user.toString() !== userId) {
+        const sender = await User.findById(userId).select("username").lean();
+        await Notification.createNotification({
+          recipient: post.user,
+          sender: userId,
+          type: "like",
+          relatedPost: postId,
+          content: `${sender.username} đã thích bài viết của bạn`,
+          groupKey: `like_${postId}`,
+        });
+      }
+
+      await session.commitTransaction();
+      return { success: true };
     } catch (error) {
-      logger.error("Database error in findHashtagByName:", error);
-      throw new Error("Error finding hashtag");
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async unlikePost(postId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const like = await Like.findOneAndDelete({
+        user: userId,
+        post: postId,
+      }).session(session);
+
+      if (!like) {
+        await session.commitTransaction();
+        return { success: true, wasNotLiked: true };
+      }
+
+      await Post.findByIdAndUpdate(postId, {
+        $inc: { likesCount: -1 },
+      }).session(session);
+
+      await session.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async getPostLikes(postId, options = {}) {
+    const { page = 1, limit = 50 } = options;
+
+    const likes = await Like.find({ post: postId, targetType: "post" })
+      .populate("user", "username name avatar verified")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    return likes.map((l) => l.user);
+  }
+
+  // ======================================
+  // Save System
+  // ======================================
+
+  static async savePost(postId, userId, collection = "default") {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const post = await Post.findOne({
+        _id: postId,
+        isDeleted: false,
+      }).session(session);
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      const existingSave = await SavePost.findOne({
+        user: userId,
+        post: postId,
+      }).session(session);
+      if (existingSave) {
+        if (existingSave.collection !== collection) {
+          existingSave.collection = collection;
+          await existingSave.save({ session });
+        }
+        await session.commitTransaction();
+        return { success: true, alreadySaved: true };
+      }
+
+      await SavePost.create([{ user: userId, post: postId, collection }], {
+        session,
+      });
+
+      await Post.findByIdAndUpdate(postId, { $inc: { savesCount: 1 } }).session(
+        session
+      );
+
+      await UserInteraction.record({
+        user: userId,
+        targetType: "post",
+        targetId: postId,
+        interactionType: "save",
+      });
+
+      await session.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async unsavePost(postId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const save = await SavePost.findOneAndDelete({
+        user: userId,
+        post: postId,
+      }).session(session);
+
+      if (!save) {
+        await session.commitTransaction();
+        return { success: true, wasNotSaved: true };
+      }
+
+      await Post.findByIdAndUpdate(postId, {
+        $inc: { savesCount: -1 },
+      }).session(session);
+
+      await session.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async getSavedPosts(userId, options = {}) {
+    const { page = 1, limit = 20, collection } = options;
+
+    const query = { user: userId };
+    if (collection) {
+      query.collection = collection;
+    }
+
+    const saved = await SavePost.find(query)
+      .populate({
+        path: "post",
+        match: { isDeleted: false },
+        populate: { path: "user", select: "username name avatar verified" },
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const posts = saved
+      .filter((s) => s.post)
+      .map((s) => ({
+        ...s.post,
+        savedAt: s.createdAt,
+        collection: s.collection,
+      }));
+
+    return {
+      posts,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  static async getSavedCollections(userId) {
+    return SavePost.getCollections(userId);
+  }
+
+  // ======================================
+  // Comment System
+  // ======================================
+
+  static async addComment(postId, userId, content, parentCommentId = null) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const post = await Post.findOne({
+        _id: postId,
+        isDeleted: false,
+      }).session(session);
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      let depth = 0;
+      let rootComment = null;
+
+      if (parentCommentId) {
+        const parentComment = await Comment.findById(parentCommentId).session(
+          session
+        );
+        if (!parentComment || parentComment.isDeleted) {
+          throw new Error("Parent comment not found");
+        }
+        depth = Math.min(parentComment.depth + 1, 3);
+        rootComment = parentComment.rootComment || parentComment._id;
+      }
+
+      const [comment] = await Comment.create(
+        [
+          {
+            post: postId,
+            user: userId,
+            content,
+            parentComment: parentCommentId,
+            rootComment,
+            depth,
+          },
+        ],
+        { session }
+      );
+
+      await Post.findByIdAndUpdate(postId, {
+        $inc: { commentsCount: 1 },
+      }).session(session);
+
+      if (parentCommentId) {
+        await Comment.findByIdAndUpdate(parentCommentId, {
+          $inc: { repliesCount: 1 },
+        }).session(session);
+      }
+
+      await UserInteraction.record({
+        user: userId,
+        targetType: "post",
+        targetId: postId,
+        interactionType: "comment",
+      });
+
+      const notifyUserId = parentCommentId
+        ? (await Comment.findById(parentCommentId).select("user").lean())?.user
+        : post.user;
+
+      if (notifyUserId && notifyUserId.toString() !== userId) {
+        const sender = await User.findById(userId).select("username").lean();
+        await Notification.createNotification({
+          recipient: notifyUserId,
+          sender: userId,
+          type: parentCommentId ? "reply" : "comment",
+          relatedPost: postId,
+          relatedComment: comment._id,
+          content: parentCommentId
+            ? `${sender.username} đã trả lời bình luận của bạn`
+            : `${sender.username} đã bình luận bài viết của bạn`,
+          groupKey: `comment_${postId}`,
+        });
+      }
+
+      await session.commitTransaction();
+
+      const populatedComment = await Comment.findById(comment._id)
+        .populate("user", "username name avatar verified")
+        .lean();
+
+      return populatedComment;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async getComments(postId, options = {}) {
+    const { page = 1, limit = 20, sort = "best" } = options;
+
+    const sortOptions = {
+      best: { likesCount: -1, createdAt: -1 },
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+    };
+
+    const comments = await Comment.find({
+      post: postId,
+      isDeleted: false,
+      parentComment: null,
+    })
+      .populate("user", "username name avatar verified")
+      .sort(sortOptions[sort] || sortOptions.best)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    return {
+      comments,
+      hasMore: comments.length === limit,
+    };
+  }
+
+  static async getCommentReplies(commentId, options = {}) {
+    const { page = 1, limit = 10 } = options;
+
+    const replies = await Comment.find({
+      parentComment: commentId,
+      isDeleted: false,
+    })
+      .populate("user", "username name avatar verified")
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    return {
+      replies,
+      hasMore: replies.length === limit,
+    };
+  }
+
+  static async deleteComment(commentId, userId, isAdmin = false) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const query = isAdmin
+        ? { _id: commentId }
+        : { _id: commentId, user: userId };
+      const comment = await Comment.findOne(query).session(session);
+
+      if (!comment) {
+        throw new Error("Comment not found or unauthorized");
+      }
+
+      comment.isDeleted = true;
+      await comment.save({ session });
+
+      await Post.findByIdAndUpdate(comment.post, {
+        $inc: { commentsCount: -1 },
+      }).session(session);
+
+      if (comment.parentComment) {
+        await Comment.findByIdAndUpdate(comment.parentComment, {
+          $inc: { repliesCount: -1 },
+        }).session(session);
+      }
+
+      await session.commitTransaction();
+      return comment;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async likeComment(commentId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const comment = await Comment.findOne({
+        _id: commentId,
+        isDeleted: false,
+      }).session(session);
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+
+      const existingLike = await Like.findOne({
+        user: userId,
+        comment: commentId,
+        targetType: "comment",
+      }).session(session);
+
+      if (existingLike) {
+        await session.commitTransaction();
+        return { success: true, alreadyLiked: true };
+      }
+
+      await Like.create(
+        [
+          {
+            user: userId,
+            comment: commentId,
+            targetType: "comment",
+          },
+        ],
+        { session }
+      );
+
+      await Comment.findByIdAndUpdate(commentId, {
+        $inc: { likesCount: 1 },
+      }).session(session);
+
+      await session.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async unlikeComment(commentId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const like = await Like.findOneAndDelete({
+        user: userId,
+        comment: commentId,
+        targetType: "comment",
+      }).session(session);
+
+      if (!like) {
+        await session.commitTransaction();
+        return { success: true, wasNotLiked: true };
+      }
+
+      await Comment.findByIdAndUpdate(commentId, {
+        $inc: { likesCount: -1 },
+      }).session(session);
+
+      await session.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // ======================================
+  // Share System
+  // ======================================
+
+  static async sharePost(postId, userId, platform = "internal") {
+    const post = await Post.findOne({ _id: postId, isDeleted: false });
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    await Post.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
+
+    await UserInteraction.record({
+      user: userId,
+      targetType: "post",
+      targetId: postId,
+      interactionType: "share",
+      metadata: { platform },
+    });
+
+    if (post.user.toString() !== userId) {
+      const sender = await User.findById(userId).select("username").lean();
+      await Notification.createNotification({
+        recipient: post.user,
+        sender: userId,
+        type: "share",
+        relatedPost: postId,
+        content: `${sender.username} đã chia sẻ bài viết của bạn`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  // ======================================
+  // Ranking & Scoring Methods
+  // ======================================
+
+  static async updatePostScores(postId) {
+    const post = await Post.findById(postId);
+    if (post) {
+      post.calculateEngagementScore();
+      post.calculateTrendingScore();
+      await post.save();
+    }
+  }
+
+  static async batchUpdateScores() {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const posts = await Post.find({
+      isDeleted: false,
+      $or: [
+        { createdAt: { $gte: twentyFourHoursAgo } },
+        { lastActivityAt: { $gte: twentyFourHoursAgo } },
+      ],
+    });
+
+    for (const post of posts) {
+      post.calculateEngagementScore();
+      post.calculateTrendingScore();
+      await post.save();
+    }
+
+    logger.info(`Updated scores for ${posts.length} posts`);
+  }
+
+  // ======================================
+  // Report System (Basic)
+  // ======================================
+
+  static async reportPost(postId, userId, reason, description = "") {
+    const Report = (await import("../models/Report.js")).default;
+
+    const post = await Post.findOne({ _id: postId, isDeleted: false });
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    const existingReport = await Report.findOne({
+      reporter: userId,
+      targetType: "post",
+      targetId: postId,
+      status: { $in: ["pending", "reviewing"] },
+    });
+
+    if (existingReport) {
+      throw new Error("You have already reported this post");
+    }
+
+    const report = await Report.create({
+      reporter: userId,
+      targetType: "post",
+      targetId: postId,
+      targetUser: post.user,
+      category: reason,
+      reason,
+      description,
+      contentSnapshot: {
+        caption: post.caption,
+        media: post.media,
+      },
+    });
+
+    return report;
+  }
+
+  // ======================================
+  // Media Upload
+  // ======================================
+
+  static async uploadMedia(files, userId) {
+    const cloudinary = (await import("../configs/cloudinaryConfig.js")).default;
+    const uploadedMedia = [];
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+    const fileArray = Array.isArray(files) ? files : [files];
+
+    for (const file of fileArray) {
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File ${file.name} exceeds 100MB limit`);
+      }
+
+      const resourceType = file.mimetype?.startsWith("video/")
+        ? "video"
+        : "image";
+
+      const result = await cloudinary.uploader.upload(file.tempFilePath, {
+        folder: "posts",
+        public_id: `post_${userId}_${Date.now()}`,
+        resource_type: resourceType,
+        transformation:
+          resourceType === "image"
+            ? [{ quality: "auto" }, { fetch_format: "auto" }]
+            : [{ quality: "auto" }],
+      });
+
+      uploadedMedia.push({
+        url: result.secure_url,
+        type: resourceType,
+        publicId: result.public_id,
+      });
+    }
+
+    return uploadedMedia;
+  }
+
+  // ======================================
+  // Backward Compatibility Aliases
+  // ======================================
+
+  static async getFollowingPosts(userId, page = 1, limit = 10) {
+    return this.getHomeFeed(userId, { page, limit });
+  }
+
+  static async getFeedPosts(userId, page = 1, limit = 20) {
+    return this.getHomeFeed(userId, { page, limit });
+  }
+
+  static async getPostsByUser(userId, options = {}) {
+    return this.getUserPosts(userId, null, options);
+  }
+
+  static async toggleLike(postId, userId) {
+    const existingLike = await Like.findOne({ user: userId, post: postId });
+    if (existingLike) {
+      await this.unlikePost(postId, userId);
+      return { liked: false };
+    } else {
+      await this.likePost(postId, userId);
+      return { liked: true };
     }
   }
 }

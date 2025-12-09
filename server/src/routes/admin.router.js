@@ -1,6 +1,6 @@
 import express from "express";
 import { AdminController } from "../controllers/admin.controller.js";
-import * as ReportController from "../controllers/report.controller.js";
+import ReportController from "../controllers/report.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import { adminMiddleware } from "../middlewares/admin.middleware.js";
 
@@ -15,81 +15,58 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Apply authentication and admin middleware to all routes except health check
+// Apply authentication and admin middleware
 router.use(verifyToken, adminMiddleware);
 
-// Dashboard routes
+// ======================================
+// Dashboard & Analytics
+// ======================================
 router.get("/dashboard/stats", AdminController.getDashboardStats);
-router.get("/dashboard/activities", AdminController.getRecentActivities);
+router.get("/analytics/user-growth", AdminController.getUserGrowthStats);
+router.get("/analytics/posts", AdminController.getPostStats);
+router.get("/analytics/top-users", AdminController.getTopEngagedUsers);
 
-// User management routes
+// ======================================
+// User Management
+// ======================================
 router.get("/users", AdminController.getAllUsers);
-
-// Banned accounts management - đặt trước các route với :userId
-router.get("/users/banned", AdminController.getBannedAccounts);
-router.get("/users/ban-history/:userId", AdminController.getBanHistory);
-router.put("/users/extend-ban", AdminController.extendBan);
-router.post("/users/temp-unban", AdminController.temporaryUnban);
-
-// Các route với userId động - đặt sau các route tĩnh
+router.get("/users/banned", AdminController.getBannedUsers);
 router.get("/users/:userId", AdminController.getUserDetails);
 router.put("/users/:userId", AdminController.updateUser);
 router.delete("/users/:userId", AdminController.deleteUser);
+
+// User Moderation
 router.post("/users/ban", AdminController.banUser);
 router.post("/users/unban", AdminController.unbanUser);
+router.post("/users/suspend", AdminController.suspendUser);
+router.post("/users/warn", AdminController.warnUser);
 
-// Post management routes
+// ======================================
+// Content Moderation
+// ======================================
 router.get("/posts", AdminController.getAllPosts);
-router.get("/posts/:postId", AdminController.getPostDetails);
+router.post("/posts/:postId/moderate", AdminController.moderatePost);
+router.post("/posts/:postId/approve", AdminController.approvePost);
 router.delete("/posts/:postId", AdminController.deletePost);
-router.post("/posts/approve/:postId", AdminController.approvePost);
 
-// Comment management routes
-router.get("/comments", AdminController.getAllComments);
+router.post("/comments/:commentId/moderate", AdminController.moderateComment);
 router.delete("/comments/:commentId", AdminController.deleteComment);
 
-// Report management routes
-router.get("/reports", ReportController.getAllReports);
-router.put("/reports/:reportId", ReportController.updateReportStatus);
-router.post("/reports/:reportId/comment", ReportController.addReportComment);
-// Custom mapping for legacy/specific actions if needed, or use the generic update
-router.post("/reports/resolve/:reportId", (req, res, next) => {
-    req.body.status = 'resolved';
-    ReportController.updateReportStatus(req, res, next);
-});
-router.post("/reports/dismiss/:reportId", (req, res, next) => {
-    req.body.status = 'dismissed';
-    ReportController.updateReportStatus(req, res, next);
-});
+// ======================================
+// Reports Management
+// ======================================
+router.get("/reports", AdminController.getReports);
+router.get("/reports/pending", ReportController.getPendingReports);
+router.get("/reports/user/:userId", ReportController.getReportsAgainstUser);
+router.post("/reports/:reportId/review", AdminController.reviewReport);
+router.post("/reports/:reportId/start-review", ReportController.startReview);
+router.put("/reports/:reportId/resolve", ReportController.resolveReport);
 
-// Interaction management routes
-router.get("/interactions/stats", AdminController.getInteractionStats);
-router.get("/interactions/timeline", AdminController.getInteractionTimeline);
-router.get("/interactions/users", AdminController.getUserInteractions);
-router.get("/interactions/spam", AdminController.getSpamAccounts);
-router.post("/interactions/flag", AdminController.flagAccount);
-router.delete(
-  "/interactions/remove/:interactionId",
-  AdminController.removeInteraction
-);
-router.get("/interactions/types", AdminController.getInteractionTypes);
-
-// Admin logs
-
-
-// Admin settings
-router.get("/settings", AdminController.getAdminSettings);
-router.put("/settings", AdminController.updateAdminSettings);
-
-// System settings
-router.put("/settings/security", AdminController.updateSecuritySettings);
-router.put("/settings/content-policy", AdminController.updateContentPolicy);
-router.put("/settings/user-permissions", AdminController.updateUserPermissions);
-router.put(
-  "/settings/notifications",
-  AdminController.updateNotificationSettings
-);
-router.get("/settings/system-health", AdminController.getSystemHealth);
-router.put("/settings/system-config", AdminController.updateSystemConfig);
+// ======================================
+// System Management
+// ======================================
+router.post("/broadcast", AdminController.broadcastNotification);
+router.get("/system/health", AdminController.getSystemHealth);
+router.get("/logs", AdminController.getAdminLogs);
 
 export default router;

@@ -6,7 +6,11 @@ const router = express.Router();
 
 router.use(verifyToken);
 
+// ======================================
+// Saved Posts
+// ======================================
 router.get("/", PostController.getSavedPosts);
+router.get("/collections", PostController.getSavedCollections);
 router.get("/:postId/status", PostController.checkSavedStatus);
 
 router.post("/:postId", PostController.savePost);

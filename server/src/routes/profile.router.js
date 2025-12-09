@@ -7,7 +7,14 @@ const router = express.Router();
 
 router.use(verifyToken);
 
+// ======================================
+// Profile Routes
+// ======================================
 router.get("/:id", UserController.GET_PROFILE_BY_ID);
-router.put("/", upload.fields([{ name: "avatar", maxCount: 1 }]), UserController.updateProfileSettings);
+router.put(
+  "/",
+  upload.fields([{ name: "avatar", maxCount: 1 }]),
+  UserController.updateProfileSettings
+);
 
 export default router;

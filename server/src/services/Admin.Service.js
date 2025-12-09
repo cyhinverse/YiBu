@@ -1,345 +1,690 @@
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Post from "../models/Post.js";
 import Comment from "../models/Comment.js";
+import Report from "../models/Report.js";
+import RefreshToken from "../models/RefreshToken.js";
+import UserSettings from "../models/UserSettings.js";
+import Notification from "../models/Notification.js";
+import logger from "../configs/logger.js";
 
-import UserService from "./User.Service.js";
-import PostService from "./Post.Service.js";
-
+/**
+ * Admin Service - Refactored for new model structure
+ *
+ * Key Changes:
+ * 1. Uses moderation.status instead of moderation.isBanned
+ * 2. Integrates with Report model for content moderation
+ * 3. Better analytics with denormalized counters
+ * 4. Audit logging for admin actions
+ */
 class AdminService {
-  // --- Dashboard & Analytics ---
-  static async getDashboardStats(timeRange = "week") {
-    const now = new Date();
-    let startDate;
-    switch (timeRange) {
-      case "day": startDate = new Date(now.setDate(now.getDate() - 1)); break;
-      case "week": startDate = new Date(now.setDate(now.getDate() - 7)); break;
-      case "month": startDate = new Date(now.setMonth(now.getMonth() - 1)); break;
-      case "year": startDate = new Date(now.setFullYear(now.getFullYear() - 1)); break;
-      default: startDate = new Date(now.setDate(now.getDate() - 7));
-    }
+  // ======================================
+  // User Management
+  // ======================================
 
-    const [
-      totalUsers, totalPosts, totalComments,
-      newUsers, newPosts, newComments, bannedUsers
-    ] = await Promise.all([
-      User.countDocuments(),
-      Post.countDocuments(),
-      Comment.countDocuments(),
-      User.countDocuments({ createdAt: { $gte: startDate } }),
-      Post.countDocuments({ createdAt: { $gte: startDate } }),
-      Comment.countDocuments({ createdAt: { $gte: startDate } }),
-      User.countDocuments({ "moderation.isBanned": true }),
-    ]);
+  static async getAllUsers(options = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      sortBy = "createdAt",
+      sortOrder = -1,
+    } = options;
 
-    return {
-      users: { total: totalUsers, new: newUsers, active: totalUsers - bannedUsers, banned: bannedUsers },
-      content: { posts: totalPosts, newPosts: newPosts, comments: totalComments, newComments: newComments },
-    };
-  }
+    const query = {};
 
-  static async getRecentActivities(limit = 10) {
-    const [recentUsers, recentPosts, recentComments] = await Promise.all([
-      User.find().sort({ createdAt: -1 }).limit(limit).select("-password"),
-      Post.find().sort({ createdAt: -1 }).limit(limit).populate("user", "username name avatar"),
-      Comment.find().sort({ createdAt: -1 }).limit(limit).populate("user", "username name avatar"),
-    ]);
-
-    const allActivities = [
-      ...recentUsers.map(u => ({ type: "user", data: u, createdAt: u.createdAt })),
-      ...recentPosts.map(p => ({ type: "post", data: p, createdAt: p.createdAt })),
-      ...recentComments.map(c => ({ type: "comment", data: c, createdAt: c.createdAt })),
-    ];
-    
-    return allActivities.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
-  }
-
-  static async getInteractionStats(timeRange = "week") {
-    const now = new Date();
-    let startDate;
-    switch (timeRange) {
-      case "day": startDate = new Date(now.setDate(now.getDate() - 1)); break;
-      case "week": startDate = new Date(now.setDate(now.getDate() - 7)); break;
-      case "month": startDate = new Date(now.setMonth(now.getMonth() - 1)); break;
-      default: startDate = new Date(now.setDate(now.getDate() - 7));
-    }
-
-    const [commentsCount, totalPosts] = await Promise.all([
-      Comment.countDocuments({ createdAt: { $gte: startDate } }),
-      Post.countDocuments({ createdAt: { $gte: startDate } }),
-    ]);
-
-    return {
-      comments: commentsCount,
-      posts: totalPosts,
-      estimatedViews: totalPosts * 10,
-      estimatedLikes: Math.floor(totalPosts * 4.5),
-      timeRange,
-    };
-  }
-  // --- Interaction Management ---
-  static async getInteractionTimeline(timeRange = "week") {
-    // Mock/Aggregation for timeline
-    const now = new Date();
-    const timeline = [];
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        timeline.push({
-            date: date.toISOString().split('T')[0],
-            likes: Math.floor(Math.random() * 50),
-            comments: Math.floor(Math.random() * 20),
-            posts: Math.floor(Math.random() * 5)
-        });
-    }
-    return timeline.reverse();
-  }
-
-  static async getUserInteractions(query, skip, limit) {
-      // Return users sorted by activity (mock or reuse getAllUsers logic with sort)
-      // For now, reuse basic user fetch but implied sorting by interactions could be added later
-     return this.getAllUsers(query, skip, limit);
-  }
-
-  static async removeInteraction(interactionId) {
-     // Generic removal? Probably Comment or Post. 
-     // For now check Comment first then Post? Or Log?
-     // Since this is ambiguous, valid strategy is to return true if ID format valid.
-     const comment = await Comment.findByIdAndDelete(interactionId);
-     if (comment) return { type: 'comment', id: interactionId };
-     
-     const post = await Post.findByIdAndDelete(interactionId);
-     if (post) return { type: 'post', id: interactionId };
-
-     throw new Error("Interaction not found");
-  }
-
-  static async getInteractionTypes() {
-      return ["like", "comment", "post", "share", "save"];
-  }
-
-  // --- User Management ---
-  static async getAllUsers(query, skip, limit) {
-    const filter = {};
-    if (query.search) {
-      filter.$or = [
-        { username: { $regex: query.search, $options: "i" } },
-        { email: { $regex: query.search, $options: "i" } },
-        { name: { $regex: query.search, $options: "i" } },
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
-    if (query.isBanned === "true") filter["moderation.isBanned"] = true;
-    if (query.isBanned === "false") filter["moderation.isBanned"] = false;
+
+    if (status) {
+      query["moderation.status"] = status;
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
 
     const [users, total] = await Promise.all([
-      User.find(filter).select("-password").skip(skip).limit(limit).sort({ createdAt: -1 }),
-      User.countDocuments(filter),
+      User.find(query)
+        .select("-loginAttempts -security")
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(query),
     ]);
-    return { users, total };
+
+    return {
+      users,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
   }
 
-  static async getUserDetails(userId) {
-    const user = await User.findById(userId).select("-password").populate("profile");
-    if (!user) throw new Error("User not found");
-    return user;
-  }
+  static async getUserById(userId) {
+    const user = await User.findById(userId).select("-loginAttempts").lean();
 
-  static async updateUser(userId, updates) {
-    delete updates.password;
-    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true }).select("-password");
-    if (!updatedUser) throw new Error("User not found");
-    return updatedUser;
-  }
-
-  // --- Ban & Flag Management ---
-  static async banUser(userId, reason, duration, adminId) {
-    let banExpiration = null;
-    if (duration && duration > 0) {
-      banExpiration = new Date();
-      banExpiration.setDate(banExpiration.getDate() + parseInt(duration));
+    if (!user) {
+      throw new Error("User not found");
     }
+
+    const settings = await UserSettings.findOne({ user: userId }).lean();
+
+    const recentReports = await Report.find({
+      targetUser: userId,
+      status: { $in: ["pending", "reviewing"] },
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    return {
+      ...user,
+      settings,
+      recentReports,
+      reportsCount: recentReports.length,
+    };
+  }
+
+  static async updateUser(userId, updateData, adminId) {
+    const { password, email, ...safeData } = updateData;
 
     const user = await User.findByIdAndUpdate(
       userId,
-      {
-        "moderation.isBanned": true,
-        "moderation.banReason": reason || "Violated community guidelines",
-        "moderation.banExpiration": banExpiration,
-        $push: { "moderation.banHistory": { action: "ban", reason: reason || "Violated community guidelines", duration: duration || null, performedBy: adminId } }
-      },
+      { $set: safeData },
       { new: true }
-    ).select("-password");
+    ).select("-loginAttempts -security");
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await this._logAdminAction(adminId, "update_user", "user", userId, {
+      updateData: safeData,
+    });
+
     return user;
+  }
+
+  // ======================================
+  // User Moderation
+  // ======================================
+
+  static async banUser(userId, adminId, reason = "Violation of terms") {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            "moderation.status": "banned",
+            "moderation.reason": reason,
+            "moderation.moderatedBy": adminId,
+            "moderation.moderatedAt": new Date(),
+          },
+        },
+        { new: true, session }
+      );
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      await RefreshToken.updateMany(
+        { user: userId },
+        { isRevoked: true, revokedReason: "user_banned" }
+      ).session(session);
+
+      await this._logAdminAction(adminId, "ban_user", "user", userId, {
+        reason,
+      });
+
+      await session.commitTransaction();
+
+      logger.info(`User ${userId} banned by admin ${adminId}`);
+
+      return user;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   static async unbanUser(userId, adminId) {
     const user = await User.findByIdAndUpdate(
       userId,
       {
-        "moderation.isBanned": false,
-        "moderation.banReason": "",
-        "moderation.banExpiration": null,
-        $push: { "moderation.banHistory": { action: "unban", performedBy: adminId } }
+        $set: {
+          "moderation.status": "active",
+          "moderation.reason": null,
+          "moderation.moderatedBy": adminId,
+          "moderation.moderatedAt": new Date(),
+        },
       },
       { new: true }
-    ).select("-password");
-    if (!user) throw new Error("User not found");
+    );
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await this._logAdminAction(adminId, "unban_user", "user", userId);
+
+    logger.info(`User ${userId} unbanned by admin ${adminId}`);
+
     return user;
   }
 
-  static async getBannedAccounts(skip, limit) {
-    const [users, total] = await Promise.all([
-      User.find({ "moderation.isBanned": true }).select("-password").skip(skip).limit(limit).sort({ updatedAt: -1 }),
-      User.countDocuments({ "moderation.isBanned": true }),
-    ]);
-    return { users, total };
-  }
+  static async suspendUser(
+    userId,
+    adminId,
+    days = 7,
+    reason = "Temporary suspension"
+  ) {
+    const suspendedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
-  static async getBanHistory(userId) {
-    const user = await User.findById(userId).select("moderation.banHistory username");
-    if (!user) throw new Error("User not found");
-    return user.moderation.banHistory;
-  }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-  static async extendBan(userId, duration, adminId) {
-    const user = await User.findById(userId);
-    if (!user || (!user.moderation || !user.moderation.isBanned)) {
-      throw new Error("User not found or not banned");
+    try {
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            "moderation.status": "suspended",
+            "moderation.reason": reason,
+            "moderation.suspendedUntil": suspendedUntil,
+            "moderation.moderatedBy": adminId,
+            "moderation.moderatedAt": new Date(),
+          },
+        },
+        { new: true, session }
+      );
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      await RefreshToken.updateMany(
+        { user: userId },
+        { isRevoked: true, revokedReason: "user_suspended" }
+      ).session(session);
+
+      await Notification.createNotification({
+        recipient: userId,
+        type: "system",
+        content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
+      });
+
+      await this._logAdminAction(adminId, "suspend_user", "user", userId, {
+        days,
+        reason,
+      });
+
+      await session.commitTransaction();
+
+      return user;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    let newExpiration = new Date(user.moderation.banExpiration || Date.now());
-    newExpiration.setDate(newExpiration.getDate() + parseInt(duration));
-
-    user.moderation.banExpiration = newExpiration;
-    user.moderation.banHistory.push({ action: "extend", duration, performedBy: adminId });
-    await user.save();
-    return newExpiration;
   }
 
-  static async temporaryUnban(userId, duration, reason, adminId) {
-    const user = await User.findById(userId);
-    if (!user || (!user.moderation || !user.moderation.isBanned)) {
-      throw new Error("User not found or not banned");
-    }
-
-    const tempUnbanExpiration = new Date();
-    tempUnbanExpiration.setDate(tempUnbanExpiration.getDate() + parseInt(duration));
-
-    user.moderation.previousBanState = {
-        isBanned: user.moderation.isBanned,
-        banReason: user.moderation.banReason,
-        banExpiration: user.moderation.banExpiration,
-    };
-    
-    user.moderation.isBanned = false;
-    user.moderation.tempUnbanExpiration = tempUnbanExpiration;
-    user.moderation.tempUnbanReason = reason;
-    user.moderation.tempUnbanBy = adminId;
-    user.moderation.banHistory.push({ action: "tempUnban", duration, reason, performedBy: adminId });
-
-    await user.save();
-    return { tempUnbanExpiration, isBanned: user.moderation.isBanned };
-  }
-
-  static async getSpamAccounts(skip, limit) {
-     const aggregationPipeline = [
-      { $lookup: { from: "Comments", localField: "_id", foreignField: "user", as: "comments" } },
-      { $lookup: { from: "Posts", localField: "_id", foreignField: "user", as: "posts" } },
+  static async warnUser(userId, adminId, reason) {
+    const user = await User.findByIdAndUpdate(
+      userId,
       {
-        $addFields: {
-          commentCount: { $size: "$comments" },
-          postCount: { $size: "$posts" },
-          riskScore: {
-             $add: [
-                { $cond: [{ $gt: [{ $divide: [{ $size: "$comments" }, { $add: [{ $size: "$posts" }, 1] }] }, 10] }, 50, 0] },
-                { $cond: [{ $and: [{ $gt: [{ $add: [{ $size: "$comments" }, { $size: "$posts" }] }, 20] }, { $lt: [{ $subtract: [new Date(), "$createdAt"] }, 7 * 24 * 60 * 60 * 1000] }] }, 30, 0] }
-             ]
+        $inc: { "moderation.warnings": 1 },
+        $set: {
+          "moderation.lastWarningAt": new Date(),
+          "moderation.moderatedBy": adminId,
+        },
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await Notification.createNotification({
+      recipient: userId,
+      type: "system",
+      content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${reason}`,
+    });
+
+    await this._logAdminAction(adminId, "warn_user", "user", userId, {
+      reason,
+    });
+
+    if (user.moderation.warnings >= 3) {
+      await this.suspendUser(userId, adminId, 3, "Nhận quá nhiều cảnh báo");
+    }
+
+    return user;
+  }
+
+  // ======================================
+  // Content Moderation
+  // ======================================
+
+  static async getAllPosts(options = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      sortBy = "createdAt",
+      sortOrder = -1,
+    } = options;
+
+    const query = { isDeleted: false };
+
+    if (status) {
+      query["moderation.status"] = status;
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
+
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .populate("user", "username name avatar verified")
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments(query),
+    ]);
+
+    return {
+      posts,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  static async moderatePost(postId, adminId, action, reason = "") {
+    const validActions = ["approve", "reject", "flag", "remove"];
+
+    if (!validActions.includes(action)) {
+      throw new Error("Invalid moderation action");
+    }
+
+    const statusMap = {
+      approve: "approved",
+      reject: "rejected",
+      flag: "flagged",
+      remove: "removed",
+    };
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const updateData = {
+        "moderation.status": statusMap[action],
+        "moderation.reviewedBy": adminId,
+        "moderation.reviewedAt": new Date(),
+      };
+
+      if (reason) {
+        updateData["moderation.reason"] = reason;
+      }
+
+      if (action === "remove") {
+        updateData.isDeleted = true;
+      }
+
+      const post = await Post.findByIdAndUpdate(
+        postId,
+        { $set: updateData },
+        { new: true, session }
+      ).populate("user", "username name avatar");
+
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      if (action === "reject" || action === "remove") {
+        await User.findByIdAndUpdate(post.user._id, {
+          $inc: { postsCount: -1 },
+        }).session(session);
+
+        await Notification.createNotification({
+          recipient: post.user._id,
+          type: "system",
+          content: `Bài viết của bạn đã bị ${
+            action === "remove" ? "gỡ bỏ" : "từ chối"
+          }. Lý do: ${reason || "Vi phạm quy định cộng đồng"}`,
+        });
+      }
+
+      await this._logAdminAction(adminId, `${action}_post`, "post", postId, {
+        reason,
+      });
+
+      await session.commitTransaction();
+
+      return post;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async deletePost(postId, adminId, reason = "Admin action") {
+    return this.moderatePost(postId, adminId, "remove", reason);
+  }
+
+  static async moderateComment(commentId, adminId, action, reason = "") {
+    const validActions = ["approve", "remove"];
+
+    if (!validActions.includes(action)) {
+      throw new Error("Invalid moderation action");
+    }
+
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+
+    if (action === "remove") {
+      comment.isDeleted = true;
+      comment.content = "[Nội dung đã bị xóa bởi quản trị viên]";
+      await comment.save();
+
+      await Post.findByIdAndUpdate(comment.post, {
+        $inc: { commentsCount: -1 },
+      });
+
+      await Notification.createNotification({
+        recipient: comment.user,
+        type: "system",
+        content: `Bình luận của bạn đã bị xóa. Lý do: ${
+          reason || "Vi phạm quy định cộng đồng"
+        }`,
+      });
+    }
+
+    await this._logAdminAction(
+      adminId,
+      `${action}_comment`,
+      "comment",
+      commentId,
+      { reason }
+    );
+
+    return comment;
+  }
+
+  // ======================================
+  // Reports Management
+  // ======================================
+
+  static async getReports(options = {}) {
+    const { page = 1, limit = 20, status, category, priority } = options;
+
+    const query = {};
+
+    if (status) query.status = status;
+    if (category) query.category = category;
+    if (priority) query.priority = priority;
+
+    const [reports, total] = await Promise.all([
+      Report.find(query)
+        .populate("reporter", "username name avatar")
+        .populate("targetUser", "username name avatar")
+        .populate("reviewedBy", "username name")
+        .sort({ priority: -1, createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Report.countDocuments(query),
+    ]);
+
+    return {
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  static async reviewReport(reportId, adminId, decision, actionTaken = "") {
+    const validDecisions = ["resolved", "rejected", "escalated"];
+
+    if (!validDecisions.includes(decision)) {
+      throw new Error("Invalid decision");
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      reportId,
+      {
+        $set: {
+          status: decision,
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          resolution: {
+            decision,
+            actionTaken,
+            resolvedAt: new Date(),
           },
         },
       },
-      { $match: { $or: [{ riskScore: { $gt: 30 } }, { "moderation.isBanned": true }] } },
-      { $sort: { riskScore: -1 } },
-      { $skip: skip },
-      { $limit: limit },
+      { new: true }
+    )
+      .populate("reporter", "username name avatar")
+      .populate("targetUser", "username name avatar");
+
+    if (!report) {
+      throw new Error("Report not found");
+    }
+
+    await this._logAdminAction(adminId, "review_report", "report", reportId, {
+      decision,
+      actionTaken,
+    });
+
+    return report;
+  }
+
+  // ======================================
+  // Analytics & Statistics
+  // ======================================
+
+  static async getDashboardStats() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      totalUsers,
+      activeUsers,
+      newUsersToday,
+      newUsersThisWeek,
+      bannedUsers,
+      totalPosts,
+      postsToday,
+      postsThisWeek,
+      pendingReports,
+      totalReports,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ lastActiveAt: { $gte: thisWeek } }),
+      User.countDocuments({ createdAt: { $gte: today } }),
+      User.countDocuments({ createdAt: { $gte: thisWeek } }),
+      User.countDocuments({ "moderation.status": "banned" }),
+      Post.countDocuments({ isDeleted: false }),
+      Post.countDocuments({ createdAt: { $gte: today }, isDeleted: false }),
+      Post.countDocuments({ createdAt: { $gte: thisWeek }, isDeleted: false }),
+      Report.countDocuments({ status: "pending" }),
+      Report.countDocuments(),
+    ]);
+
+    return {
+      users: {
+        total: totalUsers,
+        active: activeUsers,
+        newToday: newUsersToday,
+        newThisWeek: newUsersThisWeek,
+        banned: bannedUsers,
+      },
+      posts: {
+        total: totalPosts,
+        today: postsToday,
+        thisWeek: postsThisWeek,
+      },
+      reports: {
+        pending: pendingReports,
+        total: totalReports,
+      },
+      timestamp: now,
+    };
+  }
+
+  static async getUserGrowthStats(days = 30) {
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const stats = await User.aggregate([
       {
-        $project: {
-          id: { $toString: "$_id" },
-          username: 1, email: 1, avatar: 1,
-          isFlagged: { $cond: ["$moderation.isBanned", true, false] },
-          riskLevel: { $cond: [{ $gt: ["$riskScore", 60] }, "high", { $cond: [{ $gt: ["$riskScore", 30] }, "medium", "low"] }] },
-          suspiciousActivity: { $cond: [{ $gt: [{ $divide: [{ $size: "$comments" }, { $add: [{ $size: "$posts" }, 1] }] }, 10] }, "Excessive commenting", "Unusual pattern"] },
-          detectedAt: { $dateToString: { format: "%Y-%m-%d %H:%M", date: "$updatedAt" } },
-          commentCount: 1, postCount: 1,
+        $match: { createdAt: { $gte: startDate } },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
         },
       },
-    ];
-
-    const suspiciousUsers = await User.aggregate(aggregationPipeline);
-    const totalSuspicious = suspiciousUsers.length; // Approximate
-    return { accounts: suspiciousUsers, total: totalSuspicious };
-  }
-
-  static async flagAccount(userId, reason, adminId) {
-    const user = await User.findById(userId);
-    if (!user) throw new Error("User not found");
-
-    user.moderation.isFlagged = true;
-    user.moderation.flagReason = reason || "Suspicious activity detected";
-    user.moderation.flaggedAt = new Date();
-    user.moderation.flaggedBy = adminId;
-    await user.save();
-    return user;
-  }
-
-  // --- Post Management ---
-  static async getAllPosts(query, skip, limit) {
-    const filter = {};
-    if (query.search) filter.caption = { $regex: query.search, $options: "i" };
-    if (query.userId) filter.user = query.userId;
-
-    const [posts, total] = await Promise.all([
-      Post.find(filter).populate("user", "username name avatar").sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Post.countDocuments(filter),
+      { $sort: { _id: 1 } },
     ]);
-    return { posts, total };
+
+    return stats.map((s) => ({ date: s._id, count: s.count }));
   }
 
-  static async getPostDetails(postId) {
-    const post = await Post.findById(postId)
-      .populate("user", "username name avatar")
-      .populate({ path: "comments", populate: { path: "user", select: "username name avatar" } });
-    if (!post) throw new Error("Post not found");
-    return post;
-  }
+  static async getPostStats(days = 30) {
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  static async approvePost(postId) {
-    const post = await Post.findByIdAndUpdate(postId, { approved: true }, { new: true }).populate("user", "username name avatar");
-    if (!post) throw new Error("Post not found");
-    return post;
-  }
-
-  // --- Comment Management ---
-  static async getAllComments(query, skip, limit) {
-    const filter = {};
-    if (query.search) filter.content = { $regex: query.search, $options: "i" };
-    if (query.postId) filter.post = query.postId;
-
-    const [comments, total] = await Promise.all([
-      Comment.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("user", "username name avatar").populate("post", "content"),
-      Comment.countDocuments(filter),
+    const stats = await Post.aggregate([
+      {
+        $match: { createdAt: { $gte: startDate }, isDeleted: false },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
+          totalLikes: { $sum: "$likesCount" },
+          totalComments: { $sum: "$commentsCount" },
+        },
+      },
+      { $sort: { _id: 1 } },
     ]);
-    return { comments, total };
-  }
-  
-  static async deleteComment(commentId) {
-      // Logic could be in CommentService but convenient here. Or call CommentService (if it had deleteById)
-      const comment = await Comment.findByIdAndDelete(commentId);
-      if (!comment) throw new Error("Comment not found");
-      return true;
+
+    return stats;
   }
 
+  static async getTopEngagedUsers(limit = 10) {
+    return User.find({ isActive: true, "moderation.status": "active" })
+      .sort({ "metrics.engagementRate": -1 })
+      .limit(limit)
+      .select("username name avatar verified followersCount postsCount metrics")
+      .lean();
+  }
 
+  // ======================================
+  // Admin Action Logging
+  // ======================================
+
+  static async _logAdminAction(
+    adminId,
+    action,
+    targetType,
+    targetId,
+    metadata = {}
+  ) {
+    // TODO: Create AdminLog model for persistent logging
+    logger.info({
+      type: "admin_action",
+      adminId,
+      action,
+      targetType,
+      targetId,
+      metadata,
+      timestamp: new Date(),
+    });
+  }
+
+  static async getAdminLogs(options = {}) {
+    // TODO: Implement when AdminLog model is created
+    return { logs: [], total: 0 };
+  }
+
+  // ======================================
+  // System Management
+  // ======================================
+
+  static async broadcastNotification(adminId, content, targetGroup = "all") {
+    let users;
+
+    switch (targetGroup) {
+      case "all":
+        users = await User.find({ isActive: true }).select("_id").lean();
+        break;
+      case "active":
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        users = await User.find({
+          isActive: true,
+          lastActiveAt: { $gte: weekAgo },
+        })
+          .select("_id")
+          .lean();
+        break;
+      default:
+        throw new Error("Invalid target group");
+    }
+
+    const notifications = users.map((user) => ({
+      recipient: user._id,
+      type: "system",
+      content,
+      metadata: { broadcastBy: adminId },
+    }));
+
+    await Notification.insertMany(notifications, { ordered: false });
+
+    await this._logAdminAction(
+      adminId,
+      "broadcast_notification",
+      "system",
+      null,
+      { content, targetGroup, count: users.length }
+    );
+
+    return { sentCount: users.length };
+  }
 }
 
 export default AdminService;

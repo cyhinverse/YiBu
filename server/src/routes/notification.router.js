@@ -6,12 +6,33 @@ const router = express.Router();
 
 router.use(verifyToken);
 
+// ======================================
+// Get Notifications
+// ======================================
 router.get("/", NotificationController.getNotifications);
-router.post("/", NotificationController.createNotification); // Internal usage
 router.get("/unread-count", NotificationController.getUnreadCount);
+router.get(
+  "/unread-count-by-type",
+  NotificationController.getUnreadCountByType
+);
+router.get("/:notificationId", NotificationController.getNotificationById);
 
-router.post("/read-all", NotificationController.markAllAsRead);
+// ======================================
+// Notification Actions
+// ======================================
+router.post("/", NotificationController.createNotification); // Internal/admin use
 router.put("/:notificationId/read", NotificationController.markAsRead);
+router.post("/read-all", NotificationController.markAllAsRead);
 router.delete("/:notificationId", NotificationController.deleteNotification);
+router.delete("/", NotificationController.deleteAllNotifications);
+
+// ======================================
+// Notification Preferences
+// ======================================
+router.get("/preferences", NotificationController.getNotificationPreferences);
+router.put(
+  "/preferences",
+  NotificationController.updateNotificationPreferences
+);
 
 export default router;

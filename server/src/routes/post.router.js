@@ -7,12 +7,34 @@ const router = express.Router();
 
 router.use(verifyToken);
 
+// ======================================
+// Feeds
+// ======================================
 router.get("/", PostController.GetAllPost);
-router.post("/", upload.array("files"), PostController.CreatePost); // Assuming "files" is the field name
+router.get("/explore", PostController.GetExploreFeed);
+router.get("/personalized", PostController.GetPersonalizedFeed);
+router.get("/trending", PostController.GetTrendingPosts);
 
+// ======================================
+// Search
+// ======================================
+router.get("/search", PostController.SearchPosts);
+router.get("/hashtag/:hashtag", PostController.GetPostsByHashtag);
+router.get("/hashtags/trending", PostController.GetTrendingHashtags);
+
+// ======================================
+// Post CRUD
+// ======================================
+router.post("/", upload.array("files", 10), PostController.CreatePost);
 router.get("/user/:id", PostController.GetPostUserById);
-
+router.get("/:id", PostController.GetPostById);
 router.put("/:id", PostController.UpdatePost);
 router.delete("/:id", PostController.DeletePost);
+
+// ======================================
+// Interactions
+// ======================================
+router.post("/:postId/share", PostController.sharePost);
+router.post("/:postId/report", PostController.reportPost);
 
 export default router;

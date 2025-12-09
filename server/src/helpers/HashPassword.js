@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 
 import logger from "../configs/logger.js";
 
-const HashPasswordForUser = async (password) => {
+export const hashPassword = async (password) => {
   try {
     const salt = 10;
     const PasswordHashed = await bcrypt.hash(password, salt);
@@ -12,4 +12,10 @@ const HashPasswordForUser = async (password) => {
   }
 };
 
-export default HashPasswordForUser;
+export const comparePassword = async (password, hashedPassword) => {
+  const isMatch = await bcrypt.compare(password, hashedPassword);
+  return isMatch;
+};
+
+// Default export for backward compatibility
+export default hashPassword;

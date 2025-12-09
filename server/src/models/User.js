@@ -1,161 +1,263 @@
 import { Schema, model } from "mongoose";
 
+/**
+ * User Model - Optimized for Ranking & Recommendation
+ *
+ * Design Principles:
+ * 1. Denormalized counters for fast queries
+ * 2. Engagement metrics for ranking algorithms
+ * 3. Indexed fields for efficient lookups
+ * 4. Separated settings into UserSettings model
+ */
 const UserSchema = new Schema(
   {
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    name: { type: String, default: "" },
-    
-    // Embedded Profile Data
-    profile: {
-      avatar: {
-        type: String,
-        default:
-          "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1",
-      },
-      bio: { type: String, default: "" },
-      birthday: { type: Date, default: null },
-      gender: {
-        type: String,
-        enum: ["male", "female", "other"],
-        default: "other",
-      },
-      website: { type: String, default: "" },
-      interests: { type: String, default: "" },
+    // Core Identity
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
     },
-    
-    // Embedded Settings Data
-    settings: {
-        notifications: {
-          pushNotifications: {
-            enabled: { type: Boolean, default: true },
-            likes: { type: Boolean, default: true },
-            comments: { type: Boolean, default: true },
-            follows: { type: Boolean, default: true },
-            messages: { type: Boolean, default: true },
-          },
-          emailNotifications: {
-            enabled: { type: Boolean, default: true },
-            accountUpdates: { type: Boolean, default: true },
-            newFeatures: { type: Boolean, default: true },
-            marketingEmails: { type: Boolean, default: false },
-          },
-          activityNotifications: {
-            friendActivity: { type: Boolean, default: true },
-            groupActivity: { type: Boolean, default: true },
-            eventActivity: { type: Boolean, default: true },
-          },
-        },
-        privacy: {
-          profileVisibility: {
-            type: String,
-            enum: ["public", "friends", "private"],
-            default: "public",
-          },
-          postVisibility: {
-            type: String,
-            enum: ["public", "friends", "private"],
-            default: "public",
-          },
-          messagePermission: {
-            type: String,
-            enum: ["everyone", "friends", "none"],
-            default: "everyone",
-          },
-          searchVisibility: { type: Boolean, default: true },
-          activityStatus: { type: Boolean, default: true },
-          blockList: [{ type: Schema.Types.ObjectId, ref: "User" }],
-        },
-        security: {
-          twoFactorEnabled: { type: Boolean, default: false },
-          loginAlerts: { type: Boolean, default: true },
-          trustedDevices: [
-            {
-              deviceId: { type: String },
-              deviceName: { type: String },
-              lastUsed: { type: Date },
-            },
-          ],
-          securityQuestions: [
-            {
-              question: { type: String },
-              answer: { type: String },
-            },
-          ],
-        },
-        content: {
-          language: { type: String, default: "vi" },
-          contentVisibility: {
-            type: String,
-            enum: ["all", "moderate", "strict"],
-            default: "moderate",
-          },
-          autoplayEnabled: { type: Boolean, default: true },
-          contentFilters: {
-            adult: { type: Boolean, default: true },
-            violence: { type: Boolean, default: true },
-            hate: { type: Boolean, default: true },
-          },
-        },
-        theme: {
-          appearance: {
-            type: String,
-            enum: ["light", "dark", "system"],
-            default: "system",
-          },
-          primaryColor: { type: String, default: "#4f46e5" },
-          fontSize: {
-            type: String,
-            enum: ["small", "medium", "large"],
-            default: "medium",
-          },
-        },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: { type: String, required: true, select: false },
+    name: { type: String, default: "", trim: true },
+
+    // Profile (lightweight, frequently accessed)
+    avatar: {
+      type: String,
+      default:
+        "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1",
+    },
+    bio: { type: String, default: "", maxlength: 500 },
+    birthday: { type: Date, default: null },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+      default: "other",
+    },
+    website: { type: String, default: "" },
+
+    // Interests for recommendation (stored as array for efficient matching)
+    interests: [{ type: String, lowercase: true, trim: true }],
+
+    // Denormalized Counters (avoid expensive $lookup aggregations)
+    followersCount: { type: Number, default: 0, min: 0 },
+    followingCount: { type: Number, default: 0, min: 0 },
+    postsCount: { type: Number, default: 0, min: 0 },
+
+    // Engagement Metrics for Ranking
+    metrics: {
+      // Total engagement received
+      totalLikesReceived: { type: Number, default: 0 },
+      totalCommentsReceived: { type: Number, default: 0 },
+      totalSavesReceived: { type: Number, default: 0 },
+
+      // Engagement rate = (likes + comments + saves) / posts
+      engagementRate: { type: Number, default: 0 },
+
+      // Activity score (recalculated periodically)
+      activityScore: { type: Number, default: 0 },
+
+      // Average post performance
+      avgPostEngagement: { type: Number, default: 0 },
+
+      // Last calculated timestamp
+      lastCalculated: { type: Date, default: Date.now },
     },
 
-    following: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    // Account Status
     verified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
-    
-    // Moderation (Ban & Flag Status)
+    isActive: { type: Boolean, default: true },
+
+    // Moderation (simplified)
     moderation: {
-      isBanned: { type: Boolean, default: false },
-      banReason: { type: String, default: "" },
-      banExpiration: { type: Date, default: null },
-      isFlagged: { type: Boolean, default: false },
-      flagReason: { type: String, default: "" },
-      flaggedAt: { type: Date, default: null },
-      flaggedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
-      
-      // Temporary Ban Info
-      tempUnbanReason: { type: String, default: "" },
-      tempUnbanExpiration: { type: Date, default: null },
-      tempUnbanBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
-      previousBanState: {
-        isBanned: { type: Boolean, default: false },
-        banReason: { type: String, default: "" },
-        banExpiration: { type: Date, default: null },
+      status: {
+        type: String,
+        enum: ["active", "warned", "suspended", "banned"],
+        default: "active",
       },
-      banHistory: [
-        {
-          action: { type: String, enum: ["ban", "unban", "extend", "tempUnban"] },
-          reason: { type: String },
-          duration: { type: Number }, // in days
-          performedBy: { type: Schema.Types.ObjectId, ref: "User" },
-          performedAt: { type: Date, default: Date.now },
-        },
-      ],
+      reason: { type: String, default: "" },
+      expiresAt: { type: Date, default: null },
+      moderatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      moderatedAt: { type: Date },
     },
-    
-    lastActivity: { type: Date, default: Date.now },
+
+    // Activity tracking
+    lastActiveAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
     loginAttempts: { type: Number, default: 0 },
+
+    // Privacy (inline for fast access)
+    privacy: {
+      profileVisibility: {
+        type: String,
+        enum: ["public", "followers", "private"],
+        default: "public",
+      },
+      allowMessages: {
+        type: String,
+        enum: ["everyone", "followers", "none"],
+        default: "everyone",
+      },
+      showActivity: { type: Boolean, default: true },
+    },
   },
   {
     collection: "Users",
     timestamps: true,
   }
 );
+
+// ============ INDEXES ============
+// Primary lookups
+UserSchema.index({ username: 1 });
+UserSchema.index({ email: 1 });
+
+// Recommendation & Search
+UserSchema.index({ interests: 1 });
+UserSchema.index({ "metrics.engagementRate": -1 });
+UserSchema.index({ "metrics.activityScore": -1 });
+UserSchema.index({ verified: 1, "metrics.engagementRate": -1 });
+
+// Admin & Moderation
+UserSchema.index({ "moderation.status": 1 });
+UserSchema.index({ isAdmin: 1 });
+
+// Activity-based queries
+UserSchema.index({ lastActiveAt: -1 });
+UserSchema.index({ createdAt: -1 });
+
+// Compound index for user discovery
+UserSchema.index({
+  isActive: 1,
+  "moderation.status": 1,
+  "metrics.engagementRate": -1,
+});
+
+// Text search index
+UserSchema.index(
+  {
+    username: "text",
+    name: "text",
+    bio: "text",
+  },
+  {
+    weights: { username: 10, name: 5, bio: 1 },
+  }
+);
+
+// ============ METHODS ============
+UserSchema.methods.updateEngagementMetrics = async function () {
+  const Post = model("Post");
+
+  const stats = await Post.aggregate([
+    { $match: { user: this._id, isDeleted: false } },
+    {
+      $group: {
+        _id: null,
+        totalLikes: { $sum: "$likesCount" },
+        totalComments: { $sum: "$commentsCount" },
+        totalSaves: { $sum: "$savesCount" },
+        postCount: { $sum: 1 },
+        avgEngagement: { $avg: "$engagementScore" },
+      },
+    },
+  ]);
+
+  if (stats.length > 0) {
+    const { totalLikes, totalComments, totalSaves, postCount, avgEngagement } =
+      stats[0];
+    const engagementRate =
+      postCount > 0 ? (totalLikes + totalComments + totalSaves) / postCount : 0;
+
+    this.metrics = {
+      totalLikesReceived: totalLikes,
+      totalCommentsReceived: totalComments,
+      totalSavesReceived: totalSaves,
+      engagementRate: Math.round(engagementRate * 100) / 100,
+      avgPostEngagement: Math.round(avgEngagement * 100) / 100,
+      activityScore: this.calculateActivityScore(),
+      lastCalculated: new Date(),
+    };
+    this.postsCount = postCount;
+  }
+
+  return this.save();
+};
+
+UserSchema.methods.calculateActivityScore = function () {
+  const now = new Date();
+  const daysSinceActive = (now - this.lastActiveAt) / (1000 * 60 * 60 * 24);
+  const recencyFactor = Math.exp(-daysSinceActive / 7); // Decay over 7 days
+
+  const engagementFactor = this.metrics.engagementRate || 0;
+  const followersFactor = Math.log10(this.followersCount + 1);
+
+  return (
+    Math.round(
+      (recencyFactor * 40 + engagementFactor * 40 + followersFactor * 20) * 100
+    ) / 100
+  );
+};
+
+// ============ STATICS ============
+UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
+  const user = await this.findById(userId).select("interests");
+  const Follow = model("Follow");
+
+  if (!user) return [];
+
+  // Get users that current user is following
+  const following = await Follow.find({ follower: userId })
+    .select("following")
+    .lean();
+  const followingIds = following.map((f) => f.following);
+
+  // Find users with similar interests who are not followed
+  return this.aggregate([
+    {
+      $match: {
+        _id: { $ne: userId, $nin: followingIds },
+        isActive: true,
+        "moderation.status": "active",
+        interests: { $in: user.interests || [] },
+      },
+    },
+    {
+      $addFields: {
+        commonInterests: {
+          $size: { $setIntersection: ["$interests", user.interests || []] },
+        },
+        score: {
+          $add: [
+            { $multiply: ["$metrics.engagementRate", 0.3] },
+            { $multiply: ["$metrics.activityScore", 0.3] },
+            { $multiply: [{ $log10: { $add: ["$followersCount", 1] } }, 0.2] },
+            { $multiply: ["$commonInterests", 10] }, // Boost for common interests
+          ],
+        },
+      },
+    },
+    { $sort: { score: -1 } },
+    { $limit: limit },
+    {
+      $project: {
+        password: 0,
+        email: 0,
+        moderation: 0,
+        loginAttempts: 0,
+      },
+    },
+  ]);
+};
 
 export const User = model("User", UserSchema);
 export default User;

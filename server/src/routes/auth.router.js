@@ -4,17 +4,37 @@ import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
+// ======================================
+// Public Routes
+// ======================================
 router.post("/register", AuthController.Register);
 router.post("/login", AuthController.Login);
-router.post("/refresh", verifyToken, AuthController.RefreshToken);
-router.post("/logout", verifyToken, AuthController.Logout);
+router.post("/google", AuthController.GoogleAuth);
 
-router.post("/verify", verifyToken, AuthController.VerifyAccount);
-router.post("/connect", verifyToken, AuthController.ConnectSocialAccount);
+// Password Reset
+router.post("/password/reset-request", AuthController.RequestPasswordReset);
+router.post("/password/reset", AuthController.ResetPassword);
 
-router.put("/update-email", verifyToken, AuthController.UpdateEmail);
-router.put("/update-password", verifyToken, AuthController.UpdatePassword);
+// ======================================
+// Protected Routes (require auth)
+// ======================================
+router.use(verifyToken);
 
-router.delete("/delete", verifyToken, AuthController.DeleteAccount);
+// Token Management
+router.post("/refresh", AuthController.RefreshToken);
+router.post("/logout", AuthController.Logout);
+router.post("/logout-all", AuthController.LogoutAllDevices);
+
+// Password
+router.put("/password", AuthController.UpdatePassword);
+
+// Two-Factor Authentication
+router.post("/2fa/enable", AuthController.EnableTwoFactor);
+router.post("/2fa/verify", AuthController.VerifyTwoFactor);
+router.post("/2fa/disable", AuthController.DisableTwoFactor);
+
+// Session Management
+router.get("/sessions", AuthController.GetActiveSessions);
+router.delete("/sessions/:sessionId", AuthController.RevokeSession);
 
 export default router;
