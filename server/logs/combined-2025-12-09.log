@@ -1,0 +1,161 @@
+2025-12-09 15:37:17 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-09 15:37:17 [INFO]: Server running in development mode on port 9785 
+2025-12-09 15:37:17 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-09 15:38:01 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-09 15:38:01 [INFO]: Server running in development mode on port 9785 
+2025-12-09 15:38:01 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-09 15:43:14 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-09 15:43:14 [INFO]: Server running in development mode on port 9785 
+2025-12-09 15:43:14 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-09 15:43:26 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:26 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 8ms 
+2025-12-09 15:43:26 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:26 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:43:34 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:34 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:43:35 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:35 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:43:43 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:43 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:43:43 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:43 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:43:44 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:44 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:43:44 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:44 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:43:55 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:55 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:43:55 [ERROR]: JWT Verify Error: 
+2025-12-09 15:43:55 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:44:13 [ERROR]: JWT Verify Error: 
+2025-12-09 15:44:13 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:44:13 [ERROR]: JWT Verify Error: 
+2025-12-09 15:44:13 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:46:16 [ERROR]: JWT Verify Error: 
+2025-12-09 15:46:16 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:46:16 [ERROR]: JWT Verify Error: 
+2025-12-09 15:46:16 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:47:45 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:45 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:47:45 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:45 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:47:55 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:55 [ERROR]: PUT /user/settings/theme 403 - 0ms 
+2025-12-09 15:47:56 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:56 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:47:57 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:57 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:47:58 [ERROR]: JWT Verify Error: 
+2025-12-09 15:47:58 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:48:47 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:47 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:48:47 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:47 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:48:50 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:50 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:48:51 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:51 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:48:52 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:52 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:48:52 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:52 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:48:53 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:53 [ERROR]: PUT /user/settings/theme 403 - 2ms 
+2025-12-09 15:48:54 [ERROR]: JWT Verify Error: 
+2025-12-09 15:48:54 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:49:41 [ERROR]: JWT Verify Error: 
+2025-12-09 15:49:41 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:49:41 [ERROR]: JWT Verify Error: 
+2025-12-09 15:49:41 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:49:51 [ERROR]: JWT Verify Error: 
+2025-12-09 15:49:51 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:49:51 [ERROR]: JWT Verify Error: 
+2025-12-09 15:49:51 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:49:54 [ERROR]: JWT Verify Error: 
+2025-12-09 15:49:54 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:50:54 [ERROR]: JWT Verify Error: 
+2025-12-09 15:50:54 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:54:48 [ERROR]: JWT Verify Error: 
+2025-12-09 15:54:48 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:54:48 [ERROR]: JWT Verify Error: 
+2025-12-09 15:54:48 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 15:54:57 [ERROR]: JWT Verify Error: 
+2025-12-09 15:54:57 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:55:20 [ERROR]: JWT Verify Error: 
+2025-12-09 15:55:20 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:55:20 [ERROR]: JWT Verify Error: 
+2025-12-09 15:55:20 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:55:46 [ERROR]: JWT Verify Error: 
+2025-12-09 15:55:46 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 15:56:13 [ERROR]: JWT Verify Error: 
+2025-12-09 15:56:13 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:56:13 [ERROR]: JWT Verify Error: 
+2025-12-09 15:56:13 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:56:22 [ERROR]: JWT Verify Error: 
+2025-12-09 15:56:22 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:58:32 [ERROR]: JWT Verify Error: 
+2025-12-09 15:58:32 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 15:58:32 [ERROR]: JWT Verify Error: 
+2025-12-09 15:58:32 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:01:40 [ERROR]: JWT Verify Error: 
+2025-12-09 16:01:40 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:01:40 [ERROR]: JWT Verify Error: 
+2025-12-09 16:01:40 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:01:43 [ERROR]: JWT Verify Error: 
+2025-12-09 16:01:43 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:01:51 [ERROR]: JWT Verify Error: 
+2025-12-09 16:01:51 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 16:02:15 [ERROR]: JWT Verify Error: 
+2025-12-09 16:02:15 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 16:03:08 [ERROR]: JWT Verify Error: 
+2025-12-09 16:03:08 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 16:03:12 [ERROR]: JWT Verify Error: 
+2025-12-09 16:03:12 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 16:04:58 [ERROR]: JWT Verify Error: 
+2025-12-09 16:04:58 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:04:58 [ERROR]: JWT Verify Error: 
+2025-12-09 16:04:58 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 16:05:55 [ERROR]: JWT Verify Error: 
+2025-12-09 16:05:55 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:06:40 [ERROR]: JWT Verify Error: 
+2025-12-09 16:06:40 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:06:40 [ERROR]: JWT Verify Error: 
+2025-12-09 16:06:40 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:06:55 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 0ms 
+2025-12-09 16:06:55 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 1ms 
+2025-12-09 16:06:55 [ERROR]: POST /api/auth/refresh-token 404 - 1ms 
+2025-12-09 16:06:55 [ERROR]: POST /api/auth/refresh-token 404 - 1ms 
+2025-12-09 16:08:35 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 1ms 
+2025-12-09 16:08:35 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 0ms 
+2025-12-09 16:08:35 [ERROR]: POST /api/auth/refresh-token 404 - 0ms 
+2025-12-09 16:08:35 [ERROR]: POST /api/auth/refresh-token 404 - 0ms 
+2025-12-09 16:08:42 [ERROR]: JWT Verify Error: 
+2025-12-09 16:08:42 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:08:50 [ERROR]: JWT Verify Error: 
+2025-12-09 16:08:50 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:08:50 [ERROR]: JWT Verify Error: 
+2025-12-09 16:08:50 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:09:07 [ERROR]: JWT Verify Error: 
+2025-12-09 16:09:07 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 16:09:07 [ERROR]: JWT Verify Error: 
+2025-12-09 16:09:07 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:10:58 [ERROR]: JWT Verify Error: 
+2025-12-09 16:10:58 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 2ms 
+2025-12-09 16:10:58 [ERROR]: JWT Verify Error: 
+2025-12-09 16:10:58 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:11:06 [ERROR]: JWT Verify Error: 
+2025-12-09 16:11:06 [ERROR]: PUT /user/settings/theme 403 - 1ms 
+2025-12-09 16:11:24 [ERROR]: JWT Verify Error: 
+2025-12-09 16:11:24 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:11:37 [ERROR]: JWT Verify Error: 
+2025-12-09 16:11:37 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:11:44 [ERROR]: JWT Verify Error: 
+2025-12-09 16:11:44 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:12:45 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 1ms 
+2025-12-09 16:12:45 [ERROR]: GET /api/v1/posts?page=1&limit=10 401 - 0ms 
+2025-12-09 16:12:46 [ERROR]: POST /api/auth/refresh-token 404 - 0ms 
+2025-12-09 16:12:46 [ERROR]: POST /api/auth/refresh-token 404 - 0ms 
+2025-12-09 16:12:47 [ERROR]: JWT Verify Error: 
+2025-12-09 16:12:47 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
+2025-12-09 16:12:47 [ERROR]: JWT Verify Error: 
+2025-12-09 16:12:47 [ERROR]: GET /api/v1/posts?page=1&limit=10 403 - 1ms 
