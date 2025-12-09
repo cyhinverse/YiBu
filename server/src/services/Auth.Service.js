@@ -36,9 +36,13 @@ class AuthService {
 
     if (existingUser) {
       if (existingUser.email === email.toLowerCase()) {
-        throw new Error("Email đã được sử dụng");
+        const error = new Error("Email đã được sử dụng");
+        error.statusCode = 400;
+        throw error;
       }
-      throw new Error("Username đã được sử dụng");
+      const error = new Error("Username đã được sử dụng");
+      error.statusCode = 400;
+      throw error;
     }
 
     const hashedPassword = await hashPassword(password);
@@ -52,7 +56,11 @@ class AuthService {
 
     await UserSettings.create({ user: user._id });
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken({
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
 
     const userResponse = {
       _id: user._id,
@@ -119,7 +127,11 @@ class AuthService {
 
     await this._resetLoginAttempts(user);
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken({
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
     const refreshTokenData = await this._createRefreshToken(
       user._id,
       deviceInfo
@@ -182,13 +194,13 @@ class AuthService {
   }
 
   static async _createRefreshToken(userId, deviceInfo = {}) {
-    const tokenFamily = crypto.randomBytes(16).toString("hex");
+    const family = crypto.randomBytes(16).toString("hex");
     const token = crypto.randomBytes(40).toString("hex");
 
     const refreshToken = await RefreshToken.create({
       user: userId,
       token,
-      tokenFamily,
+      family,
       device: {
         userAgent: deviceInfo.userAgent || "unknown",
         ip: deviceInfo.ip || "unknown",
@@ -196,7 +208,7 @@ class AuthService {
       },
     });
 
-    return { token, tokenFamily, id: refreshToken._id };
+    return { token, family, id: refreshToken._id };
   }
 
   // ======================================
@@ -214,7 +226,7 @@ class AuthService {
 
       if (compromisedToken) {
         await RefreshToken.updateMany(
-          { tokenFamily: compromisedToken.tokenFamily },
+          { family: compromisedToken.family },
           { isRevoked: true, revokedReason: "token_reuse_detected" }
         );
         logger.warn(
@@ -245,7 +257,7 @@ class AuthService {
     await RefreshToken.create({
       user: user._id,
       token: newToken,
-      tokenFamily: refreshTokenDoc.tokenFamily,
+      family: refreshTokenDoc.family,
       device: {
         userAgent:
           deviceInfo.userAgent ||
@@ -257,7 +269,11 @@ class AuthService {
       },
     });
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken({
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
 
     return { accessToken, refreshToken: newToken };
   }
@@ -606,7 +622,11 @@ class AuthService {
       await UserSettings.create({ user: user._id });
     }
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken({
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    });
     const refreshTokenData = await this._createRefreshToken(user._id, {
       platform: "google_oauth",
     });

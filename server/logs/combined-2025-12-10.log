@@ -11,3 +11,86 @@
 2025-12-10 00:46:26 [INFO]: SocketService initialized 
 2025-12-10 00:46:26 [INFO]: Server running in development mode on port 9785 
 2025-12-10 00:46:26 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 01:38:44 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 01:38:44 [INFO]: SocketService initialized 
+2025-12-10 01:38:44 [INFO]: Server running in development mode on port 9785 
+2025-12-10 01:38:44 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 01:43:04 [ERROR]: POST /api/auth/logout 401 - 4ms 
+2025-12-10 01:43:05 [ERROR]: POST /api/auth/refresh 401 - 1ms 
+2025-12-10 01:52:34 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 01:52:34 [INFO]: SocketService initialized 
+2025-12-10 01:52:34 [INFO]: Server running in development mode on port 9785 
+2025-12-10 01:52:34 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:01:18 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:01:18 [INFO]: SocketService initialized 
+2025-12-10 02:01:18 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:01:18 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:05:53 [ERROR]: Server Error Expected "payload" to be a plain object. {"module":"system","stack":"Error: Expected \"payload\" to be a plain object.\n    at validate (C:\\Users\\cyhin\\YiBu\\server\\node_modules\\jsonwebtoken\\sign.js:44:11)\n    at validatePayload (C:\\Users\\cyhin\\YiBu\\server\\node_modules\\jsonwebtoken\\sign.js:66:10)\n    at module.exports [as sign] (C:\\Users\\cyhin\\YiBu\\server\\node_modules\\jsonwebtoken\\sign.js:144:7)\n    at generateAccessToken (file:///C:/Users/cyhin/YiBu/server/src/helpers/GenerateTokens.js:5:14)\n    at AuthService.register (file:///C:/Users/cyhin/YiBu/server/src/services/Auth.Service.js:55:25)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///C:/Users/cyhin/YiBu/server/src/controllers/auth.controller.js:27:35","path":"/api/auth/register","method":"POST","statusCode":500}
+2025-12-10 02:05:53 [ERROR]: POST /api/auth/register 500 - 800ms 
+2025-12-10 02:06:20 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:06:20 [INFO]: SocketService initialized 
+2025-12-10 02:06:20 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:06:20 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:06:42 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:06:42 [INFO]: SocketService initialized 
+2025-12-10 02:06:42 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:06:42 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:06:50 [ERROR]: Server Error Email đã được sử dụng {"module":"system","stack":"Error: Email đã được sử dụng\n    at AuthService.register (file:///C:/Users/cyhin/YiBu/server/src/services/Auth.Service.js:39:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///C:/Users/cyhin/YiBu/server/src/controllers/auth.controller.js:27:35","path":"/api/auth/register","method":"POST","statusCode":500}
+2025-12-10 02:06:50 [ERROR]: POST /api/auth/register 500 - 48ms 
+2025-12-10 02:07:05 [ERROR]: Server Error Username đã được sử dụng {"module":"system","stack":"Error: Username đã được sử dụng\n    at AuthService.register (file:///C:/Users/cyhin/YiBu/server/src/services/Auth.Service.js:41:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///C:/Users/cyhin/YiBu/server/src/controllers/auth.controller.js:27:35","path":"/api/auth/register","method":"POST","statusCode":500}
+2025-12-10 02:07:05 [ERROR]: POST /api/auth/register 500 - 35ms 
+2025-12-10 02:07:16 [INFO]: POST /api/auth/register 201 - 180ms 
+2025-12-10 02:07:37 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:07:37 [INFO]: SocketService initialized 
+2025-12-10 02:07:37 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:07:37 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:08:40 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:08:40 [INFO]: SocketService initialized 
+2025-12-10 02:08:40 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:08:40 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:08:41 [ERROR]: Server Error RefreshToken validation failed: family: Path `family` is required. {"module":"system","stack":"ValidationError: RefreshToken validation failed: family: Path `family` is required.\n    at Document.invalidate (C:\\Users\\cyhin\\YiBu\\server\\node_modules\\mongoose\\lib\\document.js:3329:32)\n    at C:\\Users\\cyhin\\YiBu\\server\\node_modules\\mongoose\\lib\\document.js:3090:17\n    at C:\\Users\\cyhin\\YiBu\\server\\node_modules\\mongoose\\lib\\schemaType.js:1407:9\n    at process.processTicksAndRejections (node:internal/process/task_queues:84:11)","path":"/api/auth/login","method":"POST","statusCode":500}
+2025-12-10 02:08:41 [ERROR]: POST /api/auth/login 500 - 239ms 
+2025-12-10 02:09:01 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:09:01 [INFO]: SocketService initialized 
+2025-12-10 02:09:01 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:09:01 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:09:11 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:09:11 [INFO]: SocketService initialized 
+2025-12-10 02:09:11 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:09:11 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:09:33 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:09:33 [INFO]: SocketService initialized 
+2025-12-10 02:09:33 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:09:33 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:09:47 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:09:47 [INFO]: SocketService initialized 
+2025-12-10 02:09:47 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:09:47 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:10:06 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:10:06 [INFO]: SocketService initialized 
+2025-12-10 02:10:06 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:10:06 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:11:32 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:11:32 [INFO]: SocketService initialized 
+2025-12-10 02:11:32 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:11:32 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:11:55 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:11:55 [INFO]: SocketService initialized 
+2025-12-10 02:11:55 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:11:55 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:12:56 [INFO]: POST /api/auth/login 200 - 188ms 
+2025-12-10 02:14:24 [INFO]: POST /api/auth/login 200 - 167ms 
+2025-12-10 02:16:48 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:16:48 [INFO]: SocketService initialized 
+2025-12-10 02:16:48 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:16:48 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:16:59 [INFO]: POST /api/auth/login 200 - 186ms 
+2025-12-10 02:19:51 [INFO]: MongoDB connected to: yibu-shard-00-00.lno79.mongodb.net 
+2025-12-10 02:19:51 [INFO]: SocketService initialized 
+2025-12-10 02:19:51 [INFO]: Server running in development mode on port 9785 
+2025-12-10 02:19:51 [INFO]: Server Started {"module":"system","details":"Server started successfully on port 9785"}
+2025-12-10 02:19:53 [INFO]: POST /api/auth/login 200 - 188ms 
+2025-12-10 02:22:08 [INFO]: POST /api/auth/login 200 - 176ms 
+2025-12-10 02:23:37 [INFO]: POST /api/auth/login 200 - 160ms 
+2025-12-10 02:24:14 [INFO]: POST /api/auth/logout 200 - 2ms 
+2025-12-10 02:24:47 [INFO]: POST /api/auth/login 200 - 168ms 
