@@ -1,27 +1,62 @@
+import { TrendingUp, Hash, ChevronRight } from "lucide-react";
 
+const TrendingTopics = ({ trendingTopics = [] }) => {
+  if (trendingTopics.length === 0) return null;
 
-const TrendingTopics = ({ trendingTopics }) => {
   return (
-    <div className="h-full flex flex-col p-4">
-      <h2 className="text-lg font-bold font-heading mb-4 text-text-primary tracking-tight">
-        Trending Topics
-      </h2>
+    <div className="flex flex-col gap-1">
+      {trendingTopics.map((topic, index) => (
+        <div
+          key={index}
+          className="px-2 py-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            {/* Icon */}
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                index === 0
+                  ? "bg-black dark:bg-white"
+                  : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700"
+              }`}
+            >
+              {index === 0 ? (
+                <TrendingUp size={14} className="text-white dark:text-black" />
+              ) : (
+                <Hash size={14} className="text-neutral-400" />
+              )}
+            </div>
 
-      <div className="space-y-1 overflow-y-auto custom-scrollbar pr-2">
-        {trendingTopics.map((topic, index) => (
-          <div
-            key={index}
-            className="group flex items-center justify-between p-2 rounded-lg hover:bg-surface-highlight cursor-pointer transition-all duration-200"
-          >
-            <span className="text-text-primary font-medium group-hover:text-primary transition-colors text-sm">
-              {topic.name}
-            </span>
-            <span className="text-text-secondary text-xs">
-              {topic.posts}
-            </span>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-medium text-black dark:text-white truncate">
+                  {topic.name}
+                </h3>
+                {index === 0 && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-medium bg-black dark:bg-white text-white dark:text-black rounded-full">
+                    Hot
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[11px] text-neutral-400">
+                  {topic.category || "Trending"}
+                </span>
+                <span className="text-[11px] text-neutral-400">·</span>
+                <span className="text-[11px] text-neutral-500">
+                  {topic.posts}
+                </span>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <ChevronRight
+              size={16}
+              className="text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+            />
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };

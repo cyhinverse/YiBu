@@ -1,139 +1,207 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import CreatePost from "../Posts/CreatePost";
 import PostLists from "../Posts/PostLists";
 import TrendingTopics from "../TrendingTopics/TrendingTopics";
 import TopUser from "../../user/TopUser/TopUser";
-import { useDispatch, useSelector } from "react-redux";
-import { getAllPost } from "../../../../redux/actions/postActions";
-import { Search } from "lucide-react";
+import {
+  Search,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Crown,
+  Flame,
+  Zap,
+} from "lucide-react";
+
+// Fake data
+const TRENDING_TOPICS = [
+  { name: "#ChillCuốiTuần", posts: "12.4K", category: "Trending" },
+  { name: "#MondayMood", posts: "8.1K", category: "Lifestyle" },
+  { name: "#FoodieLife", posts: "5.9K", category: "Food" },
+  { name: "#CodeNewbie", posts: "3.4K", category: "Technology" },
+  { name: "#Travel2025", posts: "10.7K", category: "Travel" },
+];
+
+const SUGGESTED_USERS = [
+  { _id: "1", name: "John Doe", username: "johndoe", avatar: null },
+  { _id: "2", name: "Jane Smith", username: "janesmith", avatar: null },
+  { _id: "3", name: "Tech Guy", username: "techguy", avatar: null },
+];
 
 const Contents = () => {
-  const dispatch = useDispatch();
-  const { loading, pagination } = useSelector((state) => state.post);
+  const [activeTab, setActiveTab] = useState("forYou");
+  const [isLoading, setIsLoading] = useState(false);
   const contentRef = useRef(null);
 
-  const trendingTopics = [
-    { name: "ChillCuốiTuần", count: "12.4K" },
-    { name: "MondayMood", count: "8.1K" },
-    { name: "FoodieLife", count: "5.9K" },
-    { name: "CodeNewbie", count: "3.4K" },
-    { name: "Travel2025", count: "10.7K" },
+  const tabs = [
+    { id: "forYou", label: "For You", icon: Flame },
+    { id: "following", label: "Following", icon: Users },
+    { id: "latest", label: "Latest", icon: Zap },
   ];
 
-  /* Mock data or selector for TopUser content if needed, previously passed as prop */
-  const contentPost = []; 
-
-  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
-
-  const fetchPosts = useCallback(
-    async (page) => {
-      try {
-        const response = await dispatch(getAllPost({ page, limit: pagination?.limit || 10 })).unwrap();
-        
-        if (response && response.code === 1) {
-            // response handled
-        } else {
-            console.error("Invalid response format:", response);
-        }
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
-    }
-  }, [dispatch, pagination?.limit]);
-
-  useEffect(() => {
-    fetchPosts(1);
-  }, [fetchPosts]);
-
-  const handleScroll = useCallback(async () => {
-    if (loading || isLoadingMore || !pagination?.hasMore) return;
-
-    if (contentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 50) {
-        setIsLoadingMore(true);
-        await fetchPosts(pagination.page + 1);
-        setIsLoadingMore(false);
-      }
-    }
-  }, [loading, isLoadingMore, pagination, fetchPosts]);
-
-  useEffect(() => {
-    const ref = contentRef.current;
-    if (ref) {
-      ref.addEventListener("scroll", handleScroll);
-    }
-    return () => {
-      if (ref) {
-        ref.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [handleScroll]);
-
-  const lastPostElementRef = useCallback(() => {
-     // logic if needed for intersection observer instead of scroll event
-  }, []);
-
   return (
-    <div className="w-full flex justify-center min-h-screen">
-      
-      {/* Main Feed (Center) */}
-      <div className="w-full flex-1 flex-shrink-0 h-screen flex flex-col bg-surface  shadow-none">
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md  px-4 py-3 cursor-pointer" onClick={() => contentRef.current?.scrollTo({top: 0, behavior: 'smooth'})}>
-              <h2 className="text-xl font-bold text-text-primary">Home</h2>
+    <div className="w-full flex gap-6 min-h-screen max-w-7xl mx-auto px-4 lg:px-6">
+      {/* Main Feed */}
+      <div className="flex-1 max-w-2xl mx-auto lg:mx-0 h-screen flex flex-col">
+        {/* Header */}
+        <div className="sticky top-0 z-10 pt-4 pb-2 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-xl font-semibold text-black dark:text-white">
+                Feed
+              </h1>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Discover what's happening
+              </p>
+            </div>
+            <button className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">
+              <Sparkles size={18} className="text-neutral-500" />
+            </button>
           </div>
 
+          {/* Tab Bar */}
+          <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-full">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    activeTab === tab.id
+                      ? "bg-black dark:bg-white text-white dark:text-black"
+                      : "text-neutral-500 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  <Icon size={14} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
         <div
           ref={contentRef}
-          className="w-full h-full overflow-y-scroll custom-scrollbar"
+          className="flex-1 overflow-y-auto hide-scrollbar pt-4 space-y-4"
         >
-          <div className="p-4">
-            <CreatePost />
-          </div>
-          <div className="pb-4">
-            <PostLists lastPostElementRef={lastPostElementRef} />
-          </div>
+          <CreatePost />
+          <PostLists />
 
-          {(loading || isLoadingMore) && (
-            <div className="flex justify-center items-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 "></div>
+          {/* Loading */}
+          {isLoading && (
+            <div className="flex justify-center py-6">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-900">
+                <div className="w-4 h-4 border-2 border-neutral-300 dark:border-neutral-700 border-t-black dark:border-t-white rounded-full animate-spin" />
+                <span className="text-xs text-neutral-500">Loading...</span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Right Sidebar (Search + Trending + Suggested) */}
-      <div className="hidden lg:flex flex-col w-[350px] pl-8 py-4 h-screen gap-6 sticky top-0">
-         
-         {/* Search Input */}
-         <div className="w-full bg-surface-highlight/50 rounded-full h-12 flex items-center px-5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:text-primary transition-all group">
-            <Search className="text-text-secondary group-focus-within:text-primary mr-3 w-5 h-5" />
-            <input 
-                type="text" 
-                placeholder="Search" 
-                className="bg-transparent border-none outline-none text-text-primary placeholder:text-text-secondary w-full"
-            />
-         </div>
+      {/* Right Sidebar */}
+      <div className="hidden lg:flex flex-col w-80 xl:w-96 h-screen sticky top-0 py-4 gap-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search YiBu..."
+            className="w-full pl-11 pr-4 py-3 bg-neutral-100 dark:bg-neutral-900 border border-transparent focus:border-neutral-300 dark:focus:border-neutral-700 rounded-full text-sm text-black dark:text-white placeholder:text-neutral-400 focus:outline-none transition-colors"
+          />
+        </div>
 
-         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pb-4">
-            {/* Trending Topics */}
-            <div className="bg-surface-highlight/30 rounded-2xl overflow-hidden  py-2">
-                <TrendingTopics trendingTopics={trendingTopics} />
+        {/* Scrollable Sidebar */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
+          {/* Premium Card */}
+          <div className="rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
+            <div className="bg-black dark:bg-white p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 dark:bg-black/20 rounded-full flex items-center justify-center">
+                  <Crown size={18} className="text-white dark:text-black" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white dark:text-black">
+                    YiBu Premium
+                  </h3>
+                  <p className="text-white/60 dark:text-black/60 text-xs">
+                    Unlock exclusive features
+                  </p>
+                </div>
+              </div>
             </div>
+            <div className="p-4 bg-white dark:bg-neutral-900">
+              <ul className="space-y-2 mb-4 text-xs text-neutral-500">
+                <li className="flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-black dark:bg-white" />
+                  Ad-free experience
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-neutral-400" />
+                  Priority support
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-neutral-300" />
+                  Exclusive badges
+                </li>
+              </ul>
+              <button className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity">
+                Upgrade Now
+              </button>
+            </div>
+          </div>
 
-            {/* Suggested Users */}
-            <div className="bg-surface-highlight/30 rounded-2xl overflow-hidden shadow-md bg-white-500   py-2">
-                <TopUser content={contentPost} />
+          {/* Trending */}
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} className="text-neutral-500" />
+                <h2 className="font-medium text-sm text-black dark:text-white">
+                  Trending Now
+                </h2>
+              </div>
+              <button className="text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
+                See all
+              </button>
             </div>
+            <TrendingTopics trendingTopics={TRENDING_TOPICS} />
+          </div>
 
-            {/* Footer Links (Static) */}
-            <div className="px-4 text-xs text-text-secondary flex flex-wrap gap-2 leading-relaxed">
-                <span className="hover:underline cursor-pointer">Terms of Service</span>
-                <span className="hover:underline cursor-pointer">Privacy Policy</span>
-                <span className="hover:underline cursor-pointer">Cookie Policy</span>
-                <span>© 2025 YiBu.</span>
+          {/* Suggested Users */}
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-neutral-500" />
+                <h2 className="font-medium text-sm text-black dark:text-white">
+                  Suggested
+                </h2>
+              </div>
+              <button className="text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
+                See all
+              </button>
             </div>
-         </div>
+            <TopUser users={SUGGESTED_USERS} />
+          </div>
+
+          {/* Footer */}
+          <div className="px-2 text-xs text-neutral-400 space-y-2">
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {["Terms", "Privacy", "Cookies", "About", "Help"].map((item) => (
+                <span
+                  key={item}
+                  className="hover:text-neutral-600 dark:hover:text-neutral-300 cursor-pointer transition-colors"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+            <p className="flex items-center gap-1">
+              <Sparkles size={10} />© 2025 YiBu
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

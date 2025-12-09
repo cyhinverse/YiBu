@@ -1,181 +1,174 @@
-import React, { useState, useEffect } from "react";
-// import NotificationTest from "../Notification/NotificationTest";
-// import UserSettingsService from "../../../services/userSettingsService";
-import { useDispatch } from "react-redux";
-import { getUserSettings, updateNotificationSettings } from "../../../../redux/actions/userActions";
-import { toast } from "react-toastify";
+import { useState } from "react";
+import {
+  Bell,
+  Heart,
+  MessageCircle,
+  UserPlus,
+  AtSign,
+  Mail,
+} from "lucide-react";
 
 const NotificationSettings = () => {
-  const dispatch = useDispatch();
-  const [loading, setLoading] = useState(false);
-  const [notificationData, setNotificationData] = useState({
-    pushEnabled: true,
-    emailEnabled: true,
-    activityNotifications: {
-      likes: true,
-      comments: true,
-      followers: true,
-    },
+  const [notifications, setNotifications] = useState({
+    likes: true,
+    comments: true,
+    follows: true,
+    mentions: true,
+    messages: true,
+    email: false,
+    push: true,
   });
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  const ToggleSwitch = ({ enabled, onChange }) => (
+    <button
+      onClick={onChange}
+      className={`relative w-11 h-6 rounded-full transition-colors ${
+        enabled
+          ? "bg-black dark:bg-white"
+          : "bg-neutral-200 dark:bg-neutral-700"
+      }`}
+    >
+      <div
+        className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
+          enabled
+            ? "translate-x-5 bg-white dark:bg-black"
+            : "translate-x-0.5 bg-white dark:bg-neutral-400"
+        }`}
+      />
+    </button>
+  );
 
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      const response = await dispatch(getUserSettings()).unwrap();
-      if (
-        response.success &&
-        response.userSettings &&
-        response.userSettings.notification
-      ) {
-        setNotificationData(response.userSettings.notification);
-      } else if (response.data && response.data.userSettings && response.data.userSettings.notification) {
-          setNotificationData(response.data.userSettings.notification);
-      }
-    } catch (error) {
-      console.error("Lỗi khi lấy cài đặt thông báo:", error);
-      toast.error("Không thể tải cài đặt thông báo");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e, section, subSection = null) => {
-    const isChecked = e.target.checked;
-
-    if (subSection) {
-      setNotificationData((prev) => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [subSection]: isChecked,
-        },
-      }));
-    } else {
-      setNotificationData((prev) => ({
-        ...prev,
-        [section]: isChecked,
-      }));
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      const response = await dispatch(updateNotificationSettings(notificationData)).unwrap();
-      if (response && (response.success || response.code === 1)) {
-        toast.success("Cài đặt thông báo đã được lưu");
-      } else {
-        toast.error("Không thể lưu cài đặt thông báo");
-      }
-    } catch (error) {
-      console.error("Lỗi khi cập nhật thông báo:", error);
-      toast.error("Lỗi khi lưu cài đặt");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const NotificationItem = ({ icon: Icon, label, description, settingKey }) => (
+    <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+          <Icon size={18} className="text-neutral-500" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-black dark:text-white">
+            {label}
+          </p>
+          <p className="text-xs text-neutral-500">{description}</p>
+        </div>
+      </div>
+      <ToggleSwitch
+        enabled={notifications[settingKey]}
+        onChange={() =>
+          setNotifications({
+            ...notifications,
+            [settingKey]: !notifications[settingKey],
+          })
+        }
+      />
+    </div>
+  );
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Cài đặt thông báo</h2>
-        <button
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50"
-          onClick={handleSave}
-          disabled={loading}
-        >
-          {loading ? "Đang lưu..." : "Lưu thay đổi"}
-        </button>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+          Notifications
+        </h1>
+        <p className="text-neutral-500 text-sm">
+          Choose what notifications you want to receive
+        </p>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium mb-3">Thông báo đẩy</h3>
-          <div className="flex items-center justify-between">
-            <p>Thông báo đẩy</p>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={notificationData.pushEnabled}
-                onChange={(e) => handleChange(e, "pushEnabled")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-            </label>
+      {/* Activity Notifications */}
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2">
+            <Bell size={16} className="text-neutral-500" />
+            <h3 className="text-sm font-medium text-black dark:text-white">
+              Activity
+            </h3>
           </div>
         </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-3">Thông báo email</h3>
-          <div className="flex items-center justify-between">
-            <p>Gửi thông báo qua email</p>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={notificationData.emailEnabled}
-                onChange={(e) => handleChange(e, "emailEnabled")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-3">Thông báo hoạt động</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p>Lượt thích bài viết</p>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={notificationData.activityNotifications.likes}
-                  onChange={(e) =>
-                    handleChange(e, "activityNotifications", "likes")
-                  }
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-              </label>
-            </div>
-            <div className="flex items-center justify-between">
-              <p>Bình luận bài viết</p>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={notificationData.activityNotifications.comments}
-                  onChange={(e) =>
-                    handleChange(e, "activityNotifications", "comments")
-                  }
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-              </label>
-            </div>
-            <div className="flex items-center justify-between">
-              <p>Người theo dõi mới</p>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={notificationData.activityNotifications.followers}
-                  onChange={(e) =>
-                    handleChange(e, "activityNotifications", "followers")
-                  }
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-              </label>
-            </div>
-          </div>
+        <div className="p-4">
+          <NotificationItem
+            icon={Heart}
+            label="Likes"
+            description="When someone likes your post"
+            settingKey="likes"
+          />
+          <NotificationItem
+            icon={MessageCircle}
+            label="Comments"
+            description="When someone comments on your post"
+            settingKey="comments"
+          />
+          <NotificationItem
+            icon={UserPlus}
+            label="New Followers"
+            description="When someone follows you"
+            settingKey="follows"
+          />
+          <NotificationItem
+            icon={AtSign}
+            label="Mentions"
+            description="When someone mentions you"
+            settingKey="mentions"
+          />
+          <NotificationItem
+            icon={MessageCircle}
+            label="Messages"
+            description="When you receive a new message"
+            settingKey="messages"
+          />
         </div>
       </div>
 
-      {/* Thêm component test thông báo */}
-      {/* <NotificationTest /> */}
+      {/* Delivery Methods */}
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2">
+            <Mail size={16} className="text-neutral-500" />
+            <h3 className="text-sm font-medium text-black dark:text-white">
+              Delivery Methods
+            </h3>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800">
+            <div>
+              <p className="text-sm font-medium text-black dark:text-white">
+                Push Notifications
+              </p>
+              <p className="text-xs text-neutral-500">
+                Receive notifications on your device
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={notifications.push}
+              onChange={() =>
+                setNotifications({
+                  ...notifications,
+                  push: !notifications.push,
+                })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium text-black dark:text-white">
+                Email Notifications
+              </p>
+              <p className="text-xs text-neutral-500">
+                Receive notifications via email
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={notifications.email}
+              onChange={() =>
+                setNotifications({
+                  ...notifications,
+                  email: !notifications.email,
+                })
+              }
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

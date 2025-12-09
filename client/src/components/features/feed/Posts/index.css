@@ -1,10 +1,17 @@
+/* Hide scrollbar utility */
 .hide-scroll {
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Video container styles */
 .threads-video-container {
   position: relative;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
   background-color: #000;
 }
@@ -17,7 +24,7 @@
 
 .threads-video-controls {
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .threads-video-container:hover .threads-video-controls {

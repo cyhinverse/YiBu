@@ -1,582 +1,162 @@
-import React, { useState, useEffect } from "react";
-// import UserSettingsService from "../../../services/userSettingsService";
-import { getUserSettings, updateProfileSettings } from "../../../../redux/actions/userActions";
-import { useSelector, useDispatch } from "react-redux";
-import { toast } from "react-toastify";
-import { login } from "../../../../redux/actions/authActions";
-import {
-  GenderBirthdayModal,
-  InterestsModal,
-  DefaultModal,
-  ProfileSection,
-  SuccessNotification,
-  LoadingSkeleton,
-  AvatarModal,
-} from "./ProfileSettings/index";
-import { formatDateForDisplay, getGenderText } from "./ProfileSettings/utils";
-import { Camera } from "lucide-react";
+import { useState } from "react";
+import { Camera, User, FileText, Link2, MapPin } from "lucide-react";
 
-// Component chính
+// Fake user data
+const FAKE_USER = {
+  name: "John Doe",
+  username: "johndoe",
+  bio: "Software Developer | Tech Enthusiast | Coffee Lover ☕",
+  website: "https://johndoe.dev",
+  location: "San Francisco, CA",
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
+  cover: "https://images.unsplash.com/photo-1557683316-973673baf926?w=800",
+};
+
 const ProfileSettings = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [profileData, setProfileData] = useState({
-    name: "",
-    bio: "",
-    birthday: "",
-    gender: "",
-    interests: "",
-    website: "",
-    avatar: "",
-    avatarInfo: "",
-  });
+  const [profile, setProfile] = useState(FAKE_USER);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // State cho modal
-  const [showModal, setShowModal] = useState(false);
-  const [modalField, setModalField] = useState("");
-  const [modalTitle, setModalTitle] = useState("");
-
-  // State cho thông báo thành công
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-
-  // State tạm để lưu dữ liệu đang chỉnh sửa
-  const [tempData, setTempData] = useState({});
-
-  // Lấy dữ liệu user từ Redux store
-  const userData = useSelector((state) => state.auth.user);
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setInitialLoading(true);
-
-        // Object để thu thập tất cả dữ liệu từ các nguồn
-        let collectedData = {
-          name: "",
-          bio: "",
-          birthday: "",
-          gender: "",
-          interests: "",
-          website: "",
-          avatar: "",
-          avatarInfo: "",
-        };
-
-        // Thử lấy từ API
-        const response = await dispatch(getUserSettings()).unwrap();
-
-        // Dữ liệu từ API settings
-        if (
-          response.success &&
-          response.userSettings &&
-          response.userSettings.profile
-        ) {
-          const profile = response.userSettings.profile;
-          collectedData = { ...collectedData, ...profile };
-        } else if (response.data && response.data.userSettings && response.data.userSettings.profile) {
-           const profile = response.data.userSettings.profile;
-           collectedData = { ...collectedData, ...profile };
-        }
-
-        // Kiểm tra cấu trúc dữ liệu userData
-        let userDataObj = userData;
-
-        // Nếu userData có cấu trúc { user: {...} }, lấy phần user
-        if (userData && userData.user) {
-          userDataObj = userData.user;
-        }
-
-        if (userDataObj) {
-          collectedData = {
-            ...collectedData,
-            name: userDataObj.name || collectedData.name,
-            bio: userDataObj.bio || collectedData.bio,
-            gender: userDataObj.gender || collectedData.gender,
-            birthday: userDataObj.birthday || collectedData.birthday,
-            website: userDataObj.website || collectedData.website,
-            interests: userDataObj.interests || collectedData.interests,
-            avatar: userDataObj.avatar || collectedData.avatar,
-            avatarInfo: userDataObj.avatarInfo || collectedData.avatarInfo,
-          };
-        }
-
-        // Nếu không có dữ liệu từ API và Redux, thử lấy từ localStorage
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            collectedData = {
-              ...collectedData,
-              name: parsedUser.name || collectedData.name,
-              bio: parsedUser.bio || collectedData.bio,
-              gender: parsedUser.gender || collectedData.gender,
-              birthday: parsedUser.birthday || collectedData.birthday,
-              website: parsedUser.website || collectedData.website,
-              interests: parsedUser.interests || collectedData.interests,
-              avatar: parsedUser.avatar || collectedData.avatar,
-              avatarInfo: parsedUser.avatarInfo || collectedData.avatarInfo,
-            };
-          } catch (error) {
-            console.error("Lỗi khi đọc dữ liệu từ localStorage:", error);
-          }
-        }
-
-        // Kiểm tra nếu dữ liệu còn trống, dùng dữ liệu mẫu để test
-        const isDataEmpty = Object.values(collectedData).every(
-          (val) => !val || val === ""
-        );
-
-        if (isDataEmpty) {
-          const testData = {
-            name: "Nguyễn Văn A",
-            bio: "Đây là bio mẫu để test giao diện, bạn có thể thay đổi nội dung này.",
-            gender: "male",
-            birthday: "1990-01-01",
-            website: "https://example.com",
-            interests: "Lập trình, Đọc sách, Du lịch, Âm nhạc",
-            avatar: "https://via.placeholder.com/150",
-            avatarInfo: "",
-          };
-          collectedData = testData;
-        }
-
-        // Set tất cả dữ liệu đã thu thập vào state một lần duy nhất
-        setProfileData(collectedData);
-      } catch (error) {
-        console.error("Lỗi khi lấy cài đặt:", error);
-        toast.error("Không thể tải thông tin hồ sơ");
-        
-        // Fallback data
-         const testData = {
-            name: "Nguyễn Văn A",
-            bio: "Đây là bio mẫu để test giao diện, bạn có thể thay đổi nội dung này.",
-            gender: "male",
-            birthday: "1990-01-01",
-            website: "https://example.com",
-            interests: "Lập trình, Đọc sách, Du lịch, Âm nhạc",
-            avatar: "https://via.placeholder.com/150",
-            avatarInfo: "",
-          };
-          setProfileData(testData);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-
-    fetchSettings();
-  }, [userData, dispatch]);
-
-  // Bắt đầu chỉnh sửa một phần với modal
-  const handleEdit = (field) => {
-    // Lưu dữ liệu hiện tại vào state tạm
-    let fieldData = {};
-
-    if (field === "genderBirthday") {
-      fieldData = {
-        gender: profileData.gender || "",
-        birthday: profileData.birthday || "",
-      };
-    } else if (field === "avatar") {
-      fieldData = {
-        avatar: profileData.avatar || "",
-      };
-    } else {
-      fieldData = profileData[field] || "";
-    }
-
-    console.log(`Chỉnh sửa trường ${field}:`, fieldData);
-    console.log("Dữ liệu hiện tại:", profileData);
-
-    setTempData({
-      ...tempData,
-      [field]: fieldData,
-    });
-
-    // Xác định tiêu đề modal
-    let title = "";
-    switch (field) {
-      case "name":
-        title = "Cập nhật tên";
-        break;
-      case "bio":
-        title = "Cập nhật tiểu sử";
-        break;
-      case "website":
-        title = "Cập nhật website";
-        break;
-      case "genderBirthday":
-        title = "Cập nhật giới tính & ngày sinh";
-        break;
-      case "interests":
-        title = "Cập nhật sở thích";
-        break;
-      case "avatar":
-        title = "Thay đổi ảnh đại diện";
-        break;
-      default:
-        title = "Cập nhật thông tin";
-    }
-
-    setModalTitle(title);
-    setModalField(field);
-
-    // Mở modal
-    setShowModal(true);
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 1000);
   };
 
-  // Hủy chỉnh sửa và đóng modal
-  const handleCancel = () => {
-    setShowModal(false);
-
-    // Xóa dữ liệu tạm
-    const newTempData = { ...tempData };
-    delete newTempData[modalField];
-    setTempData(newTempData);
-  };
-
-  // Hàm hiển thị thông báo thành công
-  const showSuccessToast = (message) => {
-    toast.success(message, {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
-  };
-
-  // Hàm hiển thị thông báo lỗi
-  const showErrorToast = (message) => {
-    toast.error(message, {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
-  };
-
-  // Truyền trực tiếp dữ liệu để cập nhật, không phụ thuộc vào state
-  const submitData = async (dataToUpdate) => {
-    try {
-      setIsSubmitting(true);
-
-      console.log("Dữ liệu sẽ cập nhật (trực tiếp):", dataToUpdate);
-
-      const response = await dispatch(updateProfileSettings(dataToUpdate)).unwrap();
-
-      console.log("Phản hồi từ server:", response);
-
-      if (response.success || response.code === 1) {
-        // Cập nhật dữ liệu chính
-        setProfileData((prev) => ({
-          ...prev,
-          ...dataToUpdate,
-        }));
-
-        const responseUserData = response.userData || (response.data && response.data.userData);
-
-        // Cập nhật Redux và localStorage nếu cần
-        if (responseUserData) {
-          // Lấy user hiện tại từ localStorage
-          const storedUser = localStorage.getItem("user");
-          if (storedUser) {
-            try {
-              const parsedUser = JSON.parse(storedUser);
-
-              // Cập nhật tất cả dữ liệu với thông tin mới từ server
-              const updatedUser = {
-                ...parsedUser,
-                ...responseUserData,
-              };
-
-              console.log("Cập nhật dữ liệu user:", updatedUser);
-
-              // Lưu lại vào localStorage
-              localStorage.setItem("user", JSON.stringify(updatedUser));
-
-              // Cập nhật Redux store
-              dispatch(login(updatedUser));
-            } catch (error) {
-              console.error("Lỗi khi cập nhật localStorage:", error);
-            }
-          }
-        }
-
-        // Đóng modal
-        setShowModal(false);
-
-        // Xóa dữ liệu tạm
-        const newTempData = { ...tempData };
-        delete newTempData[modalField];
-        setTempData(newTempData);
-
-        // Hiển thị thông báo thành công
-        let successMsg = "";
-        if (modalField === "name") {
-          successMsg = "Cập nhật tên người dùng thành công";
-        } else if (modalField === "bio") {
-          successMsg = "Cập nhật tiểu sử thành công";
-        } else if (modalField === "website") {
-          successMsg = "Cập nhật website thành công";
-        } else if (modalField === "genderBirthday") {
-          successMsg = "Cập nhật thông tin cá nhân thành công";
-        } else if (modalField === "interests") {
-          successMsg = "Cập nhật sở thích thành công";
-        } else if (modalField === "avatar") {
-          successMsg = "Cập nhật ảnh đại diện thành công";
-        }
-
-        setSuccessMessage(successMsg);
-        setShowSuccess(true);
-
-        // Tự động ẩn thông báo sau 3 giây
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 3000);
-
-        // Hiển thị toast thành công
-        showSuccessToast("Cập nhật thành công");
-      } else {
-        // Hiển thị toast lỗi
-        showErrorToast(response.message || "Cập nhật thất bại");
-      }
-    } catch (error) {
-      console.error("Lỗi khi cập nhật:", error);
-      // Hiển thị toast lỗi
-      showErrorToast(error.message || "Cập nhật thất bại. Vui lòng thử lại.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Modal Component
-  const UpdateModal = () => {
-    if (!showModal) return null;
-
-    // Modal cho trường genderBirthday
-    if (modalField === "genderBirthday") {
-      return (
-        <GenderBirthdayModal
-          title={modalTitle}
-          tempData={tempData.genderBirthday || {}}
-          handleCancel={handleCancel}
-          handleSubmit={submitData}
-        />
-      );
-    }
-
-    // Modal cho trường interests
-    if (modalField === "interests") {
-      return (
-        <InterestsModal
-          title={modalTitle}
-          tempData={{ interests: tempData.interests }}
-          handleCancel={handleCancel}
-          handleSubmit={submitData}
-        />
-      );
-    }
-
-    // Modal cho avatar
-    if (modalField === "avatar") {
-      return (
-        <AvatarModal
-          isOpen={showModal}
-          closeModal={handleCancel}
-          currentAvatar={profileData.avatar}
-          onAvatarChange={(newAvatarUrl) => {
-            // Lấy thông tin avatar từ modal và cập nhật cả avatar và avatarInfo
-            submitData({
-              avatar: newAvatarUrl,
-              // Nếu có avatarInfo từ form, sẽ được gửi từ AvatarModal
-            });
-          }}
-        />
-      );
-    }
-
-    // Default modal for other fields (bio, website, name)
-    const modalTempData = {
-      bio: modalField === "bio" ? tempData.bio : "",
-      website: modalField === "website" ? tempData.website : "",
-      name: modalField === "name" ? tempData.name : "",
-    };
-
-    return (
-      <DefaultModal
-        title={modalTitle}
-        tempData={modalTempData}
-        handleCancel={handleCancel}
-        handleSubmit={submitData}
-        modalField={modalField}
-      />
-    );
-  };
-
-  // Hiển thị skeleton loading khi đang tải dữ liệu ban đầu
-  if (initialLoading) {
-    return <LoadingSkeleton />;
-  }
+  const InputField = ({
+    icon: Icon,
+    label,
+    value,
+    onChange,
+    placeholder,
+    multiline = false,
+  }) => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-black dark:text-white">
+        {label}
+      </label>
+      <div className="relative">
+        {!multiline && (
+          <Icon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+          />
+        )}
+        {multiline ? (
+          <textarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            rows={3}
+            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white resize-none"
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+          />
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <>
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-purple-700 dark:text-purple-400">
-          Cài Đặt Hồ Sơ Cá Nhân
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+          Edit Profile
         </h1>
+        <p className="text-neutral-500 text-sm">
+          Update your profile information
+        </p>
+      </div>
 
-        <div className="space-y-6">
-          {/* Ảnh đại diện */}
-          <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
-                  <img
-                    src={
-                      profileData.avatar || "https://via.placeholder.com/150"
-                    }
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <button
-                  onClick={() => handleEdit("avatar")}
-                  className="absolute bottom-0 right-0 bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white rounded-full p-1.5"
-                  disabled={isSubmitting}
-                >
-                  <Camera size={16} />
-                </button>
-              </div>
-              <div className="ml-6">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  Ảnh đại diện
-                </h3>
-                {profileData.avatarInfo ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {profileData.avatarInfo}
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Tải lên ảnh đại diện của bạn
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 text-sm font-medium"
-              onClick={() => handleEdit("avatar")}
-              disabled={isSubmitting}
-            >
-              Thay đổi
+      {/* Cover & Avatar */}
+      <div className="space-y-4">
+        {/* Cover */}
+        <div className="relative h-32 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+          <img
+            src={profile.cover}
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
+          <button className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+            <Camera size={24} className="text-white" />
+          </button>
+        </div>
+
+        {/* Avatar */}
+        <div className="flex items-end gap-4 -mt-12 ml-4">
+          <div className="relative">
+            <img
+              src={profile.avatar}
+              alt={profile.name}
+              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-900"
+            />
+            <button className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity">
+              <Camera size={20} className="text-white" />
             </button>
           </div>
-
-          {/* Tên */}
-          <ProfileSection
-            title="Tên hiển thị"
-            content={
-              <p className="text-gray-700">
-                {profileData.name || "Chưa cập nhật"}
-              </p>
-            }
-            editField="name"
-            onEdit={handleEdit}
-            isDisabled={isSubmitting}
-          />
-
-          {/* Tiểu sử */}
-          <ProfileSection
-            title="Tiểu sử"
-            content={
-              <p className="text-gray-700 whitespace-pre-line">
-                {profileData.bio || "Chưa cập nhật"}
-              </p>
-            }
-            editField="bio"
-            onEdit={handleEdit}
-            isDisabled={isSubmitting}
-          />
-
-          {/* Website */}
-          <ProfileSection
-            title="Website"
-            content={
-              <p className="text-gray-700">
-                {profileData.website ? (
-                  <a
-                    href={profileData.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {profileData.website}
-                  </a>
-                ) : (
-                  "Chưa cập nhật"
-                )}
-              </p>
-            }
-            editField="website"
-            onEdit={handleEdit}
-            isDisabled={isSubmitting}
-          />
-
-          {/* Giới tính & Ngày sinh */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Giới tính & Ngày sinh
-              </h3>
-              <button
-                className="text-purple-600 hover:text-purple-800 text-sm font-medium"
-                onClick={() => handleEdit("genderBirthday")}
-                disabled={isSubmitting}
-              >
-                Chỉnh sửa
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Giới tính</p>
-                <p className="text-gray-700">
-                  {getGenderText(profileData.gender)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Ngày sinh</p>
-                <p className="text-gray-700">
-                  {formatDateForDisplay(profileData.birthday)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Sở thích */}
-          <ProfileSection
-            title="Sở thích"
-            content={
-              <p className="text-gray-700 whitespace-pre-line">
-                {profileData.interests || "Chưa cập nhật"}
-              </p>
-            }
-            editField="interests"
-            onEdit={handleEdit}
-            isDisabled={isSubmitting}
-          />
+          <button className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
+            Change Photo
+          </button>
         </div>
       </div>
 
-      {/* Modal for editing */}
-      <UpdateModal />
+      {/* Form */}
+      <div className="space-y-4">
+        <InputField
+          icon={User}
+          label="Name"
+          value={profile.name}
+          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+          placeholder="Your name"
+        />
+        <InputField
+          icon={User}
+          label="Username"
+          value={profile.username}
+          onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+          placeholder="Your username"
+        />
+        <InputField
+          icon={FileText}
+          label="Bio"
+          value={profile.bio}
+          onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+          placeholder="Tell us about yourself"
+          multiline
+        />
+        <InputField
+          icon={Link2}
+          label="Website"
+          value={profile.website}
+          onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+          placeholder="https://yourwebsite.com"
+        />
+        <InputField
+          icon={MapPin}
+          label="Location"
+          value={profile.location}
+          onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+          placeholder="Where are you based?"
+        />
+      </div>
 
-      {/* Success notification */}
-      <SuccessNotification show={showSuccess} message={successMessage} />
-    </>
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {isSaving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+    </div>
   );
 };
 

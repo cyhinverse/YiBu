@@ -1,15 +1,55 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, X, Loader2 } from "lucide-react";
-import { useDebounce } from "../../../hooks/useDebounce";
-import { USER_API_ENDPOINTS } from "../../../axios/apiEndpoint";
+import { Search, X, UserPlus, Check } from "lucide-react";
+
+// Fake search results
+const FAKE_USERS = [
+  {
+    _id: "u1",
+    name: "Sarah Chen",
+    username: "sarahchen",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
+    bio: "Product Designer @Company",
+    isFollowing: false,
+  },
+  {
+    _id: "u2",
+    name: "Mike Johnson",
+    username: "mikej",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
+    bio: "Software Engineer",
+    isFollowing: true,
+  },
+  {
+    _id: "u3",
+    name: "Emma Wilson",
+    username: "emmaw",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
+    bio: "UI/UX Designer",
+    isFollowing: false,
+  },
+  {
+    _id: "u4",
+    name: "Alex Rivera",
+    username: "alexr",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
+    bio: "Full-stack Developer",
+    isFollowing: true,
+  },
+  {
+    _id: "u5",
+    name: "Jordan Lee",
+    username: "jordanl",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jordan",
+    bio: "Creative Director",
+    isFollowing: false,
+  },
+];
 
 const SearchUser = ({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const searchInputRef = useRef(null);
   const modalRef = useRef(null);
 
@@ -35,55 +75,25 @@ const SearchUser = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!debouncedSearchQuery.trim()) {
+    if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
     }
 
-    const searchUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-          setError("Please login to search.");
-          setLoading(false);
-          return;
-        }
+    // Simulate search with delay
+    setLoading(true);
+    const timer = setTimeout(() => {
+      const filtered = FAKE_USERS.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.username.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults(filtered);
+      setLoading(false);
+    }, 300);
 
-        const endpoint = `${USER_API_ENDPOINTS.SEARCH_USERS}?query=${encodeURIComponent(debouncedSearchQuery)}`;
-        const backendUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:9785";
-        const headers = {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        };
-
-        const response = await fetch(`${backendUrl}${endpoint}`, {
-          method: "GET",
-          headers: headers,
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem("accessToken");
-          setError("Session expired.");
-          return;
-        }
-
-        if (response.ok) {
-          const data = await response.json();
-          setSearchResults(data.data || []);
-        } else {
-          setSearchResults([]);
-        }
-      } catch (err) {
-        console.error("Error searching users:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    searchUsers();
-  }, [debouncedSearchQuery]);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleClearSearch = () => {
     setSearchQuery("");
@@ -96,87 +106,122 @@ const SearchUser = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 backdrop-blur-sm pt-[10vh]">
       <div
         ref={modalRef}
-        className="w-full max-w-[600px] bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden mx-4"
+        className="w-full max-w-[600px] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden mx-4"
       >
-        {/* Header */}
-        <div className="flex items-center gap-3 p-3 px-4 border-b border-gray-100">
-           {/* Search Bar */}
-           <div className="flex-1 relative group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors">
-                  <Search size={18} />
-              </div>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search"
-                className="w-full h-10 pl-10 pr-10 bg-gray-100 rounded-full border-transparent focus:bg-white focus:border-black focus:ring-1 focus:ring-black outline-none text-black placeholder:text-gray-500 transition-all text-[15px]"
-              />
-              {searchQuery && (
-                <button 
-                    onClick={handleClearSearch} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-500 text-white rounded-full p-0.5 hover:bg-black transition-colors"
-                >
-                   <X size={14} />
-                </button>
-              )}
-           </div>
-
-           {/* Cancel Button */}
-           <button 
-             onClick={onClose}
-             className="text-black font-semibold text-[15px] hover:bg-gray-100 px-3 py-1.5 rounded-full transition-colors"
-           >
-              Cancel
-           </button>
+        {/* Search Header */}
+        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+            />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search users..."
+              className="w-full pl-10 pr-10 py-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700"
+              >
+                <X size={16} className="text-neutral-400" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto min-h-[300px] bg-white">
-           {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                 <Loader2 className="animate-spin text-black mb-2" size={24} />
-              </div>
-           ) : error ? (
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                 <span className="text-gray-500 text-sm">{error}</span>
-              </div>
-           ) : searchResults.length > 0 ? (
-              <div className="py-2">
-                 {searchResults.map(user => (
-                    <Link
-                       key={user._id}
-                       to={`/profile/${user._id}`}
-                       onClick={() => onClose()}
-                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
-                    >
-                       <img 
-                          src={user.avatar || "https://via.placeholder.com/40"} 
-                          alt={user.username} 
-                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                       />
-                       <div className="flex flex-col">
-                          <span className="font-bold text-black text-[15px] leading-tight hover:underline">
-                              {user.username}
-                          </span>
-                          <span className="text-gray-500 text-[14px]">
-                              @{user.username || "user"}
-                          </span>
-                       </div>
-                    </Link>
-                 ))}
-              </div>
-           ) : searchQuery ? (
-               <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-                  <span className="text-black font-bold text-lg mb-1">No results for "{searchQuery}"</span>
-                  <span className="text-gray-500 text-sm">The term you entered did not bring up any results</span>
-               </div>
-           ) : (
-               <div className="flex flex-col items-center justify-center py-12 text-center px-6 text-gray-500">
-                   <p>Try searching for people, lists, or keywords</p>
-               </div>
-           )}
+        {/* Search Results */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="w-6 h-6 border-2 border-neutral-300 border-t-black dark:border-t-white rounded-full animate-spin mx-auto" />
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="p-8 text-center">
+              {searchQuery ? (
+                <>
+                  <Search size={32} className="mx-auto text-neutral-300 mb-2" />
+                  <p className="text-neutral-500 text-sm">No users found</p>
+                </>
+              ) : (
+                <>
+                  <Search size={32} className="mx-auto text-neutral-300 mb-2" />
+                  <p className="text-neutral-500 text-sm">
+                    Search for users by name or username
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
+            searchResults.map((user) => (
+              <Link
+                key={user._id}
+                to={`/profile/${user._id}`}
+                onClick={onClose}
+                className="flex items-center gap-3 p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+              >
+                {/* Avatar */}
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                />
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-black dark:text-white truncate">
+                      {user.name}
+                    </span>
+                  </div>
+                  <p className="text-sm text-neutral-500 truncate">
+                    @{user.username}
+                  </p>
+                  {user.bio && (
+                    <p className="text-xs text-neutral-400 truncate mt-0.5">
+                      {user.bio}
+                    </p>
+                  )}
+                </div>
+
+                {/* Follow Button */}
+                <button
+                  onClick={(e) => e.preventDefault()}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    user.isFollowing
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700"
+                      : "bg-black dark:bg-white text-white dark:text-black"
+                  }`}
+                >
+                  {user.isFollowing ? (
+                    <>
+                      <Check size={14} />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={14} />
+                      Follow
+                    </>
+                  )}
+                </button>
+              </Link>
+            ))
+          )}
+        </div>
+
+        {/* Close Button */}
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

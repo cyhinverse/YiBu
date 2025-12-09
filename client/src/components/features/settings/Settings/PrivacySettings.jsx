@@ -1,525 +1,177 @@
-import React, { useState, useEffect } from "react";
-// import UserSettingsService from "../../../services/userSettingsService";
-import { toast } from "react-hot-toast";
-import { useDispatch } from "react-redux";
+import { useState } from "react";
 import {
-  getUserSettings,
-  updatePrivacySettings,
-  getBlockList,
-  blockUser,
-  unblockUser,
-  searchUsers
-} from "../../../../redux/actions/userActions";
-import {
-  User,
   Shield,
-  EyeOff,
-  Search,
+  Eye,
   MessageCircle,
-  FileText,
-  Loader2,
+  Search,
+  Activity,
+  Lock,
+  Globe,
 } from "lucide-react";
 
 const PrivacySettings = () => {
-  const dispatch = useDispatch();
-  const [loading, setLoading] = useState(false);
-  const [blockListLoading, setBlockListLoading] = useState(false);
-  const [privacyData, setPrivacyData] = useState({
+  const [privacy, setPrivacy] = useState({
     profileVisibility: "public",
     postVisibility: "public",
     messagePermission: "everyone",
     searchVisibility: true,
     activityStatus: true,
   });
-  const [blockedUsers, setBlockedUsers] = useState([]);
-  const [newBlockUser, setNewBlockUser] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeSection, setActiveSection] = useState(null);
 
-  useEffect(() => {
-    fetchSettings();
-    fetchBlockList();
-  }, []);
+  const ToggleSwitch = ({ enabled, onChange, label, description }) => (
+    <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+      <div>
+        <p className="text-sm font-medium text-black dark:text-white">
+          {label}
+        </p>
+        <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
+      </div>
+      <button
+        onClick={onChange}
+        className={`relative w-11 h-6 rounded-full transition-colors ${
+          enabled
+            ? "bg-black dark:bg-white"
+            : "bg-neutral-200 dark:bg-neutral-700"
+        }`}
+      >
+        <div
+          className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
+            enabled
+              ? "translate-x-5 bg-white dark:bg-black"
+              : "translate-x-0.5 bg-white dark:bg-neutral-400"
+          }`}
+        />
+      </button>
+    </div>
+  );
 
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      const response = await dispatch(getUserSettings()).unwrap();
-      // console.log("Received settings:", response);
-      if (
-        response.success &&
-        response.userSettings &&
-        response.userSettings.privacy
-      ) {
-        setPrivacyData(response.userSettings.privacy);
-      } else if (response.data && response.data.userSettings && response.data.userSettings.privacy) {
-         // handle case where response might be wrapped
-          setPrivacyData(response.data.userSettings.privacy);
-      }
-    } catch (error) {
-      console.error("Lỗi khi lấy cài đặt quyền riêng tư:", error);
-      toast.error("Không thể tải cài đặt quyền riêng tư");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBlockList = async () => {
-    try {
-      setBlockListLoading(true);
-      const response = await dispatch(getBlockList()).unwrap();
-      // console.log("Block list response:", response);
-      if (response.success && response.blockList) {
-        setBlockedUsers(response.blockList);
-      } else if (response.data && response.data.blockList) {
-          setBlockedUsers(response.data.blockList);
-      }
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách chặn:", error);
-      toast.error("Không thể tải danh sách người dùng đã chặn");
-    } finally {
-      setBlockListLoading(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setPrivacyData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleSavePrivacy = async () => {
-    try {
-      setLoading(true);
-      setActiveSection("saving");
-
-      // console.log("Saving privacy settings:", privacyData);
-      const response = await dispatch(updatePrivacySettings(privacyData)).unwrap();
-
-      if (response.success || response.code === 1) {
-        toast.success("Cài đặt quyền riêng tư đã được lưu");
-      } else {
-        toast.error(response.message || "Lỗi khi lưu cài đặt");
-      }
-    } catch (error) {
-      console.error("Lỗi khi cập nhật quyền riêng tư:", error);
-      toast.error(error.message || "Lỗi khi lưu cài đặt");
-    } finally {
-      setLoading(false);
-      setActiveSection(null);
-    }
-  };
-
-  const handleBlockUser = async (e) => {
-    e.preventDefault();
-    if (!newBlockUser.trim()) {
-      toast.error("Vui lòng nhập email, username hoặc ID người dùng");
-      return;
-    }
-
-    try {
-      setBlockListLoading(true);
-      // console.log("Gửi yêu cầu chặn user:", newBlockUser);
-      let userIdToBlock = newBlockUser.trim();
-
-      // Check if input is likely an ID (24 hex chars)
-      const isObjectId = /^[0-9a-fA-F]{24}$/.test(userIdToBlock);
-      
-      if (!isObjectId) {
-          // It's likely a username or email, search for the user first
-          try {
-             const searchRes = await dispatch(searchUsers(userIdToBlock)).unwrap();
-             // Assuming searchUsers returns { data: [...] } or [...]
-             const users = Array.isArray(searchRes) ? searchRes : (searchRes.data || []);
-             
-             // Simple exact match logic or pick first
-             const foundUser = users.find(u => 
-                (u.email === userIdToBlock) || 
-                (u.username === userIdToBlock)
-             );
-
-             if (foundUser) {
-                 userIdToBlock = foundUser._id || foundUser.id;
-             } else if (users.length > 0) {
-                 // If no exact match but results exist, take the first one?
-                 // Or warn user to be specific.
-                 // For safety, let's pick the first one but maybe notify user?
-                //  toast("Tìm thấy nhiều kết quả, chọn kết quả đầu tiên: " + users[0].name);
-                 userIdToBlock = users[0]._id || users[0].id;
-             } else {
-                 toast.error("Không tìm thấy người dùng này.");
-                 setBlockListLoading(false);
-                 return;
-             }
-          } catch(searchErr) {
-              console.error("Lỗi khi tìm người dùng:", searchErr);
-              // Fallback to trying as ID if search fails? Unlikely to work but ok.
-          }
-      }
-
-      const response = await dispatch(blockUser({ blockedUserId: userIdToBlock })).unwrap();
-
-      if (response.success || response.code === 1) {
-        toast.success("Đã chặn người dùng thành công");
-        setNewBlockUser("");
-        await fetchBlockList();
-      } else {
-        toast.error(response.message || "Không thể chặn người dùng này");
-      }
-    } catch (error) {
-      console.error("Lỗi khi chặn người dùng:", error);
-
-      // Hiển thị thông báo lỗi chi tiết từ API nếu có
-      const errorMessage =
-        error.message ||
-        error.response?.data?.message ||
-        "Không thể chặn người dùng này. Vui lòng kiểm tra lại thông tin.";
-
-      toast.error(errorMessage);
-    } finally {
-      setBlockListLoading(false);
-    }
-  };
-
-  const handleUnblockUser = async (userId) => {
-    try {
-      setBlockListLoading(true);
-      const response = await dispatch(unblockUser(userId)).unwrap();
-
-      if (response && (response.data?.success || response === userId || typeof response === 'string')) { // unblockUser action returns userId on success
-        toast.success("Đã bỏ chặn người dùng");
-        await fetchBlockList();
-      } else {
-         // handle case where action returns full response object
-         if(response.success || response.code === 1) {
-            toast.success("Đã bỏ chặn người dùng");
-            await fetchBlockList();
-         } else {
-             toast.error("Không thể bỏ chặn người dùng này");
-         }
-      }
-    } catch (error) {
-      console.error("Lỗi khi bỏ chặn người dùng:", error);
-      toast.error(error.message || "Không thể bỏ chặn người dùng này");
-    } finally {
-      setBlockListLoading(false);
-    }
-  };
-
-  const filteredBlockedUsers = blockedUsers.filter((user) => {
-    const searchValue = searchTerm.toLowerCase();
-    const username = (user.username || "").toLowerCase();
-    const name = (user.name || "").toLowerCase();
-    const email = (user.email || "").toLowerCase();
-    return (
-      username.includes(searchValue) ||
-      name.includes(searchValue) ||
-      email.includes(searchValue)
-    );
-  });
+  const SelectOption = ({ value, onChange, label, description, options }) => (
+    <div className="py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-sm font-medium text-black dark:text-white">
+            {label}
+          </p>
+          <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
+        </div>
+      </div>
+      <div className="flex gap-2 mt-3">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
+              value === option.value
+                ? "bg-black dark:bg-white text-white dark:text-black"
+                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 space-y-8 bg-white  ">
-      <div className="flex items-center space-x-3 pb-3 border-b border-neutral-200">
-        <Shield className="text-blue-600" size={24} />
-        <h1 className="text-2xl font-semibold text-neutral-800">
-          Cài Đặt Quyền Riêng Tư
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+          Privacy
         </h1>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Hiển thị hồ sơ */}
-        <section className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 hover:shadow-md transition">
-          <div className="flex items-center space-x-2 mb-3">
-            <User className="text-blue-600" size={20} />
-            <h2 className="text-lg font-medium text-neutral-700">
-              Hiển Thị Hồ Sơ
-            </h2>
-          </div>
-
-          <p className="text-sm text-neutral-500 mb-4">
-            Chọn ai có thể xem thông tin hồ sơ của bạn
-          </p>
-
-          <div className="space-y-4">
-            <select
-              name="profileVisibility"
-              value={privacyData.profileVisibility}
-              onChange={handleChange}
-              className="w-full p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="public">Công khai (Mọi người)</option>
-              <option value="friends">Chỉ bạn bè</option>
-              <option value="private">Riêng tư (Chỉ mình tôi)</option>
-            </select>
-          </div>
-        </section>
-
-        {/* Hiển thị bài viết */}
-        <section className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 hover:shadow-md transition">
-          <div className="flex items-center space-x-2 mb-3">
-            <FileText className="text-blue-600" size={20} />
-            <h2 className="text-lg font-medium text-neutral-700">
-              Hiển Thị Bài Viết
-            </h2>
-          </div>
-
-          <p className="text-sm text-neutral-500 mb-4">
-            Chọn ai có thể xem bài viết của bạn mặc định
-          </p>
-
-          <div className="space-y-4">
-            <select
-              name="postVisibility"
-              value={privacyData.postVisibility}
-              onChange={handleChange}
-              className="w-full p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="public">Công khai (Mọi người)</option>
-              <option value="friends">Chỉ bạn bè</option>
-              <option value="private">Riêng tư (Chỉ mình tôi)</option>
-            </select>
-          </div>
-        </section>
-
-        {/* Quyền nhắn tin */}
-        <section className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 hover:shadow-md transition">
-          <div className="flex items-center space-x-2 mb-3">
-            <MessageCircle className="text-blue-600" size={20} />
-            <h2 className="text-lg font-medium text-neutral-700">
-              Quyền Nhắn Tin
-            </h2>
-          </div>
-
-          <p className="text-sm text-neutral-500 mb-4">
-            Chọn ai có thể gửi tin nhắn cho bạn
-          </p>
-
-          <div className="space-y-4">
-            <select
-              name="messagePermission"
-              value={privacyData.messagePermission}
-              onChange={handleChange}
-              className="w-full p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="everyone">Tất cả mọi người</option>
-              <option value="friends">Chỉ bạn bè</option>
-              <option value="none">Không ai (Tắt tin nhắn)</option>
-            </select>
-          </div>
-        </section>
-
-        {/* Hiển thị trong tìm kiếm */}
-        <section className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 hover:shadow-md transition">
-          <div className="flex items-center space-x-2 mb-3">
-            <Search className="text-blue-600" size={20} />
-            <h2 className="text-lg font-medium text-neutral-700">
-              Hiển Thị Trong Tìm Kiếm
-            </h2>
-          </div>
-
-          <p className="text-sm text-neutral-500 mb-4">
-            Kiểm soát liệu người khác có thể tìm thấy hồ sơ của bạn
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="searchVisibility"
-                name="searchVisibility"
-                checked={privacyData.searchVisibility}
-                onChange={handleChange}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label
-                htmlFor="searchVisibility"
-                className="text-sm text-neutral-700"
-              >
-                Cho phép người khác tìm thấy tôi
-              </label>
-            </div>
-          </div>
-        </section>
-
-        {/* Trạng thái hoạt động */}
-        <section className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 hover:shadow-md transition">
-          <div className="flex items-center space-x-2 mb-3">
-            <EyeOff className="text-blue-600" size={20} />
-            <h2 className="text-lg font-medium text-neutral-700">
-              Trạng Thái Hoạt Động
-            </h2>
-          </div>
-
-          <p className="text-sm text-neutral-500 mb-4">
-            Hiển thị trạng thái hoạt động của bạn cho người khác
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="activityStatus"
-                name="activityStatus"
-                checked={privacyData.activityStatus}
-                onChange={handleChange}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label
-                htmlFor="activityStatus"
-                className="text-sm text-neutral-700"
-              >
-                Hiển thị khi tôi đang hoạt động
-              </label>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Nút lưu tất cả */}
-      <div className="flex justify-center mt-6">
-        <button
-          className="px-6 py-2.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center"
-          onClick={handleSavePrivacy}
-          disabled={loading && activeSection === "saving"}
-        >
-          {loading && activeSection === "saving" ? (
-            <>
-              <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
-              Đang lưu...
-            </>
-          ) : (
-            "Lưu tất cả thay đổi"
-          )}
-        </button>
-      </div>
-
-      {/* Danh sách người dùng đã chặn */}
-      <section className="mt-10 bg-neutral-50 p-5 rounded-lg border border-neutral-200">
-        <div className="flex items-center space-x-2 mb-4">
-          <User className="text-red-500" size={20} />
-          <h2 className="text-lg font-medium text-neutral-700">
-            Người Dùng Đã Chặn
-          </h2>
-        </div>
-
-        <p className="text-sm text-neutral-500 mb-4">
-          Quản lý danh sách người dùng bạn đã chặn tương tác. Họ sẽ không thể
-          xem hồ sơ, bài viết hoặc nhắn tin cho bạn.
+        <p className="text-neutral-500 text-sm">
+          Control who can see your content and interact with you
         </p>
+      </div>
 
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">Hướng dẫn:</span> Bạn có thể chặn
-            người dùng bằng cách nhập email, tên người dùng (username), tên hiển
-            thị (name) hoặc ID của họ vào ô bên dưới.
-          </p>
-        </div>
-
-        <form onSubmit={handleBlockUser} className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Nhập email, tên người dùng hoặc ID"
-            value={newBlockUser}
-            onChange={(e) => setNewBlockUser(e.target.value)}
-            className="flex-1 p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2.5 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition flex items-center gap-1"
-            disabled={blockListLoading}
-          >
-            {blockListLoading ? (
-              <>
-                <Loader2 className="animate-spin h-4 w-4 text-white" />
-                Đang xử lý...
-              </>
-            ) : (
-              "Chặn người dùng"
-            )}
-          </button>
-        </form>
-
-        {/* Tìm kiếm trong danh sách chặn */}
-        {blockedUsers.length > 0 && (
-          <div className="relative mb-4">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="text-gray-400" size={16} />
-            </span>
-            <input
-              type="text"
-              placeholder="Tìm kiếm người dùng đã chặn..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full p-2.5 border border-neutral-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            />
+      {/* Visibility Settings */}
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2">
+            <Eye size={16} className="text-neutral-500" />
+            <h3 className="text-sm font-medium text-black dark:text-white">
+              Visibility
+            </h3>
           </div>
-        )}
-
-        <div className="space-y-2 max-h-80 overflow-y-auto">
-          {blockListLoading && blockedUsers.length === 0 ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="animate-spin h-6 w-6 text-blue-500" />
-              <span className="ml-2 text-sm text-neutral-500">
-                Đang tải danh sách chặn...
-              </span>
-            </div>
-          ) : blockedUsers.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-neutral-300 rounded-lg">
-              <p className="text-sm text-neutral-500">
-                Bạn chưa chặn người dùng nào
-              </p>
-            </div>
-          ) : filteredBlockedUsers.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-neutral-300 rounded-lg">
-              <p className="text-sm text-neutral-500">
-                Không tìm thấy người dùng nào khớp với tìm kiếm "{searchTerm}"
-              </p>
-            </div>
-          ) : (
-            filteredBlockedUsers.map((user) => (
-              <div
-                key={user._id || user.id}
-                className="flex justify-between items-center p-3 bg-white border border-neutral-200 rounded-md hover:shadow-sm transition"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-200">
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name || user.username}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="text-neutral-400" size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm text-neutral-800">
-                      {user.name || user.username || "Người dùng"}
-                    </p>
-                    {user.email && (
-                      <p className="text-xs text-neutral-500">{user.email}</p>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  className="px-3 py-1.5 bg-neutral-100 text-neutral-700 border border-neutral-200 rounded-md text-xs font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
-                  onClick={() => handleUnblockUser(user._id || user.id)}
-                  disabled={blockListLoading}
-                >
-                  Bỏ chặn
-                </button>
-              </div>
-            ))
-          )}
         </div>
-      </section>
+        <div className="p-4">
+          <SelectOption
+            label="Profile visibility"
+            description="Who can view your profile"
+            value={privacy.profileVisibility}
+            onChange={(value) =>
+              setPrivacy({ ...privacy, profileVisibility: value })
+            }
+            options={[
+              { value: "public", label: "Public" },
+              { value: "followers", label: "Followers" },
+              { value: "private", label: "Private" },
+            ]}
+          />
+          <SelectOption
+            label="Post visibility"
+            description="Default visibility for new posts"
+            value={privacy.postVisibility}
+            onChange={(value) =>
+              setPrivacy({ ...privacy, postVisibility: value })
+            }
+            options={[
+              { value: "public", label: "Public" },
+              { value: "followers", label: "Followers" },
+              { value: "private", label: "Only me" },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Interaction Settings */}
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2">
+            <MessageCircle size={16} className="text-neutral-500" />
+            <h3 className="text-sm font-medium text-black dark:text-white">
+              Interactions
+            </h3>
+          </div>
+        </div>
+        <div className="p-4">
+          <SelectOption
+            label="Message permissions"
+            description="Who can send you messages"
+            value={privacy.messagePermission}
+            onChange={(value) =>
+              setPrivacy({ ...privacy, messagePermission: value })
+            }
+            options={[
+              { value: "everyone", label: "Everyone" },
+              { value: "followers", label: "Followers" },
+              { value: "nobody", label: "Nobody" },
+            ]}
+          />
+          <ToggleSwitch
+            label="Show in search results"
+            description="Allow others to find you through search"
+            enabled={privacy.searchVisibility}
+            onChange={() =>
+              setPrivacy({
+                ...privacy,
+                searchVisibility: !privacy.searchVisibility,
+              })
+            }
+          />
+          <ToggleSwitch
+            label="Show activity status"
+            description="Let others see when you're online"
+            enabled={privacy.activityStatus}
+            onChange={() =>
+              setPrivacy({
+                ...privacy,
+                activityStatus: !privacy.activityStatus,
+              })
+            }
+          />
+        </div>
+      </div>
     </div>
   );
 };

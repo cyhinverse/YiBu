@@ -1,595 +1,310 @@
+import { useState } from "react";
 import {
-  Ellipsis,
-  ExternalLink,
+  MoreHorizontal,
   Heart,
   MessageCircle,
-  Save,
+  Send,
+  Bookmark,
+  Eye,
+  X,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import PostOption from "./PostOption";
-import { createLike, deleteLike, getLikeStatus, getAllLikes } from "../../../../redux/actions/likeActions";
-import { checkSavedStatus as checkSavedStatusAction, savePost, unsavePost } from "../../../../redux/actions/savePostActions";
-import "./index.css";
 
-import CommentModel from "../Comment/CommentModel";
-import ShowImagePost from "./ShowImagePost";
-import ShowVideoPost from "./ShowVideoPost";
-import { updateLikeLocal } from "../../../../redux/slices/LikeSlice";
-import { setSavedStatusLocal as setSavedStatus } from "../../../../redux/slices/SavePostSlice";
-import { toast } from "react-hot-toast";
-// import { getLikeManager } from "../../../socket/likeManager";
-// import { getCommentManager } from "../../../socket/commentManager";
-import { useSocketContext } from "../../../../contexts/SocketContext";
-import InvalidPostFallback from "./InvalidPostFallback";
-import formatTime from "../../../../utils/formatTime";
-
-const PostWrapper = ({ data, isSavedPost = false }) => {
-  const hiddenPosts = useSelector(
-    (state) => state.hiddenPosts?.hiddenPosts || []
-  );
-  const isHidden = data && data._id && hiddenPosts.includes(data._id);
-
-  if (isHidden) {
-    return null;
+// Fake post data for component testing
+const formatCount = (count) => {
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   }
-
-  return <Post data={data} isSavedPost={isSavedPost} />;
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+  }
+  return count.toString();
 };
 
-const Post = ({ data, isSavedPost = false }) => {
-  const dispatch = useDispatch();
-  const currentUser = useSelector((state) => state.auth?.user);
+const formatTime = (date) => {
+  const now = new Date();
+  const postDate = new Date(date);
+  const diffMs = now - postDate;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-  // Kiểm tra user và avatar có tồn tại không
-  const userData = data?.user || {};
-  const avatar =
-    userData?.avatar ||
-    "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1";
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return postDate.toLocaleDateString();
+};
 
-  // console.log(`Check avatar every user:::`, avatar);
-  // console.log(`Check data currentUser`, data);
-
-  const likeState = useSelector((state) => {
-    return state?.like?.likesByPost?.[data._id] || { isLiked: false, count: 0 };
-  });
-  const savedStatus = useSelector(
-    (state) => state.savePost?.savedStatus?.[data?._id] || isSavedPost
-  );
-
-  const [postOption, setPostOption] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
-  // Replaced DataContext with local state
-  const [openComment, setOpenComment] = useState(false);
+const Post = ({ data }) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [likeCount, setLikeCount] = useState(data?.likeCount || 0);
+  const [showOptions, setShowOptions] = useState(false);
   const [showImage, setShowImage] = useState(null);
-  const [showVideo, setShowVideo] = useState(null);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState({});
-  const [volumeControls, setVolumeControls] = useState({});
-  const videoRefs = useRef({});
-  const [likeLoading, setLikeLoading] = useState(false);
-  const isProcessingLike = useRef(false);
-  const [commentCount, setCommentCount] = useState(0);
-  const [postId, setPostId] = useState(null);
-  // const commentManager = getCommentManager();
-
-  const isValidData = !!(data && data._id);
-
-  const userId =
-    currentUser?._id || currentUser?.user?._id || currentUser?.data?._id;
-
-  const { joinPostRoom, emitLikeAction, socket } = useSocketContext() || {};
+  const [showComments, setShowComments] = useState(false);
 
   const user = data?.user || {
-    name: "Người dùng không xác định",
-    avatar: null,
+    name: "Unknown User",
+    username: "unknown",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=default",
   };
 
-  const handleVideoLoaded = (videoId) => {
-    if (videoRefs.current[videoId]) {
-      setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-      setVolumeControls((prev) => ({
-        ...prev,
-        [videoId]: videoRefs.current[videoId].volume,
-      }));
-    }
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
   };
 
-  const togglePlay = (videoId) => {
-    const video = videoRefs.current[videoId];
-    if (!video) return;
-
-    if (video.paused) {
-      video.play();
-      setIsPlaying((prev) => ({ ...prev, [videoId]: true }));
-    } else {
-      video.pause();
-      setIsPlaying((prev) => ({ ...prev, [videoId]: false }));
-    }
+  const handleSave = () => {
+    setIsSaved(!isSaved);
   };
 
-  const toggleMute = (videoId) => {
-    const video = videoRefs.current[videoId];
-    if (!video) return;
-
-    const newMutedState = !video.muted;
-    video.muted = newMutedState;
-    setIsMuted(newMutedState);
-  };
-
-  const checkSavedStatus = async () => {
-    if (!isValidData) return;
-
-    try {
-      const postId = data._id;
-      if (!postId) return;
-
-      const response = await dispatch(checkSavedStatusAction(postId)).unwrap();
-      if (response && response.data && response.data.code === 1) {
-        dispatch(setSavedStatus({ postId, status: response.data.isSaved }));
-      }
-    } catch (error) {
-      console.error("Error checking saved status:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!isValidData) return;
-    if (!isSavedPost) {
-      checkSavedStatus();
-    }
-  }, [isValidData, data._id, isSavedPost]);
-
-  useEffect(() => {
-    if (!isValidData) return;
-
-    let isMounted = true;
-    const postId = data._id;
-
-    const fetchLikeData = async () => {
-      try {
-        setLikeLoading(true);
-        // Using redux actions directly
-        await Promise.all([
-          dispatch(getLikeStatus(postId)).unwrap(),
-          dispatch(getAllLikes([postId])).unwrap(),
-        ]);
-        
-      } catch (error) {
-        console.error(`[Post ${postId}] Error fetching like data:`, error);
-      } finally {
-        if (isMounted) {
-          setLikeLoading(false);
-        }
-      }
-    };
-
-    if (joinPostRoom) {
-      // console.log(`[Post ${postId}] Joining post room for realtime updates`);
-      joinPostRoom(postId);
-    }
-
-    fetchLikeData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [dispatch, isValidData, data?._id, currentUser?.user?._id, joinPostRoom]);
-
-  useEffect(() => {
-    if (isValidData && socket) {
-      
-      // Temporary logic for real-time comments directly via socket if needed
-      // Previous commentManager is removed. Refactor to use socket.on if needed here or move to global listener.
-      // For now, we will rely on fetching or implement simpler listeners if critical.
-      // commentManager.joinPostRoom(data._id);
-      
-      const handleNewComment = (newComment) => {
-          if (newComment.postId === data._id) {
-               setCommentCount(prev => prev + 1);
-          }
-      }
-
-      socket.on("new_comment", handleNewComment);
-
-      return () => {
-        socket.off("new_comment", handleNewComment);
-        // commentManager.leavePostRoom(data._id);
-      };
-    }
-  }, [data._id, isValidData, socket]);
-
-  const handleCommentUpdate = (eventData) => {
-    if (
-      eventData.postId === data._id &&
-      typeof eventData.commentCount === "number"
-    ) {
-      setCommentCount(eventData.commentCount);
-    }
-  };
-
-  const handleLike = async () => {
-    if (!isValidData || likeLoading || !userId) {
-      return;
-    }
-
-    try {
-      setLikeLoading(true);
-      isProcessingLike.current = true;
-
-      const oldState = { ...likeState };
-      const postId = data._id;
-      const newIsLiked = !likeState.isLiked;
-      const newCount = newIsLiked
-        ? likeState.count + 1
-        : Math.max(0, likeState.count - 1);
-
-      // Optimistic update
-      dispatch(
-        setPostLikeStatus({
-          postId,
-          isLiked: newIsLiked,
-          count: newCount,
-        })
-      );
-
-      if (emitLikeAction) {
-        emitLikeAction(
-          postId,
-          (newIsLiked ? "like" : "unlike")
-        );
-      }
-
-      // API Call
-      const action = newIsLiked ? createLike({ postId }) : deleteLike({ postId });
-      const response = await dispatch(action).unwrap();
-
-      // Check response if needed
-      if (!response || (response.code !== 1 && (!response.data || response.data.code !== 1))) {
-          // Revert if failed
-           dispatch(
-            setPostLikeStatus({
-              postId,
-              isLiked: oldState.isLiked,
-              count: oldState.count,
-            })
-          );
-      } else {
-        // Success - server might return new count
-        const serverCount = response.data?.likeCount || newCount;
-         if (serverCount !== newCount) {
-              dispatch(
-                setPostLikeStatus({
-                  postId,
-                  isLiked: newIsLiked,
-                  count: serverCount,
-                })
-              );
-         }
-      }
-
-    } catch (error) {
-      console.error(`[Post ${data._id}] Like action failed:`, error);
-      dispatch(
-        setPostLikeStatus({
-          postId: data._id,
-          isLiked: likeState.isLiked,
-          count: likeState.count,
-        })
-      );
-    } finally {
-      isProcessingLike.current = false;
-      setLikeLoading(false);
-    }
-  };
-
-  const handleVolumeChange = (videoId, value) => {
-    if (videoRefs.current[videoId]) {
-      const video = videoRefs.current[videoId];
-      const volume = parseFloat(value);
-      video.volume = volume;
-
-      setVolumeControls((prev) => ({ ...prev, [videoId]: volume }));
-
-      if (volume === 0) {
-        video.muted = true;
-        setIsMuted(true);
-      } else if (video.muted) {
-        video.muted = false;
-        setIsMuted(false);
-      }
-    }
-  };
-
-  const handleSavePost = async () => {
-    if (!isValidData || saveLoading) return;
-
-    try {
-      setSaveLoading(true);
-      const postId = data._id;
-      if (!postId) {
-        throw new Error("ID bài viết không hợp lệ");
-      }
-
-      const action = savedStatus ? unsavePost(postId) : savePost(postId);
-      const response = await dispatch(action).unwrap();
-      const responseCode = response.code || (response.data && response.data.code);
-
-      if (responseCode === 1) {
-        dispatch(
-          setSavedStatus({
-            postId,
-            status: !savedStatus,
-          })
-        );
-        toast.success(savedStatus ? "Đã bỏ lưu bài viết" : "Đã lưu bài viết");
-      } else {
-        console.error("Lỗi khi lưu bài viết:", response);
-        toast.error(response?.message || "Có lỗi xảy ra");
-      }
-    } catch (error) {
-      console.error("Lỗi khi lưu/bỏ lưu bài viết:", error);
-      toast.error(
-        error.message || "Có lỗi xảy ra khi lưu bài viết"
-      );
-    } finally {
-      setSaveLoading(false);
-    }
-  };
-
-  const openCommentModal = () => {
-    setPostId(data._id);
-    setOpenComment(true);
-  };
-
-  useEffect(() => {
-    if (isValidData) {
-      const fetchCommentCount = async () => {
-        try {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_BASE_URL}/api/comments/post/${data._id}`
-          );
-          const responseData = await response.json();
-          if (responseData.code === 1) {
-            setCommentCount(responseData.commentCount || 0);
-          }
-        } catch (error) {
-          console.error("Error fetching comment count:", error);
-        }
-      };
-
-      fetchCommentCount();
-    }
-  }, [data._id, isValidData]);
-
-  if (!isValidData) {
-    const errorMessage = !data
-      ? "Dữ liệu bài viết không tồn tại"
-      : "Dữ liệu bài viết không hợp lệ (thiếu ID)";
-    console.error("Post component:", errorMessage, data);
-    return <InvalidPostFallback message={errorMessage} />;
-  }
+  if (!data) return null;
 
   return (
-    <div className="w-full  border-b border-gray-300 flex flex-col justify-start gap-2">
-      <div className="flex justify-between px-4 pt-2">
-        <div className="flex space-x-2 relative">
-          <img
-            className="h-[35px] w-[35px] object-cover rounded-full cursor-pointer"
-            src={avatar}
-            alt="Profile"
-          />
-          <div className="flex gap-3 justify-start items-start">
-            <span className="font-semibold text-medium hover:underline">
-              {user?.name || "Người dùng"}
-            </span>
-            <span className=" font-medium text-gray-500 ">
-              {formatTime(data.createdAt)}
-            </span>
+    <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <img
+              className="w-11 h-11 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+              src={user.avatar}
+              alt={user.name}
+            />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-black dark:text-white hover:underline cursor-pointer">
+                {user.name}
+              </span>
+              {user.verified && (
+                <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="white"
+                    className="dark:fill-black"
+                  >
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+              <span>@{user.username}</span>
+              <span>•</span>
+              <span>{formatTime(data.createdAt)}</span>
+            </div>
           </div>
         </div>
-        <div onClick={() => setPostOption(!postOption)} className="relative">
-          <Ellipsis className="cursor-pointer" size={20} />
-          <PostOption
-            show={postOption}
-            postId={data._id}
-            postUserId={data.user?._id}
-          />
-        </div>
+
+        <button
+          onClick={() => setShowOptions(!showOptions)}
+          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-black dark:hover:text-white transition-all"
+        >
+          <MoreHorizontal size={18} />
+        </button>
       </div>
 
-      <p className="px-4">{data.caption || ""}</p>
+      {/* Content */}
+      {data.caption && (
+        <p className="text-black dark:text-white leading-relaxed mb-3 whitespace-pre-wrap break-words">
+          {data.caption}
+        </p>
+      )}
 
+      {/* Media */}
       {data.media && data.media.length > 0 && (
-        <div className="w-auto mx-4 overflow-x-scroll flex gap-2 flex-nowrap hide-scroll">
-          {data.media.map((item, index) => (
-            <div key={index} className="flex-shrink-0">
-              {item?.type === "video" ? (
-                <div className="threads-video-container relative">
-                  <video
-                    ref={(el) => (videoRefs.current[`video-${index}`] = el)}
-                    autoPlay
-                    playsInline
-                    muted={isMuted}
-                    loop
-                    onLoadedData={() => handleVideoLoaded(`video-${index}`)}
-                    className="w-auto h-auto max-h-[300px] object-cover bg-center rounded-md cursor-pointer"
-                    onClick={() => setShowVideo(item.url)}
-                  >
-                    <source src={item.url} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                  <div className="threads-video-controls absolute bottom-3 right-3 flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
-                    <button
-                      className="text-white hover:text-gray-200 transition-colors"
-                      onClick={() => togglePlay(`video-${index}`)}
-                    >
-                      {isPlaying[`video-${index}`] ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="6" y="4" width="4" height="16"></rect>
-                          <rect x="14" y="4" width="4" height="16"></rect>
-                        </svg>
-                      ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                      )}
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <button
-                        className="text-white hover:text-gray-200 transition-colors"
-                        onClick={() => toggleMute(`video-${index}`)}
-                      >
-                        {videoRefs.current[`video-${index}`]?.muted ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                            <line x1="23" y1="9" x2="17" y2="15"></line>
-                            <line x1="17" y1="9" x2="23" y2="15"></line>
-                          </svg>
-                        ) : (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                          </svg>
-                        )}
-                      </button>
-
-                      {!videoRefs.current[`video-${index}`]?.muted && (
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.1"
-                          value={volumeControls[`video-${index}`] || 1}
-                          onChange={(e) =>
-                            handleVolumeChange(`video-${index}`, e.target.value)
-                          }
-                          className="volume-slider w-16 h-1 bg-white/30 rounded-full appearance-none cursor-pointer"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
+        <div
+          className={`rounded-xl overflow-hidden mb-3 ${
+            data.media.length === 1 ? "" : "grid gap-1"
+          } ${data.media.length === 2 ? "grid-cols-2" : ""} ${
+            data.media.length >= 3 ? "grid-cols-2" : ""
+          }`}
+        >
+          {data.media.slice(0, 4).map((item, index) => (
+            <div
+              key={index}
+              className={`relative overflow-hidden ${
+                data.media.length === 3 && index === 0 ? "row-span-2" : ""
+              } ${data.media.length === 1 ? "max-h-[450px]" : "aspect-square"}`}
+            >
+              {item.type === "video" ? (
+                <video
+                  autoPlay
+                  playsInline
+                  muted
+                  loop
+                  className="w-full h-full object-cover"
+                >
+                  <source src={item.url} type="video/mp4" />
+                </video>
               ) : (
                 <img
-                  className="w-auto h-auto max-h-[300px] object-cover cursor-pointer rounded-md"
+                  className={`w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300 ${
+                    data.media.length === 1 ? "max-h-[450px]" : ""
+                  }`}
                   src={item.url}
-                  alt={`Post Media ${index + 1}`}
+                  alt={`Post media ${index + 1}`}
                   onClick={() => setShowImage(item.url)}
                 />
+              )}
+              {data.media.length > 4 && index === 3 && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                  <span className="text-white text-2xl font-bold">
+                    +{data.media.length - 4}
+                  </span>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
 
-      <div className="flex justify-between items-center w-[350px] mb-2 px-4">
-        <div className="flex space-x-4 items-center">
-          <div className="flex items-center space-x-1">
-            <Heart
-              onClick={handleLike}
-              className={` cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
-                likeLoading ? "opacity-50" : ""
-              }`}
-              color={likeState.isLiked ? "red" : "white"}
-              fill={likeState.isLiked ? "red" : "none"}
-              size={23}
-              strokeWidth={1}
-            />
-            <span className="text-sm font-medium text-gray-700">
-              {likeState.count}
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <MessageCircle
-              className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
-              strokeWidth={1}
-              size={23}
-              onClick={openCommentModal}
-            />
-            {commentCount > 0 && (
-              <span className="text-sm font-medium text-gray-700">
-                {commentCount}
-              </span>
-            )}
-          </div>
-          <ExternalLink
-            className="cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90"
-            strokeWidth={1}
-            size={23}
-          />
-        </div>
-        <div>
-          <Save
-            onClick={handleSavePost}
-            className={`cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 ${
-              saveLoading ? "opacity-50" : ""
-            }`}
-            strokeWidth={1}
-            size={23}
-          />
-        </div>
+      {/* Stats Row */}
+      <div className="flex items-center gap-4 py-2 mb-2 text-sm text-neutral-400">
+        <span className="flex items-center gap-1">
+          <Eye size={14} />
+          {formatCount(data.viewCount || 0)} views
+        </span>
       </div>
 
+      {/* Divider */}
+      <div className="h-px bg-neutral-200 dark:bg-neutral-800 mb-3" />
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between">
+        {/* Left Actions */}
+        <div className="flex items-center gap-1">
+          {/* Like */}
+          <button
+            onClick={handleLike}
+            className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all ${
+              isLiked
+                ? "text-red-500 bg-red-50 dark:bg-red-500/10"
+                : "text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+            }`}
+          >
+            <Heart size={18} className={isLiked ? "fill-current" : ""} />
+            {likeCount > 0 && (
+              <span className="text-sm font-medium">
+                {formatCount(likeCount)}
+              </span>
+            )}
+          </button>
+
+          {/* Comment */}
+          <button
+            onClick={() => setShowComments(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+          >
+            <MessageCircle size={18} />
+            {data.commentCount > 0 && (
+              <span className="text-sm font-medium">
+                {formatCount(data.commentCount)}
+              </span>
+            )}
+          </button>
+
+          {/* Share */}
+          <button className="flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
+            <Send size={18} />
+          </button>
+        </div>
+
+        {/* Right Actions */}
+        <button
+          onClick={handleSave}
+          className={`p-2 rounded-full transition-all ${
+            isSaved
+              ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10"
+              : "text-neutral-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10"
+          }`}
+        >
+          <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
+        </button>
+      </div>
+
+      {/* Image Modal */}
       {showImage && (
-        <ShowImagePost setShowImage={setShowImage} showImage={showImage} />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setShowImage(null)}
+        >
+          <img
+            src={showImage}
+            alt="Full view"
+            className="max-w-[90vw] max-h-[90vh] rounded-xl"
+          />
+          <button
+            className="absolute top-4 right-4 bg-white/10 backdrop-blur-sm text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors"
+            onClick={() => setShowImage(null)}
+          >
+            <X size={20} />
+          </button>
+        </div>
       )}
-      {showVideo && (
-        <ShowVideoPost setShowVideo={setShowVideo} showVideo={showVideo} />
+
+      {/* Options Modal */}
+      {showOptions && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowOptions(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+              Report post
+            </button>
+            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+              Hide post
+            </button>
+            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+              Copy link
+            </button>
+            <button
+              onClick={() => setShowOptions(false)}
+              className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
-      {openComment && postId && (
-        <CommentModel
-          postId={postId}
-          onClose={() => {
-            setOpenComment(false);
-            setPostId(null);
-          }}
-        />
+
+      {/* Comments Modal Placeholder */}
+      {showComments && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowComments(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
+              <h3 className="font-semibold text-black dark:text-white">
+                Comments
+              </h3>
+              <button
+                onClick={() => setShowComments(false)}
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <X size={18} className="text-neutral-400" />
+              </button>
+            </div>
+            <div className="p-4 text-center text-neutral-500">
+              No comments yet
+            </div>
+          </div>
+        </div>
       )}
-      {postOption && <PostOption post={data} setPostOption={setPostOption} />}
-    </div>
+    </article>
   );
 };
 
-// Xuất component wrapper thay vì component gốc
-export default PostWrapper;
+export default Post;

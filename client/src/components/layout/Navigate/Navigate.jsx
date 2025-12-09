@@ -1,184 +1,263 @@
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { Home, MessageCircle, Moon, Search, Sun, Settings, Bell, User, MoreHorizontal, PenTool } from "lucide-react";
+import {
+  Home,
+  MessageCircle,
+  Moon,
+  Search,
+  Sun,
+  Settings,
+  Bell,
+  User,
+  LogOut,
+  Bookmark,
+  Sparkles,
+  PenSquare,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-import { useDispatch, useSelector } from "react-redux";
+// Fake user data
+const CURRENT_USER = {
+  name: "John Doe",
+  username: "johndoe",
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
+};
 
-import { setThemeSettings } from "../../../redux/slices/UserSlice";
-import { updateThemeSettings } from "../../../redux/actions/userActions";
-import SearchUser from "../../features/search/SearchUser";
-
-// Helper for consistent Nav Items
-const NavItem = ({ to, icon: Icon, label, onClick, isActive, isMobile }) => {
-  if (isMobile) {
-      return (
-        <NavLink
-            to={to || "#"}
-            onClick={onClick}
-            className={({ isActive: active }) =>
-                `flex items-center justify-center w-full h-full ${active || isActive ? "text-primary" : "text-text-secondary"}`
-            }
-        >
-            <Icon size={26} strokeWidth={isActive ? 2.8 : 2} />
-        </NavLink>
-      )
-  }
-  
+// Custom Nav Item
+const NavItem = ({
+  to,
+  icon: Icon,
+  label,
+  onClick,
+  badge,
+  isActive: forceActive,
+  collapsed,
+}) => {
   return (
-    <NavLink
-      to={to || "#"}
-      onClick={onClick}
-      className={({ isActive: active }) =>
-        `flex items-center justify-start gap-4 px-3 py-3 rounded-full transition-all duration-200 group w-fit xl:w-full hover:bg-surface-highlight/50 ${
-          active || isActive ? "font-bold text-text-primary" : "font-medium text-text-primary"
-        }`
-      }
-    >
-      <div className="relative">
-        <Icon size={26} strokeWidth={isActive ? 2.8 : 2} />
-        {/* Optional Dot for active state if needed, but X uses bold text/icon */}
-      </div>
-      <span className="hidden xl:block text-xl tracking-wide">{label}</span>
+    <NavLink to={to || "#"} onClick={onClick} className="group w-full">
+      {({ isActive }) => {
+        const active = forceActive !== undefined ? forceActive : isActive;
+        return (
+          <div
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full ${
+              active
+                ? "bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white font-medium"
+                : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white"
+            } ${collapsed ? "justify-center px-2" : ""}`}
+            title={collapsed ? label : undefined}
+          >
+            <div className="relative flex-shrink-0">
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              {badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center px-1">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+            </div>
+            {!collapsed && <span className="text-sm truncate">{label}</span>}
+          </div>
+        );
+      }}
     </NavLink>
   );
 };
 
-const Navigate = ({ mobile = false }) => {
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const dispatch = useDispatch();
-
-  const authState = useSelector((s) => s.auth);
-  const userSettings = useSelector((state) => state.user?.settings);
-  const theme = userSettings?.theme || { appearance: "system" };
-  const isDarkMode =
-    theme.appearance === "dark" ||
-    (theme.appearance === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-  const [userId, setUserId] = useState(null)
-
-  useEffect(() => {
-    if (authState?.user?.user?._id) {
-       setUserId(authState.user.user._id);
-    } else if (authState?.user?._id) {
-       setUserId(authState.user._id);
+const Navigate = ({ mobile = false, onCollapsedChange }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first, then system preference
+    const saved = localStorage.getItem("theme");
+    if (saved) {
+      return saved === "dark";
     }
-  }, [authState]);
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
-
-  const handleOpenSearch = (e) => {
-      if(e) e.preventDefault();
-      setShowSearchModal(true);
+  const toggleTheme = () => {
+    const newDark = !isDarkMode;
+    setIsDarkMode(newDark);
+    localStorage.setItem("theme", newDark ? "dark" : "light");
+    if (newDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   };
-  const handleCloseSearch = () => setShowSearchModal(false);
 
-  const toggleTheme = async () => {
-    const newAppearance = isDarkMode ? "light" : "dark";
-    const updatedTheme = { ...theme, appearance: newAppearance };
-    dispatch(setThemeSettings(updatedTheme));
-    try {
-      await dispatch(updateThemeSettings(updatedTheme)).unwrap();
-    } catch (error) {
-      console.error("Error saving theme", error);
-    }
+  const toggleSidebar = () => {
+    const newCollapsed = !collapsed;
+    setCollapsed(newCollapsed);
+    onCollapsedChange?.(newCollapsed);
   };
 
   const navItems = [
     { icon: Home, path: "/", label: "Home" },
-    { icon: Search, path: "#", label: "Explore", onClick: handleOpenSearch }, 
-    { icon: Bell, path: "/notifications", label: "Notifications" }, 
-    { icon: MessageCircle, path: "/messages", label: "Messages" },
-    { icon: User, path: userId ? `/profile/${userId}` : "/auth/login", label: "Profile" },
-    { icon: Settings, path: "/settings", label: "Settings" },
+    { icon: Search, path: "/explore", label: "Explore" },
+    { icon: Bell, path: "/notifications", label: "Notifications", badge: 3 },
+    { icon: MessageCircle, path: "/messages", label: "Messages", badge: 5 },
+    { icon: Bookmark, path: "/profile/save-posts", label: "Saved" },
+    { icon: User, path: "/profile", label: "Profile" },
   ];
 
-  // Mobile Bottom Bar View
+  // Mobile Bottom Navigation
   if (mobile) {
-      return (
-          <div className="h-[60px] w-full flex justify-between items-center px-6">
-             {navItems.slice(0, 5).map((item, i) => (
-                 <div key={i} className="h-full flex-1 flex items-center justify-center">
-                    <NavItem 
-                        to={item.path} 
-                        icon={item.icon} 
-                        onClick={item.onClick}
-                        isMobile={true}
-                        isActive={window.location.pathname === item.path}
-                    />
-                 </div>
-             ))}
-                 <div className="h-full flex-1 flex items-center justify-center" onClick={toggleTheme}>
-                    <Sun size={24} className="text-text-secondary" />
-                 </div>
-             <SearchUser isOpen={showSearchModal} onClose={handleCloseSearch} />
-          </div>
-      )
+    return (
+      <div className="h-[56px] w-full flex justify-around items-center border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl">
+        {navItems.slice(0, 5).map((item, i) => (
+          <NavLink
+            key={i}
+            to={item.path}
+            className={({ isActive }) =>
+              `relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                isActive
+                  ? "text-black dark:text-white"
+                  : "text-neutral-400 hover:text-black dark:hover:text-white"
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <div className="absolute -top-1 w-6 h-0.5 rounded-full bg-black dark:bg-white" />
+                )}
+                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
+    );
   }
 
-  // Desktop Vertical Sidebar View
+  // Desktop Sidebar
   return (
-    <div className="h-full flex flex-col justify-between px-2 xl:px-4 py-4 overflow-y-auto custom-scrollbar">
-      
-      {/* Top Section */}
-      <div className="flex flex-col gap-2 items-center xl:items-start">
-        {/* Logo */}
-        <Link to="/" className="p-3 mb-2 rounded-full hover:bg-surface-highlight/50 transition-colors w-fit">
-           <span className="text-3xl font-black font-heading tracking-tighter text-primary">Y.</span>
-        </Link>
+    <div
+      className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ease-in-out ${
+        collapsed ? "px-2 w-[72px]" : "px-4 w-full"
+      }`}
+    >
+      {/* Logo */}
+      <Link
+        to="/"
+        className={`flex items-center gap-3 mb-8 ${
+          collapsed ? "justify-center px-0" : "px-1"
+        }`}
+      >
+        <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center flex-shrink-0">
+          <Sparkles size={18} className="text-white dark:text-black" />
+        </div>
+        {!collapsed && (
+          <span className="text-xl font-semibold tracking-tight text-black dark:text-white">
+            YiBu
+          </span>
+        )}
+      </Link>
 
-        {/* Navigation Items */}
-        <nav className="flex flex-col gap-2 w-full items-center xl:items-start">
-           {navItems.map((item, i) => (
-             <NavItem
-                key={i}
-                to={item.path}
-                icon={item.icon}
-                label={item.label}
-                onClick={item.onClick}
-             />
-           ))}
-           
-           {/* Theme Toggle (Custom for Desktop List) */}
-           <div 
-             onClick={toggleTheme}
-             className="flex items-center justify-start gap-4 px-3 py-3 rounded-full transition-all duration-200 group w-fit xl:w-full hover:bg-surface-highlight/50 cursor-pointer text-text-primary"
-           >
-              <div className="relative">
-                 {isDarkMode ? <Sun size={26} /> : <Moon size={26} />}
-              </div>
-              <span className="hidden xl:block text-xl tracking-wide font-medium">Theme</span>
-           </div>
-        </nav>
+      {/* Collapse Toggle */}
+      <button
+        onClick={toggleSidebar}
+        className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 transition-all self-center"
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? (
+          <ChevronRight size={16} className="text-neutral-500" />
+        ) : (
+          <ChevronLeft size={16} className="text-neutral-500" />
+        )}
+      </button>
 
-        {/* Post Button */}
-        <button className="hidden xl:block w-[90%] mt-4 bg-primary text-white font-bold text-lg py-3  hover:bg-primary/90 transition-all">
-            Post
-        </button>
-        <button className="xl:hidden mt-4 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90">
-            <PenTool size={24} />
-        </button>
-      </div>
+      {/* Navigation */}
+      <nav className="flex flex-col gap-1 flex-1">
+        {navItems.map((item, i) => (
+          <NavItem
+            key={i}
+            to={item.path}
+            icon={item.icon}
+            label={item.label}
+            badge={item.badge}
+            collapsed={collapsed}
+          />
+        ))}
 
-      {/* Bottom Section: User Profile */}
-      <div className="mt-auto w-full">
-         <Link 
-            to={userId ? `/profile/${userId}` : "/auth/login"}
-            className="flex items-center gap-3 p-3 rounded-full hover:bg-surface-highlight/50 transition-all w-full cursor-pointer"
-         >
+        {/* Settings */}
+        <NavItem
+          to="/settings"
+          icon={Settings}
+          label="Settings"
+          collapsed={collapsed}
+        />
+
+        {/* Theme Toggle */}
+        <div
+          onClick={toggleTheme}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all cursor-pointer text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white ${
+            collapsed ? "justify-center px-2" : ""
+          }`}
+          title={
+            collapsed ? (isDarkMode ? "Light mode" : "Dark mode") : undefined
+          }
+        >
+          <div className="flex-shrink-0">
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </div>
+          {!collapsed && (
+            <span className="text-sm">
+              {isDarkMode ? "Light mode" : "Dark mode"}
+            </span>
+          )}
+        </div>
+
+        {/* Create Post Button */}
+        {collapsed ? (
+          <button
+            className="mt-6 w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center mx-auto hover:opacity-80 transition-opacity"
+            title="Create Post"
+          >
+            <PenSquare size={18} className="text-white dark:text-black" />
+          </button>
+        ) : (
+          <button className="mt-6 flex items-center justify-center gap-2 py-2.5 px-4 w-full bg-black dark:bg-white text-white dark:text-black rounded-full font-medium text-sm hover:opacity-90 transition-opacity">
+            <PenSquare size={16} />
+            <span>Create Post</span>
+          </button>
+        )}
+      </nav>
+
+      {/* User Profile Card */}
+      <div className="mt-auto pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <Link
+          to="/profile"
+          className={`flex items-center gap-3 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all group ${
+            collapsed ? "justify-center" : ""
+          }`}
+          title={collapsed ? CURRENT_USER.name : undefined}
+        >
+          <div className="relative flex-shrink-0">
             <img
-              src={authState?.user?.avatar || "https://via.placeholder.com/40"}
+              src={CURRENT_USER.avatar}
               alt="Profile"
-              className="w-10 h-10 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
             />
-            <div className="hidden xl:flex flex-col flex-1 overflow-hidden">
-                <span className="text-base font-bold text-text-primary truncate">{authState?.user?.username || "Guest"}</span>
-                <span className="text-sm text-text-secondary truncate">@{authState?.user?.username || "guest"}</span>
-            </div>
-            <MoreHorizontal size={18} className="hidden xl:block text-text-secondary" />
-         </Link>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
+          </div>
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-black dark:text-white truncate leading-tight">
+                  {CURRENT_USER.name}
+                </p>
+                <p className="text-xs text-neutral-500 truncate leading-tight mt-0.5">
+                  @{CURRENT_USER.username}
+                </p>
+              </div>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <LogOut size={16} className="text-neutral-400" />
+              </div>
+            </>
+          )}
+        </Link>
       </div>
-
-      <SearchUser isOpen={showSearchModal} onClose={handleCloseSearch} />
     </div>
   );
 };

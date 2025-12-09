@@ -1,96 +1,391 @@
-@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    /* Brand Colors - Light */
-    --color-primary: #7c3aed; /* violet-600 */
-    --color-primary-foreground: #ffffff;
+/* Enable dark mode with class strategy in Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
 
-    --color-secondary: #d946ef; /* fuchsia-500 */
-    --color-secondary-foreground: #ffffff;
+/* ===== YiBu Design System - Neutral & Calm ===== */
+@theme {
+  /* Primary - Pure Black & White */
+  --color-primary: #000000;
+  --color-primary-light: #171717;
+  --color-primary-dark: #000000;
+  --color-primary-foreground: #ffffff;
 
-    --color-accent: #06b6d4; /* cyan-500 */
-    --color-accent-foreground: #ffffff;
+  /* Secondary - Elegant Gray */
+  --color-secondary: #525252;
+  --color-secondary-light: #737373;
+  --color-secondary-dark: #404040;
+  --color-secondary-foreground: #ffffff;
 
-    /* Semantic */
-    --color-success: #10b981; /* emerald-500 */
-    --color-error: #f43f5e; /* rose-500 */
-    --color-warning: #f59e0b; /* amber-500 */
-    --color-info: #0ea5e9; /* sky-500 */
+  /* Accent - Neutral Gray */
+  --color-accent: #737373;
+  --color-accent-light: #a3a3a3;
+  --color-accent-dark: #525252;
+  --color-accent-foreground: #ffffff;
 
-    /* Neutrals / Surface - Light */
-    --color-background: #f9fafb; /* gray-50 */
-    --color-surface: #ffffff;
-    --color-surface-highlight: #f3f4f6; /* gray-100 */
+  /* Semantic Colors */
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-warning: #ca8a04;
+  --color-info: #2563eb;
 
-    --color-text-primary: #111827; /* gray-900 */
-    --color-text-secondary: #6b7280; /* gray-500 */
-  }
+  /* Light Mode Surfaces - Clean White */
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #fafafa;
+  --color-surface-elevated: #ffffff;
+  --color-surface-hover: #f5f5f5;
 
-  .dark {
-    /* Brand Colors - Dark */
-    --color-primary: #8b5cf6; /* violet-500 */
-    --color-primary-foreground: #ffffff;
+  /* Text Colors - Black & Gray */
+  --color-text-primary: #000000;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-inverse: #ffffff;
 
-    --color-secondary: #e879f9; /* fuchsia-400 */
-    --color-secondary-foreground: #000000;
+  /* Border Colors - Subtle */
+  --color-border: #e5e5e5;
+  --color-border-light: #f5f5f5;
+  --color-border-focus: #a3a3a3;
 
-    --color-accent: #22d3ee; /* cyan-400 */
-    --color-accent-foreground: #000000;
+  /* Action Colors */
+  --color-like: #ef4444;
+  --color-share: #525252;
+  --color-save: #525252;
+  --color-comment: #525252;
 
-    /* Neutrals / Surface - Dark */
-    --color-background: #030712; /* gray-950 */
-    --color-surface: #111827; /* gray-900 */
-    --color-surface-highlight: #1f2937; /* gray-800 */
+  /* Utility colors */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
 
-    --color-text-primary: #f9fafb; /* gray-50 */
-    --color-text-secondary: #9ca3af; /* gray-400 */
+  /* Font Family */
+  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-family-heading: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
 
-    /* Semantic Adjustments for Dark Mode if needed */
-  }
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
 
-  body {
-    background-color: var(--color-background);
-    color: var(--color-text-primary);
-    @apply font-sans transition-colors duration-300 antialiased;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    letter-spacing: -0.025em;
-  }
+  /* Shadows - Very subtle */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04);
 }
 
-@layer components {
-  /* Common Animation Classes */
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
-  }
+/* ===== Dark Mode - Elegant Black ===== */
+.dark {
+  --color-primary: #ffffff;
+  --color-primary-light: #fafafa;
+  --color-primary-dark: #e5e5e5;
 
-  .animate-scale-in {
-    animation: scaleIn 0.25s ease-out forwards;
-  }
+  --color-secondary: #a3a3a3;
+  --color-secondary-light: #d4d4d4;
+  --color-secondary-dark: #737373;
 
-  .animate-dropdown {
-    animation: dropdownIn 0.2s ease-out forwards;
-  }
+  --color-accent: #a3a3a3;
+  --color-accent-light: #d4d4d4;
+  --color-accent-dark: #737373;
 
-  /* Utility aliases for backward compatibility or shortcuts */
-  .bg-card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-surface-highlight);
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  }
+  --color-background: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-secondary: #171717;
+  --color-surface-elevated: #171717;
+  --color-surface-hover: #1a1a1a;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3a3a3;
+  --color-text-tertiary: #525252;
+  --color-text-inverse: #18181b;
+
+  --color-border: #27272a;
+  --color-border-light: #3f3f46;
+  --color-border-focus: #71717a;
+
+  --color-like: #f87171;
+  --color-share: #a1a1aa;
+  --color-save: #a1a1aa;
+  --color-comment: #a1a1aa;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+}
+
+/* ===== Base Styles ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-family-heading);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* ===== Custom Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== YiBu Components ===== */
+
+/* Card Styles */
+.yb-card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+
+.yb-card-elevated {
+  background-color: var(--color-surface-elevated);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+
+/* Button Styles */
+.yb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-family-sans);
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  outline: none;
+  border: none;
+}
+
+.yb-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.yb-btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.yb-btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.yb-btn-secondary {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.yb-btn-secondary:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.yb-btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.yb-btn-ghost:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* Input Styles */
+.yb-input {
+  background-color: var(--color-surface-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1rem;
+  font-family: var(--font-family-sans);
+  color: var(--color-text-primary);
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.yb-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.yb-input:focus {
+  border-color: var(--color-border-focus);
+}
+
+/* Avatar Styles - Circular */
+.yb-avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+}
+
+/* Navigation Item */
+.yb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.yb-nav-item:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.yb-nav-item.active {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Post Action Buttons */
+.post-action {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.post-action:hover {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+}
+
+.post-action-like:hover,
+.post-action-like.active {
+  color: var(--color-like);
+}
+
+.post-action-comment:hover {
+  color: var(--color-text-secondary);
+}
+
+.post-action-share:hover {
+  color: var(--color-text-secondary);
+}
+
+.post-action-save:hover,
+.post-action-save.active {
+  color: var(--color-text-primary);
+}
+
+/* Badge */
+.yb-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.yb-badge-primary {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+}
+
+.yb-badge-secondary {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-tertiary);
+}
+
+/* Divider */
+.yb-divider {
+  height: 1px;
+  background-color: var(--color-border);
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.15s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+}
+
+/* Focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 /* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.2s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.15s ease-out forwards;
+}
+
+.animate-heart {
+  animation: heartBeat 0.3s ease-in-out;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -100,24 +395,60 @@
   }
 }
 
-@keyframes scaleIn {
+@keyframes slideUp {
   from {
-    transform: scale(0.95);
     opacity: 0;
+    transform: translateY(8px);
   }
   to {
-    transform: scale(1);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes dropdownIn {
+@keyframes scaleIn {
   from {
-    transform: scale(0.9);
     opacity: 0;
+    transform: scale(0.95);
   }
   to {
-    transform: scale(1);
     opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-secondary) 0%,
+    var(--color-surface) 50%,
+    var(--color-surface-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

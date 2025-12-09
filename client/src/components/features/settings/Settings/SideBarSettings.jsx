@@ -1,62 +1,110 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
-import { Settings, User, Shield, Bell, Palette } from "lucide-react";
+import {
+  User,
+  Settings,
+  Shield,
+  Bell,
+  Palette,
+  ChevronRight,
+} from "lucide-react";
 
 const menuItems = [
   {
-    title: "Cài Đặt Tài Khoản",
-    icon: <User size={20} />,
+    title: "Account",
+    description: "Manage your account settings",
+    icon: User,
     path: "/settings/account",
   },
   {
-    title: "Cài Đặt Hồ Sơ",
-    icon: <Settings size={20} />,
+    title: "Profile",
+    description: "Edit your profile information",
+    icon: Settings,
     path: "/settings/profile",
   },
   {
-    title: "Cài Đặt Quyền Riêng Tư",
-    icon: <Shield size={20} />,
+    title: "Privacy",
+    description: "Control your privacy settings",
+    icon: Shield,
     path: "/settings/privacy",
   },
   {
-    title: "Cài Đặt Thông Báo",
-    icon: <Bell size={20} />,
+    title: "Notifications",
+    description: "Manage notification preferences",
+    icon: Bell,
     path: "/settings/notification",
   },
-
   {
-    title: "Ngôn Ngữ & Giao Diện",
-    icon: <Palette size={20} />,
+    title: "Appearance",
+    description: "Theme and display settings",
+    icon: Palette,
     path: "/settings/theme",
   },
 ];
 
 const SideBarSettings = () => {
   return (
-    <div className="h-full overflow-hidden rounded-xl shadow-lg p-5 border border-gray-200 dark:border-gray-700 flex flex-col">
-      <h2 className="text-2xl font-bold mb-4  ">Settings</h2>
-      <div className="overflow-y-auto hide-scroll flex-1">
-        <ul className="space-y-2">
+    <div className="h-full overflow-hidden rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col">
+      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <h2 className="text-xl font-bold text-black dark:text-white">
+          Settings
+        </h2>
+      </div>
+      <div className="overflow-y-auto flex-1 p-2">
+        <ul className="space-y-1">
           {menuItems.map((item, index) => (
             <li key={index}>
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center p-3 rounded-lg cursor-pointer
-                  transition-all duration-300 ease-in-out
-                  ${isActive ? " dark:opacity-55 " : "hover:opacity-55 "}`
+                  `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                    isActive
+                      ? "bg-neutral-100 dark:bg-neutral-800"
+                      : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                  }`
                 }
               >
-                <span
-                  className={`mr-3 transition-colors duration-300 ${
-                    window.location.pathname === item.path
-                      ? "text-purple-700 dark:text-purple-300"
-                      : "text-purple-600 dark:text-purple-400"
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                <span className="text-base">{item.title}</span>
+                {({ isActive }) => (
+                  <>
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isActive
+                          ? "bg-black dark:bg-white"
+                          : "bg-neutral-100 dark:bg-neutral-800"
+                      }`}
+                    >
+                      <item.icon
+                        size={18}
+                        className={
+                          isActive
+                            ? "text-white dark:text-black"
+                            : "text-neutral-500"
+                        }
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${
+                          isActive
+                            ? "text-black dark:text-white"
+                            : "text-neutral-700 dark:text-neutral-300"
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-neutral-400 truncate">
+                        {item.description}
+                      </p>
+                    </div>
+                    <ChevronRight
+                      size={16}
+                      className={`flex-shrink-0 ${
+                        isActive
+                          ? "text-black dark:text-white"
+                          : "text-neutral-300"
+                      }`}
+                    />
+                  </>
+                )}
               </NavLink>
             </li>
           ))}

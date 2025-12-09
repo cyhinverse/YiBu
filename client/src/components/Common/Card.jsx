@@ -1,14 +1,24 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-const Card = ({ children, className = "", hover = false, ...props }) => {
+const Card = ({
+  children,
+  className = "",
+  hover = false,
+  noBorder = false,
+  ...props
+}) => {
   return (
     <div
       className={`
-        bg-card
+        bg-surface
+        ${noBorder ? "" : "border border-border"}
         rounded-2xl
-        p-6
-        ${hover ? "hover:shadow-md hover:border-primary/20 transition-all duration-300" : ""}
+        ${
+          hover
+            ? "hover:bg-surface-hover transition-colors duration-200 cursor-pointer"
+            : ""
+        }
         ${className}
       `}
       {...props}
@@ -22,6 +32,7 @@ Card.propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
   hover: PropTypes.bool,
+  noBorder: PropTypes.bool,
 };
 
 export default Card;

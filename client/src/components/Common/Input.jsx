@@ -2,11 +2,43 @@ import React, { forwardRef } from "react";
 import PropTypes from "prop-types";
 
 const Input = forwardRef(
-  ({ label, error, icon, className = "", type = "text", ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      icon,
+      className = "",
+      type = "text",
+      variant = "default",
+      ...props
+    },
+    ref
+  ) => {
+    const variants = {
+      default: `
+        bg-transparent
+        border border-border
+        focus:border-primary focus:ring-1 focus:ring-primary/20
+        rounded-[4px]
+      `,
+      search: `
+        bg-surface-highlight
+        border-transparent
+        focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/20
+        rounded-full
+      `,
+      outline: `
+        bg-transparent
+        border border-border-hover
+        focus:border-primary focus:ring-1 focus:ring-primary/20
+        rounded-[4px]
+      `,
+    };
+
     return (
       <div className={`w-full ${className}`}>
         {label && (
-          <label className="block text-sm font-medium text-text-secondary mb-1.5 ml-1">
+          <label className="block text-[13px] font-medium text-text-secondary mb-1">
             {label}
           </label>
         )}
@@ -21,22 +53,26 @@ const Input = forwardRef(
             type={type}
             className={`
               w-full
-              bg-surface-highlight
               text-text-primary
-              border transition-all duration-200
-              rounded-xl
-              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+              transition-all duration-200
+              focus:outline-none
               disabled:opacity-50 disabled:cursor-not-allowed
-              placeholder:text-text-secondary/50
+              placeholder:text-text-secondary
               ${icon ? "pl-10 pr-4" : "px-4"}
-              ${error ? "border-error focus:border-error focus:ring-error" : "border-surface-highlight"}
+              ${
+                error
+                  ? "border-error focus:border-error focus:ring-error/20"
+                  : ""
+              }
               py-3
+              text-[15px]
+              ${variants[variant] || variants.default}
             `}
             {...props}
           />
         </div>
         {error && (
-          <p className="mt-1 text-xs text-error ml-1 animate-fadeIn">{error}</p>
+          <p className="mt-1 text-[13px] text-error animate-fadeIn">{error}</p>
         )}
       </div>
     );
@@ -51,6 +87,7 @@ Input.propTypes = {
   icon: PropTypes.node,
   className: PropTypes.string,
   type: PropTypes.string,
+  variant: PropTypes.oneOf(["default", "search", "outline"]),
 };
 
 export default Input;

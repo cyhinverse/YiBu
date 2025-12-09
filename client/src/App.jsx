@@ -2,6 +2,8 @@ import { Outlet, Route, Routes } from "react-router-dom";
 import UserLayout from "./pages/UserPage/UserLayout";
 import Home from "./pages/UserPage/Home";
 import Message from "./pages/UserPage/Message";
+import Explore from "./pages/UserPage/Explore";
+import Notifications from "./pages/UserPage/Notifications";
 import {
   FollowingUser,
   Friends,
@@ -44,16 +46,20 @@ const App = () => {
   return (
     <>
       <Routes>
-        <Route element={<ProtectedRoute />} >
+        <Route element={<ProtectedRoute />}>
           <Route
             path={`${ROUTES.HOME}`}
             element={
               <SocketProvider>
-                  <UserLayout />
+                <UserLayout />
               </SocketProvider>
             }
           >
             <Route index element={<Home />} />
+
+            {/* Explore & Notifications */}
+            <Route path="explore" element={<Explore />} />
+            <Route path="notifications" element={<Notifications />} />
 
             {/* Message Routes */}
             <Route path={`${ROUTES.MESSAGE}`} element={<Message />}>

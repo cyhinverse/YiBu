@@ -1,44 +1,72 @@
 import { useState } from "react";
+import { Image, Smile, PenSquare } from "lucide-react";
 import ModelPost from "./ModelPost";
-import { useSelector } from "react-redux";
-import { Button } from "../../../Common";
 
+// Fake user data
+const CURRENT_USER = {
+  name: "John Doe",
+  username: "johndoe",
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
+};
 
 const CreatePost = () => {
-  const [modalBox, setModalBox] = useState(false);
-  const user = useSelector((state) => state?.auth?.user);
+  const [showModal, setShowModal] = useState(false);
 
   return (
     <>
-      <div className="w-full bg-surface p-4 transition-all duration-300">
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <img
-              className="h-10 w-10 rounded-full object-cover border border-surface-highlight"
-              src={user?.avatar || "https://via.placeholder.com/40"}
-              alt="user"
-            />
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-surface"></div>
-          </div>
+      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
+        <div className="flex gap-3">
+          {/* Avatar */}
+          <img
+            src={CURRENT_USER.avatar}
+            alt={CURRENT_USER.name}
+            className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
+          />
 
-          <div
-            onClick={() => setModalBox(true)}
-            className="flex-1 bg-background hover:bg-surface-highlight px-4 py-2 rounded-full cursor-pointer transition-colors duration-200 border border-transparent hover:border-surface-highlight"
-          >
-            <p className="text-text-secondary font-medium">Bạn đang nghĩ gì...</p>
-          </div>
+          {/* Input Area */}
+          <div className="flex-1">
+            {/* Placeholder */}
+            <div
+              onClick={() => setShowModal(true)}
+              className="min-h-[44px] flex items-center cursor-pointer rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 px-4 transition-colors"
+            >
+              <span className="text-neutral-400 text-sm">
+                What's on your mind?
+              </span>
+            </div>
 
-          <Button
-            onClick={() => setModalBox(true)}
-            variant="default"
-            size="md"
-            className="shadow-lg w-24 font-medium shadow-primary/20 bg-black text-white"
-          >
-            Post
-          </Button>
+            {/* Actions */}
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white"
+                >
+                  <Image size={16} />
+                  <span className="hidden sm:inline">Media</span>
+                </button>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white"
+                >
+                  <Smile size={16} />
+                  <span className="hidden sm:inline">Feeling</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity"
+              >
+                <PenSquare size={14} />
+                <span>Post</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      {modalBox && <ModelPost closeModal={() => setModalBox(false)} />}
+
+      {showModal && <ModelPost closeModal={() => setShowModal(false)} />}
     </>
   );
 };

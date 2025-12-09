@@ -1,82 +1,135 @@
-import  { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button, Input } from "../../components/Common";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Sparkles, Mail, ArrowLeft } from "lucide-react";
 
-
-export default function ForgotPassword() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
+    // Fake API call
     setTimeout(() => {
-        setIsLoading(false);
-        navigate("/auth/verify-code"); 
-    }, 1000);
+      setIsLoading(false);
+      setSent(true);
+    }, 1500);
   };
 
   return (
-    <div className="min-h-screen flex bg-surface">
-      {/* Left Side - Brand Panel */}
-      <div className="hidden lg:flex w-1/2 bg-surface-highlight relative items-center justify-center overflow-hidden">
-         <div className="absolute inset-0 bg-primary/5"></div>
-         <div className="relative z-10 text-center p-12">
-            <h1 className="text-7xl font-black font-heading tracking-tighter text-text-primary mb-4">
-              Recover.
-            </h1>
-            <p className="text-xl text-text-secondary font-light max-w-md mx-auto">
-              Don't worry, we'll help you get back in.
-            </p>
-         </div>
-         <div className="absolute bottom-24 right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen flex">
+      {/* Left Panel - Branding */}
+      <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
+
+        <div className="absolute bottom-32 left-32 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-32 right-32 w-80 h-80 bg-white/3 rounded-full blur-3xl" />
+
+        <div className="relative z-10 text-center px-12">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-8">
+            <Sparkles size={28} className="text-black" />
+          </div>
+          <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
+            Reset
+          </h1>
+          <p className="text-white/60 text-lg max-w-sm mx-auto">
+            Don't worry, we'll help you get back into your account.
+          </p>
+        </div>
       </div>
 
-      {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-surface">
-        <div className="w-full max-w-md space-y-10">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold font-heading text-text-primary tracking-tight">
-              Forgot Password?
-            </h2>
-            <p className="text-text-secondary">
-              Enter your email to reset your password
-            </p>
+      {/* Right Panel - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center mb-10">
+            <div className="w-12 h-12 rounded-full bg-black dark:bg-white flex items-center justify-center">
+              <Sparkles size={22} className="text-white dark:text-black" />
+            </div>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <Input
-              label="Email Address"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-transparent border-surface-highlight focus:border-primary rounded-lg"
-            />
+          {!sent ? (
+            <>
+              <div className="mb-10">
+                <h2 className="text-3xl font-bold text-black dark:text-white mb-2">
+                  Forgot password?
+                </h2>
+                <p className="text-neutral-500">
+                  Enter your email and we'll send you a reset link.
+                </p>
+              </div>
 
-            <div className="space-y-4 pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full py-4 text-sm font-semibold tracking-wide shadow-none hover:shadow-lg transition-all rounded-xl"
-                isLoading={isLoading}
-              >
-                Reset Password
-              </Button>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-black dark:text-white">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
+                    />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                    />
+                  </div>
+                </div>
 
-              <Link
-                to="/auth/login"
-                className="flex items-center justify-center w-full py-4 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center mx-auto mb-6">
+                <Mail size={28} className="text-black dark:text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">
+                Check your email
+              </h2>
+              <p className="text-neutral-500 mb-8">
+                We've sent a password reset link to <br />
+                <span className="text-black dark:text-white font-medium">
+                  {email}
+                </span>
+              </p>
+              <button
+                onClick={() => setSent(false)}
+                className="text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
               >
-                Back to Sign In
-              </Link>
+                Didn't receive it? Try again
+              </button>
             </div>
-          </form>
+          )}
+
+          {/* Back to login */}
+          <div className="mt-10 text-center">
+            <Link
+              to="/auth/login"
+              className="inline-flex items-center gap-2 text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to sign in
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
+export default ForgotPassword;
