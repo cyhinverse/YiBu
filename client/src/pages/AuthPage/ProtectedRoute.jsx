@@ -1,17 +1,13 @@
-import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
 const ProtectedRoute = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isAuthenticated === undefined) return;
-    if (!isAuthenticated || !user) {
-      navigate("/auth/login", { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
+  // If not authenticated, redirect to login
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/auth/login" replace />;
+  }
 
   return <Outlet />;
 };

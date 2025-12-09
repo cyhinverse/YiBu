@@ -12,7 +12,11 @@ export const login = createAsyncThunk(
       if (response.data.accessToken) {
         localStorage.setItem("accessToken", response.data.accessToken);
       }
-      return response.data;
+      // Server returns { data: user, accessToken }, transform to { user, accessToken }
+      return {
+        user: response.data.data,
+        accessToken: response.data.accessToken,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Đăng nhập thất bại"
@@ -31,7 +35,11 @@ export const register = createAsyncThunk(
       if (response.data.accessToken) {
         localStorage.setItem("accessToken", response.data.accessToken);
       }
-      return response.data;
+      // Server returns { data: user, accessToken }, transform to { user, accessToken }
+      return {
+        user: response.data.data,
+        accessToken: response.data.accessToken,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Đăng ký thất bại"
@@ -50,7 +58,11 @@ export const googleAuth = createAsyncThunk(
       if (response.data.accessToken) {
         localStorage.setItem("accessToken", response.data.accessToken);
       }
-      return response.data;
+      // Server returns { data: user, accessToken }, transform to { user, accessToken }
+      return {
+        user: response.data.data,
+        accessToken: response.data.accessToken,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Đăng nhập Google thất bại"

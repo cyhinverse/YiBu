@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Home,
   MessageCircle,
@@ -16,9 +17,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { logout } from "../../../redux/actions/authActions";
+import toast from "react-hot-toast";
 
-// Fake user data
-const CURRENT_USER = {
+// Fake user data - fallback if no user from Redux
+const DEFAULT_USER = {
   name: "John Doe",
   username: "johndoe",
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
@@ -64,6 +67,9 @@ const NavItem = ({
 };
 
 const Navigate = ({ mobile = false, onCollapsedChange }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
   const [collapsed, setCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first, then system preference
@@ -73,6 +79,14 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
     }
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
+
+  const handleLogout = async () => {
+    const result = await dispatch(logout());
+    if (logout.fulfilled.match(result)) {
+      toast.success("Đăng xuất thành công");
+      navigate("/auth/login");
+    }
+  };
 
   const toggleTheme = () => {
     const newDark = !isDarkMode;
@@ -226,37 +240,52 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
 
       {/* User Profile Card */}
       <div className="mt-auto pt-4 border-t border-neutral-200 dark:border-neutral-800">
-        <Link
-          to="/profile"
+        <div
           className={`flex items-center gap-3 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all group ${
             collapsed ? "justify-center" : ""
           }`}
-          title={collapsed ? CURRENT_USER.name : undefined}
+          title={collapsed ? user?.name || DEFAULT_USER.name : undefined}
         >
-          <div className="relative flex-shrink-0">
+          <Link to="/profile" className="relative flex-shrink-0">
             <img
-              src={CURRENT_USER.avatar}
+              src={user?.avatar || DEFAULT_USER.avatar}
               alt="Profile"
               className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
             />
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
-          </div>
+          </Link>
           {!collapsed && (
             <>
-              <div className="flex-1 min-w-0">
+              <Link to="/profile" className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-black dark:text-white truncate leading-tight">
-                  {CURRENT_USER.name}
+                  {user?.name || DEFAULT_USER.name}
                 </p>
                 <p className="text-xs text-neutral-500 truncate leading-tight mt-0.5">
-                  @{CURRENT_USER.username}
+                  @{user?.username || DEFAULT_USER.username}
                 </p>
-              </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <LogOut size={16} className="text-neutral-400" />
-              </div>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                title="Đăng xuất"
+              >
+                <LogOut
+                  size={16}
+                  className="text-neutral-400 hover:text-red-500"
+                />
+              </button>
             </>
           )}
-        </Link>
+        </div>
+        {collapsed && (
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex justify-center"
+            title="Đăng xuất"
+          >
+            <LogOut size={18} className="text-neutral-400 hover:text-red-500" />
+          </button>
+        )}
       </div>
     </div>
   );

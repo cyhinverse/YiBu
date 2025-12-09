@@ -26,6 +26,7 @@ import {
 import { ROUTES } from "./constants/routes";
 import NotFound from "./pages/NotFound/NotFound";
 import ForgotPassword from "./pages/AuthPage/ForgotPassword";
+import ResetPassword from "./pages/AuthPage/ResetPassword";
 import EnterCode from "./pages/AuthPage/EnterCode";
 import AuthLayout from "./pages/AuthPage/AuthLayout";
 import { Toaster } from "react-hot-toast";
@@ -99,6 +100,7 @@ const App = () => {
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="verify-code" element={<EnterCode />} />
         </Route>
 
