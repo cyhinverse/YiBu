@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import io from "socket.io-client";
 import { toast } from "react-hot-toast";
-import { addMessage } from "../redux/slices/MessageSlice";
-import { markAsRead as markMessagesAsRead } from "../redux/actions/messageActions";
+import { receiveMessage } from "../redux/slices/MessageSlice";
+import { markMessageAsRead } from "../redux/actions/messageActions";
 import { addNotification } from "../redux/slices/NotificationSlice";
-import { updateLikeLocal } from "../redux/slices/LikeSlice";
+import { setLikeStatusOptimistic } from "../redux/slices/LikeSlice";
 
 const SOCKET_URL = "http://localhost:9785";
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -41,7 +41,7 @@ const useSocket = (userId) => {
       console.log("Socket connected:", socket.id);
       reconnectAttempts.current = 0;
       setIsConnected(true);
-      
+
       // Join self room and rejoin active rooms
       socket.emit("join_room", userId);
       activeRooms.current.add(userId);
@@ -76,7 +76,7 @@ const useSocket = (userId) => {
     return () => {
       if (socket) {
         activeRooms.current.forEach((room) => {
-            if(socket.connected) socket.emit("leave_room", room);
+          if (socket.connected) socket.emit("leave_room", room);
         });
         activeRooms.current.clear();
         socket.disconnect();
@@ -116,15 +116,21 @@ const useSocket = (userId) => {
     return true;
   }, []);
 
-  const joinPostRoom = useCallback((postId) => {
-    if (!postId) return;
-    joinRoom(`post:${postId}`);
-    emitEvent("post:like:listen", postId);
-  }, [joinRoom, emitEvent]);
+  const joinPostRoom = useCallback(
+    (postId) => {
+      if (!postId) return;
+      joinRoom(`post:${postId}`);
+      emitEvent("post:like:listen", postId);
+    },
+    [joinRoom, emitEvent]
+  );
 
-  const emitLikeAction = useCallback((postId, action) => {
-    emitEvent("post:like", { postId, userId, action });
-  }, [emitEvent, userId]);
+  const emitLikeAction = useCallback(
+    (postId, action) => {
+      emitEvent("post:like", { postId, userId, action });
+    },
+    [emitEvent, userId]
+  );
 
   const isUserOnline = useCallback((uid) => !!onlineUsers[uid], [onlineUsers]);
 
@@ -138,7 +144,7 @@ const useSocket = (userId) => {
     emitLikeAction,
     isConnected,
     onlineUsers,
-    isUserOnline
+    isUserOnline,
   };
 };
 
@@ -148,28 +154,33 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
   socket.on("new_message", (message) => {
     if (!message?._id) return;
     console.log("New message:", message);
-    dispatch(addMessage(message));
+    dispatch(receiveMessage(message));
     if (message.sender !== userId) {
-      const senderName = message.sender?.firstName || message.sender?.name || "Người dùng";
+      const senderName =
+        message.sender?.firstName || message.sender?.name || "Người dùng";
       toast.success(`Tin nhắn mới từ ${senderName}`);
     }
   });
 
   socket.on("message_read", (data) => {
     if (data?.messageId) {
-       dispatch(markMessagesAsRead([data.messageId]));
+      dispatch(markMessageAsRead({ messageId: data.messageId }));
     }
   });
 
   socket.on("user_typing", (data) => console.log("User typing:", data));
-  socket.on("user_stop_typing", (data) => console.log("User stop typing:", data));
+  socket.on("user_stop_typing", (data) =>
+    console.log("User stop typing:", data)
+  );
 };
 
 const registerNotificationHandlers = (socket, dispatch) => {
   socket.on("notification:new", (notification) => {
     if (!notification?._id) return;
-    
-    const hasFullData = notification.sender?._id && (notification.type !== "like" || notification.post?._id);
+
+    const hasFullData =
+      notification.sender?._id &&
+      (notification.type !== "like" || notification.post?._id);
     if (hasFullData) {
       dispatch(addNotification(notification));
     } else {
@@ -187,7 +198,9 @@ const registerNotificationHandlers = (socket, dispatch) => {
 const registerLikeHandlers = (socket, dispatch, currentUserId) => {
   socket.on("post:like:update", ({ postId, count, userId }) => {
     if (userId === currentUserId) return;
-    dispatch(updateLikeLocal({ postId, count, isLiked: undefined }));
+    dispatch(
+      setLikeStatusOptimistic({ postId, likesCount: count, isLiked: undefined })
+    );
   });
 };
 
@@ -195,15 +208,15 @@ const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   socket.on("get_users_online", (users) => {
     console.log("Online users:", users);
     const map = {};
-    if (Array.isArray(users)) users.forEach(id => map[id] = true);
+    if (Array.isArray(users)) users.forEach((id) => (map[id] = true));
     else Object.assign(map, users || {});
     setOnlineUsers(map);
   });
 
   socket.on("user_status_change", ({ userId, status }) => {
-    setOnlineUsers(prev => ({ ...prev, [userId]: status === "online" }));
+    setOnlineUsers((prev) => ({ ...prev, [userId]: status === "online" }));
   });
-  
+
   // Initial Request
   socket.emit("get_online_users");
 };

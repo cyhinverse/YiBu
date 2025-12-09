@@ -2,15 +2,17 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   createLike,
   deleteLike,
-  getLikeStatus,
-  getAllLikes,
   toggleLike,
-  getLikedPosts,
+  getLikeStatus,
+  getBatchLikeStatus,
+  getPostLikes,
+  getMyLikedPosts,
 } from "../actions/likeActions";
 
 const initialState = {
-  likesByPost: {}, // { [postId]: { isLiked: boolean, count: number } }
-  likedPostsList: [], // List of posts liked by user
+  likeStatus: {},
+  postLikes: {},
+  likedPosts: [],
   loading: false,
   error: null,
 };
@@ -19,86 +21,71 @@ const likeSlice = createSlice({
   name: "like",
   initialState,
   reducers: {
-    resetLikes: (state) => {
-      state.likesByPost = {};
-      state.likedPostsList = [];
-      state.loading = false;
+    clearError: (state) => {
       state.error = null;
     },
-    // Manual updates if needed for optimistic UI before thunk completes (thunk handles it via fulfilled mostly)
-    updateLikeLocal: (state, action) => {
-      const { postId, isLiked, count } = action.payload;
-      state.likesByPost[postId] = { isLiked, count };
+    setLikeStatusOptimistic: (state, action) => {
+      const { postId, isLiked, likesCount } = action.payload;
+      state.likeStatus[postId] = { isLiked, likesCount };
     },
-    // Alias for Post component compatibility
-    setPostLikeStatus: (state, action) => {
-      const { postId, isLiked, count } = action.payload;
-      state.likesByPost[postId] = { isLiked, count };
-    },
+    resetLikeState: () => initialState,
   },
   extraReducers: (builder) => {
-    // getLikeStatus
-    builder.addCase(getLikeStatus.fulfilled, (state, action) => {
-      const { postId, data } = action.payload;
-      state.likesByPost[postId] = {
-        isLiked: data.isLiked,
-        count: data.count,
-      };
-    });
-
-    // getAllLikes
-    builder.addCase(getAllLikes.fulfilled, (state, action) => {
-      // Assuming payload is an array of like statuses or object
-      const likesData = action.payload;
-      // Logic depends on exact API response structure.
-      // If it's Array of { postId, isLiked, count }
-      if (Array.isArray(likesData)) {
-        likesData.forEach((item) => {
-          state.likesByPost[item.postId] = {
-            isLiked: item.isLiked,
-            count: item.count,
-          };
-        });
-      }
-    });
-
-    // toggleLike
-    builder.addCase(toggleLike.fulfilled, (state, action) => {
-      const { postId, data } = action.payload;
-      // API might return new status
-      state.likesByPost[postId] = {
-        isLiked: data.isLiked,
-        count: data.count,
-      };
-    });
-
-    // getLikedPosts
     builder
-      .addCase(getLikedPosts.pending, (state) => {
+      // Create Like
+      .addCase(createLike.fulfilled, (state, action) => {
+        const { postId, likesCount } = action.payload;
+        state.likeStatus[postId] = { isLiked: true, likesCount };
+      })
+      // Delete Like
+      .addCase(deleteLike.fulfilled, (state, action) => {
+        const { postId, likesCount } = action.payload;
+        state.likeStatus[postId] = { isLiked: false, likesCount };
+      })
+      // Toggle Like
+      .addCase(toggleLike.fulfilled, (state, action) => {
+        const { postId, isLiked, likesCount } = action.payload;
+        state.likeStatus[postId] = { isLiked, likesCount };
+      })
+      // Get Like Status
+      .addCase(getLikeStatus.fulfilled, (state, action) => {
+        const { postId, isLiked, likesCount } = action.payload;
+        state.likeStatus[postId] = { isLiked, likesCount };
+      })
+      // Get Batch Like Status
+      .addCase(getBatchLikeStatus.fulfilled, (state, action) => {
+        action.payload.forEach(({ postId, isLiked, likesCount }) => {
+          state.likeStatus[postId] = { isLiked, likesCount };
+        });
+      })
+      // Get Post Likes
+      .addCase(getPostLikes.pending, (state) => {
         state.loading = true;
       })
-      .addCase(getLikedPosts.fulfilled, (state, action) => {
+      .addCase(getPostLikes.fulfilled, (state, action) => {
         state.loading = false;
-        state.likedPostsList = action.payload;
+        const { postId, users } = action.payload;
+        state.postLikes[postId] = users;
       })
-      .addCase(getLikedPosts.rejected, (state, action) => {
+      .addCase(getPostLikes.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Get My Liked Posts
+      .addCase(getMyLikedPosts.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getMyLikedPosts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.likedPosts = action.payload;
+      })
+      .addCase(getMyLikedPosts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
-
-    // createLike & deleteLike
-    // Usually these might be used if toggleLike isn't available or for specific cases.
-    // They would likely update likesByPost similarly.
-    builder.addCase(createLike.fulfilled, () => {
-      // Update if response gives context
-    });
-    builder.addCase(deleteLike.fulfilled, () => {
-      // Update if response gives context
-    });
   },
 });
 
-export const { resetLikes, updateLikeLocal, setPostLikeStatus } =
+export const { clearError, setLikeStatusOptimistic, resetLikeState } =
   likeSlice.actions;
-
 export default likeSlice.reducer;

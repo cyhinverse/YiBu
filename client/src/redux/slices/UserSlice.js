@@ -1,86 +1,69 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  getAllUsers,
-  getUserById,
   searchUsers,
-  updateUser,
-  deleteUser,
+  getSuggestions,
+  getProfile,
+  updateProfile,
+  getUserById,
+  checkFollowStatus,
   followUser,
   unfollowUser,
-  getFollowersByUserId,
+  getFollowers,
+  getFollowing,
+  getFollowRequests,
+  acceptFollowRequest,
+  rejectFollowRequest,
+  getBlockedUsers,
+  blockUser,
+  unblockUser,
+  getMutedUsers,
+  muteUser,
+  unmuteUser,
+  getSettings,
+  updatePrivacySettings,
+  updateNotificationSettings,
+  updateSecuritySettings,
+  updateContentSettings,
+  updateThemeSettings,
 } from "../actions/userActions";
 
 const initialState = {
-  users: [],
+  currentProfile: null,
   searchResults: [],
-  follower: [],
-  user: null,
+  suggestions: [],
+  followers: [],
+  following: [],
+  followRequests: [],
+  blockedUsers: [],
+  mutedUsers: [],
+  settings: null,
+  followStatus: {},
   loading: false,
   error: null,
-  settings: {
-    theme: {
-      appearance: "system",
-      primaryColor: "#4f46e5",
-      fontSize: "medium",
-    }
-  }
 };
 
 const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    setThemeSettings: (state, action) => {
-      console.log('Redux: Setting theme settings', action.payload);
-      if (!action.payload) {
-        console.error('Redux: Invalid theme settings payload', action.payload);
-        return;
-      }
-      state.settings = {
-        ...state.settings,
-        theme: action.payload
-      };
-    },
-    setUserSettings: (state, action) => {
-      state.settings = action.payload;
-    },
     clearError: (state) => {
       state.error = null;
-    }
+    },
+    clearSearchResults: (state) => {
+      state.searchResults = [];
+    },
+    setCurrentProfile: (state, action) => {
+      state.currentProfile = action.payload;
+    },
+    updateFollowStatus: (state, action) => {
+      const { userId, isFollowing } = action.payload;
+      state.followStatus[userId] = isFollowing;
+    },
+    resetUserState: () => initialState,
   },
   extraReducers: (builder) => {
-    // getAllUsers
     builder
-      .addCase(getAllUsers.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(getAllUsers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.users = action.payload;
-      })
-      .addCase(getAllUsers.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
-
-    // getUserById
-    builder
-      .addCase(getUserById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(getUserById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload;
-      })
-      .addCase(getUserById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
-
-    // searchUsers
-    builder
+      // Search Users
       .addCase(searchUsers.pending, (state) => {
         state.loading = true;
       })
@@ -91,59 +74,144 @@ const userSlice = createSlice({
       .addCase(searchUsers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
-
-    // updateUser
-    builder
-      .addCase(updateUser.fulfilled, (state, action) => {
-        const { userId, updatedData } = action.payload;
-        // Update in users list
-        const userIndex = state.users.findIndex((u) => u.id === userId);
-        if (userIndex !== -1) {
-          state.users[userIndex] = { ...state.users[userIndex], ...updatedData };
+      })
+      // Suggestions
+      .addCase(getSuggestions.fulfilled, (state, action) => {
+        state.suggestions = action.payload;
+      })
+      // Get Profile
+      .addCase(getProfile.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentProfile = action.payload;
+      })
+      .addCase(getProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Update Profile
+      .addCase(updateProfile.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentProfile = { ...state.currentProfile, ...action.payload };
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Get User By ID
+      .addCase(getUserById.fulfilled, (state, action) => {
+        state.currentProfile = action.payload;
+      })
+      // Check Follow Status
+      .addCase(checkFollowStatus.fulfilled, (state, action) => {
+        state.followStatus[action.payload.userId] = action.payload.isFollowing;
+      })
+      // Follow User
+      .addCase(followUser.fulfilled, (state, action) => {
+        state.followStatus[action.payload.userId] = true;
+        if (state.currentProfile?.id === action.payload.userId) {
+          state.currentProfile.followersCount =
+            (state.currentProfile.followersCount || 0) + 1;
         }
-        // Update if it's the current user
-        if (state.user && state.user.id === userId) {
-          state.user = { ...state.user, ...updatedData };
+      })
+      // Unfollow User
+      .addCase(unfollowUser.fulfilled, (state, action) => {
+        state.followStatus[action.payload.userId] = false;
+        if (state.currentProfile?.id === action.payload.userId) {
+          state.currentProfile.followersCount = Math.max(
+            (state.currentProfile.followersCount || 1) - 1,
+            0
+          );
+        }
+      })
+      // Get Followers
+      .addCase(getFollowers.fulfilled, (state, action) => {
+        state.followers = action.payload;
+      })
+      // Get Following
+      .addCase(getFollowing.fulfilled, (state, action) => {
+        state.following = action.payload;
+      })
+      // Follow Requests
+      .addCase(getFollowRequests.fulfilled, (state, action) => {
+        state.followRequests = action.payload;
+      })
+      .addCase(acceptFollowRequest.fulfilled, (state, action) => {
+        state.followRequests = state.followRequests.filter(
+          (req) => req.id !== action.payload.requestId
+        );
+      })
+      .addCase(rejectFollowRequest.fulfilled, (state, action) => {
+        state.followRequests = state.followRequests.filter(
+          (req) => req.id !== action.payload.requestId
+        );
+      })
+      // Blocked Users
+      .addCase(getBlockedUsers.fulfilled, (state, action) => {
+        state.blockedUsers = action.payload;
+      })
+      .addCase(blockUser.fulfilled, (state, action) => {
+        state.blockedUsers.push(action.payload.user);
+      })
+      .addCase(unblockUser.fulfilled, (state, action) => {
+        state.blockedUsers = state.blockedUsers.filter(
+          (user) => user.id !== action.payload.userId
+        );
+      })
+      // Muted Users
+      .addCase(getMutedUsers.fulfilled, (state, action) => {
+        state.mutedUsers = action.payload;
+      })
+      .addCase(muteUser.fulfilled, (state, action) => {
+        state.mutedUsers.push(action.payload.user);
+      })
+      .addCase(unmuteUser.fulfilled, (state, action) => {
+        state.mutedUsers = state.mutedUsers.filter(
+          (user) => user.id !== action.payload.userId
+        );
+      })
+      // Settings
+      .addCase(getSettings.fulfilled, (state, action) => {
+        state.settings = action.payload;
+      })
+      .addCase(updatePrivacySettings.fulfilled, (state, action) => {
+        if (state.settings) {
+          state.settings.privacy = action.payload;
+        }
+      })
+      .addCase(updateNotificationSettings.fulfilled, (state, action) => {
+        if (state.settings) {
+          state.settings.notifications = action.payload;
+        }
+      })
+      .addCase(updateSecuritySettings.fulfilled, (state, action) => {
+        if (state.settings) {
+          state.settings.security = action.payload;
+        }
+      })
+      .addCase(updateContentSettings.fulfilled, (state, action) => {
+        if (state.settings) {
+          state.settings.content = action.payload;
+        }
+      })
+      .addCase(updateThemeSettings.fulfilled, (state, action) => {
+        if (state.settings) {
+          state.settings.theme = action.payload;
         }
       });
-
-    // deleteUser
-    builder
-      .addCase(deleteUser.fulfilled, (state, action) => {
-        state.users = state.users.filter((user) => user.id !== action.payload);
-      });
-
-    // followUser
-    builder.addCase(followUser.fulfilled, () => {
-        // Logic depends on what backend returns. Assuming it returns the updated user or success
-        // If necessary, update state.user or state.users
-    });
-
-    // unfollowUser
-    builder.addCase(unfollowUser.fulfilled, () => {
-        // Logic depends on what backend returns
-    });
-    
-    // getFollowersByUserId
-    builder.addCase(getFollowersByUserId.fulfilled, (state, action) => {
-        const { userId, followers } = action.payload;
-         if (state.user && state.user.id === userId) {
-             state.user.followers = followers;
-         }
-         // Also update in users list if needed
-         const user = state.users.find(u => u.id === userId);
-         if (user) {
-             user.followers = followers;
-         }
-    });
   },
 });
 
 export const {
-  setThemeSettings,
-  setUserSettings,
-  clearError
+  clearError,
+  clearSearchResults,
+  setCurrentProfile,
+  updateFollowStatus,
+  resetUserState,
 } = userSlice.actions;
-
 export default userSlice.reducer;

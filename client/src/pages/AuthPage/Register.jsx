@@ -1,10 +1,28 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, Mail, Lock, User, AtSign, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Sparkles,
+  Mail,
+  Lock,
+  User,
+  AtSign,
+  Eye,
+  EyeOff,
+  AlertCircle,
+} from "lucide-react";
+import { register } from "../../redux/actions/authActions";
+import { clearError } from "../../redux/slices/AuthSlice";
+import toast from "react-hot-toast";
 
 const Register = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { loading, error, isAuthenticated } = useSelector(
+    (state) => state.auth
+  );
+
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -12,18 +30,52 @@ const Register = () => {
     password: "",
   });
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (
+      !formData.name ||
+      !formData.username ||
+      !formData.email ||
+      !formData.password
+    ) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return false;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      toast.error("Username chỉ được chứa chữ cái, số và dấu gạch dưới");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Fake loading
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Register:", formData);
-    }, 1500);
+    if (!validateForm()) return;
+
+    const result = await dispatch(register(formData));
+    if (register.fulfilled.match(result)) {
+      toast.success("Đăng ký thành công!");
+      navigate("/");
+    }
   };
 
   return (
@@ -179,13 +231,21 @@ const Register = () => {
               </Link>
             </p>
 
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isLoading ? (
+              {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
               ) : (
                 "Create Account"

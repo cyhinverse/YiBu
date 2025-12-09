@@ -1,69 +1,82 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../axios/axiosConfig";
-import { SAVE_POST_API_ENDPOINTS } from "../../axios/apiEndpoint";
+import { SAVE_POST_API } from "../../axios/apiEndpoint";
 
-export const savePost = createAsyncThunk(
-  "savePost/save",
-  async (postId, { rejectWithValue }) => {
-    try {
-      const response = await api.post(`${SAVE_POST_API_ENDPOINTS.BASE}/${postId}`);
-      return { postId, data: response.data };
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
-
-export const unsavePost = createAsyncThunk(
-  "savePost/unsave",
-  async (postId, { rejectWithValue }) => {
-    try {
-      const response = await api.delete(`${SAVE_POST_API_ENDPOINTS.BASE}/${postId}`);
-      return { postId, data: response.data };
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
-
+// Get Saved Posts
 export const getSavedPosts = createAsyncThunk(
   "savePost/getSavedPosts",
-  async ({ page, limit }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`${SAVE_POST_API_ENDPOINTS.BASE}?page=${page}&limit=${limit}`);
-      
-      // Restructure logic from service to unwrap "post" object
-      if (response.data && response.data.savedPosts) {
-        response.data.savedPosts = response.data.savedPosts
-          .filter((item) => item && item.post)
-          .map((item) => {
-            return {
-              ...item.post,
-              savedId: item._id,
-            };
-          });
-      }
-      // If savedPosts missing, handle it? Service did. 
-      if (response.data && !response.data.savedPosts) {
-          response.data.savedPosts = [];
-      }
-
-      return response.data;
+      const response = await api.get(SAVE_POST_API.GET_ALL, {
+        params: { page, limit },
+      });
+      return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
-      // Logic for retry was in service, simpler now as per user request
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || "Lấy bài viết đã lưu thất bại"
+      );
     }
   }
 );
 
-export const checkSavedStatus = createAsyncThunk(
-  "savePost/checkStatus",
+// Get Collections
+export const getCollections = createAsyncThunk(
+  "savePost/getCollections",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get(SAVE_POST_API.GET_COLLECTIONS);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Lấy bộ sưu tập thất bại"
+      );
+    }
+  }
+);
+
+// Check Save Status
+export const checkSaveStatus = createAsyncThunk(
+  "savePost/checkSaveStatus",
   async (postId, { rejectWithValue }) => {
     try {
-      const response = await api.get(`${SAVE_POST_API_ENDPOINTS.CHECK}/${postId}`);
-      return { postId, data: response.data };
+      const response = await api.get(SAVE_POST_API.CHECK_STATUS(postId));
+      return { postId, ...response.data };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || "Kiểm tra trạng thái lưu thất bại"
+      );
+    }
+  }
+);
+
+// Save Post
+export const savePost = createAsyncThunk(
+  "savePost/savePost",
+  async ({ postId, collectionId }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(SAVE_POST_API.SAVE(postId), {
+        collectionId,
+      });
+      return { postId, collectionId, ...response.data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Lưu bài viết thất bại"
+      );
+    }
+  }
+);
+
+// Unsave Post
+export const unsavePost = createAsyncThunk(
+  "savePost/unsavePost",
+  async (postId, { rejectWithValue }) => {
+    try {
+      await api.delete(SAVE_POST_API.UNSAVE(postId));
+      return { postId };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Bỏ lưu bài viết thất bại"
+      );
     }
   }
 );

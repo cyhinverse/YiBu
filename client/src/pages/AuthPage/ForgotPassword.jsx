@@ -1,20 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Mail, ArrowLeft } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { Sparkles, Mail, ArrowLeft, AlertCircle } from "lucide-react";
+import { requestPasswordReset } from "../../redux/actions/authActions";
+import { clearError } from "../../redux/slices/AuthSlice";
+import toast from "react-hot-toast";
 
 const ForgotPassword = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.auth);
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Fake API call
-    setTimeout(() => {
-      setIsLoading(false);
+    if (!email) {
+      toast.error("Vui lòng nhập email");
+      return;
+    }
+    const result = await dispatch(requestPasswordReset(email));
+    if (requestPasswordReset.fulfilled.match(result)) {
       setSent(true);
-    }, 1500);
+      toast.success("Đã gửi link đặt lại mật khẩu!");
+    }
   };
 
   return (
@@ -80,12 +95,20 @@ const ForgotPassword = () => {
                   </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                    <AlertCircle size={16} />
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={loading}
                   className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
                   ) : (
                     "Send Reset Link"

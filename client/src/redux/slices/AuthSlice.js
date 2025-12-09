@@ -2,141 +2,172 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   login,
   register,
+  googleAuth,
   logout,
-  refreshToken,
-  updateEmail,
+  logoutAll,
   updatePassword,
-  deleteAccount
+  requestPasswordReset,
+  resetPassword,
+  enable2FA,
+  verify2FA,
+  disable2FA,
+  getSessions,
+  revokeSession,
 } from "../actions/authActions";
 
-// Kiểm tra nếu có thông tin user trong localStorage
-const getInitialAuthState = () => {
-  const token = localStorage.getItem("accessToken");
-  const storedUser = localStorage.getItem("user");
-
-  if (token && storedUser) {
-    try {
-      const user = JSON.parse(storedUser);
-      return {
-        isAuthenticated: true,
-        user: user,
-        loading: false,
-        error: null,
-      };
-    } catch (error) {
-      console.error("Error parsing stored user:", error);
-      localStorage.removeItem("user");
-      localStorage.removeItem("accessToken");
-    }
-  }
-
-  return {
-    isAuthenticated: false,
-    user: null,
-    loading: false,
-    error: null,
-  };
+const initialState = {
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+  sessions: [],
+  twoFactorEnabled: false,
+  twoFactorPending: false,
 };
 
-const initialState = getInitialAuthState();
-
-export const authSlice = createSlice({
+const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // Keep manual reducers if needed, e.g. for immediate state updates without API
-    resetError: (state) => {
-        state.error = null;
-    }
+    clearError: (state) => {
+      state.error = null;
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
+      state.isAuthenticated = !!action.payload;
+    },
+    updateUserProfile: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
+    resetAuthState: () => initialState,
   },
   extraReducers: (builder) => {
-    // Login
     builder
+      // Login
       .addCase(login.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
+        state.user = action.payload.user;
         state.isAuthenticated = true;
-        
-        // Destructure payload. Assuming payload is { code, message, accessToken, user }
-        const { user, accessToken } = action.payload || {};
-        
-        // Correctly set state: user should only be the user profile
-        // If 'user' exists in payload, use it. Otherwise fallback to payload IF it looks like a user object, 
-        // but given the bug, we must be careful.
-        state.user = user || action.payload; 
-
-        // Update localStorage for persistence across reloads (and for axios)
-        if (accessToken) {
-            localStorage.setItem("accessToken", accessToken);
-        }
-        
-        if (user) {
-            localStorage.setItem("user", JSON.stringify(user));
-        } else if (action.payload) {
-             // Fallback: If payload IS the user object (no wrapper), store it.
-             // But we suspect payload is a wrapper.
-             // We'll store what we put in state.user
-             localStorage.setItem("user", JSON.stringify(state.user));
-        }
+        state.twoFactorEnabled = action.payload.user?.twoFactorEnabled || false;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Register
+      .addCase(register.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Google Auth
+      .addCase(googleAuth.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(googleAuth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(googleAuth.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Logout
+      .addCase(logout.fulfilled, () => initialState)
+      .addCase(logoutAll.fulfilled, () => initialState)
+      // Update Password
+      .addCase(updatePassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updatePassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(updatePassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Password Reset Request
+      .addCase(requestPasswordReset.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(requestPasswordReset.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(requestPasswordReset.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Reset Password
+      .addCase(resetPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 2FA Enable
+      .addCase(enable2FA.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(enable2FA.fulfilled, (state, action) => {
+        state.loading = false;
+        state.twoFactorPending = true;
+      })
+      .addCase(enable2FA.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 2FA Verify
+      .addCase(verify2FA.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(verify2FA.fulfilled, (state) => {
+        state.loading = false;
+        state.twoFactorEnabled = true;
+        state.twoFactorPending = false;
+      })
+      .addCase(verify2FA.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 2FA Disable
+      .addCase(disable2FA.fulfilled, (state) => {
+        state.twoFactorEnabled = false;
+      })
+      // Sessions
+      .addCase(getSessions.fulfilled, (state, action) => {
+        state.sessions = action.payload;
+      })
+      .addCase(revokeSession.fulfilled, (state, action) => {
+        state.sessions = state.sessions.filter(
+          (session) => session.id !== action.payload.sessionId
+        );
       });
-
-    // Register
-    builder
-        .addCase(register.pending, (state) => {
-            state.loading = true;
-            state.error = null;
-        })
-        .addCase(register.fulfilled, (state, action) => {
-            state.loading = false;
-            state.isAuthenticated = false;
-            state.user = action.payload; // Or null if we don't want to store registered user details yet
-        })
-        .addCase(register.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.payload;
-        });
-
-    // Logout
-    builder
-        .addCase(logout.fulfilled, (state) => {
-            state.user = null;
-            state.isAuthenticated = false;
-            localStorage.removeItem("user");
-            localStorage.removeItem("accessToken");
-        })
-        .addCase(logout.rejected, (state) => {
-            // Even if api fails, we clear state
-             state.user = null;
-            state.isAuthenticated = false;
-            localStorage.removeItem("user");
-            localStorage.removeItem("accessToken");
-        });
-        
-    // Refresh Token
-    builder.addCase(refreshToken.fulfilled, (state, action) => {
-        // Update token in localStorage if returned
-         if (action.payload && action.payload.accessToken) {
-             localStorage.setItem("accessToken", action.payload.accessToken);
-         }
-    });
-
-    // Delete Account
-    builder.addCase(deleteAccount.fulfilled, (state) => {
-        state.user = null;
-        state.isAuthenticated = false;
-        localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
-    });
   },
 });
 
-export const { resetError } = authSlice.actions;
-
+export const { clearError, setUser, updateUserProfile, resetAuthState } =
+  authSlice.actions;
 export default authSlice.reducer;

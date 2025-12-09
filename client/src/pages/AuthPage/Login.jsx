@@ -1,27 +1,57 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { login, googleAuth } from "../../redux/actions/authActions";
+import { clearError } from "../../redux/slices/AuthSlice";
+import toast from "react-hot-toast";
 
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { loading, error, isAuthenticated } = useSelector(
+    (state) => state.auth
+  );
+
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Fake loading
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Login:", formData);
-    }, 1500);
+    if (!formData.email || !formData.password) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+    const result = await dispatch(login(formData));
+    if (login.fulfilled.match(result)) {
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    // Google OAuth implementation would go here
+    // For now, show a placeholder
+    toast.error("Google login chưa được cấu hình");
   };
 
   return (
@@ -122,13 +152,21 @@ const Login = () => {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isLoading ? (
+              {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
               ) : (
                 "Sign In"
@@ -145,7 +183,9 @@ const Login = () => {
             {/* Social Login */}
             <button
               type="button"
-              className="w-full py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-3"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

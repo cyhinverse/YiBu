@@ -1,165 +1,244 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:9785";
 
-export const AUTH_API_ENDPOINTS = {
+// ======================================
+// Auth API Endpoints
+// ======================================
+export const AUTH_API = {
+  // Public
   LOGIN: "/api/auth/login",
   REGISTER: "/api/auth/register",
+  GOOGLE_AUTH: "/api/auth/google",
+  REQUEST_PASSWORD_RESET: "/api/auth/password/reset-request",
+  RESET_PASSWORD: "/api/auth/password/reset",
+  // Protected
+  REFRESH_TOKEN: "/api/auth/refresh",
   LOGOUT: "/api/auth/logout",
-  REFRESH_TOKEN: "/api/auth/refresh-token",
-  UPDATE_EMAIL: "/api/auth/update-email",
-  UPDATE_PASSWORD: "/api/auth/update-password",
-  CONNECT_SOCIAL: "/api/auth/connect-social",
-  VERIFY_ACCOUNT: "/api/auth/verify-account",
-  DELETE_ACCOUNT: "/api/auth/delete-account",
+  LOGOUT_ALL: "/api/auth/logout-all",
+  UPDATE_PASSWORD: "/api/auth/password",
+  // 2FA
+  ENABLE_2FA: "/api/auth/2fa/enable",
+  VERIFY_2FA: "/api/auth/2fa/verify",
+  DISABLE_2FA: "/api/auth/2fa/disable",
+  // Sessions
+  GET_SESSIONS: "/api/auth/sessions",
+  REVOKE_SESSION: (sessionId) => `/api/auth/sessions/${sessionId}`,
 };
 
-export const USER_API_ENDPOINTS = {
-  GET_ALL_USER: "/user/list",
-  GET_USER_BY_ID: "/user",
-  SEARCH_USERS: "/user/search",
-  GET_TOP_USERS_BY_LIKES: "/user/top/likes",
-  FOLLOW_USER: "/user/follow",
-  UNFOLLOW_USER: "/user/unfollow",
-  CHECK_FOLLOW_STATUS: "/user/check-follow", // Fixed path from user.router.js
-  UPDATE_USER: "/user/update", // This might be admin or special? User router has put("/profile", updateProfileSettings)
-  DELETE_USER: "/user/delete",
-  GET_FOLLOWER_BY_USERID: "/user/followers",
-  ADD_FOLLOWER: "/user/add-follower",
-  REMOVE_FOLLOWER: "/user/remove-follower",
-  CREATE_USER: "/user/create",
+export const USER_API = {
+  // Search & Discovery
+  SEARCH: "/api/user/search",
+  SUGGESTIONS: "/api/user/suggestions",
+  // Profile
+  GET_PROFILE: (id) => `/api/user/profile/${id}`,
+  UPDATE_PROFILE: "/api/user/profile",
+  GET_BY_ID: (id) => `/api/user/${id}`,
+  // Follow System
+  CHECK_FOLLOW: (targetUserId) => `/api/user/check-follow/${targetUserId}`,
+  FOLLOW: "/api/user/follow",
+  UNFOLLOW: "/api/user/unfollow",
+  GET_FOLLOWERS: (userId) => `/api/user/followers/${userId}`,
+  GET_FOLLOWING: (userId) => `/api/user/following/${userId}`,
+  // Follow Requests
+  GET_FOLLOW_REQUESTS: "/api/user/follow-requests",
+  ACCEPT_FOLLOW_REQUEST: (requestId) =>
+    `/api/user/follow-requests/${requestId}/accept`,
+  REJECT_FOLLOW_REQUEST: (requestId) =>
+    `/api/user/follow-requests/${requestId}/reject`,
+  // Block & Mute
+  GET_BLOCKED: "/api/user/blocked",
+  BLOCK_USER: (userId) => `/api/user/block/${userId}`,
+  UNBLOCK_USER: (userId) => `/api/user/block/${userId}`,
+  GET_MUTED: "/api/user/muted",
+  MUTE_USER: (userId) => `/api/user/mute/${userId}`,
+  UNMUTE_USER: (userId) => `/api/user/mute/${userId}`,
+  // Settings
+  GET_SETTINGS: "/api/user/settings",
+  UPDATE_PRIVACY: "/api/user/settings/privacy",
+  UPDATE_NOTIFICATIONS: "/api/user/settings/notifications",
+  UPDATE_SECURITY: "/api/user/settings/security",
+  UPDATE_CONTENT: "/api/user/settings/content",
+  UPDATE_THEME: "/api/user/settings/theme",
+  // Trusted Devices
+  ADD_DEVICE: "/api/user/settings/devices",
+  REMOVE_DEVICE: (deviceId) => `/api/user/settings/devices/${deviceId}`,
 };
 
-export const POST_API_ENDPOINTS = {
-  CREATE_POST: "/api/v1/create-post",
-  GET_POST_USER_BY_ID: "/api/v1/post-user",
-  GET_ALL_USER: "/api/v1/posts",
-  DELETE_POST: "/api/v1/post", // delete is /:id
-  UPDATE_POST: "/api/v1/post", // put is /:id
-  REPORT_POST: "/api/v1/report-post",
+// ======================================
+// Post API Endpoints
+// ======================================
+export const POST_API = {
+  // Feeds
+  GET_ALL: "/api/post",
+  GET_EXPLORE: "/api/post/explore",
+  GET_PERSONALIZED: "/api/post/personalized",
+  GET_TRENDING: "/api/post/trending",
+  // Search
+  SEARCH: "/api/post/search",
+  GET_BY_HASHTAG: (hashtag) => `/api/post/hashtag/${hashtag}`,
+  GET_TRENDING_HASHTAGS: "/api/post/hashtags/trending",
+  // CRUD
+  CREATE: "/api/post",
+  GET_BY_USER: (userId) => `/api/post/user/${userId}`,
+  GET_BY_ID: (id) => `/api/post/${id}`,
+  UPDATE: (id) => `/api/post/${id}`,
+  DELETE: (id) => `/api/post/${id}`,
+  // Interactions
+  SHARE: (postId) => `/api/post/${postId}/share`,
+  REPORT: (postId) => `/api/post/${postId}/report`,
 };
 
-export const LIKE_API_ENDPOINTS = {
-  CREATE_LIKE: "/api/like/create",
-  DELETE_LIKE: "/api/like/delete",
-  GET_LIKE_STATUS: "/api/like/status",
-  GET_ALL_LIKES: "/api/like/get-all",
-  TOGGLE_LIKE: "/api/like/toggle",
-  GET_LIKED_POSTS: "/api/like/liked-posts",
+// ======================================
+// Comment API Endpoints
+// ======================================
+export const COMMENT_API = {
+  CREATE: "/api/comments",
+  GET_BY_POST: (postId) => `/api/comments/post/${postId}`,
+  GET_REPLIES: (commentId) => `/api/comments/${commentId}/replies`,
+  UPDATE: (id) => `/api/comments/${id}`,
+  DELETE: (id) => `/api/comments/${id}`,
+  LIKE: (commentId) => `/api/comments/${commentId}/like`,
+  UNLIKE: (commentId) => `/api/comments/${commentId}/like`,
 };
 
-export const PROFILE_API_ENDPOINTS = {
-  GET_PROFILE_BY_ID: "/user/profile", // /:id
+// ======================================
+// Like API Endpoints
+// ======================================
+export const LIKE_API = {
+  CREATE: "/api/like",
+  DELETE: "/api/like",
+  TOGGLE: "/api/like/toggle",
+  GET_STATUS: (postId) => `/api/like/status/${postId}`,
+  GET_BATCH_STATUS: "/api/like/batch-status",
+  GET_POST_LIKES: (postId) => `/api/like/post/${postId}/users`,
+  GET_MY_LIKES: "/api/like/my-likes",
 };
 
-export const COMMENT_API_ENDPOINTS = {
-  CREATE_COMMENT: "/api/comments/create",
-  GET_COMMENTS_BY_POST: "/api/comments", // /:postId
-  UPDATE_COMMENT: "/api/comments", // /:id
-  DELETE_COMMENT: "/api/comments", // /:id
+// ======================================
+// Message API Endpoints
+// ======================================
+export const MESSAGE_API = {
+  // Conversations
+  GET_CONVERSATIONS: "/api/messages/conversations",
+  CREATE_CONVERSATION: "/api/messages/conversations",
+  GET_CONVERSATION: (id) => `/api/messages/conversations/${id}`,
+  DELETE_CONVERSATION: (id) => `/api/messages/conversations/${id}`,
+  // Group Conversations
+  CREATE_GROUP: "/api/messages/groups",
+  UPDATE_GROUP: (id) => `/api/messages/groups/${id}`,
+  ADD_MEMBERS: (id) => `/api/messages/groups/${id}/members`,
+  REMOVE_MEMBER: (id, memberId) =>
+    `/api/messages/groups/${id}/members/${memberId}`,
+  LEAVE_GROUP: (id) => `/api/messages/groups/${id}/leave`,
+  // Messages
+  GET_MESSAGES: (conversationId) =>
+    `/api/messages/conversations/${conversationId}/messages`,
+  SEND: "/api/messages/send",
+  DELETE_MESSAGE: (messageId) => `/api/messages/messages/${messageId}`,
+  // Status
+  MARK_CONVERSATION_READ: (id) => `/api/messages/conversations/${id}/read`,
+  MARK_MESSAGE_READ: (messageId) => `/api/messages/messages/${messageId}/read`,
+  GET_UNREAD_COUNT: "/api/messages/unread-count",
+  // Reactions
+  ADD_REACTION: (messageId) => `/api/messages/messages/${messageId}/reactions`,
+  REMOVE_REACTION: (messageId) =>
+    `/api/messages/messages/${messageId}/reactions`,
+  // Other
+  TYPING: (conversationId) =>
+    `/api/messages/conversations/${conversationId}/typing`,
+  SEARCH: "/api/messages/search",
+  GET_USERS: "/api/messages/users",
+  MUTE: (id) => `/api/messages/conversations/${id}/mute`,
+  UNMUTE: (id) => `/api/messages/conversations/${id}/mute`,
+  GET_MEDIA: (id) => `/api/messages/conversations/${id}/media`,
 };
 
-export const REPORT_API_ENDPOINTS = {
-  CREATE_REPORT: "/api/reports",
-  GET_USER_REPORTS: "/api/reports/user",
-  GET_REPORT_DETAILS: "/api/reports", // /:reportId
-  GET_ALL_REPORTS: "/api/reports",
-  UPDATE_REPORT_STATUS: "/api/reports", // /:reportId/status
-  ADD_REPORT_COMMENT: "/api/reports", // /:reportId/comment
+// ======================================
+// Notification API Endpoints
+// ======================================
+export const NOTIFICATION_API = {
+  GET_ALL: "/api/notifications",
+  GET_UNREAD_COUNT: "/api/notifications/unread-count",
+  GET_UNREAD_BY_TYPE: "/api/notifications/unread-count-by-type",
+  GET_BY_ID: (id) => `/api/notifications/${id}`,
+  CREATE: "/api/notifications",
+  MARK_READ: (id) => `/api/notifications/${id}/read`,
+  MARK_ALL_READ: "/api/notifications/read-all",
+  DELETE: (id) => `/api/notifications/${id}`,
+  DELETE_ALL: "/api/notifications",
+  GET_PREFERENCES: "/api/notifications/preferences",
+  UPDATE_PREFERENCES: "/api/notifications/preferences",
 };
 
-export const SETTINGS_API_ENDPOINTS = {
-  GET_ALL_SETTINGS: "/user/settings",
-  UPDATE_PROFILE: "/user/profile", // PUT
-  UPDATE_PRIVACY: "/user/settings/privacy",
-  UPDATE_NOTIFICATION: "/user/settings/notifications",
-  UPDATE_SECURITY: "/user/settings/security",
-  UPDATE_CONTENT: "/user/settings/content",
-  UPDATE_THEME: "/user/settings/theme",
-  ADD_TRUSTED_DEVICE: "/user/settings/devices",
-  REMOVE_TRUSTED_DEVICE: "/user/settings/devices", // /:deviceId
-  BLOCK_USER: "/user/block",
-  UNBLOCK_USER: "/user/block", // /:blockedUserId
-  GET_BLOCK_LIST: "/user/block/list",
+// ======================================
+// Save Post API Endpoints
+// ======================================
+export const SAVE_POST_API = {
+  GET_ALL: "/api/savepost",
+  GET_COLLECTIONS: "/api/savepost/collections",
+  CHECK_STATUS: (postId) => `/api/savepost/${postId}/status`,
+  SAVE: (postId) => `/api/savepost/${postId}`,
+  UNSAVE: (postId) => `/api/savepost/${postId}`,
 };
 
-export const ADMIN_API_ENDPOINTS = {
-  // User management
+// ======================================
+// Report API Endpoints
+// ======================================
+export const REPORT_API = {
+  CREATE: "/api/reports",
+  REPORT_POST: (postId) => `/api/reports/post/${postId}`,
+  REPORT_COMMENT: (commentId) => `/api/reports/comment/${commentId}`,
+  REPORT_USER: (userId) => `/api/reports/user/${userId}`,
+  REPORT_MESSAGE: (messageId) => `/api/reports/message/${messageId}`,
+  GET_MY_REPORTS: "/api/reports/my-reports",
+  GET_BY_ID: (id) => `/api/reports/${id}`,
+  // Admin
+  GET_ALL: "/api/reports",
+  GET_PENDING: "/api/reports/pending",
+  GET_AGAINST_USER: (userId) => `/api/reports/user/${userId}/against`,
+  START_REVIEW: (id) => `/api/reports/${id}/start-review`,
+  RESOLVE: (id) => `/api/reports/${id}/resolve`,
+  UPDATE_STATUS: (id) => `/api/reports/${id}/status`,
+};
+
+// ======================================
+// Admin API Endpoints
+// ======================================
+export const ADMIN_API = {
+  // Health
+  HEALTH: "/api/admin/health",
+  // Dashboard & Analytics
+  GET_DASHBOARD_STATS: "/api/admin/dashboard/stats",
+  GET_USER_GROWTH: "/api/admin/analytics/user-growth",
+  GET_POST_STATS: "/api/admin/analytics/posts",
+  GET_TOP_USERS: "/api/admin/analytics/top-users",
+  // User Management
   GET_ALL_USERS: "/api/admin/users",
-  GET_USER_DETAILS: "/api/admin/users", // /:userId
-  UPDATE_USER: "/api/admin/users", // /:userId
-  DELETE_USER: "/api/admin/users", // /:userId
+  GET_BANNED_USERS: "/api/admin/users/banned",
+  GET_USER_DETAILS: (id) => `/api/admin/users/${id}`,
+  UPDATE_USER: (id) => `/api/admin/users/${id}`,
+  DELETE_USER: (id) => `/api/admin/users/${id}`,
+  // User Moderation
   BAN_USER: "/api/admin/users/ban",
   UNBAN_USER: "/api/admin/users/unban",
-
-  // Banned accounts management
-  GET_BANNED_ACCOUNTS: "/api/admin/users/banned",
-  GET_BAN_HISTORY: "/api/admin/users/ban-history", // /:userId
-  EXTEND_BAN: "/api/admin/users/extend-ban",
-  TEMPORARY_UNBAN: "/api/admin/users/temp-unban",
-
-  // Post management
+  SUSPEND_USER: "/api/admin/users/suspend",
+  WARN_USER: "/api/admin/users/warn",
+  // Content Moderation
   GET_ALL_POSTS: "/api/admin/posts",
-  GET_POST_DETAILS: "/api/admin/posts", // /:postId
-  DELETE_POST: "/api/admin/posts", // /:postId
-  APPROVE_POST: "/api/admin/posts/approve", // /:postId
-
-  // Comment management
-  GET_ALL_COMMENTS: "/api/admin/comments",
-  DELETE_COMMENT: "/api/admin/comments", // /:commentId
-
-  // Report management
-  GET_ALL_REPORTS: "/api/admin/reports",
-  UPDATE_REPORT_STATUS: "/api/admin/reports", // /:reportId
-  ADD_REPORT_COMMENT: "/api/admin/reports", // /:reportId/comment
-  RESOLVE_REPORT: "/api/admin/reports/resolve", // /:reportId (custom route)
-  DISMISS_REPORT: "/api/admin/reports/dismiss", // /:reportId (custom route)
-
-  // Interaction management
-  GET_INTERACTION_STATS: "/api/admin/interactions/stats",
-  GET_INTERACTION_TIMELINE: "/api/admin/interactions/timeline",
-  GET_USER_INTERACTIONS: "/api/admin/interactions/users",
-  GET_SPAM_ACCOUNTS: "/api/admin/interactions/spam",
-  FLAG_ACCOUNT: "/api/admin/interactions/flag",
-  REMOVE_INTERACTION: "/api/admin/interactions/remove", // /:interactionId
-  GET_INTERACTION_TYPES: "/api/admin/interactions/types",
-
-  // Admin dashboard
-  GET_DASHBOARD_STATS: "/api/admin/dashboard/stats",
-  GET_RECENT_ACTIVITIES: "/api/admin/dashboard/activities",
-  GET_SYSTEM_LOGS: "/api/admin/logs", // Note: NO route defined in router for this! Skippping? Or maybe future?
-                                      // Router: no logs route.
-                                      // Removing logs for now? Or keep as placeholder. 
-                                      // User asked to match router. Router has NO logs endpoint active.
-
-  // Admin settings
-  GET_ADMIN_SETTINGS: "/api/admin/settings",
-  UPDATE_ADMIN_SETTINGS: "/api/admin/settings",
-
-  // System settings
-  UPDATE_SECURITY_SETTINGS: "/api/admin/settings/security",
-  UPDATE_CONTENT_POLICY: "/api/admin/settings/content-policy",
-  UPDATE_USER_PERMISSIONS: "/api/admin/settings/user-permissions",
-  UPDATE_NOTIFICATION_SETTINGS: "/api/admin/settings/notifications",
-  GET_SYSTEM_HEALTH: "/api/admin/settings/system-health",
-  UPDATE_SYSTEM_CONFIG: "/api/admin/settings/system-config",
-};
-
-export const MESSAGE_API_ENDPOINTS = {
-  GET_CONVERSATIONS: "/api/messages/conversations",
-  GET_MESSAGES: "/api/messages", // append /:userId
-  SEND_MESSAGE: "/api/messages/send",
-  MARK_AS_READ: "/api/messages/read",
-  DELETE_MESSAGE: "/api/messages", // append /:messageId
-  DELETE_CONVERSATION: "/api/messages/conversation", // append /:partnerId
-};
-
-export const NOTIFICATION_API_ENDPOINTS = {
-  BASE: "/api/notifications",
-  READ_ALL: "/api/notifications/read-all",
-  UNREAD_COUNT: "/api/notifications/unread-count",
-};
-
-export const SAVE_POST_API_ENDPOINTS = {
-  BASE: "/api/savepost",
-  CHECK: "/api/savepost/check",
+  MODERATE_POST: (id) => `/api/admin/posts/${id}/moderate`,
+  APPROVE_POST: (id) => `/api/admin/posts/${id}/approve`,
+  DELETE_POST: (id) => `/api/admin/posts/${id}`,
+  MODERATE_COMMENT: (id) => `/api/admin/comments/${id}/moderate`,
+  DELETE_COMMENT: (id) => `/api/admin/comments/${id}`,
+  // Reports
+  GET_REPORTS: "/api/admin/reports",
+  GET_PENDING_REPORTS: "/api/admin/reports/pending",
+  GET_USER_REPORTS: (userId) => `/api/admin/reports/user/${userId}`,
+  REVIEW_REPORT: (id) => `/api/admin/reports/${id}/review`,
+  START_REPORT_REVIEW: (id) => `/api/admin/reports/${id}/start-review`,
+  RESOLVE_REPORT: (id) => `/api/admin/reports/${id}/resolve`,
+  // System
+  BROADCAST: "/api/admin/broadcast",
+  GET_SYSTEM_HEALTH: "/api/admin/system/health",
+  GET_LOGS: "/api/admin/logs",
 };

@@ -2,13 +2,18 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   createComment,
   getCommentsByPost,
+  getCommentReplies,
   updateComment,
   deleteComment,
+  likeComment,
+  unlikeComment,
 } from "../actions/commentActions";
 
 const initialState = {
-  commentsByPost: {}, // Object with postId as key and array of comments as value
+  comments: {},
+  replies: {},
   loading: false,
+  createLoading: false,
   error: null,
 };
 
@@ -16,63 +21,115 @@ const commentSlice = createSlice({
   name: "comment",
   initialState,
   reducers: {
-      clearError: (state) => {
-          state.error = null;
+    clearError: (state) => {
+      state.error = null;
+    },
+    clearComments: (state, action) => {
+      if (action.payload) {
+        delete state.comments[action.payload];
+      } else {
+        state.comments = {};
       }
+    },
+    addCommentOptimistic: (state, action) => {
+      const { postId, comment } = action.payload;
+      if (!state.comments[postId]) {
+        state.comments[postId] = [];
+      }
+      state.comments[postId].unshift(comment);
+    },
+    resetCommentState: () => initialState,
   },
   extraReducers: (builder) => {
-    // createComment
     builder
-        .addCase(createComment.fulfilled, (state, action) => {
-            const comment = action.payload;
-            const postId = comment.postId || comment.post; // Adjust based on actual payload
-            if (postId) {
-                if (!state.commentsByPost[postId]) {
-                    state.commentsByPost[postId] = [];
-                }
-                state.commentsByPost[postId].push(comment);
-            }
-        });
-
-    // getCommentsByPost
-    builder
-        .addCase(getCommentsByPost.pending, (state) => {
-            state.loading = true;
-        })
-        .addCase(getCommentsByPost.fulfilled, (state, action) => {
-            state.loading = false;
-            const { postId, comments } = action.payload;
-            state.commentsByPost[postId] = comments;
-        })
-        .addCase(getCommentsByPost.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.payload;
-        });
-
-    // updateComment
-    builder
-        .addCase(updateComment.fulfilled, (state, action) => {
-             const updatedComment = action.payload;
-             const postId = updatedComment.postId || updatedComment.post;
-             if (postId && state.commentsByPost[postId]) {
-                 const index = state.commentsByPost[postId].findIndex(c => c._id === updatedComment._id);
-                 if (index !== -1) {
-                     state.commentsByPost[postId][index] = updatedComment;
-                 }
-             }
-        });
-
-    // deleteComment
-    builder
-        .addCase(deleteComment.fulfilled, (state, action) => {
-            const commentId = action.payload;
-            // Need to find which post it belongs to, or iterate all
-            Object.keys(state.commentsByPost).forEach(postId => {
-                state.commentsByPost[postId] = state.commentsByPost[postId].filter(c => c._id !== commentId);
-            });
-        });
+      // Create Comment
+      .addCase(createComment.pending, (state) => {
+        state.createLoading = true;
+      })
+      .addCase(createComment.fulfilled, (state, action) => {
+        state.createLoading = false;
+        const { postId, comment } = action.payload;
+        if (!state.comments[postId]) {
+          state.comments[postId] = [];
+        }
+        state.comments[postId].unshift(comment);
+      })
+      .addCase(createComment.rejected, (state, action) => {
+        state.createLoading = false;
+        state.error = action.payload;
+      })
+      // Get Comments by Post
+      .addCase(getCommentsByPost.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getCommentsByPost.fulfilled, (state, action) => {
+        state.loading = false;
+        const { postId, comments } = action.payload;
+        state.comments[postId] = comments;
+      })
+      .addCase(getCommentsByPost.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Get Comment Replies
+      .addCase(getCommentReplies.fulfilled, (state, action) => {
+        const { commentId, replies } = action.payload;
+        state.replies[commentId] = replies;
+      })
+      // Update Comment
+      .addCase(updateComment.fulfilled, (state, action) => {
+        const { postId, comment } = action.payload;
+        if (state.comments[postId]) {
+          const index = state.comments[postId].findIndex(
+            (c) => c.id === comment.id
+          );
+          if (index !== -1) {
+            state.comments[postId][index] = comment;
+          }
+        }
+      })
+      // Delete Comment
+      .addCase(deleteComment.fulfilled, (state, action) => {
+        const { postId, commentId } = action.payload;
+        if (state.comments[postId]) {
+          state.comments[postId] = state.comments[postId].filter(
+            (c) => c.id !== commentId
+          );
+        }
+      })
+      // Like Comment
+      .addCase(likeComment.fulfilled, (state, action) => {
+        const { postId, commentId } = action.payload;
+        if (state.comments[postId]) {
+          const comment = state.comments[postId].find(
+            (c) => c.id === commentId
+          );
+          if (comment) {
+            comment.isLiked = true;
+            comment.likesCount = (comment.likesCount || 0) + 1;
+          }
+        }
+      })
+      // Unlike Comment
+      .addCase(unlikeComment.fulfilled, (state, action) => {
+        const { postId, commentId } = action.payload;
+        if (state.comments[postId]) {
+          const comment = state.comments[postId].find(
+            (c) => c.id === commentId
+          );
+          if (comment) {
+            comment.isLiked = false;
+            comment.likesCount = Math.max((comment.likesCount || 1) - 1, 0);
+          }
+        }
+      });
   },
 });
 
-export const { clearError } = commentSlice.actions;
+export const {
+  clearError,
+  clearComments,
+  addCommentOptimistic,
+  resetCommentState,
+} = commentSlice.actions;
 export default commentSlice.reducer;

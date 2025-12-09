@@ -1,81 +1,113 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../axios/axiosConfig";
-import { LIKE_API_ENDPOINTS } from "../../axios/apiEndpoint";
+import { LIKE_API } from "../../axios/apiEndpoint";
 
+// Create Like
 export const createLike = createAsyncThunk(
   "like/createLike",
-  async (data, { rejectWithValue }) => {
-    try {
-      const response = await api.post(LIKE_API_ENDPOINTS.CREATE_LIKE, data);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
-
-export const deleteLike = createAsyncThunk(
-  "like/deleteLike",
-  async (data, { rejectWithValue }) => {
-    try {
-      // Like service used post for delete in some cases or delete method?
-      // Looking at apiEndpoint: DELETE_LIKE: "/api/like/delete"
-      // Usually POST if body needed, or DELETE if query params. Service likely used POST or DELETE with data.
-      // Assuming standard implementation:
-      const response = await api.post(LIKE_API_ENDPOINTS.DELETE_LIKE, data);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
-
-export const getLikeStatus = createAsyncThunk(
-  "like/getLikeStatus",
   async (postId, { rejectWithValue }) => {
     try {
-      const response = await api.get(`${LIKE_API_ENDPOINTS.GET_LIKE_STATUS}/${postId}`);
-      return { postId, data: response.data };
+      const response = await api.post(LIKE_API.CREATE, { postId });
+      return { postId, ...response.data };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || "Thích bài viết thất bại"
+      );
     }
   }
 );
 
-export const getAllLikes = createAsyncThunk(
-  "like/getAllLikes",
-  async (postIds, { rejectWithValue }) => {
+// Delete Like
+export const deleteLike = createAsyncThunk(
+  "like/deleteLike",
+  async (postId, { rejectWithValue }) => {
     try {
-      // Assuming postIds is array, pass as body to POST or query?
-      // Service GET_ALL_LIKES: likely POST with list of IDs
-      const response = await api.post(LIKE_API_ENDPOINTS.GET_ALL_LIKES, { postIds });
-      return response.data;
+      await api.delete(LIKE_API.DELETE, { data: { postId } });
+      return { postId };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || "Bỏ thích bài viết thất bại"
+      );
     }
   }
 );
 
+// Toggle Like
 export const toggleLike = createAsyncThunk(
   "like/toggleLike",
   async (postId, { rejectWithValue }) => {
     try {
-      const response = await api.post(`${LIKE_API_ENDPOINTS.TOGGLE_LIKE}/${postId}`);
-      return { postId, data: response.data };
+      const response = await api.post(LIKE_API.TOGGLE, { postId });
+      return { postId, ...response.data };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message || "Thay đổi trạng thái thích thất bại"
+      );
     }
   }
 );
 
-export const getLikedPosts = createAsyncThunk(
-  "like/getLikedPosts",
-  async (_, { rejectWithValue }) => {
+// Get Like Status
+export const getLikeStatus = createAsyncThunk(
+  "like/getLikeStatus",
+  async (postId, { rejectWithValue }) => {
     try {
-      const response = await api.get(LIKE_API_ENDPOINTS.GET_LIKED_POSTS);
+      const response = await api.get(LIKE_API.GET_STATUS(postId));
+      return { postId, ...response.data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Lấy trạng thái thích thất bại"
+      );
+    }
+  }
+);
+
+// Get Batch Like Status
+export const getBatchLikeStatus = createAsyncThunk(
+  "like/getBatchLikeStatus",
+  async (postIds, { rejectWithValue }) => {
+    try {
+      const response = await api.post(LIKE_API.GET_BATCH_STATUS, { postIds });
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(
+        error.response?.data?.message ||
+          "Lấy trạng thái thích hàng loạt thất bại"
+      );
+    }
+  }
+);
+
+// Get Post Likes
+export const getPostLikes = createAsyncThunk(
+  "like/getPostLikes",
+  async ({ postId, page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(LIKE_API.GET_POST_LIKES(postId), {
+        params: { page, limit },
+      });
+      return { ...response.data, postId, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Lấy danh sách người thích thất bại"
+      );
+    }
+  }
+);
+
+// Get My Liked Posts
+export const getMyLikedPosts = createAsyncThunk(
+  "like/getMyLikedPosts",
+  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(LIKE_API.GET_MY_LIKES, {
+        params: { page, limit },
+      });
+      return { ...response.data, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Lấy bài viết đã thích thất bại"
+      );
     }
   }
 );

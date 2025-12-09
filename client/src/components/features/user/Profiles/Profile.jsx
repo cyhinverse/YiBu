@@ -97,7 +97,7 @@ const Profile = () => {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       {/* Cover Image */}
       <div className="h-48 bg-neutral-100 dark:bg-neutral-800 relative">
         {user.cover && (
@@ -107,18 +107,21 @@ const Profile = () => {
             className="w-full h-full object-cover"
           />
         )}
-      </div>
-
-      {/* Profile Header */}
-      <div className="px-4 pb-4 border-b border-neutral-200 dark:border-neutral-800">
-        {/* Avatar & Actions */}
-        <div className="flex justify-between items-end -mt-16 mb-4">
+        {/* Avatar - positioned at bottom of cover */}
+        <div className="absolute -bottom-16 left-4">
           <img
             src={user.avatar}
             alt={user.name}
-            className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-neutral-900"
+            className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-neutral-900 bg-white dark:bg-neutral-900"
           />
-          <div className="flex items-center gap-2 mb-4">
+        </div>
+      </div>
+
+      {/* Profile Header */}
+      <div className="px-4 pb-4 pt-20 border-b border-neutral-200 dark:border-neutral-800">
+        {/* Actions */}
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-2">
             {isOwnProfile ? (
               <button className="px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                 Edit Profile
@@ -243,19 +246,27 @@ const Profile = () => {
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 min-h-[400px]">
         {activeTab === "posts" &&
           FAKE_POSTS.map((post) => <Post key={post._id} data={post} />)}
         {activeTab === "likes" && (
-          <div className="text-center py-8 text-neutral-500">
-            <Heart size={32} className="mx-auto mb-2 text-neutral-300" />
-            <p>No liked posts yet</p>
+          <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
+            <Heart
+              size={48}
+              className="mb-4 text-neutral-300 dark:text-neutral-600"
+            />
+            <p className="text-lg font-medium">No liked posts yet</p>
+            <p className="text-sm mt-1">Posts you like will appear here</p>
           </div>
         )}
         {activeTab === "saved" && (
-          <div className="text-center py-8 text-neutral-500">
-            <Bookmark size={32} className="mx-auto mb-2 text-neutral-300" />
-            <p>No saved posts yet</p>
+          <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
+            <Bookmark
+              size={48}
+              className="mb-4 text-neutral-300 dark:text-neutral-600"
+            />
+            <p className="text-lg font-medium">No saved posts yet</p>
+            <p className="text-sm mt-1">Save posts to view them later</p>
           </div>
         )}
       </div>

@@ -1,14 +1,22 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
+  getSavedPosts,
+  getCollections,
+  checkSaveStatus,
   savePost,
   unsavePost,
-  getSavedPosts,
-  checkSavedStatus,
 } from "../actions/savePostActions";
 
 const initialState = {
   savedPosts: [],
-  savedStatus: {}, // { [postId]: boolean }
+  collections: [],
+  collectionPosts: {},
+  saveStatus: {},
+  pagination: {
+    page: 1,
+    limit: 20,
+    hasMore: true,
+  },
   loading: false,
   error: null,
 };
@@ -20,77 +28,66 @@ const savePostSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    setLoading: (state, action) => {
-      state.loading = action.payload;
+    clearSavedPosts: (state) => {
+      state.savedPosts = [];
+      state.pagination = { ...initialState.pagination };
     },
-    setError: (state, action) => {
-      state.error = action.payload;
-    },
-    setSavedPosts: (state, action) => {
-      state.savedPosts = action.payload;
-    },
-    removeSavedPost: (state, action) => {
-        const postId = action.payload;
-        state.savedPosts = state.savedPosts.filter((post) => post._id !== postId);
-        state.savedStatus[postId] = false;
-    },
-    // Optimistic update
-    setSavedStatusLocal: (state, action) => {
-         const { postId, status } = action.payload;
-         state.savedStatus[postId] = status;
-    }
+    resetSavePostState: () => initialState,
   },
   extraReducers: (builder) => {
-    // savePost
     builder
-        .addCase(savePost.fulfilled, (state, action) => {
-            const { postId } = action.payload;
-            state.savedStatus[postId] = true;
-            // Optionally add to savedPosts if we have the full post object. 
-            // The API response might return it. 
-            // If response.data.data includes post details, push it.
-        });
-
-    // unsavePost
-    builder
-        .addCase(unsavePost.fulfilled, (state, action) => {
-            const { postId } = action.payload;
-            state.savedStatus[postId] = false;
-            state.savedPosts = state.savedPosts.filter(p => p._id !== postId && p.post?._id !== postId);
-        });
-
-    // getSavedPosts
-    builder
-        .addCase(getSavedPosts.pending, (state) => {
-            state.loading = true;
-        })
-        .addCase(getSavedPosts.fulfilled, (state, action) => {
-            state.loading = false;
-            // Adjust based on structure. Service restructure logic suggests savedPosts array.
-            const savedPostsData = action.payload.savedPosts || [];
-            state.savedPosts = savedPostsData;
-            
-            // Sync status
-            savedPostsData.forEach(item => {
-                const id = item._id || (item.post ? item.post._id : null);
-                if (id) state.savedStatus[id] = true;
-            });
-        })
-        .addCase(getSavedPosts.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.payload;
-        });
-
-    // checkSavedStatus
-    builder
-        .addCase(checkSavedStatus.fulfilled, (state, action) => {
-            const { postId, data } = action.payload;
-            // data might be { isSaved: true }
-            state.savedStatus[postId] = !!data.isSaved; 
-        });
+      // Get Saved Posts
+      .addCase(getSavedPosts.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getSavedPosts.fulfilled, (state, action) => {
+        state.loading = false;
+        const { posts, pagination, isLoadMore } = action.payload;
+        if (isLoadMore) {
+          state.savedPosts = [...state.savedPosts, ...posts];
+        } else {
+          state.savedPosts = posts;
+        }
+        state.pagination = pagination;
+      })
+      .addCase(getSavedPosts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Get Collections
+      .addCase(getCollections.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getCollections.fulfilled, (state, action) => {
+        state.loading = false;
+        state.collections = action.payload;
+      })
+      .addCase(getCollections.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Check Save Status
+      .addCase(checkSaveStatus.fulfilled, (state, action) => {
+        const { postId, isSaved, collectionId } = action.payload;
+        state.saveStatus[postId] = { isSaved, collectionId };
+      })
+      // Save Post
+      .addCase(savePost.fulfilled, (state, action) => {
+        const { postId, post, collectionId } = action.payload;
+        state.saveStatus[postId] = { isSaved: true, collectionId };
+        if (post) {
+          state.savedPosts.unshift(post);
+        }
+      })
+      // Unsave Post
+      .addCase(unsavePost.fulfilled, (state, action) => {
+        const { postId } = action.payload;
+        state.saveStatus[postId] = { isSaved: false, collectionId: null };
+        state.savedPosts = state.savedPosts.filter((p) => p.id !== postId);
+      });
   },
 });
 
-export const { clearError, setSavedStatusLocal, setLoading, setError, setSavedPosts, removeSavedPost } = savePostSlice.actions;
-
+export const { clearError, clearSavedPosts, resetSavePostState } =
+  savePostSlice.actions;
 export default savePostSlice.reducer;
