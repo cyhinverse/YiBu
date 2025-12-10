@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   User,
   Mail,
@@ -9,60 +9,61 @@ import {
   Trash2,
   LogOut,
   Monitor,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   logout,
   logoutAll,
   updatePassword,
-} from "../../../../redux/actions/authActions";
-import toast from "react-hot-toast";
+} from '../../../redux/actions/authActions';
+import toast from 'react-hot-toast';
 
 const AccountSettings = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { currentProfile } = useSelector(state => state.user);
 
   const [account, setAccount] = useState({
-    email: "johndoe@example.com",
-    username: "johndoe",
-    phone: "",
+    email: 'johndoe@example.com',
+    username: 'johndoe',
+    phone: '',
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     const result = await dispatch(logout());
     if (logout.fulfilled.match(result)) {
-      toast.success("Đăng xuất thành công");
-      navigate("/auth/login");
+      toast.success('Đăng xuất thành công');
+      navigate('/auth/login');
     }
   };
 
   const handleLogoutAll = async () => {
     const result = await dispatch(logoutAll());
     if (logoutAll.fulfilled.match(result)) {
-      toast.success("Đã đăng xuất khỏi tất cả thiết bị");
-      navigate("/auth/login");
+      toast.success('Đã đăng xuất khỏi tất cả thiết bị');
+      navigate('/auth/login');
     }
   };
 
   const handleUpdatePassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      toast.error('Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -76,21 +77,21 @@ const AccountSettings = () => {
     setLoading(false);
 
     if (updatePassword.fulfilled.match(result)) {
-      toast.success("Đổi mật khẩu thành công. Vui lòng đăng nhập lại");
+      toast.success('Đổi mật khẩu thành công. Vui lòng đăng nhập lại');
       setShowPasswordModal(false);
       setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
       });
-      navigate("/auth/login");
+      navigate('/auth/login');
     }
   };
 
   const InputField = ({
     icon: Icon,
     label,
-    type = "text",
+    type = 'text',
     value,
     onChange,
     placeholder,
@@ -140,18 +141,16 @@ const AccountSettings = () => {
           <InputField
             icon={User}
             label="Username"
-            value={account.username}
-            onChange={(e) =>
-              setAccount({ ...account, username: e.target.value })
-            }
+            value={currentProfile.username}
+            onChange={e => setAccount({ ...account, username: e.target.value })}
             placeholder="Enter username"
           />
           <InputField
             icon={Mail}
             label="Email"
             type="email"
-            value={account.email}
-            onChange={(e) => setAccount({ ...account, email: e.target.value })}
+            value={currentProfile.email}
+            onChange={e => setAccount({ ...account, email: e.target.value })}
             placeholder="Enter email"
           />
         </div>
@@ -286,7 +285,7 @@ const AccountSettings = () => {
         >
           <div
             className="w-full max-w-sm mx-4 bg-white dark:bg-neutral-900 rounded-2xl p-6"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-black dark:text-white mb-2">
               Delete Account?
@@ -318,7 +317,7 @@ const AccountSettings = () => {
         >
           <div
             className="w-full max-w-md mx-4 bg-white dark:bg-neutral-900 rounded-2xl p-6"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-black dark:text-white mb-4">
               Đổi mật khẩu
@@ -331,7 +330,7 @@ const AccountSettings = () => {
                 <input
                   type="password"
                   value={passwordData.currentPassword}
-                  onChange={(e) =>
+                  onChange={e =>
                     setPasswordData({
                       ...passwordData,
                       currentPassword: e.target.value,
@@ -348,7 +347,7 @@ const AccountSettings = () => {
                 <input
                   type="password"
                   value={passwordData.newPassword}
-                  onChange={(e) =>
+                  onChange={e =>
                     setPasswordData({
                       ...passwordData,
                       newPassword: e.target.value,
@@ -365,7 +364,7 @@ const AccountSettings = () => {
                 <input
                   type="password"
                   value={passwordData.confirmPassword}
-                  onChange={(e) =>
+                  onChange={e =>
                     setPasswordData({
                       ...passwordData,
                       confirmPassword: e.target.value,
@@ -381,9 +380,9 @@ const AccountSettings = () => {
                 onClick={() => {
                   setShowPasswordModal(false);
                   setPasswordData({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmPassword: "",
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
                   });
                 }}
                 className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
@@ -398,7 +397,7 @@ const AccountSettings = () => {
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
                 ) : (
-                  "Xác nhận"
+                  'Xác nhận'
                 )}
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   searchUsers,
   getSuggestions,
@@ -25,7 +25,7 @@ import {
   updateSecuritySettings,
   updateContentSettings,
   updateThemeSettings,
-} from "../actions/userActions";
+} from '../actions/userActions';
 
 const initialState = {
   currentProfile: null,
@@ -43,17 +43,17 @@ const initialState = {
 };
 
 const userSlice = createSlice({
-  name: "user",
+  name: 'user',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
-    clearSearchResults: (state) => {
+    clearSearchResults: state => {
       state.searchResults = [];
     },
     setCurrentProfile: (state, action) => {
-      state.currentProfile = action.payload;
+      state.currentProfile = action.payload.data;
     },
     updateFollowStatus: (state, action) => {
       const { userId, isFollowing } = action.payload;
@@ -61,10 +61,10 @@ const userSlice = createSlice({
     },
     resetUserState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Search Users
-      .addCase(searchUsers.pending, (state) => {
+      .addCase(searchUsers.pending, state => {
         state.loading = true;
       })
       .addCase(searchUsers.fulfilled, (state, action) => {
@@ -80,19 +80,19 @@ const userSlice = createSlice({
         state.suggestions = action.payload;
       })
       // Get Profile
-      .addCase(getProfile.pending, (state) => {
+      .addCase(getProfile.pending, state => {
         state.loading = true;
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentProfile = action.payload;
+        state.currentProfile = action.payload.data;
       })
       .addCase(getProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
       // Update Profile
-      .addCase(updateProfile.pending, (state) => {
+      .addCase(updateProfile.pending, state => {
         state.loading = true;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
@@ -143,12 +143,12 @@ const userSlice = createSlice({
       })
       .addCase(acceptFollowRequest.fulfilled, (state, action) => {
         state.followRequests = state.followRequests.filter(
-          (req) => req.id !== action.payload.requestId
+          req => req.id !== action.payload.requestId
         );
       })
       .addCase(rejectFollowRequest.fulfilled, (state, action) => {
         state.followRequests = state.followRequests.filter(
-          (req) => req.id !== action.payload.requestId
+          req => req.id !== action.payload.requestId
         );
       })
       // Blocked Users
@@ -160,7 +160,7 @@ const userSlice = createSlice({
       })
       .addCase(unblockUser.fulfilled, (state, action) => {
         state.blockedUsers = state.blockedUsers.filter(
-          (user) => user.id !== action.payload.userId
+          user => user.id !== action.payload.userId
         );
       })
       // Muted Users
@@ -172,7 +172,7 @@ const userSlice = createSlice({
       })
       .addCase(unmuteUser.fulfilled, (state, action) => {
         state.mutedUsers = state.mutedUsers.filter(
-          (user) => user.id !== action.payload.userId
+          user => user.id !== action.payload.userId
         );
       })
       // Settings

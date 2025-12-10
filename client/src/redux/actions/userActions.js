@@ -1,10 +1,10 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../axios/axiosConfig";
-import { USER_API } from "../../axios/apiEndpoint";
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../axios/axiosConfig';
+import { USER_API } from '../../axios/apiEndpoint';
 
 // Search Users
 export const searchUsers = createAsyncThunk(
-  "user/searchUsers",
+  'user/searchUsers',
   async ({ query, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.SEARCH, {
@@ -13,7 +13,7 @@ export const searchUsers = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Tìm kiếm người dùng thất bại"
+        error.response?.data?.message || 'Tìm kiếm người dùng thất bại'
       );
     }
   }
@@ -21,7 +21,7 @@ export const searchUsers = createAsyncThunk(
 
 // Get Suggestions
 export const getSuggestions = createAsyncThunk(
-  "user/getSuggestions",
+  'user/getSuggestions',
   async (limit = 10, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.SUGGESTIONS, {
@@ -30,7 +30,7 @@ export const getSuggestions = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy gợi ý người dùng thất bại"
+        error.response?.data?.message || 'Lấy gợi ý người dùng thất bại'
       );
     }
   }
@@ -38,14 +38,15 @@ export const getSuggestions = createAsyncThunk(
 
 // Get Profile by ID
 export const getProfile = createAsyncThunk(
-  "user/getProfile",
+  'user/getProfile',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_PROFILE(userId));
       return response.data;
     } catch (error) {
+      console.error('getProfile error:', error);
       return rejectWithValue(
-        error.response?.data?.message || "Lấy thông tin cá nhân thất bại"
+        error.response?.data?.message || 'Lấy thông tin cá nhân thất bại'
       );
     }
   }
@@ -53,14 +54,14 @@ export const getProfile = createAsyncThunk(
 
 // Update Profile
 export const updateProfile = createAsyncThunk(
-  "user/updateProfile",
+  'user/updateProfile',
   async (profileData, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_PROFILE, profileData);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật thông tin thất bại"
+        error.response?.data?.message || 'Cập nhật thông tin thất bại'
       );
     }
   }
@@ -68,14 +69,14 @@ export const updateProfile = createAsyncThunk(
 
 // Get User by ID
 export const getUserById = createAsyncThunk(
-  "user/getUserById",
+  'user/getUserById',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_BY_ID(userId));
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy thông tin người dùng thất bại"
+        error.response?.data?.message || 'Lấy thông tin người dùng thất bại'
       );
     }
   }
@@ -83,14 +84,14 @@ export const getUserById = createAsyncThunk(
 
 // Follow User
 export const followUser = createAsyncThunk(
-  "user/followUser",
+  'user/followUser',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.post(USER_API.FOLLOW, { userId });
       return { userId, ...response.data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Theo dõi người dùng thất bại"
+        error.response?.data?.message || 'Theo dõi người dùng thất bại'
       );
     }
   }
@@ -98,14 +99,14 @@ export const followUser = createAsyncThunk(
 
 // Unfollow User
 export const unfollowUser = createAsyncThunk(
-  "user/unfollowUser",
+  'user/unfollowUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.post(USER_API.UNFOLLOW, { userId });
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Bỏ theo dõi người dùng thất bại"
+        error.response?.data?.message || 'Bỏ theo dõi người dùng thất bại'
       );
     }
   }
@@ -113,14 +114,14 @@ export const unfollowUser = createAsyncThunk(
 
 // Check Follow Status
 export const checkFollowStatus = createAsyncThunk(
-  "user/checkFollowStatus",
+  'user/checkFollowStatus',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.CHECK_FOLLOW(userId));
       return { userId, ...response.data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Kiểm tra trạng thái theo dõi thất bại"
+        error.response?.data?.message || 'Kiểm tra trạng thái theo dõi thất bại'
       );
     }
   }
@@ -128,7 +129,7 @@ export const checkFollowStatus = createAsyncThunk(
 
 // Get Followers
 export const getFollowers = createAsyncThunk(
-  "user/getFollowers",
+  'user/getFollowers',
   async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_FOLLOWERS(userId), {
@@ -137,7 +138,7 @@ export const getFollowers = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách người theo dõi thất bại"
+        error.response?.data?.message || 'Lấy danh sách người theo dõi thất bại'
       );
     }
   }
@@ -145,7 +146,7 @@ export const getFollowers = createAsyncThunk(
 
 // Get Following
 export const getFollowing = createAsyncThunk(
-  "user/getFollowing",
+  'user/getFollowing',
   async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_FOLLOWING(userId), {
@@ -154,7 +155,7 @@ export const getFollowing = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách đang theo dõi thất bại"
+        error.response?.data?.message || 'Lấy danh sách đang theo dõi thất bại'
       );
     }
   }
@@ -162,7 +163,7 @@ export const getFollowing = createAsyncThunk(
 
 // Get Follow Requests
 export const getFollowRequests = createAsyncThunk(
-  "user/getFollowRequests",
+  'user/getFollowRequests',
   async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_FOLLOW_REQUESTS, {
@@ -172,7 +173,7 @@ export const getFollowRequests = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Lấy danh sách yêu cầu theo dõi thất bại"
+          'Lấy danh sách yêu cầu theo dõi thất bại'
       );
     }
   }
@@ -180,14 +181,14 @@ export const getFollowRequests = createAsyncThunk(
 
 // Accept Follow Request
 export const acceptFollowRequest = createAsyncThunk(
-  "user/acceptFollowRequest",
+  'user/acceptFollowRequest',
   async (requestId, { rejectWithValue }) => {
     try {
       await api.post(USER_API.ACCEPT_FOLLOW_REQUEST(requestId));
       return { requestId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Chấp nhận yêu cầu theo dõi thất bại"
+        error.response?.data?.message || 'Chấp nhận yêu cầu theo dõi thất bại'
       );
     }
   }
@@ -195,14 +196,14 @@ export const acceptFollowRequest = createAsyncThunk(
 
 // Reject Follow Request
 export const rejectFollowRequest = createAsyncThunk(
-  "user/rejectFollowRequest",
+  'user/rejectFollowRequest',
   async (requestId, { rejectWithValue }) => {
     try {
       await api.post(USER_API.REJECT_FOLLOW_REQUEST(requestId));
       return { requestId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Từ chối yêu cầu theo dõi thất bại"
+        error.response?.data?.message || 'Từ chối yêu cầu theo dõi thất bại'
       );
     }
   }
@@ -210,14 +211,14 @@ export const rejectFollowRequest = createAsyncThunk(
 
 // Block User
 export const blockUser = createAsyncThunk(
-  "user/blockUser",
+  'user/blockUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.post(USER_API.BLOCK_USER(userId));
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Chặn người dùng thất bại"
+        error.response?.data?.message || 'Chặn người dùng thất bại'
       );
     }
   }
@@ -225,14 +226,14 @@ export const blockUser = createAsyncThunk(
 
 // Unblock User
 export const unblockUser = createAsyncThunk(
-  "user/unblockUser",
+  'user/unblockUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.delete(USER_API.UNBLOCK_USER(userId));
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Bỏ chặn người dùng thất bại"
+        error.response?.data?.message || 'Bỏ chặn người dùng thất bại'
       );
     }
   }
@@ -240,14 +241,14 @@ export const unblockUser = createAsyncThunk(
 
 // Get Blocked Users
 export const getBlockedUsers = createAsyncThunk(
-  "user/getBlockedUsers",
+  'user/getBlockedUsers',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_BLOCKED);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách người bị chặn thất bại"
+        error.response?.data?.message || 'Lấy danh sách người bị chặn thất bại'
       );
     }
   }
@@ -255,14 +256,14 @@ export const getBlockedUsers = createAsyncThunk(
 
 // Mute User
 export const muteUser = createAsyncThunk(
-  "user/muteUser",
+  'user/muteUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.post(USER_API.MUTE_USER(userId));
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Ẩn người dùng thất bại"
+        error.response?.data?.message || 'Ẩn người dùng thất bại'
       );
     }
   }
@@ -270,14 +271,14 @@ export const muteUser = createAsyncThunk(
 
 // Unmute User
 export const unmuteUser = createAsyncThunk(
-  "user/unmuteUser",
+  'user/unmuteUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.delete(USER_API.UNMUTE_USER(userId));
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Bỏ ẩn người dùng thất bại"
+        error.response?.data?.message || 'Bỏ ẩn người dùng thất bại'
       );
     }
   }
@@ -285,14 +286,14 @@ export const unmuteUser = createAsyncThunk(
 
 // Get Muted Users
 export const getMutedUsers = createAsyncThunk(
-  "user/getMutedUsers",
+  'user/getMutedUsers',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_MUTED);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách người bị ẩn thất bại"
+        error.response?.data?.message || 'Lấy danh sách người bị ẩn thất bại'
       );
     }
   }
@@ -300,14 +301,14 @@ export const getMutedUsers = createAsyncThunk(
 
 // Get Settings
 export const getSettings = createAsyncThunk(
-  "user/getSettings",
+  'user/getSettings',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_SETTINGS);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy cài đặt thất bại"
+        error.response?.data?.message || 'Lấy cài đặt thất bại'
       );
     }
   }
@@ -315,7 +316,7 @@ export const getSettings = createAsyncThunk(
 
 // Update Privacy Settings
 export const updatePrivacySettings = createAsyncThunk(
-  "user/updatePrivacySettings",
+  'user/updatePrivacySettings',
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_PRIVACY, settings);
@@ -323,7 +324,7 @@ export const updatePrivacySettings = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Cập nhật cài đặt quyền riêng tư thất bại"
+          'Cập nhật cài đặt quyền riêng tư thất bại'
       );
     }
   }
@@ -331,14 +332,14 @@ export const updatePrivacySettings = createAsyncThunk(
 
 // Update Notification Settings
 export const updateNotificationSettings = createAsyncThunk(
-  "user/updateNotificationSettings",
+  'user/updateNotificationSettings',
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_NOTIFICATIONS, settings);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật cài đặt thông báo thất bại"
+        error.response?.data?.message || 'Cập nhật cài đặt thông báo thất bại'
       );
     }
   }
@@ -346,14 +347,14 @@ export const updateNotificationSettings = createAsyncThunk(
 
 // Update Security Settings
 export const updateSecuritySettings = createAsyncThunk(
-  "user/updateSecuritySettings",
+  'user/updateSecuritySettings',
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_SECURITY, settings);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật cài đặt bảo mật thất bại"
+        error.response?.data?.message || 'Cập nhật cài đặt bảo mật thất bại'
       );
     }
   }
@@ -361,14 +362,14 @@ export const updateSecuritySettings = createAsyncThunk(
 
 // Update Content Settings
 export const updateContentSettings = createAsyncThunk(
-  "user/updateContentSettings",
+  'user/updateContentSettings',
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_CONTENT, settings);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật cài đặt nội dung thất bại"
+        error.response?.data?.message || 'Cập nhật cài đặt nội dung thất bại'
       );
     }
   }
@@ -376,14 +377,14 @@ export const updateContentSettings = createAsyncThunk(
 
 // Update Theme Settings
 export const updateThemeSettings = createAsyncThunk(
-  "user/updateThemeSettings",
+  'user/updateThemeSettings',
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_THEME, settings);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật cài đặt giao diện thất bại"
+        error.response?.data?.message || 'Cập nhật cài đặt giao diện thất bại'
       );
     }
   }
@@ -391,14 +392,14 @@ export const updateThemeSettings = createAsyncThunk(
 
 // Add Device
 export const addDevice = createAsyncThunk(
-  "user/addDevice",
+  'user/addDevice',
   async (deviceData, { rejectWithValue }) => {
     try {
       const response = await api.post(USER_API.ADD_DEVICE, deviceData);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Thêm thiết bị thất bại"
+        error.response?.data?.message || 'Thêm thiết bị thất bại'
       );
     }
   }
@@ -406,14 +407,14 @@ export const addDevice = createAsyncThunk(
 
 // Remove Device
 export const removeDevice = createAsyncThunk(
-  "user/removeDevice",
+  'user/removeDevice',
   async (deviceId, { rejectWithValue }) => {
     try {
       await api.delete(USER_API.REMOVE_DEVICE(deviceId));
       return { deviceId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xóa thiết bị thất bại"
+        error.response?.data?.message || 'Xóa thiết bị thất bại'
       );
     }
   }

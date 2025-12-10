@@ -4,25 +4,21 @@ import Home from "./pages/UserPage/Home";
 import Message from "./pages/UserPage/Message";
 import Explore from "./pages/UserPage/Explore";
 import Notifications from "./pages/UserPage/Notifications";
-import {
-  FollowingUser,
-  Friends,
-  HomeProfile,
-  ProfileLayout,
-  SavePosts,
-} from "./components/features/user/Profiles";
+import FollowingUser from "./components/features/user/Profiles/FollowingUser";
+import Friends from "./components/features/user/Profiles/Friends";
+import HomeProfile from "./components/features/user/Profiles/HomeProfile";
+import ProfileLayout from "./components/features/user/Profiles/ProfileLayout";
+import SavePosts from "./components/features/user/Profiles/SavePosts";
 import MainMessage from "./components/features/chat/MainMessage";
 import MessageDetail from "./components/features/chat/MessageDetail";
 import Login from "./pages/AuthPage/Login";
 import Register from "./pages/AuthPage/Register";
-import {
-  AccountSettings,
-  NotificationSettings,
-  PrivacySettings,
-  ProfileSettings,
-  SettingsLayout,
-  ThemeSettings,
-} from "./components/features/settings/Settings";
+import AccountSettings from "./components/features/settings/AccountSettings";
+import NotificationSettings from "./components/features/settings/NotificationSettings";
+import PrivacySettings from "./components/features/settings/PrivacySettings";
+import ProfileSettings from "./components/features/settings/ProfileSettings";
+import SettingsLayout from "./components/features/settings/SettingsLayout";
+import ThemeSettings from "./components/features/settings/ThemeSettings";
 import { ROUTES } from "./constants/routes";
 import NotFound from "./pages/NotFound/NotFound";
 import ForgotPassword from "./pages/AuthPage/ForgotPassword";

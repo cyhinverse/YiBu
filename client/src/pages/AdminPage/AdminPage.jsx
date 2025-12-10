@@ -7,7 +7,9 @@ import Comments from "../../components/Admin/Content/Comments";
 import Reports from "../../components/Admin/Content/Reports";
 import Interactions from "../../components/Admin/Content/Interactions";
 import BannedAccounts from "../../components/Admin/Users/BannedAccounts";
-import { Logs, Settings, Revenue } from "../../components/Admin/System";
+import Logs from "../../components/Admin/System/Logs";
+import Settings from "../../components/Admin/System/Settings";
+import Revenue from "../../components/Admin/System/Revenue";
 
 const AdminPage = () => {
   const [activePage, setActivePage] = useState("dashboard");

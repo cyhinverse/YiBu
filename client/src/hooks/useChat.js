@@ -8,7 +8,7 @@ import {
   setMessages,
   addMessage,
   setSelectedUser,
-  markMessagesAsRead as markMessagesAsReadAction, // Using alias to avoid conflict
+  markMessagesAsRead as markMessagesAsReadAction, 
   updatePagination,
   addConversation,
 } from "../slices/MessageSlice";
@@ -223,14 +223,8 @@ const useChat = () => {
       };
       
       const handleNewMsg = (data) => {
-         // Check if relevant to current chat
          const msg = data.message || data;
          if (msg.sender._id === selectedUser._id) {
-             // dispatch addMessage is handled by global listener or here?
-             // UseSocket had 'new_message' listener that dispatched addMessage?
-             // No, useSocket had GENERIC handler.
-             // Let's rely on Redux being updated implies UI update.
-             // BUT we need to mark as read if we are looking at it.
              if (!msg.isRead) {
                  markMessagesAsRead([msg._id]);
              }
@@ -251,7 +245,7 @@ const useChat = () => {
   return {
     selectedUser,
     currentMessages,
-    loading: loading.messages, // precise loading state
+    loading: loading.messages,
     sending: loading.sending,
     pagination,
     selectUser,

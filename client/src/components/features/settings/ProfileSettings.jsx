@@ -1,20 +1,22 @@
-import { useState } from "react";
-import { Camera, User, FileText, Link2, MapPin } from "lucide-react";
+import { useState } from 'react';
+import { Camera, User, FileText, Link2, MapPin } from 'lucide-react';
+import { useSelector } from 'react-redux';
 
 // Fake user data
 const FAKE_USER = {
-  name: "John Doe",
-  username: "johndoe",
-  bio: "Software Developer | Tech Enthusiast | Coffee Lover ☕",
-  website: "https://johndoe.dev",
-  location: "San Francisco, CA",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
-  cover: "https://images.unsplash.com/photo-1557683316-973673baf926?w=800",
+  name: 'John Doe',
+  username: 'johndoe',
+  bio: 'Software Developer | Tech Enthusiast | Coffee Lover ☕',
+  website: 'https://johndoe.dev',
+  location: 'San Francisco, CA',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
+  cover: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800',
 };
 
 const ProfileSettings = () => {
   const [profile, setProfile] = useState(FAKE_USER);
   const [isSaving, setIsSaving] = useState(false);
+  const { currentProfile } = useSelector(state => state.user);
 
   const handleSave = () => {
     setIsSaving(true);
@@ -92,8 +94,8 @@ const ProfileSettings = () => {
         <div className="flex items-end gap-4 -mt-12 ml-4">
           <div className="relative">
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={currentProfile.avatar}
+              alt={currentProfile.username}
               className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-900"
             />
             <button className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity">
@@ -111,37 +113,43 @@ const ProfileSettings = () => {
         <InputField
           icon={User}
           label="Name"
-          value={profile.name}
-          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+          value={currentProfile.username}
+          onChange={e => setProfile({ ...profile, name: e.target.value })}
           placeholder="Your name"
         />
         <InputField
           icon={User}
           label="Username"
-          value={profile.username}
-          onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+          value={currentProfile.username}
+          onChange={e => setProfile({ ...profile, username: e.target.value })}
           placeholder="Your username"
         />
         <InputField
           icon={FileText}
           label="Bio"
-          value={profile.bio}
-          onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+          value={currentProfile.bio}
+          onChange={e => setProfile({ ...profile, bio: e.target.value })}
           placeholder="Tell us about yourself"
           multiline
         />
         <InputField
           icon={Link2}
           label="Website"
-          value={profile.website}
-          onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+          value={
+            currentProfile.website ? currentProfile.website : 'Chưa có website'
+          }
+          onChange={e => setProfile({ ...profile, website: e.target.value })}
           placeholder="https://yourwebsite.com"
         />
         <InputField
           icon={MapPin}
           label="Location"
-          value={profile.location}
-          onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+          value={
+            currentProfile.location
+              ? currentProfile.location
+              : 'Chưa có địa chỉ'
+          }
+          onChange={e => setProfile({ ...profile, location: e.target.value })}
           placeholder="Where are you based?"
         />
       </div>
@@ -153,7 +161,7 @@ const ProfileSettings = () => {
           disabled={isSaving}
           className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : "Save Changes"}
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   MoreHorizontal,
   Heart,
@@ -7,20 +7,20 @@ import {
   Bookmark,
   Eye,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Fake post data for component testing
-const formatCount = (count) => {
+const formatCount = count => {
   if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
   }
   if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
   }
   return count.toString();
 };
 
-const formatTime = (date) => {
+const formatTime = date => {
   const now = new Date();
   const postDate = new Date(date);
   const diffMs = now - postDate;
@@ -28,7 +28,7 @@ const formatTime = (date) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "now";
+  if (diffMins < 1) return 'now';
   if (diffMins < 60) return `${diffMins}m`;
   if (diffHours < 24) return `${diffHours}h`;
   if (diffDays < 7) return `${diffDays}d`;
@@ -44,9 +44,9 @@ const Post = ({ data }) => {
   const [showComments, setShowComments] = useState(false);
 
   const user = data?.user || {
-    name: "Unknown User",
-    username: "unknown",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=default",
+    name: 'Unknown User',
+    username: 'unknown',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
   };
 
   const handleLike = () => {
@@ -57,8 +57,14 @@ const Post = ({ data }) => {
   const handleSave = () => {
     setIsSaved(!isSaved);
   };
+  console.log(data);
 
-  if (!data) return null;
+  if (!data)
+    return (
+      <div className="p-4 text-center text-neutral-500">
+        No post data available
+      </div>
+    );
 
   return (
     <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
@@ -119,19 +125,19 @@ const Post = ({ data }) => {
       {data.media && data.media.length > 0 && (
         <div
           className={`rounded-xl overflow-hidden mb-3 ${
-            data.media.length === 1 ? "" : "grid gap-1"
-          } ${data.media.length === 2 ? "grid-cols-2" : ""} ${
-            data.media.length >= 3 ? "grid-cols-2" : ""
+            data.media.length === 1 ? '' : 'grid gap-1'
+          } ${data.media.length === 2 ? 'grid-cols-2' : ''} ${
+            data.media.length >= 3 ? 'grid-cols-2' : ''
           }`}
         >
           {data.media.slice(0, 4).map((item, index) => (
             <div
               key={index}
               className={`relative overflow-hidden ${
-                data.media.length === 3 && index === 0 ? "row-span-2" : ""
-              } ${data.media.length === 1 ? "max-h-[450px]" : "aspect-square"}`}
+                data.media.length === 3 && index === 0 ? 'row-span-2' : ''
+              } ${data.media.length === 1 ? 'max-h-[450px]' : 'aspect-square'}`}
             >
-              {item.type === "video" ? (
+              {item.type === 'video' ? (
                 <video
                   autoPlay
                   playsInline
@@ -144,7 +150,7 @@ const Post = ({ data }) => {
               ) : (
                 <img
                   className={`w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300 ${
-                    data.media.length === 1 ? "max-h-[450px]" : ""
+                    data.media.length === 1 ? 'max-h-[450px]' : ''
                   }`}
                   src={item.url}
                   alt={`Post media ${index + 1}`}
@@ -183,11 +189,11 @@ const Post = ({ data }) => {
             onClick={handleLike}
             className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all ${
               isLiked
-                ? "text-red-500 bg-red-50 dark:bg-red-500/10"
-                : "text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                ? 'text-red-500 bg-red-50 dark:bg-red-500/10'
+                : 'text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'
             }`}
           >
-            <Heart size={18} className={isLiked ? "fill-current" : ""} />
+            <Heart size={18} className={isLiked ? 'fill-current' : ''} />
             {likeCount > 0 && (
               <span className="text-sm font-medium">
                 {formatCount(likeCount)}
@@ -219,11 +225,11 @@ const Post = ({ data }) => {
           onClick={handleSave}
           className={`p-2 rounded-full transition-all ${
             isSaved
-              ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10"
-              : "text-neutral-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10"
+              ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10'
+              : 'text-neutral-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10'
           }`}
         >
-          <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
+          <Bookmark size={18} className={isSaved ? 'fill-current' : ''} />
         </button>
       </div>
 
@@ -255,7 +261,7 @@ const Post = ({ data }) => {
         >
           <div
             className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
               Report post
@@ -284,7 +290,7 @@ const Post = ({ data }) => {
         >
           <div
             className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl max-h-[80vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
               <h3 className="font-semibold text-black dark:text-white">
