@@ -7,7 +7,14 @@
  * @param {Object} data - Optional data payload
  * @param {Object} extras - Optional extra fields (e.g. pagination)
  */
-export const formatResponse = (res, statusCode = 200, code = 1, message = "Success", data = null, extras = {}) => {
+export const formatResponse = (
+  res,
+  statusCode = 200,
+  code = 1,
+  message = 'Success',
+  data = null,
+  extras = {}
+) => {
   const response = {
     code,
     message,

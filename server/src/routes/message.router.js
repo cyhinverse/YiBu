@@ -1,7 +1,38 @@
-import express from "express";
-import MessageController from "../controllers/message.controller.js";
-import { verifyToken } from "../middlewares/auth.middleware.js";
-import upload from "../middlewares/multerUpload.js";
+import express from 'express';
+import MessageController from '../controllers/message.controller.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
+import upload from '../middlewares/multerUpload.js';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../middlewares/validation.middleware.js';
+import {
+  getConversationsQuery,
+  createConversationBody,
+  conversationIdParam,
+  deleteConversationParam,
+  createGroupBody,
+  updateGroupParam,
+  updateGroupBody,
+  addMembersParam,
+  addMembersBody,
+  removeMemberParam,
+  leaveGroupParam,
+  getMessagesParam,
+  getMessagesQuery,
+  sendMessageBody,
+  deleteMessageParam,
+  markAsReadParam,
+  markMessageAsReadParam,
+  addReactionParam,
+  addReactionBody,
+  removeReactionParam,
+  typingParam,
+  typingBody,
+  searchMessagesQuery,
+  getUsersForChatQuery,
+} from '../validations/message.validation.js';
 
 const router = express.Router();
 
@@ -10,56 +41,104 @@ router.use(verifyToken);
 // ======================================
 // Conversations
 // ======================================
-router.get("/conversations", MessageController.GetAllConversations);
-router.post("/conversations", MessageController.GetOrCreateConversation);
-router.get("/conversations/:conversationId", MessageController.GetConversation);
+router.get(
+  '/conversations',
+  validateQuery(getConversationsQuery),
+  MessageController.GetAllConversations
+);
+router.post(
+  '/conversations',
+  validateBody(createConversationBody),
+  MessageController.GetOrCreateConversation
+);
+router.get(
+  '/conversations/:conversationId',
+  validateParams(conversationIdParam),
+  MessageController.GetConversation
+);
 router.delete(
-  "/conversations/:conversationId",
+  '/conversations/:conversationId',
+  validateParams(deleteConversationParam),
   MessageController.DeleteConversation
 );
 
 // Group Conversations
-router.post("/groups", MessageController.CreateGroupConversation);
+router.post(
+  '/groups',
+  validateBody(createGroupBody),
+  MessageController.CreateGroupConversation
+);
 router.put(
-  "/groups/:conversationId",
+  '/groups/:conversationId',
+  validateParams(updateGroupParam),
+  validateBody(updateGroupBody),
   MessageController.UpdateGroupConversation
 );
 router.post(
-  "/groups/:conversationId/members",
+  '/groups/:conversationId/members',
+  validateParams(addMembersParam),
+  validateBody(addMembersBody),
   MessageController.AddGroupMembers
 );
 router.delete(
-  "/groups/:conversationId/members/:memberId",
+  '/groups/:conversationId/members/:memberId',
+  validateParams(removeMemberParam),
   MessageController.RemoveGroupMember
 );
-router.post("/groups/:conversationId/leave", MessageController.LeaveGroup);
+router.post(
+  '/groups/:conversationId/leave',
+  validateParams(leaveGroupParam),
+  MessageController.LeaveGroup
+);
 
 // ======================================
 // Messages
 // ======================================
 router.get(
-  "/conversations/:conversationId/messages",
+  '/conversations/:conversationId/messages',
+  validateParams(getMessagesParam),
+  validateQuery(getMessagesQuery),
   MessageController.GetMessages
 );
-router.post("/send", upload.array("files", 5), MessageController.SendMessage);
-router.delete("/messages/:messageId", MessageController.DeleteMessage);
+router.post(
+  '/send',
+  upload.array('files', 5),
+  validateBody(sendMessageBody),
+  MessageController.SendMessage
+);
+router.delete(
+  '/messages/:messageId',
+  validateParams(deleteMessageParam),
+  MessageController.DeleteMessage
+);
 
 // ======================================
 // Message Status
 // ======================================
 router.post(
-  "/conversations/:conversationId/read",
+  '/conversations/:conversationId/read',
+  validateParams(markAsReadParam),
   MessageController.MarkAsRead
 );
-router.post("/messages/:messageId/read", MessageController.MarkMessageAsRead);
-router.get("/unread-count", MessageController.GetUnreadCount);
+router.post(
+  '/messages/:messageId/read',
+  validateParams(markMessageAsReadParam),
+  MessageController.MarkMessageAsRead
+);
+router.get('/unread-count', MessageController.GetUnreadCount);
 
 // ======================================
 // Reactions
 // ======================================
-router.post("/messages/:messageId/reactions", MessageController.AddReaction);
+router.post(
+  '/messages/:messageId/reactions',
+  validateParams(addReactionParam),
+  validateBody(addReactionBody),
+  MessageController.AddReaction
+);
 router.delete(
-  "/messages/:messageId/reactions",
+  '/messages/:messageId/reactions',
+  validateParams(removeReactionParam),
   MessageController.RemoveReaction
 );
 
@@ -67,25 +146,37 @@ router.delete(
 // Typing & Search
 // ======================================
 router.post(
-  "/conversations/:conversationId/typing",
+  '/conversations/:conversationId/typing',
+  validateParams(typingParam),
+  validateBody(typingBody),
   MessageController.SendTypingIndicator
 );
-router.get("/search", MessageController.SearchMessages);
+router.get(
+  '/search',
+  validateQuery(searchMessagesQuery),
+  MessageController.SearchMessages
+);
 
 // ======================================
 // Users for Chat
 // ======================================
-router.get("/users", MessageController.GetUsersForChat);
+router.get(
+  '/users',
+  validateQuery(getUsersForChatQuery),
+  MessageController.GetUsersForChat
+);
 
 // ======================================
 // Mute
 // ======================================
 router.post(
-  "/conversations/:conversationId/mute",
+  '/conversations/:conversationId/mute',
+  validateParams(conversationIdParam),
   MessageController.MuteConversation
 );
 router.delete(
-  "/conversations/:conversationId/mute",
+  '/conversations/:conversationId/mute',
+  validateParams(conversationIdParam),
   MessageController.UnmuteConversation
 );
 
@@ -93,7 +184,8 @@ router.delete(
 // Media
 // ======================================
 router.get(
-  "/conversations/:conversationId/media",
+  '/conversations/:conversationId/media',
+  validateParams(conversationIdParam),
   MessageController.GetConversationMedia
 );
 

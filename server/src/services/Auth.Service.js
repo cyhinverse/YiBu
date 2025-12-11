@@ -1,14 +1,14 @@
-import User from "../models/User.js";
-import RefreshToken from "../models/RefreshToken.js";
-import UserSettings from "../models/UserSettings.js";
-import { hashPassword, comparePassword } from "../helpers/HashPassword.js";
+import User from '../models/User.js';
+import RefreshToken from '../models/RefreshToken.js';
+import UserSettings from '../models/UserSettings.js';
+import { hashPassword, comparePassword } from '../helpers/HashPassword.js';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from "../helpers/GenerateTokens.js";
-import crypto from "crypto";
-import logger from "../configs/logger.js";
+} from '../helpers/GenerateTokens.js';
+import crypto from 'crypto';
+import logger from '../configs/logger.js';
 
 /**
  * Auth Service - Refactored for new model structure
@@ -36,11 +36,11 @@ class AuthService {
 
     if (existingUser) {
       if (existingUser.email === email.toLowerCase()) {
-        const error = new Error("Email đã được sử dụng");
+        const error = new Error('Email đã được sử dụng');
         error.statusCode = 400;
         throw error;
       }
-      const error = new Error("Username đã được sử dụng");
+      const error = new Error('Username đã được sử dụng');
       error.statusCode = 400;
       throw error;
     }
@@ -83,18 +83,18 @@ class AuthService {
     const { email, password } = credentials;
 
     const user = await User.findOne({ email: email.toLowerCase() }).select(
-      "+password +loginAttempts"
+      '+password + loginAttempts'
     );
 
     if (!user) {
-      throw new Error("Email hoặc mật khẩu không đúng");
+      throw new Error('Email hoặc mật khẩu không đúng');
     }
 
-    if (user.moderation?.status === "banned") {
-      throw new Error("Tài khoản đã bị khóa vĩnh viễn");
+    if (user.moderation?.status === 'banned') {
+      throw new Error('Tài khoản đã bị khóa vĩnh viễn');
     }
 
-    if (user.moderation?.status === "suspended") {
+    if (user.moderation?.status === 'suspended') {
       const suspendedUntil = user.moderation.suspendedUntil;
       if (suspendedUntil && suspendedUntil > new Date()) {
         const remainingDays = Math.ceil(
@@ -102,16 +102,19 @@ class AuthService {
         );
         throw new Error(`Tài khoản bị tạm khóa, còn ${remainingDays} ngày`);
       }
-      user.moderation.status = "active";
+      user.moderation.status = 'active';
       user.moderation.suspendedUntil = null;
     }
 
-    if (
-      user.loginAttempts?.lockUntil &&
-      user.loginAttempts.lockUntil > new Date()
-    ) {
+    // Check account lock (handle both legacy Number and new Object format)
+    const lockUntil =
+      typeof user.loginAttempts === 'object'
+        ? user.loginAttempts?.lockUntil
+        : null;
+
+    if (lockUntil && lockUntil > new Date()) {
       const remainingMinutes = Math.ceil(
-        (user.loginAttempts.lockUntil - new Date()) / (1000 * 60)
+        (lockUntil - new Date()) / (1000 * 60)
       );
       throw new Error(
         `Tài khoản bị khóa tạm thời, thử lại sau ${remainingMinutes} phút`
@@ -122,7 +125,7 @@ class AuthService {
 
     if (!isPasswordValid) {
       await this._handleFailedLogin(user);
-      throw new Error("Email hoặc mật khẩu không đúng");
+      throw new Error('Email hoặc mật khẩu không đúng');
     }
 
     await this._resetLoginAttempts(user);
@@ -164,14 +167,42 @@ class AuthService {
     const maxAttempts = 5;
     const lockDurationMinutes = 15;
 
-    const attempts = (user.loginAttempts?.count || 0) + 1;
+    // Handle legacy data where loginAttempts might be a Number instead of Object
+    const currentCount =
+      typeof user.loginAttempts === 'object'
+        ? user.loginAttempts?.count || 0
+        : 0;
+    const attempts = currentCount + 1;
+
+    // If loginAttempts is a Number (legacy), first convert it to object
+    if (typeof user.loginAttempts === 'number') {
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          loginAttempts: {
+            count: attempts,
+            lastAttempt: new Date(),
+            lockUntil:
+              attempts >= maxAttempts
+                ? new Date(Date.now() + lockDurationMinutes * 60 * 1000)
+                : null,
+          },
+        },
+      });
+      if (attempts >= maxAttempts) {
+        logger.warn(
+          `User ${user._id} locked after ${maxAttempts} failed attempts`
+        );
+      }
+      return;
+    }
+
     const update = {
-      "loginAttempts.count": attempts,
-      "loginAttempts.lastAttempt": new Date(),
+      'loginAttempts.count': attempts,
+      'loginAttempts.lastAttempt': new Date(),
     };
 
     if (attempts >= maxAttempts) {
-      update["loginAttempts.lockUntil"] = new Date(
+      update['loginAttempts.lockUntil'] = new Date(
         Date.now() + lockDurationMinutes * 60 * 1000
       );
       logger.warn(
@@ -183,28 +214,38 @@ class AuthService {
   }
 
   static async _resetLoginAttempts(user) {
+    // Handle legacy data where loginAttempts might be a Number
+    if (typeof user.loginAttempts === 'number' && user.loginAttempts > 0) {
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          loginAttempts: { count: 0, lockUntil: null },
+        },
+      });
+      return;
+    }
+
     if (user.loginAttempts?.count > 0) {
       await User.findByIdAndUpdate(user._id, {
         $set: {
-          "loginAttempts.count": 0,
-          "loginAttempts.lockUntil": null,
+          'loginAttempts.count': 0,
+          'loginAttempts.lockUntil': null,
         },
       });
     }
   }
 
   static async _createRefreshToken(userId, deviceInfo = {}) {
-    const family = crypto.randomBytes(16).toString("hex");
-    const token = crypto.randomBytes(40).toString("hex");
+    const family = crypto.randomBytes(16).toString('hex');
+    const token = crypto.randomBytes(40).toString('hex');
 
     const refreshToken = await RefreshToken.create({
       user: userId,
       token,
       family,
       device: {
-        userAgent: deviceInfo.userAgent || "unknown",
-        ip: deviceInfo.ip || "unknown",
-        platform: deviceInfo.platform || "unknown",
+        userAgent: deviceInfo.userAgent || 'unknown',
+        ip: deviceInfo.ip || 'unknown',
+        platform: deviceInfo.platform || 'unknown',
       },
     });
 
@@ -227,33 +268,33 @@ class AuthService {
       if (compromisedToken) {
         await RefreshToken.updateMany(
           { family: compromisedToken.family },
-          { isRevoked: true, revokedReason: "token_reuse_detected" }
+          { isRevoked: true, revokedReason: 'token_reuse_detected' }
         );
         logger.warn(
           `Token reuse detected for user ${compromisedToken.user}, family revoked`
         );
       }
 
-      throw new Error("Invalid refresh token");
+      throw new Error('Invalid refresh token');
     }
 
     if (refreshTokenDoc.expiresAt < new Date()) {
       refreshTokenDoc.isRevoked = true;
-      refreshTokenDoc.revokedReason = "expired";
+      refreshTokenDoc.revokedReason = 'expired';
       await refreshTokenDoc.save();
-      throw new Error("Refresh token expired");
+      throw new Error('Refresh token expired');
     }
 
     const user = await User.findById(refreshTokenDoc.user);
-    if (!user || user.moderation?.status === "banned") {
-      throw new Error("User not found or banned");
+    if (!user || user.moderation?.status === 'banned') {
+      throw new Error('User not found or banned');
     }
 
     refreshTokenDoc.isRevoked = true;
-    refreshTokenDoc.revokedReason = "rotated";
+    refreshTokenDoc.revokedReason = 'rotated';
     await refreshTokenDoc.save();
 
-    const newToken = crypto.randomBytes(40).toString("hex");
+    const newToken = crypto.randomBytes(40).toString('hex');
     await RefreshToken.create({
       user: user._id,
       token: newToken,
@@ -262,10 +303,10 @@ class AuthService {
         userAgent:
           deviceInfo.userAgent ||
           refreshTokenDoc.device?.userAgent ||
-          "unknown",
-        ip: deviceInfo.ip || refreshTokenDoc.device?.ip || "unknown",
+          'unknown',
+        ip: deviceInfo.ip || refreshTokenDoc.device?.ip || 'unknown',
         platform:
-          deviceInfo.platform || refreshTokenDoc.device?.platform || "unknown",
+          deviceInfo.platform || refreshTokenDoc.device?.platform || 'unknown',
       },
     });
 
@@ -291,7 +332,7 @@ class AuthService {
 
     if (tokenDoc) {
       tokenDoc.isRevoked = true;
-      tokenDoc.revokedReason = "logout";
+      tokenDoc.revokedReason = 'logout';
       await tokenDoc.save();
     }
 
@@ -301,7 +342,7 @@ class AuthService {
   static async logoutAllDevices(userId) {
     await RefreshToken.updateMany(
       { user: userId, isRevoked: false },
-      { isRevoked: true, revokedReason: "logout_all" }
+      { isRevoked: true, revokedReason: 'logout_all' }
     );
 
     return { success: true };
@@ -312,10 +353,10 @@ class AuthService {
   // ======================================
 
   static async changePassword(userId, currentPassword, newPassword) {
-    const user = await User.findById(userId).select("+password");
+    const user = await User.findById(userId).select('+password');
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     const isPasswordValid = await comparePassword(
@@ -323,11 +364,11 @@ class AuthService {
       user.password
     );
     if (!isPasswordValid) {
-      throw new Error("Mật khẩu hiện tại không đúng");
+      throw new Error('Mật khẩu hiện tại không đúng');
     }
 
     if (currentPassword === newPassword) {
-      throw new Error("Mật khẩu mới phải khác mật khẩu cũ");
+      throw new Error('Mật khẩu mới phải khác mật khẩu cũ');
     }
 
     user.password = await hashPassword(newPassword);
@@ -335,7 +376,7 @@ class AuthService {
 
     await RefreshToken.updateMany(
       { user: userId, isRevoked: false },
-      { isRevoked: true, revokedReason: "password_changed" }
+      { isRevoked: true, revokedReason: 'password_changed' }
     );
 
     return { success: true };
@@ -348,15 +389,15 @@ class AuthService {
       return { success: true };
     }
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(resetToken)
-      .digest("hex");
+      .digest('hex');
 
     await User.findByIdAndUpdate(user._id, {
-      "security.passwordResetToken": resetTokenHash,
-      "security.passwordResetExpires": new Date(Date.now() + 60 * 60 * 1000),
+      'security.passwordResetToken': resetTokenHash,
+      'security.passwordResetExpires': new Date(Date.now() + 60 * 60 * 1000),
     });
 
     // TODO: Send email with resetToken
@@ -367,17 +408,17 @@ class AuthService {
 
   static async resetPassword(resetToken, newPassword) {
     const resetTokenHash = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(resetToken)
-      .digest("hex");
+      .digest('hex');
 
     const user = await User.findOne({
-      "security.passwordResetToken": resetTokenHash,
-      "security.passwordResetExpires": { $gt: new Date() },
+      'security.passwordResetToken': resetTokenHash,
+      'security.passwordResetExpires': { $gt: new Date() },
     });
 
     if (!user) {
-      throw new Error("Token không hợp lệ hoặc đã hết hạn");
+      throw new Error('Token không hợp lệ hoặc đã hết hạn');
     }
 
     user.password = await hashPassword(newPassword);
@@ -387,7 +428,7 @@ class AuthService {
 
     await RefreshToken.updateMany(
       { user: user._id, isRevoked: false },
-      { isRevoked: true, revokedReason: "password_reset" }
+      { isRevoked: true, revokedReason: 'password_reset' }
     );
 
     return { success: true };
@@ -401,22 +442,22 @@ class AuthService {
     const user = await User.findById(userId);
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     if (user.verified) {
-      throw new Error("Email đã được xác thực");
+      throw new Error('Email đã được xác thực');
     }
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenHash = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(verificationToken)
-      .digest("hex");
+      .digest('hex');
 
     await User.findByIdAndUpdate(userId, {
-      "security.emailVerificationToken": verificationTokenHash,
-      "security.emailVerificationExpires": new Date(
+      'security.emailVerificationToken': verificationTokenHash,
+      'security.emailVerificationExpires': new Date(
         Date.now() + 24 * 60 * 60 * 1000
       ),
     });
@@ -429,17 +470,17 @@ class AuthService {
 
   static async verifyEmail(verificationToken) {
     const verificationTokenHash = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(verificationToken)
-      .digest("hex");
+      .digest('hex');
 
     const user = await User.findOne({
-      "security.emailVerificationToken": verificationTokenHash,
-      "security.emailVerificationExpires": { $gt: new Date() },
+      'security.emailVerificationToken': verificationTokenHash,
+      'security.emailVerificationExpires': { $gt: new Date() },
     });
 
     if (!user) {
-      throw new Error("Token không hợp lệ hoặc đã hết hạn");
+      throw new Error('Token không hợp lệ hoặc đã hết hạn');
     }
 
     user.verified = true;
@@ -455,8 +496,8 @@ class AuthService {
   // ======================================
 
   static async enableTwoFactor(userId) {
-    const speakeasy = (await import("speakeasy")).default;
-    const QRCode = (await import("qrcode")).default;
+    const speakeasy = (await import('speakeasy')).default;
+    const QRCode = (await import('qrcode')).default;
 
     const secret = speakeasy.generateSecret({
       name: `YiBu:${userId}`,
@@ -464,8 +505,8 @@ class AuthService {
     });
 
     await User.findByIdAndUpdate(userId, {
-      "security.twoFactorSecret": secret.base32,
-      "security.twoFactorEnabled": false,
+      'security.twoFactorSecret': secret.base32,
+      'security.twoFactorEnabled': false,
     });
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
@@ -474,43 +515,43 @@ class AuthService {
   }
 
   static async verifyAndEnableTwoFactor(userId, token) {
-    const speakeasy = (await import("speakeasy")).default;
+    const speakeasy = (await import('speakeasy')).default;
 
     const user = await User.findById(userId).select(
-      "+security.twoFactorSecret"
+      '+security.twoFactorSecret'
     );
 
     if (!user || !user.security?.twoFactorSecret) {
-      throw new Error("Two-factor setup not initiated");
+      throw new Error('Two-factor setup not initiated');
     }
 
     const verified = speakeasy.totp.verify({
       secret: user.security.twoFactorSecret,
-      encoding: "base32",
+      encoding: 'base32',
       token,
       window: 1,
     });
 
     if (!verified) {
-      throw new Error("Invalid verification code");
+      throw new Error('Invalid verification code');
     }
 
     const backupCodes = Array.from({ length: 10 }, () =>
-      crypto.randomBytes(4).toString("hex")
+      crypto.randomBytes(4).toString('hex')
     );
 
     const hashedBackupCodes = await Promise.all(
-      backupCodes.map((code) => hashPassword(code))
+      backupCodes.map(code => hashPassword(code))
     );
 
     await User.findByIdAndUpdate(userId, {
-      "security.twoFactorEnabled": true,
-      "security.twoFactorBackupCodes": hashedBackupCodes,
+      'security.twoFactorEnabled': true,
+      'security.twoFactorBackupCodes': hashedBackupCodes,
     });
 
     await UserSettings.findOneAndUpdate(
       { user: userId },
-      { "security.twoFactorEnabled": true },
+      { 'security.twoFactorEnabled': true },
       { upsert: true }
     );
 
@@ -518,45 +559,45 @@ class AuthService {
   }
 
   static async disableTwoFactor(userId, password) {
-    const user = await User.findById(userId).select("+password");
+    const user = await User.findById(userId).select('+password');
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
-      throw new Error("Mật khẩu không đúng");
+      throw new Error('Mật khẩu không đúng');
     }
 
     await User.findByIdAndUpdate(userId, {
-      "security.twoFactorEnabled": false,
-      "security.twoFactorSecret": null,
-      "security.twoFactorBackupCodes": [],
+      'security.twoFactorEnabled': false,
+      'security.twoFactorSecret': null,
+      'security.twoFactorBackupCodes': [],
     });
 
     await UserSettings.findOneAndUpdate(
       { user: userId },
-      { "security.twoFactorEnabled": false }
+      { 'security.twoFactorEnabled': false }
     );
 
     return { success: true };
   }
 
   static async verifyTwoFactorToken(userId, token) {
-    const speakeasy = (await import("speakeasy")).default;
+    const speakeasy = (await import('speakeasy')).default;
 
     const user = await User.findById(userId).select(
-      "+security.twoFactorSecret"
+      '+security.twoFactorSecret'
     );
 
     if (!user || !user.security?.twoFactorSecret) {
-      throw new Error("Two-factor not enabled");
+      throw new Error('Two-factor not enabled');
     }
 
     const verified = speakeasy.totp.verify({
       secret: user.security.twoFactorSecret,
-      encoding: "base32",
+      encoding: 'base32',
       token,
       window: 1,
     });
@@ -574,11 +615,11 @@ class AuthService {
       isRevoked: false,
       expiresAt: { $gt: new Date() },
     })
-      .select("device createdAt lastUsedAt")
+      .select('device createdAt lastUsedAt')
       .sort({ lastUsedAt: -1 })
       .lean();
 
-    return sessions.map((session) => ({
+    return sessions.map(session => ({
       id: session._id,
       device: session.device,
       createdAt: session.createdAt,
@@ -589,11 +630,11 @@ class AuthService {
   static async revokeSession(userId, sessionId) {
     const result = await RefreshToken.findOneAndUpdate(
       { _id: sessionId, user: userId },
-      { isRevoked: true, revokedReason: "manual_revoke" }
+      { isRevoked: true, revokedReason: 'manual_revoke' }
     );
 
     if (!result) {
-      throw new Error("Session not found");
+      throw new Error('Session not found');
     }
 
     return { success: true };
@@ -610,10 +651,10 @@ class AuthService {
       user = await User.create({
         name: profile.name,
         email: profile.email.toLowerCase(),
-        username: `user_${crypto.randomBytes(4).toString("hex")}`,
+        username: `user_${crypto.randomBytes(4).toString('hex')}`,
         avatar: profile.picture,
         verified: true,
-        "oauth.google": {
+        'oauth.google': {
           id: profile.sub,
           email: profile.email,
         },
@@ -628,7 +669,7 @@ class AuthService {
       isAdmin: user.isAdmin,
     });
     const refreshTokenData = await this._createRefreshToken(user._id, {
-      platform: "google_oauth",
+      platform: 'google_oauth',
     });
 
     return {

@@ -1,23 +1,23 @@
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../configs/cloudinaryConfig.js";
+import multer from 'multer';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../configs/cloudinaryConfig.js';
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    let folder = "user_uploads";
-    let isImage = file.mimetype.startsWith("image/");
-    let isVideo = file.mimetype.startsWith("video/");
+    let folder = 'user_uploads';
+    let isImage = file.mimetype.startsWith('image/');
+    let isVideo = file.mimetype.startsWith('video/');
 
     if (!isImage && !isVideo) {
-      throw new Error("Only support upload image or video!");
+      throw new Error('Only support upload image or video!');
     }
 
     return {
       folder: folder,
-      resource_type: isVideo ? "video" : "image",
-      format: isImage ? "jpg" : undefined,
-      public_id: file.originalname.split(".")[0],
+      resource_type: isVideo ? 'video' : 'image',
+      format: isImage ? 'jpg' : undefined,
+      public_id: file.originalname.split('.')[0],
     };
   },
 });

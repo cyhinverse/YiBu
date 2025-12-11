@@ -43,6 +43,7 @@ const UserSchema = new Schema(
       default: "other",
     },
     website: { type: String, default: "" },
+    cover: { type: String, default: "" },
 
     // Interests for recommendation (stored as array for efficient matching)
     interests: [{ type: String, lowercase: true, trim: true }],
@@ -93,7 +94,11 @@ const UserSchema = new Schema(
     // Activity tracking
     lastActiveAt: { type: Date, default: Date.now },
     lastLoginAt: { type: Date },
-    loginAttempts: { type: Number, default: 0 },
+    loginAttempts: {
+      count: { type: Number, default: 0 },
+      lastAttempt: { type: Date },
+      lockUntil: { type: Date },
+    },
 
     // Privacy (inline for fast access)
     privacy: {

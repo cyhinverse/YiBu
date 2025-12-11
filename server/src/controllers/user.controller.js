@@ -1,6 +1,7 @@
 import { CatchError } from "../configs/CatchError.js";
 import UserService from "../services/User.Service.js";
 import { formatResponse } from "../helpers/formatResponse.js";
+import logger from "../configs/logger.js";
 
 const UserController = {
   // ======================================
@@ -195,6 +196,7 @@ const UserController = {
 
   GET_PROFILE_BY_ID: CatchError(async (req, res) => {
     const { id } = req.params;
+    logger.info(`Fetching profile for user ID: ${id}`);
     const requesterId = req.user?.id;
 
     const profile = await UserService.getUserProfile(id, requesterId);
