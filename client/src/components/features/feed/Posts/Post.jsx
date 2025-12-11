@@ -8,6 +8,7 @@ import {
   Eye,
   X,
 } from 'lucide-react';
+import { CommentModal } from '../Comment';
 
 // Fake post data for component testing
 const formatCount = count => {
@@ -57,7 +58,6 @@ const Post = ({ data }) => {
   const handleSave = () => {
     setIsSaved(!isSaved);
   };
-  console.log(data);
 
   if (!data)
     return (
@@ -284,30 +284,10 @@ const Post = ({ data }) => {
 
       {/* Comments Modal Placeholder */}
       {showComments && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowComments(false)}
-        >
-          <div
-            className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl max-h-[80vh] overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
-              <h3 className="font-semibold text-black dark:text-white">
-                Comments
-              </h3>
-              <button
-                onClick={() => setShowComments(false)}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                <X size={18} className="text-neutral-400" />
-              </button>
-            </div>
-            <div className="p-4 text-center text-neutral-500">
-              No comments yet
-            </div>
-          </div>
-        </div>
+        <CommentModal
+          onClose={() => setShowComments(false)}
+          postId={data?._id}
+        />
       )}
     </article>
   );
