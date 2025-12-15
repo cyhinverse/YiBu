@@ -4,6 +4,46 @@ import { useSelector, useDispatch } from 'react-redux';
 import { updateProfile, getProfile } from '../../../redux/actions/userActions';
 import toast from 'react-hot-toast';
 
+const InputField = ({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  placeholder,
+  multiline = false,
+}) => (
+  <div className="space-y-2">
+    <label className="text-sm font-medium text-black dark:text-white">
+      {label}
+    </label>
+    <div className="relative">
+      {!multiline && (
+        <Icon
+          size={18}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+        />
+      )}
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={3}
+          className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      )}
+    </div>
+  </div>
+);
+
 const ProfileSettings = () => {
   const dispatch = useDispatch();
   const fileInputRef = useRef(null);
@@ -15,6 +55,7 @@ const ProfileSettings = () => {
   const [coverPreview, setCoverPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -88,7 +129,7 @@ const ProfileSettings = () => {
         toast.error(result.payload || 'Cập nhật thất bại');
       }
     } catch (error) {
-      toast.error('Có lỗi xảy ra');
+      toast.error('Có lỗi xảy ra',error);
     } finally {
       setIsSaving(false);
     }
@@ -97,46 +138,6 @@ const ProfileSettings = () => {
   const handleChange = field => e => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
-
-  const InputField = ({
-    icon: Icon,
-    label,
-    value,
-    onChange,
-    placeholder,
-    multiline = false,
-  }) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-black dark:text-white">
-        {label}
-      </label>
-      <div className="relative">
-        {!multiline && (
-          <Icon
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-        )}
-        {multiline ? (
-          <textarea
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            rows={3}
-            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white resize-none"
-          />
-        ) : (
-          <input
-            type="text"
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-          />
-        )}
-      </div>
-    </div>
-  );
 
   if (loading && !currentProfile) {
     return (

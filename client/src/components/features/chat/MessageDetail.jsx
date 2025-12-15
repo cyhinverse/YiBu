@@ -399,7 +399,7 @@ const MessageDetail = () => {
             onChange={e => setMessageText(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Nhập tin nhắn..."
-            className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             onClick={handleSend}
@@ -409,7 +409,7 @@ const MessageDetail = () => {
             }
             className={`p-2.5 rounded-full transition-all ${
               (messageText.trim() || selectedImages.length > 0) && !sendLoading
-                ? 'bg-black dark:bg-white text-white dark:text-black hover:opacity-80'
+                ? 'bg-primary text-primary-foreground hover:opacity-80'
                 : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
             }`}
           >

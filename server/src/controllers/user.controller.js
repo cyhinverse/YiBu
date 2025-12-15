@@ -205,17 +205,16 @@ const UserController = {
 
   updateProfileSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    let avatarUrl = null;
+    const profileData = { ...req.body };
 
     // Handle avatar upload
-    if (req.files?.avatar) {
-      const avatar = req.files.avatar;
-      avatarUrl = await UserService.uploadAvatarToCloudinary(avatar, userId);
+    if (req.files?.avatar && req.files.avatar[0]) {
+      profileData.avatar = req.files.avatar[0].path;
     }
 
-    const profileData = { ...req.body };
-    if (avatarUrl) {
-      profileData.avatar = avatarUrl;
+    // Handle cover upload
+    if (req.files?.cover && req.files.cover[0]) {
+      profileData.cover = req.files.cover[0].path;
     }
 
     const user = await UserService.updateProfile(userId, profileData);

@@ -60,6 +60,7 @@ const App = () => {
             {/* Explore & Notifications */}
             <Route path="explore" element={<Explore />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="saved" element={<SavePosts />} />
 
             {/* Message Routes */}
             <Route path={`${ROUTES.MESSAGE}`} element={<Message />}>
@@ -89,7 +90,7 @@ const App = () => {
               <Route path="home" element={<HomeProfile />} />
               <Route path="following" element={<FollowingUser />} />
               <Route path="friends" element={<Friends />} />
-              <Route path="save-posts" element={<SavePosts />} />
+
             </Route>
           </Route>
         </Route>

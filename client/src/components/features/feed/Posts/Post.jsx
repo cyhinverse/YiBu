@@ -21,12 +21,10 @@ import { CommentModal } from '../Comment';
 import {
   createLike,
   deleteLike,
-  getLikeStatus,
 } from '../../../../redux/actions/likeActions';
 import {
   savePost,
   unsavePost,
-  checkSaveStatus,
 } from '../../../../redux/actions/savePostActions';
 import { deletePost, sharePost } from '../../../../redux/actions/postActions';
 import { ReportModal } from '../../report';
@@ -216,24 +214,24 @@ const Post = ({ data, onDelete }) => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-black dark:text-white hover:underline cursor-pointer">
+              <span className="font-semibold text-content dark:text-white hover:underline cursor-pointer">
                 {user.name}
               </span>
               {user.verified && (
-                <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
+                <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
                   <svg
                     width="10"
                     height="10"
                     viewBox="0 0 24 24"
-                    fill="white"
-                    className="dark:fill-black"
+                    fill="currentColor"
+                    className="text-primary-foreground"
                   >
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                   </svg>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+            <div className="flex items-center gap-1.5 text-sm text-secondary">
               <span>@{user.username}</span>
               <span>•</span>
               <span>{formatTime(data.createdAt)}</span>
@@ -243,7 +241,7 @@ const Post = ({ data, onDelete }) => {
 
         <button
           onClick={() => setShowOptions(!showOptions)}
-          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-black dark:hover:text-white transition-all"
+          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-content dark:hover:text-white transition-all"
         >
           <MoreHorizontal size={18} />
         </button>
@@ -251,7 +249,7 @@ const Post = ({ data, onDelete }) => {
 
       {/* Content */}
       {data.caption && (
-        <p className="text-black dark:text-white leading-relaxed mb-3 whitespace-pre-wrap break-words">
+        <p className="text-content dark:text-white leading-relaxed mb-3 whitespace-pre-wrap break-words">
           {data.caption}
         </p>
       )}

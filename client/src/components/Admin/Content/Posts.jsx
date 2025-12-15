@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Search,
   Filter,
@@ -22,46 +22,46 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   getAllPosts,
   moderatePost,
   approvePost,
   deletePost,
-} from "../../../redux/actions/adminActions";
+} from '../../../redux/actions/adminActions';
 
-const getTypeIcon = (type) => {
+const getTypeIcon = type => {
   switch (type) {
-    case "image":
+    case 'image':
       return <Image size={16} />;
-    case "video":
+    case 'video':
       return <Video size={16} />;
     default:
       return <FileText size={16} />;
   }
 };
 
-const getStatusStyle = (status) => {
+const getStatusStyle = status => {
   switch (status) {
-    case "active":
-      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "hidden":
-      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-    case "pending":
-      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+    case 'active':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    case 'hidden':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
     default:
-      return "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400";
+      return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400';
   }
 };
 
-const getStatusText = (status) => {
+const getStatusText = status => {
   switch (status) {
-    case "active":
-      return "Hoạt động";
-    case "hidden":
-      return "Đã ẩn";
-    case "pending":
-      return "Chờ duyệt";
+    case 'active':
+      return 'Hoạt động';
+    case 'hidden':
+      return 'Đã ẩn';
+    case 'pending':
+      return 'Chờ duyệt';
     default:
       return status;
   }
@@ -69,10 +69,14 @@ const getStatusText = (status) => {
 
 export default function Posts() {
   const dispatch = useDispatch();
-  const { posts: postsList, pagination, loading } = useSelector((state) => state.admin);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const {
+    posts: postsList,
+    pagination,
+    loading,
+  } = useSelector(state => state.admin);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [selectedPost, setSelectedPost] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
@@ -85,9 +89,9 @@ export default function Posts() {
       page: currentPage,
       limit: 10,
     };
-    if (filterStatus !== "all") params.status = filterStatus;
-    if (filterType !== "all") params.type = filterType;
-    
+    if (filterStatus !== 'all') params.status = filterStatus;
+    if (filterType !== 'all') params.type = filterType;
+
     dispatch(getAllPosts(params));
   }, [dispatch, currentPage, filterStatus, filterType]);
 
@@ -100,8 +104,8 @@ export default function Posts() {
           limit: 10,
           search: searchTerm || undefined,
         };
-        if (filterStatus !== "all") params.status = filterStatus;
-        if (filterType !== "all") params.type = filterType;
+        if (filterStatus !== 'all') params.status = filterStatus;
+        if (filterType !== 'all') params.type = filterType;
         dispatch(getAllPosts(params));
         setCurrentPage(1);
       }
@@ -117,33 +121,35 @@ export default function Posts() {
       await dispatch(deletePost(postToDelete._id || postToDelete.id)).unwrap();
       dispatch(getAllPosts({ page: currentPage, limit: 10 }));
     } catch (error) {
-      console.error("Failed to delete post:", error);
+      console.error('Failed to delete post:', error);
     }
     setShowDeleteModal(false);
     setPostToDelete(null);
   };
 
-  const handleToggleStatus = async (post) => {
-    const newStatus = post.status === "active" ? "hidden" : "active";
+  const handleToggleStatus = async post => {
+    const newStatus = post.status === 'active' ? 'hidden' : 'active';
     try {
-      await dispatch(moderatePost({ 
-        postId: post._id || post.id, 
-        action: newStatus === "hidden" ? "hide" : "approve",
-        reason: newStatus === "hidden" ? "Admin moderation" : undefined
-      })).unwrap();
+      await dispatch(
+        moderatePost({
+          postId: post._id || post.id,
+          action: newStatus === 'hidden' ? 'hide' : 'approve',
+          reason: newStatus === 'hidden' ? 'Admin moderation' : undefined,
+        })
+      ).unwrap();
       dispatch(getAllPosts({ page: currentPage, limit: 10 }));
     } catch (error) {
-      console.error("Failed to moderate post:", error);
+      console.error('Failed to moderate post:', error);
     }
     setActiveDropdown(null);
   };
 
-  const handleApprovePost = async (post) => {
+  const handleApprovePost = async post => {
     try {
       await dispatch(approvePost(post._id || post.id)).unwrap();
       dispatch(getAllPosts({ page: currentPage, limit: 10 }));
     } catch (error) {
-      console.error("Failed to approve post:", error);
+      console.error('Failed to approve post:', error);
     }
     setActiveDropdown(null);
   };
@@ -152,7 +158,7 @@ export default function Posts() {
     dispatch(getAllPosts({ page: currentPage, limit: 10 }));
   };
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = newPage => {
     setCurrentPage(newPage);
   };
 
@@ -173,7 +179,7 @@ export default function Posts() {
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
         >
-          <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+          <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
@@ -189,7 +195,7 @@ export default function Posts() {
             type="text"
             placeholder="Tìm kiếm bài viết..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
           />
         </div>
@@ -197,7 +203,7 @@ export default function Posts() {
         <div className="flex gap-3">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={e => setFilterType(e.target.value)}
             className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
           >
             <option value="all">Tất cả loại</option>
@@ -208,7 +214,7 @@ export default function Posts() {
 
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={e => setFilterStatus(e.target.value)}
             className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
           >
             <option value="all">Tất cả trạng thái</option>
@@ -230,12 +236,18 @@ export default function Posts() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {posts.map((post) => {
+          {posts.map(post => {
             const author = post.author || post.user || {};
             const mediaItems = post.media || post.images || [];
             const hasMedia = mediaItems.length > 0;
-            const postType = post.type || (hasMedia ? (mediaItems[0]?.type === "video" ? "video" : "image") : "text");
-            
+            const postType =
+              post.type ||
+              (hasMedia
+                ? mediaItems[0]?.type === 'video'
+                  ? 'video'
+                  : 'image'
+                : 'text');
+
             return (
               <div
                 key={post._id || post.id}
@@ -244,8 +256,8 @@ export default function Posts() {
                 <div className="flex items-start gap-4">
                   {/* Author Avatar */}
                   <img
-                    src={author.avatar || "/images/default-avatar.png"}
-                    alt={author.name || author.username || "User"}
+                    src={author.avatar || '/images/default-avatar.png'}
+                    alt={author.name || author.username || 'User'}
                     className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
                   />
 
@@ -255,24 +267,26 @@ export default function Posts() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold text-black dark:text-white">
-                            {author.name || author.username || "Unknown"}
+                            {author.name || author.username || 'Unknown'}
                           </h3>
                           <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                            @{author.username || "user"}
+                            @{author.username || 'user'}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                           <span className="flex items-center gap-1">
                             <Calendar size={14} />
-                            {post.createdAt ? new Date(post.createdAt).toLocaleString() : "N/A"}
+                            {post.createdAt
+                              ? new Date(post.createdAt).toLocaleString()
+                              : 'N/A'}
                           </span>
                           <span className="flex items-center gap-1">
                             {getTypeIcon(postType)}
-                            {postType === "image"
-                              ? "Hình ảnh"
-                              : postType === "video"
-                              ? "Video"
-                              : "Văn bản"}
+                            {postType === 'image'
+                              ? 'Hình ảnh'
+                              : postType === 'video'
+                              ? 'Video'
+                              : 'Văn bản'}
                           </span>
                         </div>
                       </div>
@@ -280,10 +294,10 @@ export default function Posts() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(
-                            post.status || "active"
+                            post.status || 'active'
                           )}`}
                         >
-                          {getStatusText(post.status || "active")}
+                          {getStatusText(post.status || 'active')}
                         </span>
 
                         {(post.reportsCount || post.reports) > 0 && (
@@ -293,132 +307,146 @@ export default function Posts() {
                           </span>
                         )}
 
-                    {/* Actions Dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() =>
-                          setActiveDropdown(
-                            activeDropdown === (post._id || post.id) ? null : (post._id || post.id)
-                          )
-                        }
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                      >
-                        <MoreHorizontal
-                          size={18}
-                          className="text-neutral-500"
-                        />
-                      </button>
-
-                      {activeDropdown === (post._id || post.id) && (
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10">
+                        {/* Actions Dropdown */}
+                        <div className="relative">
                           <button
-                            onClick={() => {
-                              setSelectedPost(post);
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                            onClick={() =>
+                              setActiveDropdown(
+                                activeDropdown === (post._id || post.id)
+                                  ? null
+                                  : post._id || post.id
+                              )
+                            }
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                           >
-                            <Eye size={16} />
-                            Xem chi tiết
+                            <MoreHorizontal
+                              size={18}
+                              className="text-neutral-500"
+                            />
                           </button>
-                          {post.status === "pending" && (
-                            <button
-                              onClick={() => handleApprovePost(post)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
-                            >
-                              <CheckCircle size={16} />
-                              Phê duyệt
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleToggleStatus(post)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
-                          >
-                            {post.status === "active" ? <XCircle size={16} /> : <CheckCircle size={16} />}
-                            {post.status === "active" ? "Ẩn bài" : "Hiện bài"}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPostToDelete(post);
-                              setShowDeleteModal(true);
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-red-600"
-                          >
-                            <Trash2 size={16} />
-                            Xóa bài
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Post Content */}
-                <p className="mt-3 text-black dark:text-white line-clamp-2">
-                  {post.content || post.caption || "No content"}
-                </p>
-
-                {/* Media Preview */}
-                {mediaItems.length > 0 && (
-                  <div className="mt-3 flex gap-2 overflow-x-auto">
-                    {mediaItems.slice(0, 3).map((media, idx) => {
-                      const mediaUrl = typeof media === 'string' ? media : media.url;
-                      const isVideo = typeof media === 'object' ? media.type === 'video' : postType === 'video';
-                      return (
-                        <div
-                          key={idx}
-                          className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800"
-                        >
-                          <img
-                            src={mediaUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                          {isVideo && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                              <Video size={24} className="text-white" />
+                          {activeDropdown === (post._id || post.id) && (
+                            <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10">
+                              <button
+                                onClick={() => {
+                                  setSelectedPost(post);
+                                  setActiveDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                              >
+                                <Eye size={16} />
+                                Xem chi tiết
+                              </button>
+                              {post.status === 'pending' && (
+                                <button
+                                  onClick={() => handleApprovePost(post)}
+                                  className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
+                                >
+                                  <CheckCircle size={16} />
+                                  Phê duyệt
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleToggleStatus(post)}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                              >
+                                {post.status === 'active' ? (
+                                  <XCircle size={16} />
+                                ) : (
+                                  <CheckCircle size={16} />
+                                )}
+                                {post.status === 'active'
+                                  ? 'Ẩn bài'
+                                  : 'Hiện bài'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setPostToDelete(post);
+                                  setShowDeleteModal(true);
+                                  setActiveDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-red-600"
+                              >
+                                <Trash2 size={16} />
+                                Xóa bài
+                              </button>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                    {mediaItems.length > 3 && (
-                      <div className="flex-shrink-0 w-24 h-24 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-medium">
-                          +{mediaItems.length - 3}
-                        </span>
+                      </div>
+                    </div>
+
+                    {/* Post Content */}
+                    <p className="mt-3 text-black dark:text-white line-clamp-2">
+                      {post.content || post.caption || 'No content'}
+                    </p>
+
+                    {/* Media Preview */}
+                    {mediaItems.length > 0 && (
+                      <div className="mt-3 flex gap-2 overflow-x-auto">
+                        {mediaItems.slice(0, 3).map((media, idx) => {
+                          const mediaUrl =
+                            typeof media === 'string' ? media : media.url;
+                          const isVideo =
+                            typeof media === 'object'
+                              ? media.type === 'video'
+                              : postType === 'video';
+                          return (
+                            <div
+                              key={idx}
+                              className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800"
+                            >
+                              <img
+                                src={mediaUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                              {isVideo && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                  <Video size={24} className="text-white" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {mediaItems.length > 3 && (
+                          <div className="flex-shrink-0 w-24 h-24 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                            <span className="text-neutral-500 dark:text-neutral-400 font-medium">
+                              +{mediaItems.length - 3}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* Stats */}
-                <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
-                  <span className="flex items-center gap-1.5">
-                    <Heart size={16} />
-                    {post.likesCount || post.likes || 0}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <MessageCircle size={16} />
-                    {post.commentsCount || post.comments || 0}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Share2 size={16} />
-                    {post.sharesCount || post.shares || 0}
-                  </span>
+                    {/* Stats */}
+                    <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
+                      <span className="flex items-center gap-1.5">
+                        <Heart size={16} />
+                        {post.likesCount || post.likes || 0}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MessageCircle size={16} />
+                        {post.commentsCount || post.comments || 0}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Share2 size={16} />
+                        {post.sharesCount || post.shares || 0}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
         </div>
       )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Page {currentPage} of {pagination?.pages || 1} ({pagination?.total || posts.length} posts)
+          Page {currentPage} of {pagination?.pages || 1} (
+          {pagination?.total || posts.length} posts)
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -458,33 +486,40 @@ export default function Posts() {
 
               {(() => {
                 const author = selectedPost.author || selectedPost.user || {};
-                const mediaItems = selectedPost.media || selectedPost.images || [];
+                const mediaItems =
+                  selectedPost.media || selectedPost.images || [];
                 return (
                   <>
                     <div className="flex items-center gap-3 mb-4">
                       <img
-                        src={author.avatar || "/images/default-avatar.png"}
-                        alt={author.name || author.username || "User"}
+                        src={author.avatar || '/images/default-avatar.png'}
+                        alt={author.name || author.username || 'User'}
                         className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
                       />
                       <div>
                         <h3 className="font-semibold text-black dark:text-white">
-                          {author.name || author.username || "Unknown"}
+                          {author.name || author.username || 'Unknown'}
                         </h3>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          @{author.username || "user"} • {selectedPost.createdAt ? new Date(selectedPost.createdAt).toLocaleString() : "N/A"}
+                          @{author.username || 'user'} •{' '}
+                          {selectedPost.createdAt
+                            ? new Date(selectedPost.createdAt).toLocaleString()
+                            : 'N/A'}
                         </p>
                       </div>
                     </div>
 
                     <p className="text-black dark:text-white mb-4">
-                      {selectedPost.content || selectedPost.caption || "No content"}
+                      {selectedPost.content ||
+                        selectedPost.caption ||
+                        'No content'}
                     </p>
 
                     {mediaItems.length > 0 && (
                       <div className="grid grid-cols-2 gap-2 mb-4">
                         {mediaItems.map((media, idx) => {
-                          const mediaUrl = typeof media === 'string' ? media : media.url;
+                          const mediaUrl =
+                            typeof media === 'string' ? media : media.url;
                           return (
                             <img
                               key={idx}
@@ -499,13 +534,21 @@ export default function Posts() {
 
                     <div className="flex items-center gap-6 text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 pt-4">
                       <span className="flex items-center gap-1.5">
-                        <Heart size={18} /> {selectedPost.likesCount || selectedPost.likes || 0} lượt thích
+                        <Heart size={18} />{' '}
+                        {selectedPost.likesCount || selectedPost.likes || 0}{' '}
+                        lượt thích
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <MessageCircle size={18} /> {selectedPost.commentsCount || selectedPost.comments || 0} bình luận
+                        <MessageCircle size={18} />{' '}
+                        {selectedPost.commentsCount ||
+                          selectedPost.comments ||
+                          0}{' '}
+                        bình luận
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Share2 size={18} /> {selectedPost.sharesCount || selectedPost.shares || 0} chia sẻ
+                        <Share2 size={18} />{' '}
+                        {selectedPost.sharesCount || selectedPost.shares || 0}{' '}
+                        chia sẻ
                       </span>
                     </div>
                   </>
@@ -535,9 +578,12 @@ export default function Posts() {
             </div>
 
             <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-              Bạn có chắc chắn muốn xóa bài viết của{" "}
+              Bạn có chắc chắn muốn xóa bài viết của{' '}
               <strong className="text-black dark:text-white">
-                {postToDelete?.author?.name || postToDelete?.user?.name || postToDelete?.user?.username || "this user"}
+                {postToDelete?.author?.name ||
+                  postToDelete?.user?.name ||
+                  postToDelete?.user?.username ||
+                  'this user'}
               </strong>
               ?
             </p>

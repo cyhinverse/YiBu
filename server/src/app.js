@@ -27,9 +27,6 @@ import userSettingsRoutes from './routes/userSettings.router.js';
 
 const app = express();
 
-// ============================================
-// SECURITY MIDDLEWARES
-// ============================================
 
 // Helmet - HTTP Security Headers
 app.use(helmetMiddleware);
@@ -53,22 +50,13 @@ app.use(hppMiddleware);
 // CORS
 app.use(
   cors({
-    origin: [
-      'http://localhost:9258',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      config.CLIENT_URL,
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: [process.env.CLIENT_URL || 'http://localhost:3000', 'http://localhost:9258'],
     credentials: true,
     optionsSuccessStatus: 200,
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-// ============================================
-// LOGGING
-// ============================================
 
 // Morgan + Winston Request Logger
 app.use(morganMiddleware);

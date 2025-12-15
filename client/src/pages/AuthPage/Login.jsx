@@ -10,7 +10,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const googleButtonRef = useRef(null);
   const googleInitialized = useRef(false);
-  const { loading, error, isAuthenticated, user } = useSelector(
+  const { loading, error, isAuthenticated } = useSelector(
     (state) => state.auth
   );
 
@@ -166,7 +166,7 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="name@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                  className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -195,7 +195,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                  className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
                 />
                 <button
                   type="button"
@@ -219,10 +219,10 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-primary text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 "Sign In"
               )}
@@ -246,7 +246,7 @@ const Login = () => {
             Don't have an account?{" "}
             <Link
               to="/auth/register"
-              className="font-medium text-black dark:text-white hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               Sign up
             </Link>

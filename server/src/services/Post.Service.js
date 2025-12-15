@@ -99,6 +99,7 @@ class PostService {
   }
 
   static async updatePost(postId, userId, updateData) {
+
     const post = await Post.findOne({
       _id: postId,
       user: userId,
@@ -109,8 +110,23 @@ class PostService {
       throw new Error("Post not found or unauthorized");
     }
 
-    const { caption, visibility, location, mentions } = updateData;
+    const { caption, visibility, location, mentions, media, existingMedia } = updateData;
     const allowedUpdates = {};
+
+    let currentMedia = post.media;
+    if (existingMedia) {
+       try {
+         currentMedia = typeof existingMedia === 'string' ? JSON.parse(existingMedia) : existingMedia;
+       } catch (e) {
+         currentMedia = [];
+       }
+    }
+
+    if (media && media.length > 0) {
+      allowedUpdates.media = [...currentMedia, ...media];
+    } else if (existingMedia !== undefined) {
+      allowedUpdates.media = currentMedia;
+    }
 
     if (caption !== undefined) {
       allowedUpdates.caption = caption;
@@ -130,7 +146,7 @@ class PostService {
         );
       }
 
-      allowedUpdates.hashtags = newTags;
+      allowedUpdates.hashtags = newTags.map(t => t.tag);
     }
 
     if (visibility !== undefined) allowedUpdates.visibility = visibility;
@@ -1154,37 +1170,20 @@ class PostService {
   // ======================================
 
   static async uploadMedia(files, userId) {
-    const cloudinary = (await import("../configs/cloudinaryConfig.js")).default;
-    const uploadedMedia = [];
-    const MAX_FILE_SIZE = 100 * 1024 * 1024;
-
+    // Files are already uploaded by multer-storage-cloudinary middleware
+    // We just need to map them to our schema structure
     const fileArray = Array.isArray(files) ? files : [files];
-
-    for (const file of fileArray) {
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error(`File ${file.name} exceeds 100MB limit`);
-      }
-
+    const uploadedMedia = fileArray.map((file) => {
       const resourceType = file.mimetype?.startsWith("video/")
         ? "video"
         : "image";
 
-      const result = await cloudinary.uploader.upload(file.tempFilePath, {
-        folder: "posts",
-        public_id: `post_${userId}_${Date.now()}`,
-        resource_type: resourceType,
-        transformation:
-          resourceType === "image"
-            ? [{ quality: "auto" }, { fetch_format: "auto" }]
-            : [{ quality: "auto" }],
-      });
-
-      uploadedMedia.push({
-        url: result.secure_url,
+      return {
+        url: file.path, // Cloudinary URL from multer
         type: resourceType,
-        publicId: result.public_id,
-      });
-    }
+        publicId: file.filename, // Cloudinary Public ID from multer
+      };
+    });
 
     return uploadedMedia;
   }

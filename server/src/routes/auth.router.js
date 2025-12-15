@@ -56,17 +56,18 @@ router.post(
   AuthController.ResetPassword
 );
 
-// ======================================
-// Protected Routes (require auth)
-// ======================================
-router.use(verifyToken);
-
-// Token Management
+// Token Management (Public because access token might be expired)
 router.post(
   '/refresh',
   validateBody(refreshTokenBody),
   AuthController.RefreshToken
 );
+
+// ======================================
+// Protected Routes (require auth)
+// ======================================
+router.use(verifyToken);
+
 router.post('/logout', AuthController.Logout);
 router.post('/logout-all', AuthController.LogoutAllDevices);
 

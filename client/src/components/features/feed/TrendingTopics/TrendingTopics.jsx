@@ -15,12 +15,12 @@ const TrendingTopics = ({ trendingTopics = [] }) => {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                 index === 0
-                  ? "bg-black dark:bg-white"
+                  ? "bg-primary"
                   : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700"
               }`}
             >
               {index === 0 ? (
-                <TrendingUp size={14} className="text-white dark:text-black" />
+                <TrendingUp size={14} className="text-primary-foreground" />
               ) : (
                 <Hash size={14} className="text-neutral-400" />
               )}
@@ -33,7 +33,7 @@ const TrendingTopics = ({ trendingTopics = [] }) => {
                   {topic.name}
                 </h3>
                 {index === 0 && (
-                  <span className="px-1.5 py-0.5 text-[9px] font-medium bg-black dark:bg-white text-white dark:text-black rounded-full">
+                  <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary text-primary-foreground rounded-full">
                     Hot
                   </span>
                 )}

@@ -90,6 +90,7 @@ const authSlice = createSlice({
       })
       // Logout
       .addCase(logout.fulfilled, () => initialState)
+      .addCase(logout.rejected, () => initialState)
       .addCase(logoutAll.fulfilled, () => initialState)
       // Update Password
       .addCase(updatePassword.pending, (state) => {

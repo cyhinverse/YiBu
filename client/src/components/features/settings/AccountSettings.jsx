@@ -396,7 +396,7 @@ const AccountSettings = () => {
               <button
                 onClick={handleUpdatePassword}
                 disabled={loading}
-                className="flex-1 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center"
+                className="flex-1 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />

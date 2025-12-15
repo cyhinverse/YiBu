@@ -90,6 +90,7 @@ router.get(
 router.get('/:id', validateParams(postIdParam), PostController.GetPostById);
 router.put(
   '/:id',
+  upload.array('files', 10),
   validateParams(postIdParam),
   validateBody(updatePostBody),
   PostController.UpdatePost

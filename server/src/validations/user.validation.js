@@ -51,13 +51,14 @@ export const updateProfileBody = Joi.object({
   location: Joi.string().trim().max(100).allow('').messages({
     'string.max': 'Location không được quá 100 ký tự',
   }),
-  website: Joi.string().trim().uri().allow('').messages({
+  website: Joi.string().trim().allow('').messages({
     'string.uri': 'Website không hợp lệ',
   }),
   dateOfBirth: Joi.date().max('now').allow(null).messages({
     'date.max': 'Ngày sinh không hợp lệ',
   }),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer_not_to_say'),
+  cover: Joi.string().allow(''),
 });
 
 // ======================================
@@ -178,6 +179,9 @@ export const updateThemeBody = Joi.object({
   }),
   fontSize: Joi.string().valid('small', 'medium', 'large'),
   accentColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
+  primaryColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
+  secondaryColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
+  textColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
 });
 
 // ======================================

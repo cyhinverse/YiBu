@@ -45,7 +45,7 @@ const NavItem = ({
           <div
             className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full ${
               active
-                ? "bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white font-medium"
+                ? "bg-primary text-primary-foreground font-medium"
                 : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white"
             } ${collapsed ? "justify-center px-2" : ""}`}
             title={collapsed ? label : undefined}
@@ -81,11 +81,9 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
   });
 
   const handleLogout = async () => {
-    const result = await dispatch(logout());
-    if (logout.fulfilled.match(result)) {
-      toast.success("Đăng xuất thành công");
-      navigate("/auth/login");
-    }
+    await dispatch(logout());
+    toast.success("Đăng xuất thành công");
+    navigate("/auth/login");
   };
 
   const toggleTheme = () => {
@@ -110,7 +108,7 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
     { icon: Search, path: "/explore", label: "Explore" },
     { icon: Bell, path: "/notifications", label: "Notifications", badge: 3 },
     { icon: MessageCircle, path: "/messages", label: "Messages", badge: 5 },
-    { icon: Bookmark, path: "/profile/save-posts", label: "Saved" },
+    { icon: Bookmark, path: "/saved", label: "Saved" },
     { icon: User, path: "/profile", label: "Profile" },
   ];
 
@@ -225,13 +223,13 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
         {/* Create Post Button */}
         {collapsed ? (
           <button
-            className="mt-6 w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center mx-auto hover:opacity-80 transition-opacity"
+            className="mt-6 w-10 h-10 rounded-full bg-primary flex items-center justify-center mx-auto hover:opacity-80 transition-opacity"
             title="Create Post"
           >
-            <PenSquare size={18} className="text-white dark:text-black" />
+            <PenSquare size={18} className="text-primary-foreground" />
           </button>
         ) : (
-          <button className="mt-6 flex items-center justify-center gap-2 py-2.5 px-4 w-full bg-black dark:bg-white text-white dark:text-black rounded-full font-medium text-sm hover:opacity-90 transition-opacity">
+          <button className="mt-6 flex items-center justify-center gap-2 py-2.5 px-4 w-full bg-primary text-primary-foreground rounded-full font-medium text-sm hover:opacity-90 transition-opacity">
             <PenSquare size={16} />
             <span>Create Post</span>
           </button>

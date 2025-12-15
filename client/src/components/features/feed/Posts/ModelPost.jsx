@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import EmojiPicker from 'emoji-picker-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Image,
@@ -11,7 +12,7 @@ import {
   Send,
   Video,
 } from 'lucide-react';
-import { createPost } from '../../../../redux/actions/postActions';
+import { createPost, updatePost } from '../../../../redux/actions/postActions';
 
 const PRIVACY_OPTIONS = [
   {
@@ -36,21 +37,27 @@ const PRIVACY_OPTIONS = [
 
 const ModelPost = ({ closeModal, editPost = null }) => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { currentProfile } = useSelector(state => state.user);
   const { createLoading } = useSelector(state => state.post);
 
   const [caption, setCaption] = useState(editPost?.caption || '');
   const [mediaFiles, setMediaFiles] = useState([]);
-  const [mediaPreviews, setMediaPreviews] = useState(editPost?.media || []);
+  const [existingMedia, setExistingMedia] = useState(editPost?.media || []);
   const [selectedImage, setSelectedImage] = useState(null);
   const [privacy, setPrivacy] = useState(editPost?.privacy || 'public');
   const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
 
+  const onEmojiClick = (emojiObject) => {
+    setCaption((prev) => prev + emojiObject.emoji);
+  };
+
+
   const avatarUrl =
-    user?.avatar ||
+    currentProfile?.avatar ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-      user?.username || 'default'
+      currentProfile?.username || 'default'
     }`;
   const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === privacy);
 
@@ -60,25 +67,15 @@ const ModelPost = ({ closeModal, editPost = null }) => {
 
     // Store actual files for upload
     setMediaFiles(prev => [...prev, ...files]);
-
-    // Create preview URLs
-    const previewUrls = files.map(file => ({
-      url: URL.createObjectURL(file),
-      type: file.type.startsWith('video/') ? 'video' : 'image',
-    }));
-    setMediaPreviews(prev => [...prev, ...previewUrls]);
     event.target.value = '';
   };
 
-  const removeMedia = index => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-    setMediaPreviews(prev => {
-      const removed = prev[index];
-      if (removed?.url?.startsWith('blob:')) {
-        URL.revokeObjectURL(removed.url);
-      }
-      return prev.filter((_, i) => i !== index);
-    });
+  const removeMedia = (index, isExisting) => {
+    if (isExisting) {
+      setExistingMedia(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const handlePost = async () => {
@@ -88,20 +85,40 @@ const ModelPost = ({ closeModal, editPost = null }) => {
     formData.append('caption', caption.trim());
     formData.append('visibility', privacy);
 
+    // Append existing media as JSON string
+    formData.append('existingMedia', JSON.stringify(existingMedia));
+
     // Append all media files - use 'files' to match multer config
     mediaFiles.forEach(file => {
       formData.append('files', file);
     });
 
     try {
-      await dispatch(createPost(formData)).unwrap();
+      if (editPost) {
+        await dispatch(
+          updatePost({ postId: editPost._id, data: formData })
+        ).unwrap();
+      } else {
+        await dispatch(createPost(formData)).unwrap();
+      }
       closeModal();
     } catch (error) {
-      console.error('Failed to create post:', error);
+      console.error('Failed to save post:', error);
     }
   };
 
-  const canPost = caption.trim() || mediaFiles.length > 0;
+  const canPost = caption.trim() || mediaFiles.length > 0 || existingMedia.length > 0;
+
+  // Combine media for preview
+  const allMedia = [
+    ...existingMedia.map(m => ({ ...m, isExisting: true })),
+    ...mediaFiles.map(f => ({
+      url: URL.createObjectURL(f),
+      type: f.type.startsWith('video/') ? 'video' : 'image',
+      isExisting: false,
+      file: f
+    }))
+  ];
 
   return (
     <div
@@ -133,7 +150,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
             {/* Avatar */}
             <img
               src={avatarUrl}
-              alt={user?.fullName || user?.username || 'User'}
+              alt={currentProfile?.fullName || currentProfile?.username || 'User'}
               className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
             />
 
@@ -142,7 +159,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
               {/* User info */}
               <div className="mb-2">
                 <p className="font-semibold text-black dark:text-white text-sm">
-                  {user?.fullName || user?.username || 'User'}
+                  {currentProfile?.fullName || currentProfile?.username || 'User'}
                 </p>
                 {/* Privacy selector */}
                 <div className="relative">
@@ -194,34 +211,37 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full bg-transparent resize-none text-black dark:text-white placeholder:text-neutral-400 border-none outline-none min-h-[100px] text-[15px] leading-relaxed"
+                className="w-full h-32 bg-transparent text-content dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none outline-none text-base"
                 autoFocus
               />
 
               {/* Media previews */}
-              {mediaPreviews.length > 0 && (
+              {allMedia.length > 0 && (
                 <div
                   className={`mt-3 rounded-xl overflow-hidden ${
-                    mediaPreviews.length > 1 ? 'grid gap-1' : ''
-                  } ${mediaPreviews.length === 2 ? 'grid-cols-2' : ''} ${
-                    mediaPreviews.length >= 3 ? 'grid-cols-2' : ''
+                    allMedia.length > 1 ? 'grid gap-1' : ''
+                  } ${allMedia.length === 2 ? 'grid-cols-2' : ''} ${
+                    allMedia.length >= 3 ? 'grid-cols-2' : ''
                   }`}
                 >
-                  {mediaPreviews.map((preview, index) => (
+                  {allMedia.map((preview, index) => (
                     <div
                       key={index}
                       className={`relative ${
-                        mediaPreviews.length === 1
+                        allMedia.length === 1
                           ? 'max-h-[350px]'
                           : 'aspect-square'
                       } ${
-                        mediaPreviews.length === 3 && index === 0
+                        allMedia.length === 3 && index === 0
                           ? 'row-span-2'
                           : ''
                       }`}
                     >
                       <button
-                        onClick={() => removeMedia(index)}
+                        onClick={() => removeMedia(
+                          preview.isExisting ? index : index - existingMedia.length, 
+                          preview.isExisting
+                        )}
                         className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-black/80 transition-colors"
                       >
                         <X size={14} />
@@ -230,7 +250,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                         <video
                           src={preview.url}
                           className={`w-full h-full object-cover rounded-xl ${
-                            mediaPreviews.length === 1 ? 'max-h-[350px]' : ''
+                            allMedia.length === 1 ? 'max-h-[350px]' : ''
                           }`}
                           controls
                         />
@@ -239,7 +259,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                           src={preview.url || preview}
                           alt="Preview"
                           className={`w-full h-full object-cover cursor-pointer rounded-xl ${
-                            mediaPreviews.length === 1 ? 'max-h-[350px]' : ''
+                            allMedia.length === 1 ? 'max-h-[350px]' : ''
                           }`}
                           onClick={() =>
                             setSelectedImage(preview.url || preview)
@@ -290,12 +310,31 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                 className="text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors"
               />
             </button>
-            <button className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group">
-              <Smile
-                size={18}
-                className="text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors"
-              />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
+              >
+                <Smile
+                  size={18}
+                  className="text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors"
+                />
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 mb-2 z-20">
+                  <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                  <div className="relative z-20 shadow-2xl rounded-xl">
+                    <EmojiPicker 
+                      onEmojiClick={onEmojiClick}
+                      theme={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'}
+                      lazyLoadEmojis={true}
+                      width={300}
+                      height={400}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Character count & Post button */}
@@ -314,7 +353,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
               disabled={createLoading || !canPost}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 canPost && !createLoading
-                  ? 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
+                  ? 'bg-primary text-primary-foreground hover:opacity-90'
                   : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
               }`}
             >

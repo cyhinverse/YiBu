@@ -34,29 +34,41 @@ const likeSlice = createSlice({
     builder
       // Create Like
       .addCase(createLike.fulfilled, (state, action) => {
-        const { postId, likesCount } = action.payload;
+        const { postId } = action.payload;
+        const data = action.payload.data || action.payload;
+        const { likesCount } = data;
         state.likeStatus[postId] = { isLiked: true, likesCount };
       })
       // Delete Like
       .addCase(deleteLike.fulfilled, (state, action) => {
-        const { postId, likesCount } = action.payload;
+        const { postId } = action.payload;
+        const data = action.payload.data || action.payload;
+        const { likesCount } = data;
         state.likeStatus[postId] = { isLiked: false, likesCount };
       })
       // Toggle Like
       .addCase(toggleLike.fulfilled, (state, action) => {
-        const { postId, isLiked, likesCount } = action.payload;
+        const { postId } = action.payload;
+        const data = action.payload.data || action.payload;
+        const { isLiked, likesCount } = data;
         state.likeStatus[postId] = { isLiked, likesCount };
       })
       // Get Like Status
       .addCase(getLikeStatus.fulfilled, (state, action) => {
-        const { postId, isLiked, likesCount } = action.payload;
+        const { postId } = action.payload;
+        const data = action.payload.data || action.payload;
+        const { isLiked, likesCount } = data;
         state.likeStatus[postId] = { isLiked, likesCount };
       })
       // Get Batch Like Status
       .addCase(getBatchLikeStatus.fulfilled, (state, action) => {
-        action.payload.forEach(({ postId, isLiked, likesCount }) => {
-          state.likeStatus[postId] = { isLiked, likesCount };
-        });
+         // Batch status usually returns array in data
+         const batchData = action.payload.data || [];
+         if (Array.isArray(batchData)) {
+            batchData.forEach(({ postId, isLiked, likesCount }) => {
+                state.likeStatus[postId] = { isLiked, likesCount };
+            });
+         }
       })
       // Get Post Likes
       .addCase(getPostLikes.pending, (state) => {
@@ -64,7 +76,8 @@ const likeSlice = createSlice({
       })
       .addCase(getPostLikes.fulfilled, (state, action) => {
         state.loading = false;
-        const { postId, users } = action.payload;
+        const { postId } = action.payload;
+        const users = action.payload.data?.users || [];
         state.postLikes[postId] = users;
       })
       .addCase(getPostLikes.rejected, (state, action) => {
@@ -77,7 +90,7 @@ const likeSlice = createSlice({
       })
       .addCase(getMyLikedPosts.fulfilled, (state, action) => {
         state.loading = false;
-        state.likedPosts = action.payload;
+        state.likedPosts = action.payload.data?.posts || [];
       })
       .addCase(getMyLikedPosts.rejected, (state, action) => {
         state.loading = false;

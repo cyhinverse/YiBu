@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { X, AlertTriangle, Flag, Loader2, Check } from 'lucide-react';
 import {
   reportPost,
@@ -58,7 +58,6 @@ const ReportModal = ({
   onClose,
   targetId,
   targetType = 'post', // 'post' | 'comment' | 'user' | 'message'
-  targetContent = null,
 }) => {
   const dispatch = useDispatch();
   const [selectedReason, setSelectedReason] = useState('');
@@ -204,19 +203,19 @@ const ReportModal = ({
                     onClick={() => setSelectedReason(reason.id)}
                     className={`w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors ${
                       selectedReason === reason.id
-                        ? 'bg-neutral-100 dark:bg-neutral-800 border border-black dark:border-white'
+                        ? 'bg-neutral-100 dark:bg-neutral-800 border-2 border-primary'
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700'
                     }`}
                   >
                     <div
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
                         selectedReason === reason.id
-                          ? 'border-black dark:border-white bg-black dark:bg-white'
+                          ? 'border-primary bg-primary'
                           : 'border-neutral-300 dark:border-neutral-600'
                       }`}
                     >
                       {selectedReason === reason.id && (
-                        <div className="w-2 h-2 rounded-full bg-white dark:bg-black" />
+                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                       )}
                     </div>
                     <div>
@@ -241,7 +240,7 @@ const ReportModal = ({
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder="Provide any additional context..."
-                    className="w-full p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent text-black dark:text-white placeholder:text-neutral-400 resize-none focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white text-sm"
+                    className="w-full p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent text-black dark:text-white placeholder:text-neutral-400 resize-none focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                     rows={3}
                     maxLength={500}
                   />

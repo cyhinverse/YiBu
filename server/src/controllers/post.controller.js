@@ -101,6 +101,12 @@ const PostController = {
     const { id } = req.params;
     const userId = req.user.id;
 
+    let media = [];
+    if (req.files && req.files.length > 0) {
+      media = await PostService.uploadMedia(req.files, userId);
+      req.body.media = media;
+    }
+
     const post = await PostService.updatePost(id, userId, req.body);
     return formatResponse(res, 200, 1, "Post updated successfully", post);
   }),

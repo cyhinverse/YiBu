@@ -57,7 +57,10 @@ router.get(
 );
 router.put(
   '/profile',
-  upload.fields([{ name: 'avatar', maxCount: 1 }]),
+  upload.fields([
+    { name: 'avatar', maxCount: 1 },
+    { name: 'cover', maxCount: 1 },
+  ]),
   validateBody(updateProfileBody),
   UserController.updateProfileSettings
 );

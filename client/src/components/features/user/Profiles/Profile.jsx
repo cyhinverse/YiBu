@@ -60,7 +60,7 @@ const Profile = () => {
   useEffect(() => {
     if (profileId) {
       dispatch(getProfile(profileId));
-      dispatch(getPostsByUser(profileId));
+      dispatch(getPostsByUser({ userId: profileId }));
       // Check follow status if not own profile
       if (!isOwnProfile) {
         dispatch(checkFollowStatus(profileId));
@@ -117,7 +117,6 @@ const Profile = () => {
         setIsFollowing(true);
         toast.success('Đã theo dõi');
       }
-      // Refresh profile to update counts
       dispatch(getProfile(profileId));
     } catch (error) {
       toast.error(error || 'Thao tác thất bại');
@@ -396,7 +395,7 @@ const Profile = () => {
             <tab.icon size={16} />
             {tab.label}
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-black dark:bg-white rounded-full" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
             )}
           </button>
         ))}

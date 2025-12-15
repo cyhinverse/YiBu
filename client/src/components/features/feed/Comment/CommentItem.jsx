@@ -48,15 +48,15 @@ const CommentInput = memo(
           disabled={isSubmitting}
           className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 
                    text-neutral-900 dark:text-white placeholder:text-neutral-400 
-                   text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 
-                   dark:focus:ring-neutral-600 disabled:opacity-50"
+                   text-sm focus:outline-none focus:ring-2 focus:ring-primary 
+                   disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}
           disabled={!value.trim() || isSubmitting}
           className={`p-2.5 rounded-full transition-all duration-200 ${
             value.trim() && !isSubmitting
-              ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-80'
+              ? 'bg-primary text-primary-foreground hover:opacity-80'
               : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
           }`}
         >
@@ -217,11 +217,11 @@ const CommentItem = memo(
             ) : (
               <div className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-neutral-900 dark:text-white">
+                  <span className="text-sm font-medium text-content dark:text-white">
                     {comment.user?.name || 'Người dùng'}
                   </span>
                   <div className="flex items-center gap-1 relative">
-                    <span className="text-xs text-neutral-500">{timeAgo}</span>
+                    <span className="text-xs text-secondary">{timeAgo}</span>
                     <button
                       onClick={() => setShowOptions(!showOptions)}
                       className="p-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700"
@@ -238,7 +238,7 @@ const CommentItem = memo(
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-0.5 break-words">
+                <p className="text-sm text-content dark:text-neutral-300 mt-0.5 break-words">
                   {comment.content}
                 </p>
               </div>

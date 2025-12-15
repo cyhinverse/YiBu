@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
 import Post from '../../feed/Posts/Post';
@@ -28,7 +28,7 @@ const SavePosts = () => {
         const result = await dispatch(
           getSavedPosts({ page: 1, limit: 50 })
         ).unwrap();
-        const postList = result.posts || result.savedPosts || result || [];
+        const postList = result.data?.posts || result.posts || [];
         setPosts(postList);
       } catch (error) {
         console.error('Failed to fetch saved posts:', error);

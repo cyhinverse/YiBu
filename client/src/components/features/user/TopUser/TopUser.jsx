@@ -40,7 +40,7 @@ const TopUser = ({ users = [], loading = false }) => {
           toast.success('Đã theo dõi');
         }
       }
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra');
     } finally {
       setLoadingIds(prev => {
@@ -117,7 +117,7 @@ const TopUser = ({ users = [], loading = false }) => {
                 className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 transition-colors disabled:opacity-50 ${
                   isFollowed
                     ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
-                    : 'bg-black dark:bg-white text-white dark:text-black'
+                    : 'bg-primary text-primary-foreground'
                 }`}
               >
                 {isLoading ? (

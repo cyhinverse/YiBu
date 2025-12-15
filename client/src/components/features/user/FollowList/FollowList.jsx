@@ -163,7 +163,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
                       } ${
                         followingStates[user._id]
                           ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
-                          : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
+                          : 'bg-primary text-primary-foreground hover:opacity-90'
                       }`}
                     >
                       {loadingStates[user._id] ? (

@@ -89,7 +89,7 @@ const SideBarSettings = () => {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         isActive
-                          ? 'bg-black dark:bg-white'
+                          ? 'bg-primary'
                           : 'bg-neutral-100 dark:bg-neutral-800'
                       }`}
                     >
@@ -97,7 +97,7 @@ const SideBarSettings = () => {
                         size={18}
                         className={
                           isActive
-                            ? 'text-white dark:text-black'
+                            ? 'text-primary-foreground'
                             : 'text-neutral-500'
                         }
                       />
@@ -106,7 +106,7 @@ const SideBarSettings = () => {
                       <p
                         className={`text-sm font-medium ${
                           isActive
-                            ? 'text-black dark:text-white'
+                            ? 'text-primary'
                             : 'text-neutral-700 dark:text-neutral-300'
                         }`}
                       >
@@ -120,7 +120,7 @@ const SideBarSettings = () => {
                       size={16}
                       className={`flex-shrink-0 ${
                         isActive
-                          ? 'text-black dark:text-white'
+                          ? 'text-primary'
                           : 'text-neutral-300'
                       }`}
                     />

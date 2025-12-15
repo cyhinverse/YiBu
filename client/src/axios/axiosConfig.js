@@ -1,49 +1,81 @@
 import axios from "axios";
-// import Auth from "../services/authService";
 
 const backendUrl = "http://localhost:9785";
+
 const api = axios.create({
   baseURL: backendUrl,
   timeout: 10000,
+  withCredentials: true, // để gửi cookie refresh
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+let accessToken = localStorage.getItem("accessToken");
+
+let isRefreshing = false;
+let refreshQueue = [];
+
+const processQueue = (error, token = null) => {
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  refreshQueue = [];
+};
+
+
+api.interceptors.request.use(
+  (config) => {
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 api.interceptors.response.use(
-  (response) => {
-    // console.log(`[AxiosConfig] Response from ${response.config.url}:`, {
-    //   status: response.status,
-    //   statusText: response.statusText,
-    // });
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Xử lý lỗi 401 - Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (!error.response) {
+      return Promise.reject(error);
+    }
+
+    if (error.response.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        const refreshResponse = await axios.post(
+        const res = await axios.post(
           `${backendUrl}/api/auth/refresh`,
           {},
-          {
-            withCredentials: true,
-          }
+          { withCredentials: true }
         );
-        const newAccessToken = refreshResponse.data.accessToken;
 
+        const newAccessToken = res.data.accessToken;
+
+        // update token
+        accessToken = newAccessToken;
         localStorage.setItem("accessToken", newAccessToken);
-        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+
+        api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        processQueue(null, newAccessToken);
+
         return api(originalRequest);
       } catch (refreshError) {
+        processQueue(refreshError, null);
+
+        accessToken = null;
         localStorage.removeItem("accessToken");
 
         const currentPath = window.location.pathname;
@@ -52,23 +84,22 @@ api.interceptors.response.use(
         }
 
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    // Xử lý lỗi 403 - Forbidden (không có quyền admin)
-    if (error.response?.status === 403) {
-      console.error("Access forbidden:", error.response.data.message);
+    if (error.response.status === 403) {
+      const message = error.response.data?.message || "";
 
-      // Thêm thông báo cho người dùng biết họ không có quyền
-      if (error.response.data.message.includes("Admin privileges required")) {
-        // Có thể chuyển đến trang thông báo lỗi riêng thay vì đăng nhập lại
-        const currentPath = window.location.pathname;
-        if (currentPath.includes("/admin")) {
-          window.location.href = "/access-denied";
-          return Promise.reject(
-            new Error("Bạn không có quyền truy cập trang quản trị")
-          );
-        }
+      if (
+        message.includes("Admin") &&
+        window.location.pathname.startsWith("/admin")
+      ) {
+        window.location.href = "/access-denied";
+        return Promise.reject(
+          new Error("Bạn không có quyền truy cập trang quản trị")
+        );
       }
     }
 

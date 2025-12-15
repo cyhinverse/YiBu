@@ -171,26 +171,26 @@ const NotificationPanel = () => {
             onClick={() => setFilter('all')}
             className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
               filter === 'all'
-                ? 'text-black dark:text-white'
+                ? 'text-primary'
                 : 'text-neutral-500 hover:text-black dark:hover:text-white'
             }`}
           >
             All
             {filter === 'all' && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-black dark:bg-white rounded-full" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
             )}
           </button>
           <button
             onClick={() => setFilter('unread')}
             className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
               filter === 'unread'
-                ? 'text-black dark:text-white'
+                ? 'text-primary'
                 : 'text-neutral-500 hover:text-black dark:hover:text-white'
             }`}
           >
             Unread {unreadCount > 0 && `(${unreadCount})`}
             {filter === 'unread' && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-black dark:bg-white rounded-full" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
             )}
           </button>
         </div>
@@ -210,7 +210,7 @@ const NotificationPanel = () => {
           <p className="text-red-500 text-sm">{error}</p>
           <button
             onClick={() => dispatch(getNotifications({ page: 1, limit: 20 }))}
-            className="mt-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm rounded-full"
+            className="mt-2 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-full"
           >
             Thử lại
           </button>
@@ -270,7 +270,7 @@ const NotificationPanel = () => {
                 <div className="flex items-center gap-2">
                   {/* Unread Indicator */}
                   {!notification.isRead && (
-                    <div className="w-2 h-2 rounded-full bg-black dark:bg-white flex-shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                   )}
                   {/* Delete Button */}
                   <button

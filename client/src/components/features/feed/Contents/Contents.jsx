@@ -27,7 +27,7 @@ const Contents = () => {
   const contentRef = useRef(null);
 
   // Redux state
-  const { trendingHashtags, loading: postLoading } = useSelector(
+  const { trendingHashtags } = useSelector(
     state => state.post
   );
   const {
@@ -105,7 +105,7 @@ const Contents = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                     activeTab === tab.id
-                      ? 'bg-black dark:bg-white text-white dark:text-black'
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-neutral-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
@@ -145,25 +145,25 @@ const Contents = () => {
         <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
           {/* Premium Card */}
           <div className="rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
-            <div className="bg-black dark:bg-white p-4">
+            <div className="bg-primary p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 dark:bg-black/20 rounded-full flex items-center justify-center">
-                  <Crown size={18} className="text-white dark:text-black" />
+                  <Crown size={18} className="text-primary-foreground" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white dark:text-black">
+                  <h3 className="font-semibold text-primary-foreground">
                     YiBu Premium
                   </h3>
-                  <p className="text-white/60 dark:text-black/60 text-xs">
+                  <p className="text-primary-foreground/60 text-xs">
                     Unlock exclusive features
                   </p>
                 </div>
               </div>
             </div>
             <div className="p-4 bg-white dark:bg-neutral-900">
-              <ul className="space-y-2 mb-4 text-xs text-neutral-500">
+              <ul className="space-y-2 mb-4 text-xs text-secondary">
                 <li className="flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-black dark:bg-white" />
+                  <div className="w-1 h-1 rounded-full bg-primary" />
                   Ad-free experience
                 </li>
                 <li className="flex items-center gap-2">
@@ -175,7 +175,7 @@ const Contents = () => {
                   Exclusive badges
                 </li>
               </ul>
-              <button className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity">
+              <button className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-full hover:opacity-90 transition-opacity">
                 Upgrade Now
               </button>
             </div>

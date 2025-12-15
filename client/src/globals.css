@@ -38,8 +38,8 @@
   --color-surface-hover: #f5f5f5;
 
   /* Text Colors - Black & Gray */
-  --color-text-primary: #000000;
-  --color-text-secondary: #525252;
+  --color-content: #000000;
+  --color-text-secondary: var(--color-secondary);
   --color-text-tertiary: #a3a3a3;
   --color-text-inverse: #ffffff;
 
@@ -84,6 +84,7 @@
   --color-primary: #ffffff;
   --color-primary-light: #fafafa;
   --color-primary-dark: #e5e5e5;
+  --color-primary-foreground: #000000;
 
   --color-secondary: #a3a3a3;
   --color-secondary-light: #d4d4d4;
@@ -100,7 +101,7 @@
   --color-surface-hover: #1a1a1a;
 
   --color-text-primary: #ffffff;
-  --color-text-secondary: #a3a3a3;
+  --color-text-secondary: var(--color-secondary);
   --color-text-tertiary: #525252;
   --color-text-inverse: #18181b;
 
@@ -128,7 +129,7 @@ html {
 
 body {
   background-color: var(--color-background);
-  color: var(--color-text-primary);
+  color: var(--color-content);
   font-family: var(--font-family-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

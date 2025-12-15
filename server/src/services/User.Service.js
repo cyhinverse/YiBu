@@ -171,6 +171,8 @@ class UserService {
       "gender",
       "website",
       "avatar",
+      "cover",
+      "location",
       "interests",
     ];
     const updateData = {};

@@ -42,13 +42,18 @@ const savePostSlice = createSlice({
       })
       .addCase(getSavedPosts.fulfilled, (state, action) => {
         state.loading = false;
-        const { posts, pagination, isLoadMore } = action.payload;
+        const { isLoadMore } = action.payload;
+        const posts = action.payload.data?.posts || action.payload.posts || [];
+        const pagination = action.payload.data?.pagination || action.payload.pagination;
+
         if (isLoadMore) {
           state.savedPosts = [...state.savedPosts, ...posts];
         } else {
           state.savedPosts = posts;
         }
-        state.pagination = pagination;
+        if (pagination) {
+          state.pagination = pagination;
+        }
       })
       .addCase(getSavedPosts.rejected, (state, action) => {
         state.loading = false;
@@ -60,7 +65,7 @@ const savePostSlice = createSlice({
       })
       .addCase(getCollections.fulfilled, (state, action) => {
         state.loading = false;
-        state.collections = action.payload;
+        state.collections = action.payload.data || action.payload;
       })
       .addCase(getCollections.rejected, (state, action) => {
         state.loading = false;
@@ -83,7 +88,7 @@ const savePostSlice = createSlice({
       .addCase(unsavePost.fulfilled, (state, action) => {
         const { postId } = action.payload;
         state.saveStatus[postId] = { isSaved: false, collectionId: null };
-        state.savedPosts = state.savedPosts.filter((p) => p.id !== postId);
+        state.savedPosts = state.savedPosts.filter((p) => p._id !== postId);
       });
   },
 });
