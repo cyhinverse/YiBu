@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -19,50 +19,54 @@ import {
   Bell,
   Search,
   ChevronLeft,
-} from "lucide-react";
+  HeartPulse,
+  Send,
+} from 'lucide-react';
 
 // Fake admin user
 const ADMIN_USER = {
-  name: "Admin User",
-  email: "admin@yibu.com",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
-  role: "Super Admin",
+  name: 'Admin User',
+  email: 'admin@yibu.com',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+  role: 'Super Admin',
 };
 
 const menuItems = [
-  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { id: "users", icon: Users, label: "Users" },
-  { id: "posts", icon: FileText, label: "Posts" },
-  { id: "comments", icon: MessageSquare, label: "Comments" },
-  { id: "reports", icon: Flag, label: "Reports", badge: 5 },
-  { id: "interactions", icon: Activity, label: "Interactions" },
-  { id: "banned", icon: UserX, label: "Banned Users" },
-  { id: "revenue", icon: DollarSign, label: "Revenue" },
-  { id: "settings", icon: Settings, label: "Settings" },
-  { id: "adminlogs", icon: ScrollText, label: "Activity Logs" },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'users', icon: Users, label: 'Users' },
+  { id: 'posts', icon: FileText, label: 'Posts' },
+  { id: 'comments', icon: MessageSquare, label: 'Comments' },
+  { id: 'reports', icon: Flag, label: 'Reports', badge: 5 },
+  { id: 'interactions', icon: Activity, label: 'Interactions' },
+  { id: 'banned', icon: UserX, label: 'Banned Users' },
+  { id: 'revenue', icon: DollarSign, label: 'Revenue' },
+  { id: 'broadcast', icon: Send, label: 'Broadcast' },
+  { id: 'systemhealth', icon: HeartPulse, label: 'System Health' },
+  { id: 'adminlogs', icon: ScrollText, label: 'Activity Logs' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
 ];
 
 const AdminLayout = ({ children, activePage, setActivePage }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem("admin-theme") === "dark";
+    return localStorage.getItem('admin-theme') === 'dark';
   });
 
   const toggleTheme = () => {
     const newDark = !isDarkMode;
     setIsDarkMode(newDark);
-    localStorage.setItem("admin-theme", newDark ? "dark" : "light");
+    localStorage.setItem('admin-theme', newDark ? 'dark' : 'light');
     if (newDark) {
-      document.documentElement.classList.add("dark");
+      document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove('dark');
     }
   };
 
   const handleLogout = () => {
     // Fake logout
-    console.log("Logout clicked");
+    console.log('Logout clicked');
   };
 
   const SidebarContent = ({ mobile = false }) => (
@@ -89,7 +93,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
             <ChevronLeft
               size={18}
               className={`text-neutral-500 transition-transform ${
-                !sidebarOpen ? "rotate-180" : ""
+                !sidebarOpen ? 'rotate-180' : ''
               }`}
             />
           </button>
@@ -98,7 +102,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {menuItems.map((item) => (
+        {menuItems.map(item => (
           <button
             key={item.id}
             onClick={() => {
@@ -107,8 +111,8 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
             }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
               activePage === item.id
-                ? "bg-black dark:bg-white text-white dark:text-black font-medium"
-                : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white"
+                ? 'bg-black dark:bg-white text-white dark:text-black font-medium'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white'
             }`}
             title={!sidebarOpen && !mobile ? item.label : undefined}
           >
@@ -129,7 +133,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
       <div className="p-3 border-t border-neutral-200 dark:border-neutral-800">
         <div
           className={`flex items-center gap-3 p-2 rounded-lg ${
-            sidebarOpen || mobile ? "" : "justify-center"
+            sidebarOpen || mobile ? '' : 'justify-center'
           }`}
         >
           <img
@@ -151,7 +155,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
         <button
           onClick={handleLogout}
           className={`w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ${
-            !sidebarOpen && !mobile ? "justify-center" : ""
+            !sidebarOpen && !mobile ? 'justify-center' : ''
           }`}
         >
           <LogOut size={20} />
@@ -166,7 +170,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
       {/* Desktop Sidebar */}
       <aside
         className={`hidden md:flex flex-col bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-[72px]"
+          sidebarOpen ? 'w-64' : 'w-[72px]'
         }`}
       >
         <SidebarContent />
@@ -200,8 +204,8 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
               />
             </button>
             <h1 className="text-lg font-semibold text-black dark:text-white capitalize">
-              {menuItems.find((item) => item.id === activePage)?.label ||
-                "Dashboard"}
+              {menuItems.find(item => item.id === activePage)?.label ||
+                'Dashboard'}
             </h1>
           </div>
 

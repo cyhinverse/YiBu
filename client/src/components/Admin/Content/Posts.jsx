@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Search,
   Filter,
@@ -17,118 +18,17 @@ import {
   ChevronRight,
   X,
   AlertTriangle,
+  RefreshCcw,
+  Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-
-const FAKE_POSTS = [
-  {
-    id: 1,
-    author: {
-      name: "Nguyễn Văn A",
-      username: "@nguyenvana",
-      avatar: "https://i.pravatar.cc/150?img=1",
-    },
-    content:
-      "Hôm nay trời đẹp quá, ra ngoài chụp ảnh thôi! 📸 #photography #nature",
-    type: "image",
-    media: ["https://picsum.photos/400/300?random=1"],
-    likes: 234,
-    comments: 45,
-    shares: 12,
-    status: "active",
-    createdAt: "2024-01-15 10:30",
-    reports: 0,
-  },
-  {
-    id: 2,
-    author: {
-      name: "Trần Thị B",
-      username: "@tranthib",
-      avatar: "https://i.pravatar.cc/150?img=2",
-    },
-    content: "Video mới về công thức nấu ăn đơn giản cho ngày cuối tuần! 🍳",
-    type: "video",
-    media: ["https://picsum.photos/400/300?random=2"],
-    likes: 567,
-    comments: 89,
-    shares: 34,
-    status: "active",
-    createdAt: "2024-01-15 09:15",
-    reports: 2,
-  },
-  {
-    id: 3,
-    author: {
-      name: "Lê Văn C",
-      username: "@levanc",
-      avatar: "https://i.pravatar.cc/150?img=3",
-    },
-    content:
-      "Chia sẻ kinh nghiệm học lập trình web cho người mới bắt đầu. Các bạn có thể tham khảo...",
-    type: "text",
-    media: [],
-    likes: 123,
-    comments: 67,
-    shares: 45,
-    status: "active",
-    createdAt: "2024-01-15 08:00",
-    reports: 0,
-  },
-  {
-    id: 4,
-    author: {
-      name: "Phạm Thị D",
-      username: "@phamthid",
-      avatar: "https://i.pravatar.cc/150?img=4",
-    },
-    content: "Nội dung vi phạm quy định cộng đồng...",
-    type: "text",
-    media: [],
-    likes: 12,
-    comments: 3,
-    shares: 1,
-    status: "hidden",
-    createdAt: "2024-01-14 22:30",
-    reports: 15,
-  },
-  {
-    id: 5,
-    author: {
-      name: "Hoàng Văn E",
-      username: "@hoangvane",
-      avatar: "https://i.pravatar.cc/150?img=5",
-    },
-    content: "Album ảnh du lịch Đà Nẵng 🏖️ Cảnh đẹp và đồ ăn ngon!",
-    type: "image",
-    media: [
-      "https://picsum.photos/400/300?random=3",
-      "https://picsum.photos/400/300?random=4",
-      "https://picsum.photos/400/300?random=5",
-    ],
-    likes: 890,
-    comments: 156,
-    shares: 78,
-    status: "active",
-    createdAt: "2024-01-14 18:45",
-    reports: 0,
-  },
-  {
-    id: 6,
-    author: {
-      name: "Ngô Thị F",
-      username: "@ngothif",
-      avatar: "https://i.pravatar.cc/150?img=6",
-    },
-    content: "Bài viết đang chờ kiểm duyệt do có nội dung nhạy cảm...",
-    type: "image",
-    media: ["https://picsum.photos/400/300?random=6"],
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    status: "pending",
-    createdAt: "2024-01-14 16:20",
-    reports: 5,
-  },
-];
+import {
+  getAllPosts,
+  moderatePost,
+  approvePost,
+  deletePost,
+} from "../../../redux/actions/adminActions";
 
 const getTypeIcon = (type) => {
   switch (type) {
@@ -168,7 +68,8 @@ const getStatusText = (status) => {
 };
 
 export default function Posts() {
-  const [posts, setPosts] = useState(FAKE_POSTS);
+  const dispatch = useDispatch();
+  const { posts: postsList, pagination, loading } = useSelector((state) => state.admin);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -178,30 +79,81 @@ export default function Posts() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredPosts = posts.filter((post) => {
-    const matchSearch =
-      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.author.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchType = filterType === "all" || post.type === filterType;
-    const matchStatus = filterStatus === "all" || post.status === filterStatus;
-    return matchSearch && matchType && matchStatus;
-  });
+  // Fetch posts on mount and when filters change
+  useEffect(() => {
+    const params = {
+      page: currentPage,
+      limit: 10,
+    };
+    if (filterStatus !== "all") params.status = filterStatus;
+    if (filterType !== "all") params.type = filterType;
+    
+    dispatch(getAllPosts(params));
+  }, [dispatch, currentPage, filterStatus, filterType]);
 
-  const handleDelete = () => {
-    setPosts(posts.filter((p) => p.id !== postToDelete?.id));
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== undefined) {
+        const params = {
+          page: 1,
+          limit: 10,
+          search: searchTerm || undefined,
+        };
+        if (filterStatus !== "all") params.status = filterStatus;
+        if (filterType !== "all") params.type = filterType;
+        dispatch(getAllPosts(params));
+        setCurrentPage(1);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const posts = Array.isArray(postsList) ? postsList : [];
+
+  const handleDelete = async () => {
+    if (!postToDelete) return;
+    try {
+      await dispatch(deletePost(postToDelete._id || postToDelete.id)).unwrap();
+      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+    }
     setShowDeleteModal(false);
     setPostToDelete(null);
   };
 
-  const handleToggleStatus = (postId) => {
-    setPosts(
-      posts.map((p) =>
-        p.id === postId
-          ? { ...p, status: p.status === "active" ? "hidden" : "active" }
-          : p
-      )
-    );
+  const handleToggleStatus = async (post) => {
+    const newStatus = post.status === "active" ? "hidden" : "active";
+    try {
+      await dispatch(moderatePost({ 
+        postId: post._id || post.id, 
+        action: newStatus === "hidden" ? "hide" : "approve",
+        reason: newStatus === "hidden" ? "Admin moderation" : undefined
+      })).unwrap();
+      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+    } catch (error) {
+      console.error("Failed to moderate post:", error);
+    }
     setActiveDropdown(null);
+  };
+
+  const handleApprovePost = async (post) => {
+    try {
+      await dispatch(approvePost(post._id || post.id)).unwrap();
+      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+    } catch (error) {
+      console.error("Failed to approve post:", error);
+    }
+    setActiveDropdown(null);
+  };
+
+  const handleRefresh = () => {
+    dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
   };
 
   return (
@@ -213,9 +165,17 @@ export default function Posts() {
             Quản lý bài viết
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1">
-            {filteredPosts.length} bài viết
+            {pagination?.total || posts.length} bài viết
           </p>
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </div>
 
       {/* Filters */}
@@ -260,70 +220,85 @@ export default function Posts() {
       </div>
 
       {/* Posts Grid */}
-      <div className="grid gap-4">
-        {filteredPosts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5"
-          >
-            <div className="flex items-start gap-4">
-              {/* Author Avatar */}
-              <img
-                src={post.author.avatar}
-                alt={post.author.name}
-                className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
-              />
+      {loading && posts.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-neutral-400" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-12 text-neutral-500">
+          Không có bài viết nào
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {posts.map((post) => {
+            const author = post.author || post.user || {};
+            const mediaItems = post.media || post.images || [];
+            const hasMedia = mediaItems.length > 0;
+            const postType = post.type || (hasMedia ? (mediaItems[0]?.type === "video" ? "video" : "image") : "text");
+            
+            return (
+              <div
+                key={post._id || post.id}
+                className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5"
+              >
+                <div className="flex items-start gap-4">
+                  {/* Author Avatar */}
+                  <img
+                    src={author.avatar || "/images/default-avatar.png"}
+                    alt={author.name || author.username || "User"}
+                    className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
+                  />
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-black dark:text-white">
-                        {post.author.name}
-                      </h3>
-                      <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                        {post.author.username}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        {post.createdAt}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        {getTypeIcon(post.type)}
-                        {post.type === "image"
-                          ? "Hình ảnh"
-                          : post.type === "video"
-                          ? "Video"
-                          : "Văn bản"}
-                      </span>
-                    </div>
-                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-black dark:text-white">
+                            {author.name || author.username || "Unknown"}
+                          </h3>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-sm">
+                            @{author.username || "user"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            {post.createdAt ? new Date(post.createdAt).toLocaleString() : "N/A"}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            {getTypeIcon(postType)}
+                            {postType === "image"
+                              ? "Hình ảnh"
+                              : postType === "video"
+                              ? "Video"
+                              : "Văn bản"}
+                          </span>
+                        </div>
+                      </div>
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(
-                        post.status
-                      )}`}
-                    >
-                      {getStatusText(post.status)}
-                    </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(
+                            post.status || "active"
+                          )}`}
+                        >
+                          {getStatusText(post.status || "active")}
+                        </span>
 
-                    {post.reports > 0 && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        <Flag size={12} />
-                        {post.reports}
-                      </span>
-                    )}
+                        {(post.reportsCount || post.reports) > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            <Flag size={12} />
+                            {post.reportsCount || post.reports}
+                          </span>
+                        )}
 
                     {/* Actions Dropdown */}
                     <div className="relative">
                       <button
                         onClick={() =>
                           setActiveDropdown(
-                            activeDropdown === post.id ? null : post.id
+                            activeDropdown === (post._id || post.id) ? null : (post._id || post.id)
                           )
                         }
                         className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -334,8 +309,8 @@ export default function Posts() {
                         />
                       </button>
 
-                      {activeDropdown === post.id && (
-                        <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10">
+                      {activeDropdown === (post._id || post.id) && (
+                        <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10">
                           <button
                             onClick={() => {
                               setSelectedPost(post);
@@ -346,11 +321,20 @@ export default function Posts() {
                             <Eye size={16} />
                             Xem chi tiết
                           </button>
+                          {post.status === "pending" && (
+                            <button
+                              onClick={() => handleApprovePost(post)}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
+                            >
+                              <CheckCircle size={16} />
+                              Phê duyệt
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleToggleStatus(post.id)}
+                            onClick={() => handleToggleStatus(post)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
                           >
-                            <Flag size={16} />
+                            {post.status === "active" ? <XCircle size={16} /> : <CheckCircle size={16} />}
                             {post.status === "active" ? "Ẩn bài" : "Hiện bài"}
                           </button>
                           <button
@@ -372,33 +356,37 @@ export default function Posts() {
 
                 {/* Post Content */}
                 <p className="mt-3 text-black dark:text-white line-clamp-2">
-                  {post.content}
+                  {post.content || post.caption || "No content"}
                 </p>
 
                 {/* Media Preview */}
-                {post.media.length > 0 && (
+                {mediaItems.length > 0 && (
                   <div className="mt-3 flex gap-2 overflow-x-auto">
-                    {post.media.slice(0, 3).map((url, idx) => (
-                      <div
-                        key={idx}
-                        className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800"
-                      >
-                        <img
-                          src={url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                        {post.type === "video" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                            <Video size={24} className="text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {post.media.length > 3 && (
+                    {mediaItems.slice(0, 3).map((media, idx) => {
+                      const mediaUrl = typeof media === 'string' ? media : media.url;
+                      const isVideo = typeof media === 'object' ? media.type === 'video' : postType === 'video';
+                      return (
+                        <div
+                          key={idx}
+                          className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800"
+                        >
+                          <img
+                            src={mediaUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          {isVideo && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <Video size={24} className="text-white" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {mediaItems.length > 3 && (
                       <div className="flex-shrink-0 w-24 h-24 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                         <span className="text-neutral-500 dark:text-neutral-400 font-medium">
-                          +{post.media.length - 3}
+                          +{mediaItems.length - 3}
                         </span>
                       </div>
                     )}
@@ -409,40 +397,42 @@ export default function Posts() {
                 <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
                   <span className="flex items-center gap-1.5">
                     <Heart size={16} />
-                    {post.likes}
+                    {post.likesCount || post.likes || 0}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <MessageCircle size={16} />
-                    {post.comments}
+                    {post.commentsCount || post.comments || 0}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Share2 size={16} />
-                    {post.shares}
+                    {post.sharesCount || post.shares || 0}
                   </span>
                 </div>
               </div>
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Hiển thị {filteredPosts.length} bài viết
+          Page {currentPage} of {pagination?.pages || 1} ({pagination?.total || posts.length} posts)
         </p>
         <div className="flex items-center gap-2">
           <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
+            disabled={currentPage <= 1}
+            onClick={() => handlePageChange(currentPage - 1)}
             className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft size={18} />
           </button>
           <span className="px-4 py-2 text-sm">Trang {currentPage}</span>
           <button
-            onClick={() => setCurrentPage((p) => p + 1)}
-            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            disabled={currentPage >= (pagination?.pages || 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronRight size={18} />
           </button>
@@ -466,57 +456,68 @@ export default function Posts() {
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <img
-                  src={selectedPost.author.avatar}
-                  alt={selectedPost.author.name}
-                  className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
-                />
-                <div>
-                  <h3 className="font-semibold text-black dark:text-white">
-                    {selectedPost.author.name}
-                  </h3>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {selectedPost.author.username} • {selectedPost.createdAt}
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                const author = selectedPost.author || selectedPost.user || {};
+                const mediaItems = selectedPost.media || selectedPost.images || [];
+                return (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <img
+                        src={author.avatar || "/images/default-avatar.png"}
+                        alt={author.name || author.username || "User"}
+                        className="w-12 h-12 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-black dark:text-white">
+                          {author.name || author.username || "Unknown"}
+                        </h3>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                          @{author.username || "user"} • {selectedPost.createdAt ? new Date(selectedPost.createdAt).toLocaleString() : "N/A"}
+                        </p>
+                      </div>
+                    </div>
 
-              <p className="text-black dark:text-white mb-4">
-                {selectedPost.content}
-              </p>
+                    <p className="text-black dark:text-white mb-4">
+                      {selectedPost.content || selectedPost.caption || "No content"}
+                    </p>
 
-              {selectedPost.media.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {selectedPost.media.map((url, idx) => (
-                    <img
-                      key={idx}
-                      src={url}
-                      alt=""
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                  ))}
-                </div>
-              )}
+                    {mediaItems.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        {mediaItems.map((media, idx) => {
+                          const mediaUrl = typeof media === 'string' ? media : media.url;
+                          return (
+                            <img
+                              key={idx}
+                              src={mediaUrl}
+                              alt=""
+                              className="w-full h-48 object-cover rounded-lg"
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
 
-              <div className="flex items-center gap-6 text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 pt-4">
-                <span className="flex items-center gap-1.5">
-                  <Heart size={18} /> {selectedPost.likes} lượt thích
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MessageCircle size={18} /> {selectedPost.comments} bình luận
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Share2 size={18} /> {selectedPost.shares} chia sẻ
-                </span>
-              </div>
+                    <div className="flex items-center gap-6 text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 pt-4">
+                      <span className="flex items-center gap-1.5">
+                        <Heart size={18} /> {selectedPost.likesCount || selectedPost.likes || 0} lượt thích
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MessageCircle size={18} /> {selectedPost.commentsCount || selectedPost.comments || 0} bình luận
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Share2 size={18} /> {selectedPost.sharesCount || selectedPost.shares || 0} chia sẻ
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
       )}
 
       {/* Delete Modal */}
-      {showDeleteModal && (
+      {showDeleteModal && postToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -536,7 +537,7 @@ export default function Posts() {
             <p className="text-neutral-600 dark:text-neutral-400 mb-6">
               Bạn có chắc chắn muốn xóa bài viết của{" "}
               <strong className="text-black dark:text-white">
-                {postToDelete?.author.name}
+                {postToDelete?.author?.name || postToDelete?.user?.name || postToDelete?.user?.username || "this user"}
               </strong>
               ?
             </p>
@@ -553,8 +554,10 @@ export default function Posts() {
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors"
+                disabled={loading}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
+                {loading && <Loader2 size={16} className="animate-spin" />}
                 Xóa
               </button>
             </div>
