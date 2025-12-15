@@ -1,57 +1,25 @@
-import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Search, X, UserPlus, Check } from "lucide-react";
-
-// Fake search results
-const FAKE_USERS = [
-  {
-    _id: "u1",
-    name: "Sarah Chen",
-    username: "sarahchen",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    bio: "Product Designer @Company",
-    isFollowing: false,
-  },
-  {
-    _id: "u2",
-    name: "Mike Johnson",
-    username: "mikej",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-    bio: "Software Engineer",
-    isFollowing: true,
-  },
-  {
-    _id: "u3",
-    name: "Emma Wilson",
-    username: "emmaw",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-    bio: "UI/UX Designer",
-    isFollowing: false,
-  },
-  {
-    _id: "u4",
-    name: "Alex Rivera",
-    username: "alexr",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-    bio: "Full-stack Developer",
-    isFollowing: true,
-  },
-  {
-    _id: "u5",
-    name: "Jordan Lee",
-    username: "jordanl",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jordan",
-    bio: "Creative Director",
-    isFollowing: false,
-  },
-];
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Search, X, UserPlus, Check, Loader2 } from 'lucide-react';
+import {
+  searchUsers,
+  followUser,
+  unfollowUser,
+} from '../../../redux/actions/userActions';
+import toast from 'react-hot-toast';
 
 const SearchUser = ({ isOpen, onClose }) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { searchResults, loading } = useSelector(state => state.user);
+  const { user: currentUser } = useSelector(state => state.auth);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [followingIds, setFollowingIds] = useState(new Set());
+  const [loadingIds, setLoadingIds] = useState(new Set());
   const searchInputRef = useRef(null);
   const modalRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -60,45 +28,84 @@ const SearchUser = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setSearchResults([]);
       return;
     }
 
-    // Simulate search with delay
-    setLoading(true);
-    const timer = setTimeout(() => {
-      const filtered = FAKE_USERS.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setSearchResults(filtered);
-      setLoading(false);
+    // Debounce search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      dispatch(searchUsers({ query: searchQuery, page: 1, limit: 10 }));
     }, 300);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, dispatch]);
+
+  const handleFollow = useCallback(
+    async (e, userId) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (loadingIds.has(userId)) return;
+
+      setLoadingIds(prev => new Set([...prev, userId]));
+      const isCurrentlyFollowing = followingIds.has(userId);
+
+      try {
+        if (isCurrentlyFollowing) {
+          await dispatch(unfollowUser(userId)).unwrap();
+          setFollowingIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(userId);
+            return newSet;
+          });
+          toast.success('Đã bỏ theo dõi');
+        } else {
+          await dispatch(followUser(userId)).unwrap();
+          setFollowingIds(prev => new Set([...prev, userId]));
+          toast.success('Đã theo dõi');
+        }
+      } catch (error) {
+        toast.error(error || 'Thao tác thất bại');
+      } finally {
+        setLoadingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      }
+    },
+    [dispatch, followingIds, loadingIds]
+  );
 
   const handleClearSearch = () => {
-    setSearchQuery("");
-    setSearchResults([]);
+    setSearchQuery('');
   };
+
+  // Get users list from Redux
+  const users = searchResults?.data || searchResults || [];
 
   if (!isOpen) return null;
 
@@ -119,7 +126,7 @@ const SearchUser = ({ isOpen, onClose }) => {
               ref={searchInputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search users..."
               className="w-full pl-10 pr-10 py-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
             />
@@ -138,9 +145,9 @@ const SearchUser = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center">
-              <div className="w-6 h-6 border-2 border-neutral-300 border-t-black dark:border-t-white rounded-full animate-spin mx-auto" />
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-neutral-400" />
             </div>
-          ) : searchResults.length === 0 ? (
+          ) : users.length === 0 ? (
             <div className="p-8 text-center">
               {searchQuery ? (
                 <>
@@ -157,60 +164,76 @@ const SearchUser = ({ isOpen, onClose }) => {
               )}
             </div>
           ) : (
-            searchResults.map((user) => (
-              <Link
-                key={user._id}
-                to={`/profile/${user._id}`}
-                onClick={onClose}
-                className="flex items-center gap-3 p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-              >
-                {/* Avatar */}
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
-                />
+            users.map(user => {
+              const isFollowed = followingIds.has(user._id) || user.isFollowing;
+              const isLoading = loadingIds.has(user._id);
+              const isSelf = currentUser?._id === user._id;
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-black dark:text-white truncate">
-                      {user.name}
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-500 truncate">
-                    @{user.username}
-                  </p>
-                  {user.bio && (
-                    <p className="text-xs text-neutral-400 truncate mt-0.5">
-                      {user.bio}
-                    </p>
-                  )}
-                </div>
-
-                {/* Follow Button */}
-                <button
-                  onClick={(e) => e.preventDefault()}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    user.isFollowing
-                      ? "bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700"
-                      : "bg-black dark:bg-white text-white dark:text-black"
-                  }`}
+              return (
+                <Link
+                  key={user._id}
+                  to={`/profile/${user._id}`}
+                  onClick={onClose}
+                  className="flex items-center gap-3 p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                 >
-                  {user.isFollowing ? (
-                    <>
-                      <Check size={14} />
-                      Following
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus size={14} />
-                      Follow
-                    </>
+                  {/* Avatar */}
+                  <img
+                    src={
+                      user.avatar ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                    }
+                    alt={user.name || user.username}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                  />
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-black dark:text-white truncate">
+                        {user.name || user.fullName || user.username}
+                      </span>
+                    </div>
+                    <p className="text-sm text-neutral-500 truncate">
+                      @{user.username}
+                    </p>
+                    {user.bio && (
+                      <p className="text-xs text-neutral-400 truncate mt-0.5">
+                        {user.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Follow Button - Don't show for self */}
+                  {!isSelf && (
+                    <button
+                      onClick={e => handleFollow(e, user._id)}
+                      disabled={isLoading}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      } ${
+                        isFollowed
+                          ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
+                          : 'bg-black dark:bg-white text-white dark:text-black'
+                      }`}
+                    >
+                      {isLoading ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : isFollowed ? (
+                        <>
+                          <Check size={14} />
+                          Following
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={14} />
+                          Follow
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
-              </Link>
-            ))
+                </Link>
+              );
+            })
           )}
         </div>
 

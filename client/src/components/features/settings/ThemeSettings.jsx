@@ -1,30 +1,62 @@
-import { useState, useEffect } from "react";
-import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Sun, Moon, Monitor, Check, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+  getSettings,
+  updateThemeSettings,
+} from '../../../redux/actions/userActions';
 
 const ThemeSettings = () => {
+  const dispatch = useDispatch();
+  const { settings, loading: settingsLoading } = useSelector(
+    state => state.user
+  );
+
   const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const savedFontSize = localStorage.getItem("fontSize");
+    const savedTheme = localStorage.getItem('theme');
+    const savedFontSize = localStorage.getItem('fontSize');
     return {
-      appearance: savedTheme || "system",
-      fontSize: savedFontSize || "medium",
+      appearance: savedTheme || 'system',
+      fontSize: savedFontSize || 'medium',
     };
   });
+  const [saving, setSaving] = useState(false);
+
+  // Load settings from server
+  useEffect(() => {
+    dispatch(getSettings());
+  }, [dispatch]);
+
+  // Sync local state with server settings
+  useEffect(() => {
+    if (settings?.theme) {
+      setTheme(prev => ({
+        appearance: settings.theme.appearance || prev.appearance,
+        fontSize: settings.theme.fontSize || prev.fontSize,
+      }));
+      // Apply the theme from server
+      applyTheme(settings.theme.appearance || theme.appearance);
+      if (settings.theme.fontSize) {
+        applyFontSize(settings.theme.fontSize);
+      }
+    }
+  }, [settings]);
 
   // Apply theme on mount
   useEffect(() => {
     applyTheme(theme.appearance);
   }, []);
 
-  const applyTheme = (appearance) => {
+  const applyTheme = appearance => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove('light', 'dark');
 
-    if (appearance === "system") {
+    if (appearance === 'system') {
       const systemDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
+        '(prefers-color-scheme: dark)'
       ).matches;
-      root.classList.add(systemDark ? "dark" : "light");
+      root.classList.add(systemDark ? 'dark' : 'light');
     } else {
       root.classList.add(appearance);
     }
@@ -32,42 +64,71 @@ const ThemeSettings = () => {
 
   const appearances = [
     {
-      id: "light",
-      label: "Light",
+      id: 'light',
+      label: 'Light',
       icon: Sun,
-      description: "Light background with dark text",
+      description: 'Light background with dark text',
     },
     {
-      id: "dark",
-      label: "Dark",
+      id: 'dark',
+      label: 'Dark',
       icon: Moon,
-      description: "Dark background with light text",
+      description: 'Dark background with light text',
     },
     {
-      id: "system",
-      label: "System",
+      id: 'system',
+      label: 'System',
       icon: Monitor,
-      description: "Follows your device settings",
+      description: 'Follows your device settings',
     },
   ];
 
   const fontSizes = [
-    { id: "small", label: "Small", size: "text-sm" },
-    { id: "medium", label: "Medium", size: "text-base" },
-    { id: "large", label: "Large", size: "text-lg" },
+    { id: 'small', label: 'Small', size: 'text-sm' },
+    { id: 'medium', label: 'Medium', size: 'text-base' },
+    { id: 'large', label: 'Large', size: 'text-lg' },
   ];
 
-  const handleAppearanceChange = (appearance) => {
-    setTheme({ ...theme, appearance });
-    localStorage.setItem("theme", appearance);
-    applyTheme(appearance);
+  const applyFontSize = fontSize => {
+    const sizeMap = { small: '14px', medium: '16px', large: '18px' };
+    document.documentElement.style.fontSize = sizeMap[fontSize] || '16px';
   };
 
-  const handleFontSizeChange = (fontSize) => {
-    setTheme({ ...theme, fontSize });
-    localStorage.setItem("fontSize", fontSize);
-    const sizeMap = { small: "14px", medium: "16px", large: "18px" };
-    document.documentElement.style.fontSize = sizeMap[fontSize] || "16px";
+  const handleAppearanceChange = async appearance => {
+    const newTheme = { ...theme, appearance };
+    setTheme(newTheme);
+    localStorage.setItem('theme', appearance);
+    applyTheme(appearance);
+
+    // Save to server
+    setSaving(true);
+    try {
+      await dispatch(updateThemeSettings(newTheme)).unwrap();
+      toast.success('Đã lưu cài đặt giao diện');
+    } catch (error) {
+      // Keep local change even if server fails
+      console.error('Failed to save theme to server:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFontSizeChange = async fontSize => {
+    const newTheme = { ...theme, fontSize };
+    setTheme(newTheme);
+    localStorage.setItem('fontSize', fontSize);
+    applyFontSize(fontSize);
+
+    // Save to server
+    setSaving(true);
+    try {
+      await dispatch(updateThemeSettings(newTheme)).unwrap();
+      toast.success('Đã lưu cài đặt giao diện');
+    } catch (error) {
+      console.error('Failed to save theme to server:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -87,29 +148,32 @@ const ThemeSettings = () => {
           Theme
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {appearances.map((item) => (
+          {appearances.map(item => (
             <button
               key={item.id}
               onClick={() => handleAppearanceChange(item.id)}
+              disabled={saving}
               className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                saving ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 theme.appearance === item.id
-                  ? "border-black dark:border-white bg-neutral-50 dark:bg-neutral-800"
-                  : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
+                  ? 'border-black dark:border-white bg-neutral-50 dark:bg-neutral-800'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center ${
                   theme.appearance === item.id
-                    ? "bg-black dark:bg-white"
-                    : "bg-neutral-100 dark:bg-neutral-800"
+                    ? 'bg-black dark:bg-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800'
                 }`}
               >
                 <item.icon
                   size={20}
                   className={
                     theme.appearance === item.id
-                      ? "text-white dark:text-black"
-                      : "text-neutral-500"
+                      ? 'text-white dark:text-black'
+                      : 'text-neutral-500'
                   }
                 />
               </div>
@@ -117,8 +181,8 @@ const ThemeSettings = () => {
                 <p
                   className={`text-sm font-medium ${
                     theme.appearance === item.id
-                      ? "text-black dark:text-white"
-                      : "text-neutral-600 dark:text-neutral-400"
+                      ? 'text-black dark:text-white'
+                      : 'text-neutral-600 dark:text-neutral-400'
                   }`}
                 >
                   {item.label}
@@ -143,21 +207,24 @@ const ThemeSettings = () => {
           Font Size
         </h3>
         <div className="flex gap-3">
-          {fontSizes.map((item) => (
+          {fontSizes.map(item => (
             <button
               key={item.id}
               onClick={() => handleFontSizeChange(item.id)}
+              disabled={saving}
               className={`flex-1 py-3 px-4 rounded-xl border-2 transition-all ${
+                saving ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 theme.fontSize === item.id
-                  ? "border-black dark:border-white bg-neutral-50 dark:bg-neutral-800"
-                  : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
+                  ? 'border-black dark:border-white bg-neutral-50 dark:bg-neutral-800'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               <span
                 className={`${item.size} ${
                   theme.fontSize === item.id
-                    ? "text-black dark:text-white font-medium"
-                    : "text-neutral-500"
+                    ? 'text-black dark:text-white font-medium'
+                    : 'text-neutral-500'
                 }`}
               >
                 {item.label}
@@ -165,6 +232,12 @@ const ThemeSettings = () => {
             </button>
           ))}
         </div>
+        {saving && (
+          <div className="flex items-center justify-center gap-2 mt-4 text-sm text-neutral-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Đang lưu...</span>
+          </div>
+        )}
       </div>
 
       {/* Preview */}

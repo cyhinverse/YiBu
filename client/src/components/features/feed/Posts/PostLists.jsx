@@ -1,110 +1,152 @@
-import { FileText, PenSquare } from "lucide-react";
-import Post from "./Post";
+import { useEffect, useCallback, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { FileText, PenSquare, Loader2 } from 'lucide-react';
+import Post from './Post';
+import {
+  getAllPosts,
+  getPersonalizedFeed,
+  getTrendingPosts,
+} from '../../../../redux/actions/postActions';
+import { getBatchLikeStatus } from '../../../../redux/actions/likeActions';
 
-// Fake posts data
-const FAKE_POSTS = [
-  {
-    _id: "1",
-    caption:
-      "Just shipped a new feature! 🚀 The team has been working hard on this for weeks. Really proud of what we've accomplished together.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 mins ago
-    likeCount: 234,
-    commentCount: 12,
-    viewCount: 1520,
-    user: {
-      name: "Sarah Chen",
-      username: "sarahchen",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      verified: true,
-    },
-    media: [
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600",
-      },
-    ],
-  },
-  {
-    _id: "2",
-    caption: "Coffee and code. That's my morning routine ☕️",
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 mins ago
-    likeCount: 89,
-    commentCount: 5,
-    viewCount: 432,
-    user: {
-      name: "Mike Johnson",
-      username: "mikej",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      verified: false,
-    },
-    media: [],
-  },
-  {
-    _id: "3",
-    caption: "Beautiful sunset from my office window today 🌅",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    likeCount: 567,
-    commentCount: 23,
-    viewCount: 3200,
-    user: {
-      name: "Emma Wilson",
-      username: "emmaw",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-      verified: true,
-    },
-    media: [
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=600",
-      },
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=600",
-      },
-    ],
-  },
-  {
-    _id: "4",
-    caption:
-      "New design system is coming along nicely. Clean, minimal, and elegant. What do you think?",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
-    likeCount: 1234,
-    commentCount: 89,
-    viewCount: 8900,
-    user: {
-      name: "Alex Rivera",
-      username: "alexr",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-      verified: true,
-    },
-    media: [
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1545235617-9465d2a55698?w=600",
-      },
-    ],
-  },
-  {
-    _id: "5",
-    caption: "Weekend vibes 🎧",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    likeCount: 45,
-    commentCount: 2,
-    viewCount: 210,
-    user: {
-      name: "Jordan Lee",
-      username: "jordanl",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jordan",
-      verified: false,
-    },
-    media: [],
-  },
-];
+const PostLists = ({ activeTab = 'forYou' }) => {
+  const dispatch = useDispatch();
+  const {
+    posts,
+    personalizedPosts,
+    trendingPosts,
+    loading,
+    error,
+    pagination,
+  } = useSelector(state => state.post);
+  const { likeStatuses } = useSelector(state => state.like);
+  const loadingRef = useRef(false);
+  const observerRef = useRef(null);
+  const prevTabRef = useRef(activeTab);
 
-const PostLists = () => {
-  const posts = FAKE_POSTS;
+  // Determine which posts to display based on active tab
+  const getDisplayPosts = () => {
+    switch (activeTab) {
+      case 'forYou':
+        return personalizedPosts?.length > 0 ? personalizedPosts : posts;
+      case 'following':
+        return posts;
+      case 'latest':
+        return trendingPosts?.length > 0 ? trendingPosts : posts;
+      default:
+        return posts;
+    }
+  };
 
-  if (posts.length === 0) {
+  const displayPosts = getDisplayPosts();
+
+  // Fetch posts based on active tab
+  useEffect(() => {
+    // Reset when tab changes
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+    }
+
+    switch (activeTab) {
+      case 'forYou':
+        dispatch(getPersonalizedFeed({ page: 1, limit: 20 }));
+        break;
+      case 'following':
+        dispatch(getAllPosts({ page: 1, limit: 20 }));
+        break;
+      case 'latest':
+        dispatch(getTrendingPosts({ page: 1, limit: 20 }));
+        break;
+      default:
+        dispatch(getAllPosts({ page: 1, limit: 20 }));
+    }
+  }, [dispatch, activeTab]);
+
+  // Fetch like statuses when displayPosts change
+  useEffect(() => {
+    if (displayPosts?.length > 0) {
+      // Ensure postIds are strings for backend validation
+      const postIds = displayPosts.map(post => String(post._id));
+      dispatch(getBatchLikeStatus(postIds));
+    }
+  }, [displayPosts, dispatch]);
+
+  // Infinite scroll
+  const loadMore = useCallback(() => {
+    if (loadingRef.current || !pagination?.hasMore) return;
+    loadingRef.current = true;
+
+    const loadAction = () => {
+      switch (activeTab) {
+        case 'forYou':
+          return getPersonalizedFeed({
+            page: pagination.currentPage + 1,
+            limit: 20,
+          });
+        case 'latest':
+          return getTrendingPosts({
+            page: pagination.currentPage + 1,
+            limit: 20,
+          });
+        default:
+          return getAllPosts({ page: pagination.currentPage + 1, limit: 20 });
+      }
+    };
+
+    dispatch(loadAction()).finally(() => {
+      loadingRef.current = false;
+    });
+  }, [dispatch, pagination, activeTab]);
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && !loading && pagination?.hasMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [loadMore, loading, pagination?.hasMore]);
+
+  if (loading && (!displayPosts || displayPosts.length === 0)) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4">
+          <FileText size={28} className="text-red-500" />
+        </div>
+        <h3 className="text-base font-medium text-black dark:text-white mb-2">
+          Có lỗi xảy ra
+        </h3>
+        <p className="text-xs text-neutral-500 text-center max-w-xs mb-4">
+          {error}
+        </p>
+        <button
+          onClick={() => dispatch(getAllPosts({ page: 1, limit: 20 }))}
+          className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
+  if (!displayPosts || displayPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4">
         <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
@@ -127,9 +169,28 @@ const PostLists = () => {
 
   return (
     <div className="space-y-4">
-      {posts.map((post) => (
-        <Post key={post._id} data={post} />
+      {displayPosts.map(post => (
+        <Post
+          key={post._id}
+          data={post}
+          isLiked={likeStatuses?.[post._id]?.isLiked}
+        />
       ))}
+
+      {/* Load more trigger */}
+      <div ref={observerRef} className="h-10">
+        {loading && displayPosts.length > 0 && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+          </div>
+        )}
+      </div>
+
+      {!pagination?.hasMore && displayPosts.length > 0 && (
+        <p className="text-center text-xs text-neutral-400 py-4">
+          Bạn đã xem hết bài viết
+        </p>
+      )}
     </div>
   );
 };

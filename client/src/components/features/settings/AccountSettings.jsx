@@ -21,6 +21,10 @@ const AccountSettings = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentProfile } = useSelector(state => state.user);
+  const { user: authUser } = useSelector(state => state.auth);
+
+  // Use currentProfile or authUser as fallback
+  const profile = currentProfile || authUser || {};
 
   const [account, setAccount] = useState({
     email: 'johndoe@example.com',
@@ -141,7 +145,7 @@ const AccountSettings = () => {
           <InputField
             icon={User}
             label="Username"
-            value={currentProfile.username}
+            value={profile.username || ''}
             onChange={e => setAccount({ ...account, username: e.target.value })}
             placeholder="Enter username"
           />
@@ -149,7 +153,7 @@ const AccountSettings = () => {
             icon={Mail}
             label="Email"
             type="email"
-            value={currentProfile.email}
+            value={profile.email || ''}
             onChange={e => setAccount({ ...account, email: e.target.value })}
             placeholder="Enter email"
           />

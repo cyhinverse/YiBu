@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
-import CreatePost from "../Posts/CreatePost";
-import PostLists from "../Posts/PostLists";
-import TrendingTopics from "../TrendingTopics/TrendingTopics";
-import TopUser from "../../user/TopUser/TopUser";
+import { useState, useRef, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import CreatePost from '../Posts/CreatePost';
+import PostLists from '../Posts/PostLists';
+import TrendingTopics from '../TrendingTopics/TrendingTopics';
+import TopUser from '../../user/TopUser/TopUser';
 import {
   Search,
   Sparkles,
@@ -11,33 +12,68 @@ import {
   Crown,
   Flame,
   Zap,
-} from "lucide-react";
-
-// Fake data
-const TRENDING_TOPICS = [
-  { name: "#ChillCuốiTuần", posts: "12.4K", category: "Trending" },
-  { name: "#MondayMood", posts: "8.1K", category: "Lifestyle" },
-  { name: "#FoodieLife", posts: "5.9K", category: "Food" },
-  { name: "#CodeNewbie", posts: "3.4K", category: "Technology" },
-  { name: "#Travel2025", posts: "10.7K", category: "Travel" },
-];
-
-const SUGGESTED_USERS = [
-  { _id: "1", name: "John Doe", username: "johndoe", avatar: null },
-  { _id: "2", name: "Jane Smith", username: "janesmith", avatar: null },
-  { _id: "3", name: "Tech Guy", username: "techguy", avatar: null },
-];
+} from 'lucide-react';
+import { getTrendingHashtags } from '../../../../redux/actions/postActions';
+import {
+  getSuggestions,
+  searchUsers,
+} from '../../../../redux/actions/userActions';
+import { useDebounce } from '../../../../hooks/useDebounce';
 
 const Contents = () => {
-  const [activeTab, setActiveTab] = useState("forYou");
-  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
+  const [activeTab, setActiveTab] = useState('forYou');
+  const [searchQuery, setSearchQuery] = useState('');
   const contentRef = useRef(null);
 
+  // Redux state
+  const { trendingHashtags, loading: postLoading } = useSelector(
+    state => state.post
+  );
+  const {
+    suggestions,
+    searchResults,
+    loading: userLoading,
+  } = useSelector(state => state.user);
+
+  // Debounce search
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Fetch trending hashtags and suggestions on mount
+  useEffect(() => {
+    dispatch(getTrendingHashtags(10));
+    dispatch(getSuggestions(5));
+  }, [dispatch]);
+
+  // Search when query changes
+  useEffect(() => {
+    if (debouncedSearch.trim()) {
+      dispatch(searchUsers({ query: debouncedSearch, page: 1, limit: 5 }));
+    }
+  }, [debouncedSearch, dispatch]);
+
   const tabs = [
-    { id: "forYou", label: "For You", icon: Flame },
-    { id: "following", label: "Following", icon: Users },
-    { id: "latest", label: "Latest", icon: Zap },
+    { id: 'forYou', label: 'For You', icon: Flame },
+    { id: 'following', label: 'Following', icon: Users },
+    { id: 'latest', label: 'Latest', icon: Zap },
   ];
+
+  // Format trending hashtags for component - handle both array and object with data property
+  const hashtagsArray = Array.isArray(trendingHashtags)
+    ? trendingHashtags
+    : trendingHashtags?.data || [];
+  const formattedTrending = hashtagsArray.map(tag => ({
+    name: `#${tag.name || tag.tag}`,
+    posts: tag.count
+      ? `${tag.count > 1000 ? (tag.count / 1000).toFixed(1) + 'K' : tag.count}`
+      : '0',
+    category: tag.category || 'Trending',
+  }));
+
+  // Use suggestions or search results
+  const displayUsers = debouncedSearch.trim()
+    ? searchResults?.data || []
+    : suggestions?.data || suggestions || [];
 
   return (
     <div className="w-full flex gap-6 min-h-screen max-w-7xl mx-auto px-4 lg:px-6">
@@ -61,7 +97,7 @@ const Contents = () => {
 
           {/* Tab Bar */}
           <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-full">
-            {tabs.map((tab) => {
+            {tabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <button
@@ -69,8 +105,8 @@ const Contents = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                     activeTab === tab.id
-                      ? "bg-black dark:bg-white text-white dark:text-black"
-                      : "text-neutral-500 hover:text-black dark:hover:text-white"
+                      ? 'bg-black dark:bg-white text-white dark:text-black'
+                      : 'text-neutral-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
                   <Icon size={14} />
@@ -87,17 +123,7 @@ const Contents = () => {
           className="flex-1 overflow-y-auto hide-scrollbar pt-4 space-y-4"
         >
           <CreatePost />
-          <PostLists />
-
-          {/* Loading */}
-          {isLoading && (
-            <div className="flex justify-center py-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-900">
-                <div className="w-4 h-4 border-2 border-neutral-300 dark:border-neutral-700 border-t-black dark:border-t-white rounded-full animate-spin" />
-                <span className="text-xs text-neutral-500">Loading...</span>
-              </div>
-            </div>
-          )}
+          <PostLists activeTab={activeTab} />
         </div>
       </div>
 
@@ -109,6 +135,8 @@ const Contents = () => {
           <input
             type="text"
             placeholder="Search YiBu..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-4 py-3 bg-neutral-100 dark:bg-neutral-900 border border-transparent focus:border-neutral-300 dark:focus:border-neutral-700 rounded-full text-sm text-black dark:text-white placeholder:text-neutral-400 focus:outline-none transition-colors"
           />
         </div>
@@ -166,7 +194,13 @@ const Contents = () => {
                 See all
               </button>
             </div>
-            <TrendingTopics trendingTopics={TRENDING_TOPICS} />
+            <TrendingTopics
+              trendingTopics={
+                formattedTrending.length > 0
+                  ? formattedTrending
+                  : [{ name: '#Trending', posts: '0', category: 'Loading...' }]
+              }
+            />
           </div>
 
           {/* Suggested Users */}
@@ -175,20 +209,20 @@ const Contents = () => {
               <div className="flex items-center gap-2">
                 <Users size={16} className="text-neutral-500" />
                 <h2 className="font-medium text-sm text-black dark:text-white">
-                  Suggested
+                  {debouncedSearch.trim() ? 'Search Results' : 'Suggested'}
                 </h2>
               </div>
               <button className="text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
                 See all
               </button>
             </div>
-            <TopUser users={SUGGESTED_USERS} />
+            <TopUser users={displayUsers} loading={userLoading} />
           </div>
 
           {/* Footer */}
           <div className="px-2 text-xs text-neutral-400 space-y-2">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {["Terms", "Privacy", "Cookies", "About", "Help"].map((item) => (
+              {['Terms', 'Privacy', 'Cookies', 'About', 'Help'].map(item => (
                 <span
                   key={item}
                   className="hover:text-neutral-600 dark:hover:text-neutral-300 cursor-pointer transition-colors"

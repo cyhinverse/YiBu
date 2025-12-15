@@ -69,7 +69,10 @@ const userSlice = createSlice({
       })
       .addCase(searchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.searchResults = action.payload;
+        // Extract users array from response
+        const data = action.payload;
+        state.searchResults =
+          data?.users || data?.data?.users || (Array.isArray(data) ? data : []);
       })
       .addCase(searchUsers.rejected, (state, action) => {
         state.loading = false;
@@ -77,7 +80,13 @@ const userSlice = createSlice({
       })
       // Suggestions
       .addCase(getSuggestions.fulfilled, (state, action) => {
-        state.suggestions = action.payload;
+        // Extract users array from response
+        const data = action.payload;
+        state.suggestions =
+          data?.users ||
+          data?.suggestions ||
+          data?.data?.users ||
+          (Array.isArray(data) ? data : []);
       })
       // Get Profile
       .addCase(getProfile.pending, state => {

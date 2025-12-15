@@ -1,10 +1,10 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../axios/axiosConfig";
-import { POST_API } from "../../axios/apiEndpoint";
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../axios/axiosConfig';
+import { POST_API } from '../../axios/apiEndpoint';
 
 // Get All Posts (Feed)
 export const getAllPosts = createAsyncThunk(
-  "post/getAllPosts",
+  'post/getAllPosts',
   async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_ALL, {
@@ -13,7 +13,7 @@ export const getAllPosts = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết thất bại"
+        error.response?.data?.message || 'Lấy bài viết thất bại'
       );
     }
   }
@@ -21,7 +21,7 @@ export const getAllPosts = createAsyncThunk(
 
 // Get Explore Feed
 export const getExploreFeed = createAsyncThunk(
-  "post/getExploreFeed",
+  'post/getExploreFeed',
   async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_EXPLORE, {
@@ -30,7 +30,7 @@ export const getExploreFeed = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết khám phá thất bại"
+        error.response?.data?.message || 'Lấy bài viết khám phá thất bại'
       );
     }
   }
@@ -38,7 +38,7 @@ export const getExploreFeed = createAsyncThunk(
 
 // Get Personalized Feed
 export const getPersonalizedFeed = createAsyncThunk(
-  "post/getPersonalizedFeed",
+  'post/getPersonalizedFeed',
   async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_PERSONALIZED, {
@@ -47,7 +47,7 @@ export const getPersonalizedFeed = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết cá nhân hóa thất bại"
+        error.response?.data?.message || 'Lấy bài viết cá nhân hóa thất bại'
       );
     }
   }
@@ -55,7 +55,7 @@ export const getPersonalizedFeed = createAsyncThunk(
 
 // Get Trending Posts
 export const getTrendingPosts = createAsyncThunk(
-  "post/getTrendingPosts",
+  'post/getTrendingPosts',
   async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_TRENDING, {
@@ -64,7 +64,7 @@ export const getTrendingPosts = createAsyncThunk(
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết xu hướng thất bại"
+        error.response?.data?.message || 'Lấy bài viết xu hướng thất bại'
       );
     }
   }
@@ -72,16 +72,16 @@ export const getTrendingPosts = createAsyncThunk(
 
 // Search Posts
 export const searchPosts = createAsyncThunk(
-  "post/searchPosts",
+  'post/searchPosts',
   async ({ query, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.SEARCH, {
-        params: { query, page, limit },
+        params: { q: query, page, limit },
       });
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Tìm kiếm bài viết thất bại"
+        error.response?.data?.message || 'Tìm kiếm bài viết thất bại'
       );
     }
   }
@@ -89,7 +89,7 @@ export const searchPosts = createAsyncThunk(
 
 // Get Posts by Hashtag
 export const getPostsByHashtag = createAsyncThunk(
-  "post/getPostsByHashtag",
+  'post/getPostsByHashtag',
   async ({ hashtag, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_BY_HASHTAG(hashtag), {
@@ -98,7 +98,7 @@ export const getPostsByHashtag = createAsyncThunk(
       return { ...response.data, hashtag, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết theo hashtag thất bại"
+        error.response?.data?.message || 'Lấy bài viết theo hashtag thất bại'
       );
     }
   }
@@ -106,7 +106,7 @@ export const getPostsByHashtag = createAsyncThunk(
 
 // Get Trending Hashtags
 export const getTrendingHashtags = createAsyncThunk(
-  "post/getTrendingHashtags",
+  'post/getTrendingHashtags',
   async (limit = 10, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_TRENDING_HASHTAGS, {
@@ -115,7 +115,7 @@ export const getTrendingHashtags = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy hashtag xu hướng thất bại"
+        error.response?.data?.message || 'Lấy hashtag xu hướng thất bại'
       );
     }
   }
@@ -123,18 +123,18 @@ export const getTrendingHashtags = createAsyncThunk(
 
 // Create Post
 export const createPost = createAsyncThunk(
-  "post/createPost",
+  'post/createPost',
   async (postData, { rejectWithValue }) => {
     try {
       const response = await api.post(POST_API.CREATE, postData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Tạo bài viết thất bại"
+        error.response?.data?.message || 'Tạo bài viết thất bại'
       );
     }
   }
@@ -142,14 +142,14 @@ export const createPost = createAsyncThunk(
 
 // Get Post by ID
 export const getPostById = createAsyncThunk(
-  "post/getPostById",
+  'post/getPostById',
   async (postId, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_BY_ID(postId));
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy chi tiết bài viết thất bại"
+        error.response?.data?.message || 'Lấy chi tiết bài viết thất bại'
       );
     }
   }
@@ -157,7 +157,7 @@ export const getPostById = createAsyncThunk(
 
 // Get Posts by User
 export const getPostsByUser = createAsyncThunk(
-  "post/getPostsByUser",
+  'post/getPostsByUser',
   async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(POST_API.GET_BY_USER(userId), {
@@ -166,7 +166,7 @@ export const getPostsByUser = createAsyncThunk(
       return { ...response.data, userId, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy bài viết của người dùng thất bại"
+        error.response?.data?.message || 'Lấy bài viết của người dùng thất bại'
       );
     }
   }
@@ -174,18 +174,18 @@ export const getPostsByUser = createAsyncThunk(
 
 // Update Post
 export const updatePost = createAsyncThunk(
-  "post/updatePost",
+  'post/updatePost',
   async ({ postId, data }, { rejectWithValue }) => {
     try {
       const response = await api.put(POST_API.UPDATE(postId), data, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật bài viết thất bại"
+        error.response?.data?.message || 'Cập nhật bài viết thất bại'
       );
     }
   }
@@ -193,14 +193,14 @@ export const updatePost = createAsyncThunk(
 
 // Delete Post
 export const deletePost = createAsyncThunk(
-  "post/deletePost",
+  'post/deletePost',
   async (postId, { rejectWithValue }) => {
     try {
       await api.delete(POST_API.DELETE(postId));
       return { postId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xóa bài viết thất bại"
+        error.response?.data?.message || 'Xóa bài viết thất bại'
       );
     }
   }
@@ -208,7 +208,7 @@ export const deletePost = createAsyncThunk(
 
 // Share Post
 export const sharePost = createAsyncThunk(
-  "post/sharePost",
+  'post/sharePost',
   async ({ postId, content }, { rejectWithValue }) => {
     try {
       const response = await api.post(POST_API.SHARE(postId), {
@@ -217,7 +217,7 @@ export const sharePost = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Chia sẻ bài viết thất bại"
+        error.response?.data?.message || 'Chia sẻ bài viết thất bại'
       );
     }
   }
@@ -225,7 +225,7 @@ export const sharePost = createAsyncThunk(
 
 // Report Post
 export const reportPost = createAsyncThunk(
-  "post/reportPost",
+  'post/reportPost',
   async ({ postId, reason, description }, { rejectWithValue }) => {
     try {
       const response = await api.post(POST_API.REPORT(postId), {
@@ -235,7 +235,7 @@ export const reportPost = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Báo cáo bài viết thất bại"
+        error.response?.data?.message || 'Báo cáo bài viết thất bại'
       );
     }
   }

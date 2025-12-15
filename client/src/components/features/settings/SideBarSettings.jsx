@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from 'react-router-dom';
 import {
   User,
   Settings,
@@ -6,38 +6,59 @@ import {
   Bell,
   Palette,
   ChevronRight,
-} from "lucide-react";
+  Lock,
+  UserX,
+  UserPlus,
+} from 'lucide-react';
 
 const menuItems = [
   {
-    title: "Account",
-    description: "Manage your account settings",
+    title: 'Account',
+    description: 'Manage your account settings',
     icon: User,
-    path: "/settings/account",
+    path: '/settings/account',
   },
   {
-    title: "Profile",
-    description: "Edit your profile information",
+    title: 'Profile',
+    description: 'Edit your profile information',
     icon: Settings,
-    path: "/settings/profile",
+    path: '/settings/profile',
   },
   {
-    title: "Privacy",
-    description: "Control your privacy settings",
+    title: 'Privacy',
+    description: 'Control your privacy settings',
     icon: Shield,
-    path: "/settings/privacy",
+    path: '/settings/privacy',
   },
   {
-    title: "Notifications",
-    description: "Manage notification preferences",
+    title: 'Security',
+    description: '2FA and login security',
+    icon: Lock,
+    path: '/settings/security',
+  },
+  {
+    title: 'Notifications',
+    description: 'Manage notification preferences',
     icon: Bell,
-    path: "/settings/notification",
+    path: '/settings/notification',
   },
   {
-    title: "Appearance",
-    description: "Theme and display settings",
+    title: 'Blocked & Muted',
+    description: 'Manage blocked and muted users',
+    icon: UserX,
+    path: '/settings/blocked',
+  },
+  {
+    title: 'Follow Requests',
+    description: 'Pending follow requests',
+    icon: UserPlus,
+    path: '/settings/follow-requests',
+  },
+  {
+    title: 'Appearance',
+    description: 'Theme and display settings',
     icon: Palette,
-    path: "/settings/theme",
+    path: '/settings/theme',
   },
 ];
 
@@ -58,8 +79,8 @@ const SideBarSettings = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                     isActive
-                      ? "bg-neutral-100 dark:bg-neutral-800"
-                      : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                      ? 'bg-neutral-100 dark:bg-neutral-800'
+                      : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
                   }`
                 }
               >
@@ -68,16 +89,16 @@ const SideBarSettings = () => {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         isActive
-                          ? "bg-black dark:bg-white"
-                          : "bg-neutral-100 dark:bg-neutral-800"
+                          ? 'bg-black dark:bg-white'
+                          : 'bg-neutral-100 dark:bg-neutral-800'
                       }`}
                     >
                       <item.icon
                         size={18}
                         className={
                           isActive
-                            ? "text-white dark:text-black"
-                            : "text-neutral-500"
+                            ? 'text-white dark:text-black'
+                            : 'text-neutral-500'
                         }
                       />
                     </div>
@@ -85,8 +106,8 @@ const SideBarSettings = () => {
                       <p
                         className={`text-sm font-medium ${
                           isActive
-                            ? "text-black dark:text-white"
-                            : "text-neutral-700 dark:text-neutral-300"
+                            ? 'text-black dark:text-white'
+                            : 'text-neutral-700 dark:text-neutral-300'
                         }`}
                       >
                         {item.title}
@@ -99,8 +120,8 @@ const SideBarSettings = () => {
                       size={16}
                       className={`flex-shrink-0 ${
                         isActive
-                          ? "text-black dark:text-white"
-                          : "text-neutral-300"
+                          ? 'text-black dark:text-white'
+                          : 'text-neutral-300'
                       }`}
                     />
                   </>

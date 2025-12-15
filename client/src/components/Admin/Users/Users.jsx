@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Search,
   Filter,
@@ -11,76 +12,20 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
+  Loader2,
+  RefreshCcw,
+  AlertTriangle,
+  ShieldOff,
 } from "lucide-react";
-
-// Fake users data
-const FAKE_USERS = [
-  {
-    _id: "u1",
-    name: "Sarah Chen",
-    username: "sarahchen",
-    email: "sarah@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    role: "user",
-    status: "active",
-    posts: 45,
-    followers: 1234,
-    joinedDate: "Jan 15, 2024",
-    isVerified: true,
-  },
-  {
-    _id: "u2",
-    name: "Mike Johnson",
-    username: "mikej",
-    email: "mike@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-    role: "user",
-    status: "active",
-    posts: 23,
-    followers: 567,
-    joinedDate: "Feb 20, 2024",
-    isVerified: false,
-  },
-  {
-    _id: "u3",
-    name: "Emma Wilson",
-    username: "emmaw",
-    email: "emma@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-    role: "moderator",
-    status: "active",
-    posts: 89,
-    followers: 2345,
-    joinedDate: "Dec 10, 2023",
-    isVerified: true,
-  },
-  {
-    _id: "u4",
-    name: "Alex Kim",
-    username: "alexk",
-    email: "alex@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-    role: "user",
-    status: "pending",
-    posts: 12,
-    followers: 234,
-    joinedDate: "Mar 5, 2024",
-    isVerified: false,
-  },
-  {
-    _id: "u5",
-    name: "Jessica Lee",
-    username: "jessical",
-    email: "jessica@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jessica",
-    role: "user",
-    status: "suspended",
-    posts: 67,
-    followers: 890,
-    joinedDate: "Nov 22, 2023",
-    isVerified: true,
-  },
-];
+import {
+  getAllUsers,
+  getUserById,
+  deleteUser,
+  banUser,
+  unbanUser,
+  suspendUser,
+  warnUser,
+} from "../../../redux/actions/adminActions";
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -104,23 +49,51 @@ const StatusBadge = ({ status }) => {
 };
 
 const Users = () => {
-  const [users, setUsers] = useState(FAKE_USERS);
+  const dispatch = useDispatch();
+  const { users: usersList, pagination, loading } = useSelector((state) => state.admin);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterRole, setFilterRole] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionType, setActionType] = useState("");
+  const [actionReason, setActionReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.username.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || user.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Fetch users on mount and when filters change
+  useEffect(() => {
+    const params = {
+      page: currentPage,
+      limit: 10,
+    };
+    if (searchQuery) params.search = searchQuery;
+    if (filterStatus !== "all") params.status = filterStatus;
+    if (filterRole !== "all") params.role = filterRole;
+    
+    dispatch(getAllUsers(params));
+  }, [dispatch, currentPage, filterStatus, filterRole]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        const params = {
+          page: 1,
+          limit: 10,
+          search: searchQuery || undefined,
+        };
+        if (filterStatus !== "all") params.status = filterStatus;
+        if (filterRole !== "all") params.role = filterRole;
+        dispatch(getAllUsers(params));
+        setCurrentPage(1);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const users = Array.isArray(usersList) ? usersList : [];
 
   const handleViewUser = (user) => {
     setSelectedUser(user);
@@ -129,16 +102,71 @@ const Users = () => {
 
   const handleBanUser = (user) => {
     setSelectedUser(user);
-    setShowBanModal(true);
+    setActionType("ban");
+    setShowActionModal(true);
   };
 
-  const confirmBan = () => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u._id === selectedUser._id ? { ...u, status: "banned" } : u
-      )
-    );
-    setShowBanModal(false);
+  const handleUnbanUser = (user) => {
+    setSelectedUser(user);
+    setActionType("unban");
+    setShowActionModal(true);
+  };
+
+  const handleSuspendUser = (user) => {
+    setSelectedUser(user);
+    setActionType("suspend");
+    setShowActionModal(true);
+  };
+
+  const handleWarnUser = (user) => {
+    setSelectedUser(user);
+    setActionType("warn");
+    setShowActionModal(true);
+  };
+
+  const handleDeleteUser = (user) => {
+    setSelectedUser(user);
+    setActionType("delete");
+    setShowActionModal(true);
+  };
+
+  const confirmAction = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      switch (actionType) {
+        case "ban":
+          await dispatch(banUser({ userId: selectedUser._id, reason: actionReason })).unwrap();
+          break;
+        case "unban":
+          await dispatch(unbanUser({ userId: selectedUser._id })).unwrap();
+          break;
+        case "suspend":
+          await dispatch(suspendUser({ userId: selectedUser._id, duration: 7, reason: actionReason })).unwrap();
+          break;
+        case "warn":
+          await dispatch(warnUser({ userId: selectedUser._id, message: actionReason })).unwrap();
+          break;
+        case "delete":
+          await dispatch(deleteUser(selectedUser._id)).unwrap();
+          break;
+      }
+      // Refresh users list
+      dispatch(getAllUsers({ page: currentPage, limit: 10 }));
+    } catch (error) {
+      console.error(`Failed to ${actionType} user:`, error);
+    }
+    
+    setShowActionModal(false);
+    setActionReason("");
+  };
+
+  const handleRefresh = () => {
+    dispatch(getAllUsers({ page: currentPage, limit: 10 }));
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
   };
 
   return (
@@ -150,13 +178,19 @@ const Users = () => {
             Users
           </h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Manage and monitor user accounts
+            Manage and monitor user accounts ({pagination?.total || users.length} total)
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-          <UserPlus size={18} />
-          Add User
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -189,96 +223,132 @@ const Users = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
-                  User
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
-                  Role
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
-                  Status
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
-                  Posts
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
-                  Joined
-                </th>
-                <th className="text-right px-6 py-4 text-sm font-medium text-neutral-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-              {filteredUsers.map((user) => (
-                <tr
-                  key={user._id}
-                  className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-black dark:text-white">
-                            {user.name}
-                          </span>
-                          {user.isVerified && (
-                            <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
-                              <Check
-                                size={10}
-                                className="text-white dark:text-black"
-                              />
+        {loading && users.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={24} className="animate-spin text-neutral-400" />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-12 text-neutral-500">
+            No users found
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                    <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
+                      User
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
+                      Role
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
+                      Status
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
+                      Posts
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-neutral-500">
+                      Joined
+                    </th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-neutral-500">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {users.map((user) => (
+                    <tr
+                      key={user._id}
+                      className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={user.avatar || "/images/default-avatar.png"}
+                            alt={user.name || user.username}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-black dark:text-white">
+                                {user.name || user.username}
+                              </span>
+                              {user.isVerified && (
+                                <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
+                                  <Check
+                                    size={10}
+                                    className="text-white dark:text-black"
+                                  />
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <span className="text-sm text-neutral-500">
-                          @{user.username}
-                        </span>
-                      </div>
+                            <span className="text-sm text-neutral-500">
+                              @{user.username}
+                            </span>
+                          </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-black dark:text-white capitalize">
-                      {user.role}
+                      {user.role || "user"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={user.status} />
+                    <StatusBadge status={user.status || "active"} />
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-black dark:text-white">
-                      {user.posts}
+                      {user.postsCount || user.posts || 0}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-neutral-500">
-                      {user.joinedDate}
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleViewUser(user)}
                         className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                        title="View"
+                        title="View Details"
                       >
                         <Eye size={16} className="text-neutral-500" />
                       </button>
+                      {user.status === "banned" ? (
+                        <button
+                          onClick={() => handleUnbanUser(user)}
+                          className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
+                          title="Unban User"
+                        >
+                          <ShieldOff size={16} className="text-green-500" />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleWarnUser(user)}
+                            className="p-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/20 transition-colors"
+                            title="Warn User"
+                          >
+                            <AlertTriangle size={16} className="text-yellow-500" />
+                          </button>
+                          <button
+                            onClick={() => handleBanUser(user)}
+                            className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                            title="Ban User"
+                          >
+                            <Ban size={16} className="text-red-500" />
+                          </button>
+                        </>
+                      )}
                       <button
-                        onClick={() => handleBanUser(user)}
+                        onClick={() => handleDeleteUser(user)}
                         className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                        title="Ban"
+                        title="Delete User"
                       >
-                        <Ban size={16} className="text-red-500" />
+                        <Trash2 size={16} className="text-red-500" />
                       </button>
                     </div>
                   </td>
@@ -291,20 +361,30 @@ const Users = () => {
         {/* Pagination */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-200 dark:border-neutral-800">
           <span className="text-sm text-neutral-500">
-            Showing {filteredUsers.length} of {users.length} users
+            Page {currentPage} of {pagination?.pages || 1} ({pagination?.total || users.length} total)
           </span>
           <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft size={18} className="text-neutral-500" />
             </button>
             <span className="px-3 py-1 text-sm font-medium text-black dark:text-white">
-              1
+              {currentPage}
             </span>
-            <button className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50">
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= (pagination?.pages || 1)}
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronRight size={18} className="text-neutral-500" />
             </button>
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* User Detail Modal */}

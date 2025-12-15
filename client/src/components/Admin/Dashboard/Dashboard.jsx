@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Users,
   FileText,
@@ -11,158 +12,134 @@ import {
   Share2,
   ArrowUpRight,
   MoreHorizontal,
+  Loader2,
+  RefreshCcw,
 } from "lucide-react";
+import {
+  getDashboardStats,
+  getUserGrowth,
+  getPostStats,
+  getTopUsers,
+} from "../../../redux/actions/adminActions";
 
-// Fake stats data
-const FAKE_STATS = [
-  {
-    id: 1,
-    title: "Total Users",
-    value: "12,543",
-    change: "+12.5%",
-    trend: "up",
-    icon: Users,
-    color: "bg-blue-500",
-  },
-  {
-    id: 2,
-    title: "Total Posts",
-    value: "45,678",
-    change: "+8.2%",
-    trend: "up",
-    icon: FileText,
-    color: "bg-purple-500",
-  },
-  {
-    id: 3,
-    title: "Comments",
-    value: "89,234",
-    change: "-2.4%",
-    trend: "down",
-    icon: MessageSquare,
-    color: "bg-green-500",
-  },
-  {
-    id: 4,
-    title: "Revenue",
-    value: "$34,567",
-    change: "+18.7%",
-    trend: "up",
-    icon: DollarSign,
-    color: "bg-orange-500",
-  },
+// Default stats for fallback
+const DEFAULT_STATS = [
+  { id: 1, title: "Total Users", value: "0", change: "+0%", trend: "up", icon: Users, color: "bg-blue-500", key: "totalUsers" },
+  { id: 2, title: "Total Posts", value: "0", change: "+0%", trend: "up", icon: FileText, color: "bg-purple-500", key: "totalPosts" },
+  { id: 3, title: "Comments", value: "0", change: "+0%", trend: "up", icon: MessageSquare, color: "bg-green-500", key: "totalComments" },
+  { id: 4, title: "Active Users", value: "0", change: "+0%", trend: "up", icon: Users, color: "bg-orange-500", key: "activeUsers" },
 ];
 
-// Fake recent users
-const FAKE_RECENT_USERS = [
-  {
-    _id: "u1",
-    name: "Sarah Chen",
-    email: "sarah@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    joinedDate: "2 hours ago",
-    status: "active",
-  },
-  {
-    _id: "u2",
-    name: "Mike Johnson",
-    email: "mike@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-    joinedDate: "5 hours ago",
-    status: "active",
-  },
-  {
-    _id: "u3",
-    name: "Emma Wilson",
-    email: "emma@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-    joinedDate: "1 day ago",
-    status: "pending",
-  },
-];
-
-// Fake recent activities
-const FAKE_ACTIVITIES = [
-  {
-    id: 1,
-    type: "user",
-    message: "New user registered",
-    user: "John Doe",
-    time: "2 min ago",
-  },
-  {
-    id: 2,
-    type: "post",
-    message: "Post reported for spam",
-    user: "System",
-    time: "15 min ago",
-  },
-  {
-    id: 3,
-    type: "comment",
-    message: "Comment flagged for review",
-    user: "Moderator",
-    time: "1 hour ago",
-  },
-  {
-    id: 4,
-    type: "revenue",
-    message: "New subscription payment",
-    user: "$29.99",
-    time: "2 hours ago",
-  },
-  {
-    id: 5,
-    type: "user",
-    message: "User account banned",
-    user: "Admin",
-    time: "3 hours ago",
-  },
-];
-
-// Fake top posts
-const FAKE_TOP_POSTS = [
-  { id: 1, title: "How to build a React app", views: 15234, likes: 892 },
-  { id: 2, title: "Best practices for UI design", views: 12456, likes: 756 },
-  { id: 3, title: "Introduction to TypeScript", views: 9876, likes: 543 },
-  { id: 4, title: "CSS Grid vs Flexbox", views: 8765, likes: 432 },
-];
-
-const StatCard = ({ stat }) => (
+const StatCard = ({ stat, isLoading }) => (
   <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
     <div className="flex items-center justify-between mb-4">
-      <div
-        className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}
-      >
+      <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
         <stat.icon size={24} className="text-white" />
       </div>
-      <div
-        className={`flex items-center gap-1 text-sm font-medium ${
+      {!isLoading && (
+        <div className={`flex items-center gap-1 text-sm font-medium ${
           stat.trend === "up" ? "text-green-500" : "text-red-500"
-        }`}
-      >
-        {stat.trend === "up" ? (
-          <TrendingUp size={16} />
-        ) : (
-          <TrendingDown size={16} />
-        )}
-        {stat.change}
-      </div>
+        }`}>
+          {stat.trend === "up" ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+          {stat.change}
+        </div>
+      )}
     </div>
-    <h3 className="text-2xl font-bold text-black dark:text-white">
-      {stat.value}
-    </h3>
+    {isLoading ? (
+      <div className="h-8 w-24 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+    ) : (
+      <h3 className="text-2xl font-bold text-black dark:text-white">{stat.value}</h3>
+    )}
     <p className="text-sm text-neutral-500 mt-1">{stat.title}</p>
   </div>
 );
 
 const Dashboard = () => {
+  const dispatch = useDispatch();
+  const { stats, topUsers, loading } = useSelector((state) => state.admin);
+  const [period, setPeriod] = useState("week");
+
+  // Fetch data on mount
+  useEffect(() => {
+    dispatch(getDashboardStats());
+    dispatch(getTopUsers({ limit: 10 }));
+  }, [dispatch]);
+
+  // Build stats from API response
+  const buildStats = () => {
+    if (!stats) return DEFAULT_STATS;
+    
+    return [
+      {
+        id: 1,
+        title: "Total Users",
+        value: (stats.totalUsers || 0).toLocaleString(),
+        change: `+${stats.newUsersThisWeek || 0}`,
+        trend: "up",
+        icon: Users,
+        color: "bg-blue-500",
+      },
+      {
+        id: 2,
+        title: "Total Posts",
+        value: (stats.totalPosts || 0).toLocaleString(),
+        change: `+${stats.newPostsThisWeek || 0}`,
+        trend: "up",
+        icon: FileText,
+        color: "bg-purple-500",
+      },
+      {
+        id: 3,
+        title: "Comments",
+        value: (stats.totalComments || 0).toLocaleString(),
+        change: `+${stats.newCommentsThisWeek || 0}`,
+        trend: "up",
+        icon: MessageSquare,
+        color: "bg-green-500",
+      },
+      {
+        id: 4,
+        title: "Active Users",
+        value: (stats.activeUsers || 0).toLocaleString(),
+        change: `${stats.activeUsersChange || 0}%`,
+        trend: (stats.activeUsersChange || 0) >= 0 ? "up" : "down",
+        icon: Users,
+        color: "bg-orange-500",
+      },
+    ];
+  };
+
+  // Get recent activities from stats
+  const activities = stats?.recentActivities || [];
+  const recentUsers = stats?.recentUsers || [];
+  const topPosts = stats?.topPosts || [];
+
+  const handleRefresh = () => {
+    dispatch(getDashboardStats());
+    dispatch(getTopUsers({ limit: 10 }));
+  };
   return (
     <div className="space-y-6">
+      {/* Header with Refresh */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-black dark:text-white">Dashboard</h2>
+          <p className="text-sm text-neutral-500 mt-1">Welcome back, Admin</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {FAKE_STATS.map((stat) => (
-          <StatCard key={stat.id} stat={stat} />
+        {buildStats().map((stat) => (
+          <StatCard key={stat.id} stat={stat} isLoading={loading && !stats} />
         ))}
       </div>
 
@@ -200,19 +177,23 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="space-y-4">
-            {FAKE_ACTIVITIES.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-black dark:bg-white mt-2 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-black dark:text-white">
-                    {activity.message}
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {activity.user} · {activity.time}
-                  </p>
+            {activities.length === 0 ? (
+              <p className="text-sm text-neutral-500 text-center py-4">No recent activities</p>
+            ) : (
+              activities.slice(0, 5).map((activity, index) => (
+                <div key={activity._id || index} className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-black dark:bg-white mt-2 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-black dark:text-white">
+                      {activity.message || activity.action}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {activity.user?.name || "System"} · {activity.createdAt ? new Date(activity.createdAt).toLocaleString() : "Just now"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -231,40 +212,46 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {FAKE_RECENT_USERS.map((user) => (
-              <div
-                key={user._id}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-              >
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-black dark:text-white truncate">
-                    {user.name}
-                  </p>
-                  <p className="text-sm text-neutral-500 truncate">
-                    {user.email}
-                  </p>
+            {recentUsers.length === 0 ? (
+              <p className="text-sm text-neutral-500 text-center py-4">No recent users</p>
+            ) : (
+              recentUsers.slice(0, 5).map((user) => (
+                <div
+                  key={user._id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <img
+                    src={user.avatar || "/images/default-avatar.png"}
+                    alt={user.name || user.username}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-black dark:text-white truncate">
+                      {user.name || user.username}
+                    </p>
+                    <p className="text-sm text-neutral-500 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                        user.status === "active"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                          : user.status === "banned"
+                          ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                          : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                      }`}
+                    >
+                      {user.status || "active"}
+                    </span>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Recently"}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span
-                    className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                      user.status === "active"
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                        : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
-                    }`}
-                  >
-                    {user.status}
-                  </span>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    {user.joinedDate}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -280,34 +267,38 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {FAKE_TOP_POSTS.map((post, index) => (
-              <div
-                key={post.id}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-              >
-                <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-sm font-medium text-neutral-500">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-black dark:text-white truncate">
-                    {post.title}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1 text-xs text-neutral-500">
-                      <Eye size={12} />
-                      {post.views.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-neutral-500">
-                      <Heart size={12} />
-                      {post.likes.toLocaleString()}
-                    </span>
+            {topPosts.length === 0 ? (
+              <p className="text-sm text-neutral-500 text-center py-4">No top posts</p>
+            ) : (
+              topPosts.slice(0, 5).map((post, index) => (
+                <div
+                  key={post._id || index}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-sm font-medium text-neutral-500">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-black dark:text-white truncate">
+                      {post.caption || post.content || "Untitled Post"}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="flex items-center gap-1 text-xs text-neutral-500">
+                        <Eye size={12} />
+                        {(post.views || 0).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-neutral-500">
+                        <Heart size={12} />
+                        {(post.likesCount || post.likes || 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
+                  <button className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
+                    <MoreHorizontal size={16} className="text-neutral-400" />
+                  </button>
                 </div>
-                <button className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-                  <MoreHorizontal size={16} className="text-neutral-400" />
-                </button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

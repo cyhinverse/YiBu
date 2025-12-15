@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { Image, Smile, PenSquare } from "lucide-react";
-import ModelPost from "./ModelPost";
-
-// Fake user data
-const CURRENT_USER = {
-  name: "John Doe",
-  username: "johndoe",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
-};
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { Image, Smile, PenSquare } from 'lucide-react';
+import ModelPost from './ModelPost';
 
 const CreatePost = () => {
   const [showModal, setShowModal] = useState(false);
+  const { user } = useSelector(state => state.auth);
+
+  const avatarUrl =
+    user?.avatar ||
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+      user?.username || 'default'
+    }`;
 
   return (
     <>
@@ -18,8 +19,8 @@ const CreatePost = () => {
         <div className="flex gap-3">
           {/* Avatar */}
           <img
-            src={CURRENT_USER.avatar}
-            alt={CURRENT_USER.name}
+            src={avatarUrl}
+            alt={user?.fullName || user?.username || 'User'}
             className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
           />
 

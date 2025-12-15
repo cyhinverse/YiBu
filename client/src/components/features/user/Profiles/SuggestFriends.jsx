@@ -1,57 +1,92 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { UserPlus, Check, Users } from "lucide-react";
-
-// Fake suggested users
-const FAKE_SUGGESTIONS = [
-  {
-    _id: "u1",
-    name: "Sarah Chen",
-    username: "sarahchen",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    bio: "Product Designer at Company",
-    mutualFriends: 12,
-    isVerified: true,
-  },
-  {
-    _id: "u2",
-    name: "Mike Johnson",
-    username: "mikej",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-    bio: "Software Engineer",
-    mutualFriends: 8,
-    isVerified: false,
-  },
-  {
-    _id: "u3",
-    name: "Emma Wilson",
-    username: "emmaw",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-    bio: "UI/UX Designer",
-    mutualFriends: 5,
-    isVerified: true,
-  },
-  {
-    _id: "u4",
-    name: "Alex Kim",
-    username: "alexk",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-    bio: "Full Stack Developer",
-    mutualFriends: 3,
-    isVerified: false,
-  },
-];
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { UserPlus, Check, Users, Loader2 } from 'lucide-react';
+import {
+  getSuggestions,
+  followUser,
+  unfollowUser,
+} from '../../../../redux/actions/userActions';
 
 const SuggestFriends = () => {
-  const [followedUsers, setFollowedUsers] = useState([]);
+  const dispatch = useDispatch();
+  const { suggestions: reduxSuggestions } = useSelector(
+    state => state.user || {}
+  );
 
-  const handleFollow = (userId) => {
-    setFollowedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+  const [suggestions, setSuggestions] = useState([]);
+  const [followedUsers, setFollowedUsers] = useState([]);
+  const [loadingStates, setLoadingStates] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  // Fetch suggestions on mount
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      setLoading(true);
+      try {
+        const result = await dispatch(getSuggestions({ limit: 5 })).unwrap();
+        const userList = result.users || result.suggestions || result || [];
+        setSuggestions(userList);
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSuggestions();
+  }, [dispatch]);
+
+  // Sync with redux state
+  useEffect(() => {
+    if (reduxSuggestions && Array.isArray(reduxSuggestions)) {
+      setSuggestions(reduxSuggestions);
+    }
+  }, [reduxSuggestions]);
+
+  const handleFollow = useCallback(
+    async userId => {
+      if (loadingStates[userId]) return;
+
+      setLoadingStates(prev => ({ ...prev, [userId]: true }));
+
+      try {
+        const isFollowed = followedUsers.includes(userId);
+
+        if (isFollowed) {
+          await dispatch(unfollowUser(userId)).unwrap();
+          setFollowedUsers(prev => prev.filter(id => id !== userId));
+        } else {
+          await dispatch(followUser(userId)).unwrap();
+          setFollowedUsers(prev => [...prev, userId]);
+        }
+      } catch (error) {
+        console.error('Follow action failed:', error);
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [userId]: false }));
+      }
+    },
+    [dispatch, followedUsers, loadingStates]
+  );
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+        <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+          <h2 className="font-semibold text-black dark:text-white">
+            Suggested for you
+          </h2>
+          <p className="text-sm text-neutral-500">People you may know</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-neutral-400" />
+        </div>
+      </div>
     );
-  };
+  }
+
+  if (suggestions.length === 0) {
+    return null;
+  }
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
@@ -65,8 +100,9 @@ const SuggestFriends = () => {
 
       {/* Users List */}
       <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-        {FAKE_SUGGESTIONS.map((user) => {
+        {suggestions.map(user => {
           const isFollowed = followedUsers.includes(user._id);
+          const isLoading = loadingStates[user._id];
           return (
             <div
               key={user._id}
@@ -75,12 +111,15 @@ const SuggestFriends = () => {
               <div className="flex items-start gap-3">
                 {/* Avatar */}
                 <Link
-                  to={`/profile/${user.username}`}
+                  to={`/profile/${user._id}`}
                   className="relative flex-shrink-0"
                 >
                   <img
-                    src={user.avatar}
-                    alt={user.name}
+                    src={
+                      user.avatar ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                    }
+                    alt={user.name || user.username}
                     className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                   />
                   {user.isVerified && (
@@ -93,10 +132,10 @@ const SuggestFriends = () => {
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/profile/${user.username}`}
+                    to={`/profile/${user._id}`}
                     className="font-medium text-black dark:text-white hover:underline truncate block"
                   >
-                    {user.name}
+                    {user.fullName || user.name || user.username}
                   </Link>
                   <p className="text-sm text-neutral-500 truncate">
                     @{user.username}
@@ -117,13 +156,18 @@ const SuggestFriends = () => {
                 {/* Follow Button */}
                 <button
                   onClick={() => handleFollow(user._id)}
+                  disabled={isLoading}
                   className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium flex-shrink-0 transition-colors ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  } ${
                     isFollowed
-                      ? "bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700"
-                      : "bg-black dark:bg-white text-white dark:text-black"
+                      ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
+                      : 'bg-black dark:bg-white text-white dark:text-black'
                   }`}
                 >
-                  {isFollowed ? (
+                  {isLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : isFollowed ? (
                     <>
                       <Check size={14} />
                       Following

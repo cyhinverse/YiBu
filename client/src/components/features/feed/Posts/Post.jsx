@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   MoreHorizontal,
   Heart,
@@ -7,8 +8,29 @@ import {
   Bookmark,
   Eye,
   X,
+  Loader2,
+  Flag,
+  Trash2,
+  Edit3,
+  EyeOff,
+  Link2,
+  Share2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { CommentModal } from '../Comment';
+import {
+  createLike,
+  deleteLike,
+  getLikeStatus,
+} from '../../../../redux/actions/likeActions';
+import {
+  savePost,
+  unsavePost,
+  checkSaveStatus,
+} from '../../../../redux/actions/savePostActions';
+import { deletePost, sharePost } from '../../../../redux/actions/postActions';
+import { ReportModal } from '../../report';
+import ModelPost from './ModelPost';
 
 // Fake post data for component testing
 const formatCount = count => {
@@ -36,13 +58,42 @@ const formatTime = date => {
   return postDate.toLocaleDateString();
 };
 
-const Post = ({ data }) => {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [likeCount, setLikeCount] = useState(data?.likeCount || 0);
+const Post = ({ data, onDelete }) => {
+  const dispatch = useDispatch();
+  const { likeStatus } = useSelector(state => state.like || {});
+  const { saveStatus } = useSelector(state => state.savePost || {});
+  const authUser = useSelector(state => state.auth?.user);
+
+  const [isLiked, setIsLiked] = useState(data?.isLiked || false);
+  const [isSaved, setIsSaved] = useState(data?.isSaved || false);
+  const [likeCount, setLikeCount] = useState(
+    data?.likeCount || data?.likesCount || 0
+  );
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showImage, setShowImage] = useState(null);
   const [showComments, setShowComments] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+
+  const isOwner = authUser?._id === data?.user?._id;
+
+  // Update state from Redux if available
+  useEffect(() => {
+    if (data?._id && likeStatus?.[data._id]) {
+      setIsLiked(likeStatus[data._id].isLiked);
+      if (likeStatus[data._id].likesCount !== undefined) {
+        setLikeCount(likeStatus[data._id].likesCount);
+      }
+    }
+    if (data?._id && saveStatus?.[data._id] !== undefined) {
+      setIsSaved(saveStatus[data._id]);
+    }
+  }, [data?._id, likeStatus, saveStatus]);
 
   const user = data?.user || {
     name: 'Unknown User',
@@ -50,14 +101,98 @@ const Post = ({ data }) => {
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
   };
 
-  const handleLike = () => {
+  const handleLike = useCallback(async () => {
+    if (likeLoading || !data?._id) return;
+    setLikeLoading(true);
+
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+
+    // Optimistic update
     setIsLiked(!isLiked);
     setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
-  };
 
-  const handleSave = () => {
+    try {
+      if (prevLiked) {
+        await dispatch(deleteLike(data._id)).unwrap();
+      } else {
+        await dispatch(createLike(data._id)).unwrap();
+      }
+    } catch (error) {
+      // Revert on failure
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
+      toast.error(error || 'Thao tác thất bại');
+    } finally {
+      setLikeLoading(false);
+    }
+  }, [dispatch, data?._id, isLiked, likeCount, likeLoading]);
+
+  const handleSave = useCallback(async () => {
+    if (saveLoading || !data?._id) return;
+    setSaveLoading(true);
+
+    const prevSaved = isSaved;
+
+    // Optimistic update
     setIsSaved(!isSaved);
-  };
+
+    try {
+      if (prevSaved) {
+        await dispatch(unsavePost(data._id)).unwrap();
+        toast.success('Đã bỏ lưu bài viết');
+      } else {
+        await dispatch(savePost(data._id)).unwrap();
+        toast.success('Đã lưu bài viết');
+      }
+    } catch (error) {
+      // Revert on failure
+      setIsSaved(prevSaved);
+      toast.error(error || 'Thao tác thất bại');
+    } finally {
+      setSaveLoading(false);
+    }
+  }, [dispatch, data?._id, isSaved, saveLoading]);
+
+  const handleDelete = useCallback(async () => {
+    if (deleteLoading || !data?._id) return;
+    setDeleteLoading(true);
+
+    try {
+      await dispatch(deletePost(data._id)).unwrap();
+      toast.success('Đã xóa bài viết');
+      setShowDeleteConfirm(false);
+      setShowOptions(false);
+      // Notify parent to remove from list
+      onDelete?.(data._id);
+    } catch (error) {
+      toast.error(error || 'Xóa bài viết thất bại');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [dispatch, data?._id, deleteLoading, onDelete]);
+
+  const handleShare = useCallback(async () => {
+    if (shareLoading || !data?._id) return;
+    setShareLoading(true);
+
+    try {
+      await dispatch(sharePost(data._id)).unwrap();
+      toast.success('Đã chia sẻ bài viết');
+      setShowOptions(false);
+    } catch (error) {
+      toast.error(error || 'Chia sẻ thất bại');
+    } finally {
+      setShareLoading(false);
+    }
+  }, [dispatch, data?._id, shareLoading]);
+
+  const handleCopyLink = useCallback(() => {
+    const url = `${window.location.origin}/post/${data?._id}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Đã sao chép link');
+    setShowOptions(false);
+  }, [data?._id]);
 
   if (!data)
     return (
@@ -187,13 +322,20 @@ const Post = ({ data }) => {
           {/* Like */}
           <button
             onClick={handleLike}
+            disabled={likeLoading}
             className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all ${
+              likeLoading ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isLiked
                 ? 'text-red-500 bg-red-50 dark:bg-red-500/10'
                 : 'text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'
             }`}
           >
-            <Heart size={18} className={isLiked ? 'fill-current' : ''} />
+            {likeLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Heart size={18} className={isLiked ? 'fill-current' : ''} />
+            )}
             {likeCount > 0 && (
               <span className="text-sm font-medium">
                 {formatCount(likeCount)}
@@ -207,29 +349,46 @@ const Post = ({ data }) => {
             className="flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
           >
             <MessageCircle size={18} />
-            {data.commentCount > 0 && (
+            {(data.commentCount || data.commentsCount || 0) > 0 && (
               <span className="text-sm font-medium">
-                {formatCount(data.commentCount)}
+                {formatCount(data.commentCount || data.commentsCount || 0)}
               </span>
             )}
           </button>
 
           {/* Share */}
-          <button className="flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
-            <Send size={18} />
+          <button
+            onClick={handleShare}
+            disabled={shareLoading}
+            className={`flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all ${
+              shareLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {shareLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
           </button>
         </div>
 
         {/* Right Actions */}
         <button
           onClick={handleSave}
+          disabled={saveLoading}
           className={`p-2 rounded-full transition-all ${
+            saveLoading ? 'opacity-50 cursor-not-allowed' : ''
+          } ${
             isSaved
               ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10'
               : 'text-neutral-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10'
           }`}
         >
-          <Bookmark size={18} className={isSaved ? 'fill-current' : ''} />
+          {saveLoading ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Bookmark size={18} className={isSaved ? 'fill-current' : ''} />
+          )}
         </button>
       </div>
 
@@ -263,15 +422,70 @@ const Post = ({ data }) => {
             className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
-              Report post
+            {/* Owner actions */}
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => {
+                    setShowEditModal(true);
+                    setShowOptions(false);
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+                >
+                  <Edit3 size={18} />
+                  Edit post
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(true);
+                    setShowOptions(false);
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
+                >
+                  <Trash2 size={18} />
+                  Delete post
+                </button>
+              </>
+            )}
+
+            {/* Report - only for non-owners */}
+            {!isOwner && (
+              <button
+                onClick={() => {
+                  setShowReportModal(true);
+                  setShowOptions(false);
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
+              >
+                <Flag size={18} />
+                Report post
+              </button>
+            )}
+
+            <button
+              onClick={handleShare}
+              disabled={shareLoading}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+            >
+              <Share2 size={18} />
+              {shareLoading ? 'Sharing...' : 'Share post'}
             </button>
-            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
-              Hide post
-            </button>
-            <button className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+
+            <button
+              onClick={handleCopyLink}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+            >
+              <Link2 size={18} />
               Copy link
             </button>
+
+            {!isOwner && (
+              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+                <EyeOff size={18} />
+                Hide post
+              </button>
+            )}
+
             <button
               onClick={() => setShowOptions(false)}
               className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
@@ -280,6 +494,62 @@ const Post = ({ data }) => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
+              Delete Post?
+            </h3>
+            <p className="text-sm text-neutral-500 mb-6">
+              This action cannot be undone. The post will be permanently
+              removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+              >
+                {deleteLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetId={data?._id}
+        targetType="post"
+      />
+
+      {/* Edit Post Modal */}
+      {showEditModal && (
+        <ModelPost closeModal={() => setShowEditModal(false)} editPost={data} />
       )}
 
       {/* Comments Modal Placeholder */}

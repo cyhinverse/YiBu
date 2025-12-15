@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
   Heart,
@@ -6,9 +7,18 @@ import {
   UserPlus,
   AtSign,
   Mail,
-} from "lucide-react";
+  Loader2,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+  getSettings,
+  updateNotificationSettings,
+} from '../../../redux/actions/userActions';
 
 const NotificationSettings = () => {
+  const dispatch = useDispatch();
+  const { settings, loading } = useSelector(state => state.user);
+
   const [notifications, setNotifications] = useState({
     likes: true,
     comments: true,
@@ -18,21 +28,58 @@ const NotificationSettings = () => {
     email: false,
     push: true,
   });
+  const [saving, setSaving] = useState(false);
 
-  const ToggleSwitch = ({ enabled, onChange }) => (
+  // Load settings on mount
+  useEffect(() => {
+    dispatch(getSettings());
+  }, [dispatch]);
+
+  // Sync local state with Redux state
+  useEffect(() => {
+    if (settings?.notifications) {
+      setNotifications(settings.notifications);
+    }
+  }, [settings]);
+
+  const handleToggle = async settingKey => {
+    const newNotifications = {
+      ...notifications,
+      [settingKey]: !notifications[settingKey],
+    };
+
+    setNotifications(newNotifications);
+    setSaving(true);
+
+    try {
+      await dispatch(updateNotificationSettings(newNotifications)).unwrap();
+      toast.success('Đã lưu cài đặt thông báo');
+    } catch (error) {
+      // Revert on failure
+      setNotifications(notifications);
+      toast.error(error || 'Lưu cài đặt thất bại');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ToggleSwitch = ({ enabled, onChange, disabled }) => (
     <button
       onClick={onChange}
+      disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition-colors ${
+        disabled ? 'opacity-50 cursor-not-allowed' : ''
+      } ${
         enabled
-          ? "bg-black dark:bg-white"
-          : "bg-neutral-200 dark:bg-neutral-700"
+          ? 'bg-black dark:bg-white'
+          : 'bg-neutral-200 dark:bg-neutral-700'
       }`}
     >
       <div
         className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
           enabled
-            ? "translate-x-5 bg-white dark:bg-black"
-            : "translate-x-0.5 bg-white dark:bg-neutral-400"
+            ? 'translate-x-5 bg-white dark:bg-black'
+            : 'translate-x-0.5 bg-white dark:bg-neutral-400'
         }`}
       />
     </button>
@@ -53,15 +100,19 @@ const NotificationSettings = () => {
       </div>
       <ToggleSwitch
         enabled={notifications[settingKey]}
-        onChange={() =>
-          setNotifications({
-            ...notifications,
-            [settingKey]: !notifications[settingKey],
-          })
-        }
+        onChange={() => handleToggle(settingKey)}
+        disabled={saving}
       />
     </div>
   );
+
+  if (loading && !settings) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -140,12 +191,8 @@ const NotificationSettings = () => {
             </div>
             <ToggleSwitch
               enabled={notifications.push}
-              onChange={() =>
-                setNotifications({
-                  ...notifications,
-                  push: !notifications.push,
-                })
-              }
+              onChange={() => handleToggle('push')}
+              disabled={saving}
             />
           </div>
           <div className="flex items-center justify-between py-4">
@@ -159,16 +206,20 @@ const NotificationSettings = () => {
             </div>
             <ToggleSwitch
               enabled={notifications.email}
-              onChange={() =>
-                setNotifications({
-                  ...notifications,
-                  email: !notifications.email,
-                })
-              }
+              onChange={() => handleToggle('email')}
+              disabled={saving}
             />
           </div>
         </div>
       </div>
+
+      {/* Saving indicator */}
+      {saving && (
+        <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Đang lưu...</span>
+        </div>
+      )}
     </div>
   );
 };

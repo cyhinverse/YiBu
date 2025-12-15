@@ -1,28 +1,101 @@
-import { useState } from 'react';
-import { Camera, User, FileText, Link2, MapPin } from 'lucide-react';
-import { useSelector } from 'react-redux';
-
-// Fake user data
-const FAKE_USER = {
-  name: 'John Doe',
-  username: 'johndoe',
-  bio: 'Software Developer | Tech Enthusiast | Coffee Lover ☕',
-  website: 'https://johndoe.dev',
-  location: 'San Francisco, CA',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
-  cover: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800',
-};
+import { useState, useEffect, useRef } from 'react';
+import { Camera, User, FileText, Link2, MapPin, Loader2 } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateProfile, getProfile } from '../../../redux/actions/userActions';
+import toast from 'react-hot-toast';
 
 const ProfileSettings = () => {
-  const [profile, setProfile] = useState(FAKE_USER);
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+  const { currentProfile, loading } = useSelector(state => state.user);
+  const { user } = useSelector(state => state.auth);
   const [isSaving, setIsSaving] = useState(false);
-  const { currentProfile } = useSelector(state => state.user);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
 
-  const handleSave = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    username: '',
+    bio: '',
+    website: '',
+    location: '',
+  });
+
+  // Load profile data
+  useEffect(() => {
+    if (user?._id) {
+      dispatch(getProfile(user._id));
+    }
+  }, [dispatch, user?._id]);
+
+  // Update form when profile loads
+  useEffect(() => {
+    if (currentProfile) {
+      setFormData({
+        name: currentProfile.name || '',
+        username: currentProfile.username || '',
+        bio: currentProfile.bio || '',
+        website: currentProfile.website || '',
+        location: currentProfile.location || '',
+      });
+    }
+  }, [currentProfile]);
+
+  const handleAvatarChange = e => {
+    const file = e.target.files[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCoverChange = e => {
+    const file = e.target.files[0];
+    if (file) {
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('username', formData.username);
+      data.append('bio', formData.bio);
+      data.append('website', formData.website);
+      data.append('location', formData.location);
+
+      if (avatarFile) {
+        data.append('avatar', avatarFile);
+      }
+      if (coverFile) {
+        data.append('cover', coverFile);
+      }
+
+      const result = await dispatch(updateProfile(data));
+      if (updateProfile.fulfilled.match(result)) {
+        toast.success('Cập nhật thành công!');
+        setAvatarFile(null);
+        setCoverFile(null);
+        setAvatarPreview(null);
+        setCoverPreview(null);
+      } else {
+        toast.error(result.payload || 'Cập nhật thất bại');
+      }
+    } catch (error) {
+      toast.error('Có lỗi xảy ra');
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
+  };
+
+  const handleChange = field => e => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
 
   const InputField = ({
@@ -65,6 +138,14 @@ const ProfileSettings = () => {
     </div>
   );
 
+  if (loading && !currentProfile) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -81,11 +162,25 @@ const ProfileSettings = () => {
         {/* Cover */}
         <div className="relative h-32 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <img
-            src={profile.cover}
+            src={
+              coverPreview ||
+              currentProfile?.cover ||
+              'https://images.unsplash.com/photo-1557683316-973673baf926?w=800'
+            }
             alt="Cover"
             className="w-full h-full object-cover"
           />
-          <button className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverChange}
+            className="hidden"
+          />
+          <button
+            onClick={() => coverInputRef.current?.click()}
+            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
+          >
             <Camera size={24} className="text-white" />
           </button>
         </div>
@@ -94,15 +189,28 @@ const ProfileSettings = () => {
         <div className="flex items-end gap-4 -mt-12 ml-4">
           <div className="relative">
             <img
-              src={currentProfile.avatar}
-              alt={currentProfile.username}
+              src={avatarPreview || currentProfile?.avatar}
+              alt={currentProfile?.username}
               className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-900"
             />
-            <button className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+            >
               <Camera size={20} className="text-white" />
             </button>
           </div>
-          <button className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+          >
             Change Photo
           </button>
         </div>
@@ -113,43 +221,37 @@ const ProfileSettings = () => {
         <InputField
           icon={User}
           label="Name"
-          value={currentProfile.username}
-          onChange={e => setProfile({ ...profile, name: e.target.value })}
+          value={formData.name}
+          onChange={handleChange('name')}
           placeholder="Your name"
         />
         <InputField
           icon={User}
           label="Username"
-          value={currentProfile.username}
-          onChange={e => setProfile({ ...profile, username: e.target.value })}
+          value={formData.username}
+          onChange={handleChange('username')}
           placeholder="Your username"
         />
         <InputField
           icon={FileText}
           label="Bio"
-          value={currentProfile.bio}
-          onChange={e => setProfile({ ...profile, bio: e.target.value })}
+          value={formData.bio}
+          onChange={handleChange('bio')}
           placeholder="Tell us about yourself"
           multiline
         />
         <InputField
           icon={Link2}
           label="Website"
-          value={
-            currentProfile.website ? currentProfile.website : 'Chưa có website'
-          }
-          onChange={e => setProfile({ ...profile, website: e.target.value })}
+          value={formData.website}
+          onChange={handleChange('website')}
           placeholder="https://yourwebsite.com"
         />
         <InputField
           icon={MapPin}
           label="Location"
-          value={
-            currentProfile.location
-              ? currentProfile.location
-              : 'Chưa có địa chỉ'
-          }
-          onChange={e => setProfile({ ...profile, location: e.target.value })}
+          value={formData.location}
+          onChange={handleChange('location')}
           placeholder="Where are you based?"
         />
       </div>
@@ -159,8 +261,9 @@ const ProfileSettings = () => {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
         >
+          {isSaving && <Loader2 size={16} className="animate-spin" />}
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>

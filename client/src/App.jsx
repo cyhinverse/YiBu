@@ -1,42 +1,45 @@
-import { Outlet, Route, Routes } from "react-router-dom";
-import UserLayout from "./pages/UserPage/UserLayout";
-import Home from "./pages/UserPage/Home";
-import Message from "./pages/UserPage/Message";
-import Explore from "./pages/UserPage/Explore";
-import Notifications from "./pages/UserPage/Notifications";
-import FollowingUser from "./components/features/user/Profiles/FollowingUser";
-import Friends from "./components/features/user/Profiles/Friends";
-import HomeProfile from "./components/features/user/Profiles/HomeProfile";
-import ProfileLayout from "./components/features/user/Profiles/ProfileLayout";
-import SavePosts from "./components/features/user/Profiles/SavePosts";
-import MainMessage from "./components/features/chat/MainMessage";
-import MessageDetail from "./components/features/chat/MessageDetail";
-import Login from "./pages/AuthPage/Login";
-import Register from "./pages/AuthPage/Register";
-import AccountSettings from "./components/features/settings/AccountSettings";
-import NotificationSettings from "./components/features/settings/NotificationSettings";
-import PrivacySettings from "./components/features/settings/PrivacySettings";
-import ProfileSettings from "./components/features/settings/ProfileSettings";
-import SettingsLayout from "./components/features/settings/SettingsLayout";
-import ThemeSettings from "./components/features/settings/ThemeSettings";
-import { ROUTES } from "./constants/routes";
-import NotFound from "./pages/NotFound/NotFound";
-import ForgotPassword from "./pages/AuthPage/ForgotPassword";
-import ResetPassword from "./pages/AuthPage/ResetPassword";
-import EnterCode from "./pages/AuthPage/EnterCode";
-import AuthLayout from "./pages/AuthPage/AuthLayout";
-import { Toaster } from "react-hot-toast";
-import ProtectedRoute from "./pages/AuthPage/ProtectedRoute";
-import AdminRoute from "./pages/AuthPage/AdminRoute";
-import AdminPage from "./pages/AdminPage/AdminPage";
-import AccessDenied from "./pages/ErrorPages/AccessDenied";
-import { SocketProvider } from "./contexts/SocketContext";
-import { useSelector } from "react-redux";
-import { useTheme } from "./hooks/useTheme";
-import React from "react";
+import { Outlet, Route, Routes } from 'react-router-dom';
+import UserLayout from './pages/UserPage/UserLayout';
+import Home from './pages/UserPage/Home';
+import Message from './pages/UserPage/Message';
+import Explore from './pages/UserPage/Explore';
+import Notifications from './pages/UserPage/Notifications';
+import FollowingUser from './components/features/user/Profiles/FollowingUser';
+import Friends from './components/features/user/Profiles/Friends';
+import HomeProfile from './components/features/user/Profiles/HomeProfile';
+import ProfileLayout from './components/features/user/Profiles/ProfileLayout';
+import SavePosts from './components/features/user/Profiles/SavePosts';
+import MainMessage from './components/features/chat/MainMessage';
+import MessageDetail from './components/features/chat/MessageDetail';
+import Login from './pages/AuthPage/Login';
+import Register from './pages/AuthPage/Register';
+import AccountSettings from './components/features/settings/AccountSettings';
+import NotificationSettings from './components/features/settings/NotificationSettings';
+import PrivacySettings from './components/features/settings/PrivacySettings';
+import ProfileSettings from './components/features/settings/ProfileSettings';
+import SettingsLayout from './components/features/settings/SettingsLayout';
+import ThemeSettings from './components/features/settings/ThemeSettings';
+import SecuritySettings from './components/features/settings/SecuritySettings';
+import BlockedMutedSettings from './components/features/settings/BlockedMutedSettings';
+import FollowRequestsSettings from './components/features/settings/FollowRequestsSettings';
+import { ROUTES } from './constants/routes';
+import NotFound from './pages/NotFound/NotFound';
+import ForgotPassword from './pages/AuthPage/ForgotPassword';
+import ResetPassword from './pages/AuthPage/ResetPassword';
+import EnterCode from './pages/AuthPage/EnterCode';
+import AuthLayout from './pages/AuthPage/AuthLayout';
+import { Toaster } from 'react-hot-toast';
+import ProtectedRoute from './pages/AuthPage/ProtectedRoute';
+import AdminRoute from './pages/AuthPage/AdminRoute';
+import AdminPage from './pages/AdminPage/AdminPage';
+import AccessDenied from './pages/ErrorPages/AccessDenied';
+import { SocketProvider } from './contexts/SocketContext';
+import { useSelector } from 'react-redux';
+import { useTheme } from './hooks/useTheme';
+import React from 'react';
 
 const App = () => {
-  const userSettings = useSelector((state) => state.user?.settings);
+  const userSettings = useSelector(state => state.user?.settings);
   // Apply theme settings
   useTheme(userSettings?.theme);
 
@@ -70,8 +73,13 @@ const App = () => {
               <Route path="account" element={<AccountSettings />} />
               <Route path="profile" element={<ProfileSettings />} />
               <Route path="privacy" element={<PrivacySettings />} />
+              <Route path="security" element={<SecuritySettings />} />
               <Route path="notification" element={<NotificationSettings />} />
-
+              <Route path="blocked" element={<BlockedMutedSettings />} />
+              <Route
+                path="follow-requests"
+                element={<FollowRequestsSettings />}
+              />
               <Route path="theme" element={<ThemeSettings />} />
             </Route>
 
@@ -109,21 +117,21 @@ const App = () => {
         toastOptions={{
           duration: 3000,
           style: {
-            background: "#fff",
-            color: "#333",
+            background: '#fff',
+            color: '#333',
           },
           success: {
             style: {
-              background: "#ECFDF5",
-              border: "1px solid #10B981",
-              color: "#065F46",
+              background: '#ECFDF5',
+              border: '1px solid #10B981',
+              color: '#065F46',
             },
           },
           error: {
             style: {
-              background: "#FEF2F2",
-              border: "1px solid #EF4444",
-              color: "#991B1B",
+              background: '#FEF2F2',
+              border: '1px solid #EF4444',
+              color: '#991B1B',
             },
           },
         }}

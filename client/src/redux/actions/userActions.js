@@ -8,7 +8,7 @@ export const searchUsers = createAsyncThunk(
   async ({ query, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.SEARCH, {
-        params: { query, page, limit },
+        params: { q: query, page, limit },
       });
       return { ...response.data, isLoadMore: page > 1 };
     } catch (error) {
@@ -85,10 +85,10 @@ export const getUserById = createAsyncThunk(
 // Follow User
 export const followUser = createAsyncThunk(
   'user/followUser',
-  async (userId, { rejectWithValue }) => {
+  async (targetUserId, { rejectWithValue }) => {
     try {
-      const response = await api.post(USER_API.FOLLOW, { userId });
-      return { userId, ...response.data };
+      const response = await api.post(USER_API.FOLLOW, { targetUserId });
+      return { userId: targetUserId, ...response.data };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Theo dõi người dùng thất bại'
@@ -100,10 +100,10 @@ export const followUser = createAsyncThunk(
 // Unfollow User
 export const unfollowUser = createAsyncThunk(
   'user/unfollowUser',
-  async (userId, { rejectWithValue }) => {
+  async (targetUserId, { rejectWithValue }) => {
     try {
-      await api.post(USER_API.UNFOLLOW, { userId });
-      return { userId };
+      await api.post(USER_API.UNFOLLOW, { targetUserId });
+      return { userId: targetUserId };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Bỏ theo dõi người dùng thất bại'
