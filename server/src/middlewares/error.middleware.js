@@ -32,17 +32,15 @@ const errorMiddleware = (err, req, res, next) => {
 
   const message = err.message || "Internal Server Error";
 
-  // Only log as error if it's a server error (500)
-  if (statusCode >= 500) {
-    logger.error("Server Error", {
-      module: "system",
-      message: message,
-      stack: err.stack,
-      path: req.path,
-      method: req.method,
-      statusCode,
-    });
-  }
+  // Always log error stack for debugging
+  logger.error("Error Caught", {
+    module: "system",
+    message: message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    statusCode,
+  });
 
   res.status(statusCode).json({
     success: false,

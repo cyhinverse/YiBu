@@ -18,7 +18,7 @@ import toast from "react-hot-toast";
 const Register = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, isAuthenticated } = useSelector(
+  const { loading, error, isAuthenticated, user } = useSelector(
     (state) => state.auth
   );
 
@@ -30,11 +30,12 @@ const Register = () => {
     password: "",
   });
 
+  // Only redirect if BOTH authenticated AND user data is loaded
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       navigate("/");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     return () => {

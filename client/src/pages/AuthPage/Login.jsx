@@ -10,7 +10,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const googleButtonRef = useRef(null);
   const googleInitialized = useRef(false);
-  const { loading, error, isAuthenticated } = useSelector(
+  const { loading, error, isAuthenticated, user } = useSelector(
     (state) => state.auth
   );
 
@@ -104,8 +104,8 @@ const Login = () => {
     }
   };
 
-  // Redirect if already authenticated - using Navigate component instead of useEffect
-  if (isAuthenticated) {
+  // Redirect if already authenticated AND user data is loaded
+  if (isAuthenticated && user) {
     return <Navigate to="/" replace />;
   }
 

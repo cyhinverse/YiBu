@@ -48,10 +48,6 @@ export const registerBody = Joi.object({
         'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
       'any.required': 'Mật khẩu là bắt buộc',
     }),
-  confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
-    'any.only': 'Xác nhận mật khẩu không khớp',
-    'any.required': 'Xác nhận mật khẩu là bắt buộc',
-  }),
 });
 
 // ======================================

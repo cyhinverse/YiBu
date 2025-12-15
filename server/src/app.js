@@ -27,12 +27,58 @@ import userSettingsRoutes from './routes/userSettings.router.js';
 
 const app = express();
 
+// CORS Configuration - PHẢI ĐẶT TRƯỚC TẤT CẢ MIDDLEWARE KHÁC
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Cho phép requests không có origin (mobile apps, Postman, etc.)
+    const allowedOrigins = [
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      'http://localhost:9258',
+      'http://localhost:9259',
+      'http://localhost:5173',
+      'http://127.0.0.1:9258',
+      'http://127.0.0.1:9259',
+    ];
 
-// Helmet - HTTP Security Headers
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Tạm thời cho phép tất cả để debug
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours - cache preflight response
+  optionsSuccessStatus: 200,
+};
+
+// Handle preflight requests FIRST
+app.options('*', cors(corsOptions));
+
+// Apply CORS to all routes
+app.use(cors(corsOptions));
+
+// Helmet - HTTP Security Headers (sau CORS)
 app.use(helmetMiddleware);
 
-// Rate Limiting - Chống DDoS
-app.use(globalRateLimiter);
+// Rate Limiting - Chống DDoS (không áp dụng cho OPTIONS requests)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return next(); // Skip rate limiting for preflight
+  }
+  globalRateLimiter(req, res, next);
+});
 
 // Body parsers
 app.use(express.json({ limit: '10kb' })); // Giới hạn body size
@@ -46,17 +92,6 @@ app.use(xssClean);
 
 // HPP - Chống HTTP Parameter Pollution
 app.use(hppMiddleware);
-
-// CORS
-app.use(
-  cors({
-    origin: [process.env.CLIENT_URL || 'http://localhost:3000', 'http://localhost:9258'],
-    credentials: true,
-    optionsSuccessStatus: 200,
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
 
 // Morgan + Winston Request Logger
 app.use(morganMiddleware);

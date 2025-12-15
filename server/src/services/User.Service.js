@@ -307,8 +307,6 @@ class UserService {
 
     const searchQuery = {
       _id: { $nin: excludeIds },
-      isActive: true,
-      "moderation.status": "active",
       $or: [
         { username: { $regex: query, $options: "i" } },
         { name: { $regex: query, $options: "i" } },

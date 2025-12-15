@@ -126,13 +126,14 @@ const PostController = {
 
   SearchPosts: CatchError(async (req, res) => {
     const userId = req.user?.id;
-    const { query, page = 1, limit = 20 } = req.query;
+    const { q, query, page = 1, limit = 20 } = req.query;
+    const searchQuery = q || query;
 
-    if (!query || query.trim().length < 2) {
+    if (!searchQuery || searchQuery.trim().length < 2) {
       return formatResponse(res, 400, 0, "Query must be at least 2 characters");
     }
 
-    const result = await PostService.searchPosts(query, userId, {
+    const result = await PostService.searchPosts(searchQuery, userId, {
       page: parseInt(page),
       limit: parseInt(limit),
     });
@@ -174,7 +175,7 @@ const PostController = {
 
     if (!result.alreadyLiked) {
       const post = await PostService.getPostById(postId);
-      if (post.user._id.toString() !== userId) {
+      if (post.user && post.user._id.toString() !== userId) {
         socketService.emitPostLike(post.user._id.toString(), {
           postId,
           userId,

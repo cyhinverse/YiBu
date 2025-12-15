@@ -36,7 +36,6 @@ import AccessDenied from './pages/ErrorPages/AccessDenied';
 import { SocketProvider } from './contexts/SocketContext';
 import { useSelector } from 'react-redux';
 import { useTheme } from './hooks/useTheme';
-import React from 'react';
 
 const App = () => {
   const userSettings = useSelector(state => state.user?.settings);
@@ -90,7 +89,6 @@ const App = () => {
               <Route path="home" element={<HomeProfile />} />
               <Route path="following" element={<FollowingUser />} />
               <Route path="friends" element={<Friends />} />
-
             </Route>
           </Route>
         </Route>

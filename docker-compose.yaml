@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  server:
+    build: ./server
+    container_name: social_server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CLIENT_URL=http://localhost:3000
+      - MONGODB_URI=mongodb://mongo:27017/socialmedia
+      # JWT Secrets (REQUIRED for auth to work - replace with your own secure values)
+      - ACCESS_TOKEN_SECRET=your_access_token_secret_here_change_in_production
+      - REFRESH_TOKEN_SECRET=your_refresh_token_secret_here_change_in_production
+      # Cloudinary (optional, uncomment if needed)
+      # - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      # - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      # - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - social_network
+
+  client:
+    build: ./client
+    container_name: social_client
+    ports:
+      - "3000:9258" # Map host 3000 to vite 9258
+    depends_on:
+      - server
+    networks:
+      - social_network
+
+  mongo:
+    image: mongo:latest
+    container_name: social_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - social_network
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: |
+        test $$(mongosh --quiet --eval "try { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok } catch (_) { rs.status().ok }") -eq 1
+      interval: 10s
+      start_period: 30s
+
+  redis:
+    image: redis:alpine
+    container_name: social_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - social_network
+
+networks:
+  social_network:
+    driver: bridge
+
+volumes:
+  mongo_data:

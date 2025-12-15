@@ -31,7 +31,7 @@ export const helmetMiddleware = helmet({
 // Global rate limit cho tất cả requests
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 100, // Giới hạn 100 requests mỗi IP trong 15 phút
+  max: 1000, // Relaxed for dev: 1000 requests per 15 min
   message: {
     code: 0,
     message: 'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',

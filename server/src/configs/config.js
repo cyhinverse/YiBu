@@ -8,7 +8,7 @@ const envFile =
 
 // Load .env file (if it exists) and then specific env file
 dotenv.config();
-dotenv.config({ path: envFile, override: true });
+dotenv.config({ path: envFile });
 
 const config = {
   env: nodeEnv,

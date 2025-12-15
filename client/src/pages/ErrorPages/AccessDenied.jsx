@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { ShieldX, Home, ArrowLeft } from "lucide-react";
+import { Link } from 'react-router-dom';
+import { ShieldX, Home, ArrowLeft } from 'lucide-react';
 
 const AccessDenied = () => {
   return (

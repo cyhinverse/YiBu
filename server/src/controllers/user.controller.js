@@ -52,10 +52,11 @@ const UserController = {
   // ======================================
 
   searchUsers: CatchError(async (req, res) => {
-    const { query, page = 1, limit = 20 } = req.query;
+    const { q, query, page = 1, limit = 20 } = req.query;
     const currentUserId = req.user.id;
+    const searchQuery = q || query;
 
-    if (!query || query.trim().length < 2) {
+    if (!searchQuery || searchQuery.trim().length < 2) {
       return formatResponse(
         res,
         400,
@@ -64,7 +65,7 @@ const UserController = {
       );
     }
 
-    const result = await UserService.searchUsers(query, currentUserId, {
+    const result = await UserService.searchUsers(searchQuery, currentUserId, {
       page: parseInt(page),
       limit: parseInt(limit),
     });
