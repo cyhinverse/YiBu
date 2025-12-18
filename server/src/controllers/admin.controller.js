@@ -1,14 +1,14 @@
-import UserService from "../services/User.Service.js";
-import PostService from "../services/Post.Service.js";
-import AdminService from "../services/Admin.Service.js";
-import mongoose from "mongoose";
-import { CatchError } from "../configs/CatchError.js";
-import { formatResponse } from "../helpers/formatResponse.js";
+import UserService from '../services/User.Service.js';
+import PostService from '../services/Post.Service.js';
+import AdminService from '../services/Admin.Service.js';
+import mongoose from 'mongoose';
+import { CatchError } from '../configs/CatchError.js';
+import { formatResponse } from '../helpers/formatResponse.js';
 import {
   getPaginationParams,
   getPaginationResponse,
-} from "../helpers/pagination.js";
-import logger from "../configs/logger.js";
+} from '../helpers/pagination.js';
+import logger from '../configs/logger.js';
 
 export const AdminController = {
   // ======================================
@@ -21,7 +21,7 @@ export const AdminController = {
       res,
       200,
       1,
-      "Dashboard stats retrieved successfully",
+      'Dashboard stats retrieved successfully',
       stats
     );
   }),
@@ -29,19 +29,42 @@ export const AdminController = {
   getUserGrowthStats: CatchError(async (req, res) => {
     const days = parseInt(req.query.days) || 30;
     const stats = await AdminService.getUserGrowthStats(days);
-    return formatResponse(res, 200, 1, "User growth stats retrieved", stats);
+    return formatResponse(res, 200, 1, 'User growth stats retrieved', stats);
   }),
 
   getPostStats: CatchError(async (req, res) => {
     const days = parseInt(req.query.days) || 30;
     const stats = await AdminService.getPostStats(days);
-    return formatResponse(res, 200, 1, "Post stats retrieved", stats);
+    return formatResponse(res, 200, 1, 'Post stats retrieved', stats);
   }),
 
   getTopEngagedUsers: CatchError(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const users = await AdminService.getTopEngagedUsers(limit);
-    return formatResponse(res, 200, 1, "Top engaged users retrieved", users);
+    return formatResponse(res, 200, 1, 'Top engaged users retrieved', users);
+  }),
+
+  getInteractions: CatchError(async (req, res) => {
+    const { page, limit } = getPaginationParams(req.query);
+    const { type, search } = req.query;
+
+    const result = await AdminService.getInteractions({
+      page,
+      limit,
+      type,
+      search,
+    });
+
+    return formatResponse(res, 200, 1, 'Interactions retrieved successfully', {
+      interactions: result.interactions,
+      stats: result.stats,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+        hasMore: result.hasMore,
+      },
+    });
   }),
 
   // ======================================
@@ -58,10 +81,10 @@ export const AdminController = {
       search,
       status,
       sortBy,
-      sortOrder: sortOrder === "asc" ? 1 : -1,
+      sortOrder: sortOrder === 'asc' ? 1 : -1,
     });
 
-    return formatResponse(res, 200, 1, "Users retrieved successfully", {
+    return formatResponse(res, 200, 1, 'Users retrieved successfully', {
       users: result.users,
       pagination: {
         total: result.total,
@@ -76,7 +99,7 @@ export const AdminController = {
     const { userId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Invalid user ID format");
+      return formatResponse(res, 400, 0, 'Invalid user ID format');
     }
 
     const user = await AdminService.getUserById(userId);
@@ -84,7 +107,7 @@ export const AdminController = {
       res,
       200,
       1,
-      "User details retrieved successfully",
+      'User details retrieved successfully',
       user
     );
   }),
@@ -94,7 +117,7 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Invalid user ID format");
+      return formatResponse(res, 400, 0, 'Invalid user ID format');
     }
 
     const updatedUser = await AdminService.updateUser(
@@ -106,7 +129,7 @@ export const AdminController = {
       res,
       200,
       1,
-      "User updated successfully",
+      'User updated successfully',
       updatedUser
     );
   }),
@@ -116,14 +139,14 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Invalid user ID format");
+      return formatResponse(res, 400, 0, 'Invalid user ID format');
     }
 
     await UserService.deleteUser(userId);
 
     logger.info(`User ${userId} deleted by admin ${adminId}`);
 
-    return formatResponse(res, 200, 1, "User deleted successfully");
+    return formatResponse(res, 200, 1, 'User deleted successfully');
   }),
 
   // ======================================
@@ -135,11 +158,11 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Valid user ID is required");
+      return formatResponse(res, 400, 0, 'Valid user ID is required');
     }
 
     const user = await AdminService.banUser(userId, adminId, reason);
-    return formatResponse(res, 200, 1, "User banned successfully", user);
+    return formatResponse(res, 200, 1, 'User banned successfully', user);
   }),
 
   unbanUser: CatchError(async (req, res) => {
@@ -147,11 +170,11 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Valid user ID is required");
+      return formatResponse(res, 400, 0, 'Valid user ID is required');
     }
 
     const user = await AdminService.unbanUser(userId, adminId);
-    return formatResponse(res, 200, 1, "User unbanned successfully", user);
+    return formatResponse(res, 200, 1, 'User unbanned successfully', user);
   }),
 
   suspendUser: CatchError(async (req, res) => {
@@ -159,11 +182,11 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Valid user ID is required");
+      return formatResponse(res, 400, 0, 'Valid user ID is required');
     }
 
     const user = await AdminService.suspendUser(userId, adminId, days, reason);
-    return formatResponse(res, 200, 1, "User suspended successfully", user);
+    return formatResponse(res, 200, 1, 'User suspended successfully', user);
   }),
 
   warnUser: CatchError(async (req, res) => {
@@ -171,15 +194,15 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Valid user ID is required");
+      return formatResponse(res, 400, 0, 'Valid user ID is required');
     }
 
     if (!reason) {
-      return formatResponse(res, 400, 0, "Warning reason is required");
+      return formatResponse(res, 400, 0, 'Warning reason is required');
     }
 
     const user = await AdminService.warnUser(userId, adminId, reason);
-    return formatResponse(res, 200, 1, "Warning issued successfully", user);
+    return formatResponse(res, 200, 1, 'Warning issued successfully', user);
   }),
 
   getBannedUsers: CatchError(async (req, res) => {
@@ -188,10 +211,10 @@ export const AdminController = {
     const result = await AdminService.getAllUsers({
       page,
       limit,
-      status: "banned",
+      status: 'banned',
     });
 
-    return formatResponse(res, 200, 1, "Banned users retrieved", {
+    return formatResponse(res, 200, 1, 'Banned users retrieved', {
       users: result.users,
       pagination: {
         total: result.total,
@@ -215,10 +238,10 @@ export const AdminController = {
       limit,
       status,
       sortBy,
-      sortOrder: sortOrder === "asc" ? 1 : -1,
+      sortOrder: sortOrder === 'asc' ? 1 : -1,
     });
 
-    return formatResponse(res, 200, 1, "Posts retrieved successfully", {
+    return formatResponse(res, 200, 1, 'Posts retrieved successfully', {
       posts: result.posts,
       pagination: {
         total: result.total,
@@ -235,7 +258,7 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return formatResponse(res, 400, 0, "Invalid post ID format");
+      return formatResponse(res, 400, 0, 'Invalid post ID format');
     }
 
     if (!action) {
@@ -243,7 +266,7 @@ export const AdminController = {
         res,
         400,
         0,
-        "Action is required (approve/reject/flag/remove)"
+        'Action is required (approve/reject/flag/remove)'
       );
     }
 
@@ -261,11 +284,11 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return formatResponse(res, 400, 0, "Invalid post ID format");
+      return formatResponse(res, 400, 0, 'Invalid post ID format');
     }
 
-    const post = await AdminService.moderatePost(postId, adminId, "approve");
-    return formatResponse(res, 200, 1, "Post approved successfully", post);
+    const post = await AdminService.moderatePost(postId, adminId, 'approve');
+    return formatResponse(res, 200, 1, 'Post approved successfully', post);
   }),
 
   deletePost: CatchError(async (req, res) => {
@@ -274,11 +297,35 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return formatResponse(res, 400, 0, "Invalid post ID format");
+      return formatResponse(res, 400, 0, 'Invalid post ID format');
     }
 
     await AdminService.deletePost(postId, adminId, reason);
-    return formatResponse(res, 200, 1, "Post deleted successfully");
+    return formatResponse(res, 200, 1, 'Post deleted successfully');
+  }),
+
+  getAllComments: CatchError(async (req, res) => {
+    const { page, limit } = getPaginationParams(req.query);
+    const { search, status, sortBy, sortOrder } = req.query;
+
+    const result = await AdminService.getAllComments({
+      page,
+      limit,
+      search,
+      status,
+      sortBy,
+      sortOrder: sortOrder === 'asc' ? 1 : -1,
+    });
+
+    return formatResponse(res, 200, 1, 'Comments retrieved successfully', {
+      comments: result.comments,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+        hasMore: result.hasMore,
+      },
+    });
   }),
 
   moderateComment: CatchError(async (req, res) => {
@@ -287,7 +334,7 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      return formatResponse(res, 400, 0, "Invalid comment ID format");
+      return formatResponse(res, 400, 0, 'Invalid comment ID format');
     }
 
     const comment = await AdminService.moderateComment(
@@ -311,16 +358,16 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      return formatResponse(res, 400, 0, "Invalid comment ID format");
+      return formatResponse(res, 400, 0, 'Invalid comment ID format');
     }
 
     const comment = await AdminService.moderateComment(
       commentId,
       adminId,
-      "remove",
+      'remove',
       reason
     );
-    return formatResponse(res, 200, 1, "Comment deleted successfully", comment);
+    return formatResponse(res, 200, 1, 'Comment deleted successfully', comment);
   }),
 
   // ======================================
@@ -339,7 +386,7 @@ export const AdminController = {
       priority,
     });
 
-    return formatResponse(res, 200, 1, "Reports retrieved successfully", {
+    return formatResponse(res, 200, 1, 'Reports retrieved successfully', {
       reports: result.reports,
       pagination: {
         total: result.total,
@@ -356,7 +403,7 @@ export const AdminController = {
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return formatResponse(res, 400, 0, "Invalid report ID format");
+      return formatResponse(res, 400, 0, 'Invalid report ID format');
     }
 
     if (!decision) {
@@ -364,7 +411,7 @@ export const AdminController = {
         res,
         400,
         0,
-        "Decision is required (resolved/rejected/escalated)"
+        'Decision is required (resolved/rejected/escalated)'
       );
     }
 
@@ -374,7 +421,7 @@ export const AdminController = {
       decision,
       actionTaken
     );
-    return formatResponse(res, 200, 1, "Report reviewed successfully", report);
+    return formatResponse(res, 200, 1, 'Report reviewed successfully', report);
   }),
 
   // ======================================
@@ -382,17 +429,30 @@ export const AdminController = {
   // ======================================
 
   broadcastNotification: CatchError(async (req, res) => {
-    const { content, targetGroup } = req.body;
+    const {
+      title,
+      message,
+      content,
+      targetAudience,
+      targetGroup,
+      type,
+      priority,
+      link,
+    } = req.body;
     const adminId = req.user.id;
 
-    if (!content) {
-      return formatResponse(res, 400, 0, "Notification content is required");
+    // Map client fields to service expectations
+    const finalContent = content || (title ? `${title}: ${message}` : message);
+    const finalTargetGroup = targetGroup || targetAudience || 'all';
+
+    if (!finalContent) {
+      return formatResponse(res, 400, 0, 'Notification content is required');
     }
 
     const result = await AdminService.broadcastNotification(
       adminId,
-      content,
-      targetGroup
+      finalContent,
+      finalTargetGroup
     );
     return formatResponse(
       res,
@@ -405,18 +465,63 @@ export const AdminController = {
 
   getSystemHealth: CatchError(async (req, res) => {
     const health = {
-      status: "healthy",
+      status: 'healthy',
       uptime: process.uptime(),
       memory: process.memoryUsage(),
       timestamp: new Date(),
     };
-    return formatResponse(res, 200, 1, "System health retrieved", health);
+    return formatResponse(res, 200, 1, 'System health retrieved', health);
   }),
 
   getAdminLogs: CatchError(async (req, res) => {
     const { page, limit } = getPaginationParams(req.query);
 
     const result = await AdminService.getAdminLogs({ page, limit });
-    return formatResponse(res, 200, 1, "Admin logs retrieved", result);
+    return formatResponse(res, 200, 1, 'Admin logs retrieved', result);
+  }),
+
+  // ======================================
+  // Settings Management
+  // ======================================
+
+  getSystemSettings: CatchError(async (req, res) => {
+    const settings = await AdminService.getSystemSettings();
+    return formatResponse(res, 200, 1, 'System settings retrieved', settings);
+  }),
+
+  updateSystemSettings: CatchError(async (req, res) => {
+    const updatedSettings = await AdminService.updateSystemSettings(
+      req.body,
+      req.user.id
+    );
+    return formatResponse(
+      res,
+      200,
+      1,
+      'System settings updated',
+      updatedSettings
+    );
+  }),
+
+  // ======================================
+  // Revenue & Transactions
+  // ======================================
+
+  getRevenueStats: CatchError(async (req, res) => {
+    const stats = await AdminService.getRevenueStats();
+    return formatResponse(res, 200, 1, 'Revenue stats retrieved', stats);
+  }),
+
+  getTransactions: CatchError(async (req, res) => {
+    const { page, limit } = getPaginationParams(req.query);
+    const { status, type } = req.query;
+
+    const result = await AdminService.getTransactions({
+      page,
+      limit,
+      status,
+      type,
+    });
+    return formatResponse(res, 200, 1, 'Transactions retrieved', result);
   }),
 };

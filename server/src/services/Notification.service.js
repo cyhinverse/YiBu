@@ -1,8 +1,10 @@
-import mongoose from "mongoose";
-import Notification from "../models/Notification.js";
-import UserSettings from "../models/UserSettings.js";
-import User from "../models/User.js";
-import logger from "../configs/logger.js";
+import mongoose from 'mongoose';
+import Notification from '../models/Notification.js';
+import UserSettings from '../models/UserSettings.js';
+import User from '../models/User.js';
+import logger from '../configs/logger.js';
+import { retryOperation } from '../helpers/retryOperation.js';
+import socketService from './Socket.Service.js';
 
 /**
  * Notification Service - Refactored for new model structure
@@ -35,29 +37,29 @@ class NotificationService {
     }
 
     const settings = await UserSettings.findOne({ user: recipient })
-      .select("notifications blockedUsers mutedUsers")
+      .select('notifications blockedUsers mutedUsers')
       .lean();
 
     if (
-      settings?.blockedUsers?.some((id) => id.toString() === sender?.toString())
+      settings?.blockedUsers?.some(id => id.toString() === sender?.toString())
     ) {
       return null;
     }
 
     if (
-      settings?.mutedUsers?.some((id) => id.toString() === sender?.toString())
+      settings?.mutedUsers?.some(id => id.toString() === sender?.toString())
     ) {
       return null;
     }
 
     const notificationTypeMap = {
-      like: "likes",
-      comment: "comments",
-      reply: "comments",
-      follow: "follows",
-      mention: "mentions",
-      share: "shares",
-      message: "messages",
+      like: 'likes',
+      comment: 'comments',
+      reply: 'comments',
+      follow: 'follows',
+      mention: 'mentions',
+      share: 'shares',
+      message: 'messages',
     };
 
     const settingKey = notificationTypeMap[type] || type;
@@ -75,12 +77,12 @@ class NotificationService {
 
       if (existingGroup) {
         const senderExists = existingGroup.groupedSenders?.some(
-          (s) => s.user?.toString() === sender?.toString()
+          s => s.user?.toString() === sender?.toString()
         );
 
         if (!senderExists && sender) {
           const senderUser = await User.findById(sender)
-            .select("username avatar")
+            .select('username avatar')
             .lean();
 
           await Notification.findByIdAndUpdate(existingGroup._id, {
@@ -103,7 +105,7 @@ class NotificationService {
     let senderData;
     if (sender) {
       const senderUser = await User.findById(sender)
-        .select("username avatar")
+        .select('username avatar')
         .lean();
       senderData = {
         user: sender,
@@ -127,9 +129,27 @@ class NotificationService {
     });
 
     const populatedNotification = await Notification.findById(notification._id)
-      .populate("sender", "username name avatar verified")
-      .populate("relatedPost", "caption media")
+      .populate('sender', 'username name avatar verified')
+      .populate('post', 'caption media')
+      .populate('relatedPost', 'caption media')
       .lean();
+
+    // Ensure post field is available for client
+    const postData =
+      populatedNotification.post || populatedNotification.relatedPost;
+
+    // Emit realtime notification via socket
+    try {
+      await socketService.sendNotification(recipient.toString(), {
+        ...populatedNotification,
+        _id: populatedNotification._id.toString(),
+        post: postData,
+      });
+      logger.debug(`Socket notification sent to user ${recipient}`);
+    } catch (socketError) {
+      logger.error('Failed to send socket notification:', socketError);
+      // Don't throw - notification is saved, socket is optional
+    }
 
     return populatedNotification;
   }
@@ -159,8 +179,9 @@ class NotificationService {
 
     const [notifications, total, unreadCount] = await Promise.all([
       Notification.find(query)
-        .populate("sender", "username name avatar verified")
-        .populate("relatedPost", "_id caption media")
+        .populate('sender', 'username name avatar verified')
+        .populate('post', '_id caption media')
+        .populate('relatedPost', '_id caption media')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -169,7 +190,7 @@ class NotificationService {
       Notification.countDocuments({ recipient: userId, isRead: false }),
     ]);
 
-    const formattedNotifications = notifications.map((notif) =>
+    const formattedNotifications = notifications.map(notif =>
       this._formatNotification(notif)
     );
 
@@ -201,8 +222,12 @@ class NotificationService {
       displayContent = typeMessages[notification.type] || displayContent;
     }
 
+    // Ensure post field is available (may be in 'post' or 'relatedPost')
+    const postData = notification.post || notification.relatedPost;
+
     return {
       ...notification,
+      post: postData,
       displayContent,
       isGrouped: notification.groupCount > 1,
     };
@@ -213,8 +238,8 @@ class NotificationService {
       _id: notificationId,
       recipient: userId,
     })
-      .populate("sender", "username name avatar verified")
-      .populate("relatedPost", "_id caption media")
+      .populate('sender', 'username name avatar verified')
+      .populate('relatedPost', '_id caption media')
       .lean();
 
     return notification ? this._formatNotification(notification) : null;
@@ -225,10 +250,12 @@ class NotificationService {
   // ======================================
 
   static async markAsRead(notificationId, userId) {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: notificationId, recipient: userId },
-      { isRead: true, readAt: new Date() },
-      { new: true }
+    const notification = await retryOperation(() =>
+      Notification.findOneAndUpdate(
+        { _id: notificationId, recipient: userId },
+        { isRead: true, readAt: new Date() },
+        { new: true }
+      )
     );
 
     return notification;
@@ -257,7 +284,7 @@ class NotificationService {
 
     return result
       ? { success: true }
-      : { success: false, error: "Notification not found" };
+      : { success: false, error: 'Notification not found' };
   }
 
   static async deleteAllNotifications(userId, type = null) {
@@ -303,14 +330,14 @@ class NotificationService {
       },
       {
         $group: {
-          _id: "$type",
+          _id: '$type',
           count: { $sum: 1 },
         },
       },
     ]);
 
     const result = {};
-    counts.forEach((item) => {
+    counts.forEach(item => {
       result[item._id] = item.count;
     });
 
@@ -322,17 +349,17 @@ class NotificationService {
   // ======================================
 
   static async notifyFollowers(userId, type, content, relatedPost = null) {
-    const Follow = (await import("../models/Follow.js")).default;
+    const Follow = (await import('../models/Follow.js')).default;
 
     const followers = await Follow.getFollowerIds(userId);
 
-    const user = await User.findById(userId).select("username avatar").lean();
+    const user = await User.findById(userId).select('username avatar').lean();
 
-    const notifications = followers.map((followerId) => ({
+    const notifications = followers.map(followerId => ({
       recipient: followerId,
       sender: userId,
       type,
-      content: content.replace("{username}", user.username),
+      content: content.replace('{username}', user.username),
       relatedPost,
       groupKey: relatedPost ? `${type}_${relatedPost}` : null,
       groupedSenders: [
@@ -347,8 +374,8 @@ class NotificationService {
 
     if (notifications.length > 0) {
       await Notification.insertMany(notifications, { ordered: false }).catch(
-        (err) => {
-          logger.warn("Some notifications failed to insert:", err.message);
+        err => {
+          logger.warn('Some notifications failed to insert:', err.message);
         }
       );
     }
@@ -372,7 +399,7 @@ class NotificationService {
 
   static async getNotificationPreferences(userId) {
     const settings = await UserSettings.findOne({ user: userId })
-      .select("notifications")
+      .select('notifications')
       .lean();
 
     return (
@@ -393,11 +420,11 @@ class NotificationService {
 
   static async sendPushNotification(userId, notification) {
     const settings = await UserSettings.findOne({ user: userId })
-      .select("notifications")
+      .select('notifications')
       .lean();
 
     if (!settings?.notifications?.push) {
-      return { sent: false, reason: "Push notifications disabled" };
+      return { sent: false, reason: 'Push notifications disabled' };
     }
 
     // TODO: Integrate with push notification service (FCM, APNs, etc.)

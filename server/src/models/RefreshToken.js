@@ -59,7 +59,7 @@ const RefreshTokenSchema = new Schema(
     expiresAt: {
       type: Date,
       default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      index: true,
+      // index: true, // Defined in explicit index below with expireAfterSeconds
     },
   },
   {
@@ -70,7 +70,7 @@ const RefreshTokenSchema = new Schema(
 
 // ============ INDEXES ============
 // Primary lookups
-RefreshTokenSchema.index({ token: 1 }, { unique: true });
+// RefreshTokenSchema.index({ token: 1 }, { unique: true }); // Already defined in schema
 RefreshTokenSchema.index({ user: 1, isValid: 1 });
 RefreshTokenSchema.index({ family: 1, isValid: 1 });
 

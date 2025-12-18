@@ -39,9 +39,9 @@ export const notificationIdParam = Joi.object({
 // Body: { userId, type, title, message, data? }
 // ======================================
 export const createNotificationBody = Joi.object({
-  userId: objectId.required().messages({
-    'any.required': 'User ID là bắt buộc',
-  }),
+  recipient: objectId,
+  userId: objectId, // For fallback
+  sender: objectId,
   type: Joi.string()
     .valid(
       'like',
@@ -51,21 +51,17 @@ export const createNotificationBody = Joi.object({
       'reply',
       'share',
       'message',
-      'system'
+      'system',
+      'announcement'
     )
-    .required()
-    .messages({
-      'any.only': 'Loại thông báo không hợp lệ',
-      'any.required': 'Loại thông báo là bắt buộc',
-    }),
-  title: Joi.string().trim().max(100).required().messages({
-    'string.max': 'Tiêu đề không được quá 100 ký tự',
-    'any.required': 'Tiêu đề là bắt buộc',
-  }),
-  message: Joi.string().trim().max(500).required().messages({
-    'string.max': 'Nội dung không được quá 500 ký tự',
-    'any.required': 'Nội dung là bắt buộc',
-  }),
+    .required(),
+  content: Joi.string().trim().max(500),
+  title: Joi.string().trim().max(100), // Legacy
+  message: Joi.string().trim().max(500), // Legacy
+  relatedPost: objectId,
+  relatedComment: objectId,
+  groupKey: Joi.string(),
+  metadata: Joi.object(),
   data: Joi.object({
     postId: objectId,
     commentId: objectId,
@@ -73,6 +69,7 @@ export const createNotificationBody = Joi.object({
     link: Joi.string().uri(),
   }),
 });
+
 
 // ======================================
 // PUT /:notificationId/read (markAsRead)

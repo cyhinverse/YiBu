@@ -64,7 +64,7 @@ const App = () => {
             {/* Message Routes */}
             <Route path={`${ROUTES.MESSAGE}`} element={<Message />}>
               <Route index element={<MainMessage />} />
-              <Route path=":userId" element={<MessageDetail />} />
+              <Route path=":conversationId" element={<MessageDetail />} />
             </Route>
 
             {/* Router settings */}

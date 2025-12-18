@@ -8,7 +8,8 @@ export const useSocketContext = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const { user } = useSelector((state) => state.auth);
-  const userId = user?.user?._id;
+  const userId = user?._id || user?.user?._id;
+
 
   const socketData = useSocket(userId);
 

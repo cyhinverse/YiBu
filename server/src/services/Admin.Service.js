@@ -1,12 +1,17 @@
-import mongoose from "mongoose";
-import User from "../models/User.js";
-import Post from "../models/Post.js";
-import Comment from "../models/Comment.js";
-import Report from "../models/Report.js";
-import RefreshToken from "../models/RefreshToken.js";
-import UserSettings from "../models/UserSettings.js";
-import Notification from "../models/Notification.js";
-import logger from "../configs/logger.js";
+import mongoose from 'mongoose';
+import User from '../models/User.js';
+import Post from '../models/Post.js';
+import Comment from '../models/Comment.js';
+import Report from '../models/Report.js';
+import RefreshToken from '../models/RefreshToken.js';
+import UserSettings from '../models/UserSettings.js';
+import Notification from '../models/Notification.js';
+import logger from '../configs/logger.js';
+import SystemSetting from '../models/SystemSetting.js';
+import Transaction from '../models/Transaction.js';
+import Like from '../models/Like.js';
+import Follow from '../models/Follow.js';
+import SavePost from '../models/SavePost.js';
 
 /**
  * Admin Service - Refactored for new model structure
@@ -28,7 +33,7 @@ class AdminService {
       limit = 20,
       search,
       status,
-      sortBy = "createdAt",
+      sortBy = 'createdAt',
       sortOrder = -1,
     } = options;
 
@@ -36,14 +41,14 @@ class AdminService {
 
     if (search) {
       query.$or = [
-        { username: { $regex: search, $options: "i" } },
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { username: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
       ];
     }
 
     if (status) {
-      query["moderation.status"] = status;
+      query['moderation.status'] = status;
     }
 
     const sortOptions = {};
@@ -51,7 +56,7 @@ class AdminService {
 
     const [users, total] = await Promise.all([
       User.find(query)
-        .select("-loginAttempts -security")
+        .select('-loginAttempts -security')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -69,17 +74,17 @@ class AdminService {
   }
 
   static async getUserById(userId) {
-    const user = await User.findById(userId).select("-loginAttempts").lean();
+    const user = await User.findById(userId).select('-loginAttempts').lean();
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     const settings = await UserSettings.findOne({ user: userId }).lean();
 
     const recentReports = await Report.find({
       targetUser: userId,
-      status: { $in: ["pending", "reviewing"] },
+      status: { $in: ['pending', 'reviewing'] },
     })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -100,13 +105,13 @@ class AdminService {
       userId,
       { $set: safeData },
       { new: true }
-    ).select("-loginAttempts -security");
+    ).select('-loginAttempts -security');
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
-    await this._logAdminAction(adminId, "update_user", "user", userId, {
+    await this._logAdminAction(adminId, 'update_user', 'user', userId, {
       updateData: safeData,
     });
 
@@ -117,7 +122,7 @@ class AdminService {
   // User Moderation
   // ======================================
 
-  static async banUser(userId, adminId, reason = "Violation of terms") {
+  static async banUser(userId, adminId, reason = 'Violation of terms') {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -126,25 +131,25 @@ class AdminService {
         userId,
         {
           $set: {
-            "moderation.status": "banned",
-            "moderation.reason": reason,
-            "moderation.moderatedBy": adminId,
-            "moderation.moderatedAt": new Date(),
+            'moderation.status': 'banned',
+            'moderation.reason': reason,
+            'moderation.moderatedBy': adminId,
+            'moderation.moderatedAt': new Date(),
           },
         },
         { new: true, session }
       );
 
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       await RefreshToken.updateMany(
         { user: userId },
-        { isRevoked: true, revokedReason: "user_banned" }
+        { isRevoked: true, revokedReason: 'user_banned' }
       ).session(session);
 
-      await this._logAdminAction(adminId, "ban_user", "user", userId, {
+      await this._logAdminAction(adminId, 'ban_user', 'user', userId, {
         reason,
       });
 
@@ -166,20 +171,20 @@ class AdminService {
       userId,
       {
         $set: {
-          "moderation.status": "active",
-          "moderation.reason": null,
-          "moderation.moderatedBy": adminId,
-          "moderation.moderatedAt": new Date(),
+          'moderation.status': 'active',
+          'moderation.reason': null,
+          'moderation.moderatedBy': adminId,
+          'moderation.moderatedAt': new Date(),
         },
       },
       { new: true }
     );
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
-    await this._logAdminAction(adminId, "unban_user", "user", userId);
+    await this._logAdminAction(adminId, 'unban_user', 'user', userId);
 
     logger.info(`User ${userId} unbanned by admin ${adminId}`);
 
@@ -190,7 +195,7 @@ class AdminService {
     userId,
     adminId,
     days = 7,
-    reason = "Temporary suspension"
+    reason = 'Temporary suspension'
   ) {
     const suspendedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
@@ -202,32 +207,32 @@ class AdminService {
         userId,
         {
           $set: {
-            "moderation.status": "suspended",
-            "moderation.reason": reason,
-            "moderation.suspendedUntil": suspendedUntil,
-            "moderation.moderatedBy": adminId,
-            "moderation.moderatedAt": new Date(),
+            'moderation.status': 'suspended',
+            'moderation.reason': reason,
+            'moderation.suspendedUntil': suspendedUntil,
+            'moderation.moderatedBy': adminId,
+            'moderation.moderatedAt': new Date(),
           },
         },
         { new: true, session }
       );
 
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       await RefreshToken.updateMany(
         { user: userId },
-        { isRevoked: true, revokedReason: "user_suspended" }
+        { isRevoked: true, revokedReason: 'user_suspended' }
       ).session(session);
 
       await Notification.createNotification({
         recipient: userId,
-        type: "system",
+        type: 'system',
         content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
       });
 
-      await this._logAdminAction(adminId, "suspend_user", "user", userId, {
+      await this._logAdminAction(adminId, 'suspend_user', 'user', userId, {
         days,
         reason,
       });
@@ -247,31 +252,31 @@ class AdminService {
     const user = await User.findByIdAndUpdate(
       userId,
       {
-        $inc: { "moderation.warnings": 1 },
+        $inc: { 'moderation.warnings': 1 },
         $set: {
-          "moderation.lastWarningAt": new Date(),
-          "moderation.moderatedBy": adminId,
+          'moderation.lastWarningAt': new Date(),
+          'moderation.moderatedBy': adminId,
         },
       },
       { new: true }
     );
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     await Notification.createNotification({
       recipient: userId,
-      type: "system",
+      type: 'system',
       content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${reason}`,
     });
 
-    await this._logAdminAction(adminId, "warn_user", "user", userId, {
+    await this._logAdminAction(adminId, 'warn_user', 'user', userId, {
       reason,
     });
 
     if (user.moderation.warnings >= 3) {
-      await this.suspendUser(userId, adminId, 3, "Nhận quá nhiều cảnh báo");
+      await this.suspendUser(userId, adminId, 3, 'Nhận quá nhiều cảnh báo');
     }
 
     return user;
@@ -286,14 +291,14 @@ class AdminService {
       page = 1,
       limit = 20,
       status,
-      sortBy = "createdAt",
+      sortBy = 'createdAt',
       sortOrder = -1,
     } = options;
 
     const query = { isDeleted: false };
 
     if (status) {
-      query["moderation.status"] = status;
+      query['moderation.status'] = status;
     }
 
     const sortOptions = {};
@@ -301,7 +306,7 @@ class AdminService {
 
     const [posts, total] = await Promise.all([
       Post.find(query)
-        .populate("user", "username name avatar verified")
+        .populate('user', 'username name avatar verified')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -318,18 +323,19 @@ class AdminService {
     };
   }
 
-  static async moderatePost(postId, adminId, action, reason = "") {
-    const validActions = ["approve", "reject", "flag", "remove"];
+  static async moderatePost(postId, adminId, action, reason = '') {
+    const validActions = ['approve', 'reject', 'flag', 'remove', 'hide'];
 
     if (!validActions.includes(action)) {
-      throw new Error("Invalid moderation action");
+      throw new Error('Invalid moderation action');
     }
 
     const statusMap = {
-      approve: "approved",
-      reject: "rejected",
-      flag: "flagged",
-      remove: "removed",
+      approve: 'approved',
+      reject: 'rejected',
+      flag: 'flagged',
+      remove: 'removed',
+      hide: 'removed',
     };
 
     const session = await mongoose.startSession();
@@ -337,16 +343,16 @@ class AdminService {
 
     try {
       const updateData = {
-        "moderation.status": statusMap[action],
-        "moderation.reviewedBy": adminId,
-        "moderation.reviewedAt": new Date(),
+        'moderation.status': statusMap[action],
+        'moderation.reviewedBy': adminId,
+        'moderation.reviewedAt': new Date(),
       };
 
       if (reason) {
-        updateData["moderation.reason"] = reason;
+        updateData['moderation.reason'] = reason;
       }
 
-      if (action === "remove") {
+      if (action === 'remove' || action === 'hide') {
         updateData.isDeleted = true;
       }
 
@@ -354,27 +360,27 @@ class AdminService {
         postId,
         { $set: updateData },
         { new: true, session }
-      ).populate("user", "username name avatar");
+      ).populate('user', 'username name avatar');
 
       if (!post) {
-        throw new Error("Post not found");
+        throw new Error('Post not found');
       }
 
-      if (action === "reject" || action === "remove") {
+      if (action === 'reject' || action === 'remove' || action === 'hide') {
         await User.findByIdAndUpdate(post.user._id, {
           $inc: { postsCount: -1 },
         }).session(session);
 
         await Notification.createNotification({
           recipient: post.user._id,
-          type: "system",
+          type: 'system',
           content: `Bài viết của bạn đã bị ${
-            action === "remove" ? "gỡ bỏ" : "từ chối"
-          }. Lý do: ${reason || "Vi phạm quy định cộng đồng"}`,
+            action === 'remove' ? 'gỡ bỏ' : 'từ chối'
+          }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
         });
       }
 
-      await this._logAdminAction(adminId, `${action}_post`, "post", postId, {
+      await this._logAdminAction(adminId, `${action}_post`, 'post', postId, {
         reason,
       });
 
@@ -389,26 +395,77 @@ class AdminService {
     }
   }
 
-  static async deletePost(postId, adminId, reason = "Admin action") {
-    return this.moderatePost(postId, adminId, "remove", reason);
+  static async deletePost(postId, adminId, reason = 'Admin action') {
+    return this.moderatePost(postId, adminId, 'remove', reason);
   }
 
-  static async moderateComment(commentId, adminId, action, reason = "") {
-    const validActions = ["approve", "remove"];
+  static async getAllComments(options = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status, // "active", "hidden", "flagged"
+      sortBy = 'createdAt',
+      sortOrder = -1,
+    } = options;
+
+    const query = {};
+
+    if (search) {
+      query.content = { $regex: search, $options: 'i' };
+    }
+
+    if (status) {
+      if (status === 'hidden') {
+        query.isDeleted = true;
+      } else if (status === 'active') {
+        query.isDeleted = false;
+      }
+      // Note: "flagged" typically requires a separate report check or a specific flag on the comment
+    }
+
+    // Sort options
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
+
+    const [comments, total] = await Promise.all([
+      Comment.find(query)
+        .populate('user', 'username name avatar')
+        .populate('post', 'caption') // To show post preview
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Comment.countDocuments(query),
+    ]);
+
+    // Enhance comments with additional data if needed (e.g. report count)
+    // For now, return basic info
+    return {
+      comments,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  static async moderateComment(commentId, adminId, action, reason = '') {
+    const validActions = ['approve', 'remove'];
 
     if (!validActions.includes(action)) {
-      throw new Error("Invalid moderation action");
+      throw new Error('Invalid moderation action');
     }
 
     const comment = await Comment.findById(commentId);
 
     if (!comment) {
-      throw new Error("Comment not found");
+      throw new Error('Comment not found');
     }
 
-    if (action === "remove") {
+    if (action === 'remove') {
       comment.isDeleted = true;
-      comment.content = "[Nội dung đã bị xóa bởi quản trị viên]";
+      comment.content = '[Nội dung đã bị xóa bởi quản trị viên]';
       await comment.save();
 
       await Post.findByIdAndUpdate(comment.post, {
@@ -417,17 +474,24 @@ class AdminService {
 
       await Notification.createNotification({
         recipient: comment.user,
-        type: "system",
+        type: 'system',
         content: `Bình luận của bạn đã bị xóa. Lý do: ${
-          reason || "Vi phạm quy định cộng đồng"
+          reason || 'Vi phạm quy định cộng đồng'
         }`,
+      });
+    } else if (action === 'approve' && comment.isDeleted) {
+      comment.isDeleted = false;
+      await comment.save();
+
+      await Post.findByIdAndUpdate(comment.post, {
+        $inc: { commentsCount: 1 },
       });
     }
 
     await this._logAdminAction(
       adminId,
       `${action}_comment`,
-      "comment",
+      'comment',
       commentId,
       { reason }
     );
@@ -450,9 +514,9 @@ class AdminService {
 
     const [reports, total] = await Promise.all([
       Report.find(query)
-        .populate("reporter", "username name avatar")
-        .populate("targetUser", "username name avatar")
-        .populate("reviewedBy", "username name")
+        .populate('reporter', 'username name avatar')
+        .populate('targetUser', 'username name avatar')
+        .populate('reviewedBy', 'username name')
         .sort({ priority: -1, createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -469,11 +533,11 @@ class AdminService {
     };
   }
 
-  static async reviewReport(reportId, adminId, decision, actionTaken = "") {
-    const validDecisions = ["resolved", "rejected", "escalated"];
+  static async reviewReport(reportId, adminId, decision, actionTaken = '') {
+    const validDecisions = ['resolved', 'rejected', 'escalated'];
 
     if (!validDecisions.includes(decision)) {
-      throw new Error("Invalid decision");
+      throw new Error('Invalid decision');
     }
 
     const report = await Report.findByIdAndUpdate(
@@ -492,14 +556,14 @@ class AdminService {
       },
       { new: true }
     )
-      .populate("reporter", "username name avatar")
-      .populate("targetUser", "username name avatar");
+      .populate('reporter', 'username name avatar')
+      .populate('targetUser', 'username name avatar');
 
     if (!report) {
-      throw new Error("Report not found");
+      throw new Error('Report not found');
     }
 
-    await this._logAdminAction(adminId, "review_report", "report", reportId, {
+    await this._logAdminAction(adminId, 'review_report', 'report', reportId, {
       decision,
       actionTaken,
     });
@@ -533,11 +597,11 @@ class AdminService {
       User.countDocuments({ lastActiveAt: { $gte: thisWeek } }),
       User.countDocuments({ createdAt: { $gte: today } }),
       User.countDocuments({ createdAt: { $gte: thisWeek } }),
-      User.countDocuments({ "moderation.status": "banned" }),
+      User.countDocuments({ 'moderation.status': 'banned' }),
       Post.countDocuments({ isDeleted: false }),
       Post.countDocuments({ createdAt: { $gte: today }, isDeleted: false }),
       Post.countDocuments({ createdAt: { $gte: thisWeek }, isDeleted: false }),
-      Report.countDocuments({ status: "pending" }),
+      Report.countDocuments({ status: 'pending' }),
       Report.countDocuments(),
     ]);
 
@@ -572,7 +636,7 @@ class AdminService {
       {
         $group: {
           _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
           count: { $sum: 1 },
         },
@@ -580,7 +644,7 @@ class AdminService {
       { $sort: { _id: 1 } },
     ]);
 
-    return stats.map((s) => ({ date: s._id, count: s.count }));
+    return stats.map(s => ({ date: s._id, count: s.count }));
   }
 
   static async getPostStats(days = 30) {
@@ -593,11 +657,11 @@ class AdminService {
       {
         $group: {
           _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
           count: { $sum: 1 },
-          totalLikes: { $sum: "$likesCount" },
-          totalComments: { $sum: "$commentsCount" },
+          totalLikes: { $sum: '$likesCount' },
+          totalComments: { $sum: '$commentsCount' },
         },
       },
       { $sort: { _id: 1 } },
@@ -607,11 +671,193 @@ class AdminService {
   }
 
   static async getTopEngagedUsers(limit = 10) {
-    return User.find({ isActive: true, "moderation.status": "active" })
-      .sort({ "metrics.engagementRate": -1 })
+    return User.find({ isActive: true, 'moderation.status': 'active' })
+      .sort({ 'metrics.engagementRate': -1 })
       .limit(limit)
-      .select("username name avatar verified followersCount postsCount metrics")
+      .select('username name avatar verified followersCount postsCount metrics')
       .lean();
+  }
+
+  // ======================================
+  // Interactions Analytics
+  // ======================================
+
+  static async getInteractions(options = {}) {
+    const { page = 1, limit = 20, type, search } = options;
+
+    // Get interaction stats
+    const [totalLikes, totalComments, totalFollows, totalSaves, totalShares] =
+      await Promise.all([
+        Like.countDocuments(),
+        Comment.countDocuments({ isDeleted: false }),
+        Follow.countDocuments({ status: 'active' }),
+        SavePost.countDocuments(),
+        Post.aggregate([
+          { $group: { _id: null, total: { $sum: '$sharesCount' } } },
+        ]).then(r => r[0]?.total || 0),
+      ]);
+
+    const stats = {
+      likes: totalLikes,
+      comments: totalComments,
+      follows: totalFollows,
+      saves: totalSaves,
+      shares: totalShares,
+    };
+
+    // Build aggregation pipeline for recent interactions
+    const interactions = [];
+    const skip = (page - 1) * limit;
+    const perType = Math.ceil(limit / 5);
+
+    // Get likes
+    if (!type || type === 'like') {
+      const likes = await Like.find()
+        .sort({ createdAt: -1 })
+        .skip(type === 'like' ? skip : 0)
+        .limit(type === 'like' ? limit : perType)
+        .populate('user', 'username name avatar')
+        .populate({
+          path: 'post',
+          select: 'caption user',
+          populate: { path: 'user', select: 'username name' },
+        })
+        .lean();
+
+      likes.forEach(like => {
+        if (like.user && like.post) {
+          interactions.push({
+            _id: like._id,
+            type: 'like',
+            user: like.user,
+            target: {
+              type: 'post',
+              preview: like.post.caption?.substring(0, 100) || 'Bài viết',
+              author: like.post.user?.name || 'Unknown',
+            },
+            createdAt: like.createdAt,
+          });
+        }
+      });
+    }
+
+    // Get comments
+    if (!type || type === 'comment') {
+      const comments = await Comment.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .skip(type === 'comment' ? skip : 0)
+        .limit(type === 'comment' ? limit : perType)
+        .populate('user', 'username name avatar')
+        .populate({
+          path: 'post',
+          select: 'caption user',
+          populate: { path: 'user', select: 'username name' },
+        })
+        .lean();
+
+      comments.forEach(comment => {
+        if (comment.user && comment.post) {
+          interactions.push({
+            _id: comment._id,
+            type: 'comment',
+            user: comment.user,
+            content: comment.content?.substring(0, 100),
+            target: {
+              type: 'post',
+              preview: comment.post.caption?.substring(0, 100) || 'Bài viết',
+              author: comment.post.user?.name || 'Unknown',
+            },
+            createdAt: comment.createdAt,
+          });
+        }
+      });
+    }
+
+    // Get follows
+    if (!type || type === 'follow') {
+      const follows = await Follow.find({ status: 'active' })
+        .sort({ createdAt: -1 })
+        .skip(type === 'follow' ? skip : 0)
+        .limit(type === 'follow' ? limit : perType)
+        .populate('follower', 'username name avatar')
+        .populate('following', 'username name')
+        .lean();
+
+      follows.forEach(follow => {
+        if (follow.follower && follow.following) {
+          interactions.push({
+            _id: follow._id,
+            type: 'follow',
+            user: follow.follower,
+            target: {
+              type: 'user',
+              name: follow.following.name,
+              username: `@${follow.following.username}`,
+            },
+            createdAt: follow.createdAt,
+          });
+        }
+      });
+    }
+
+    // Get saves
+    if (!type || type === 'save') {
+      const saves = await SavePost.find()
+        .sort({ createdAt: -1 })
+        .skip(type === 'save' ? skip : 0)
+        .limit(type === 'save' ? limit : perType)
+        .populate('user', 'username name avatar')
+        .populate({
+          path: 'post',
+          select: 'caption user',
+          populate: { path: 'user', select: 'username name' },
+        })
+        .lean();
+
+      saves.forEach(save => {
+        if (save.user && save.post) {
+          interactions.push({
+            _id: save._id,
+            type: 'save',
+            user: save.user,
+            target: {
+              type: 'post',
+              preview: save.post.caption?.substring(0, 100) || 'Bài viết',
+              author: save.post.user?.name || 'Unknown',
+            },
+            createdAt: save.createdAt,
+          });
+        }
+      });
+    }
+
+    // Sort by date and apply search filter
+    let filteredInteractions = interactions.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredInteractions = filteredInteractions.filter(
+        i =>
+          i.user?.name?.toLowerCase().includes(searchLower) ||
+          i.user?.username?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const total = type
+      ? stats[type + 's'] || filteredInteractions.length
+      : filteredInteractions.length;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      interactions: filteredInteractions.slice(0, limit),
+      stats,
+      total,
+      page,
+      totalPages,
+      hasMore: page < totalPages,
+    };
   }
 
   // ======================================
@@ -627,7 +873,7 @@ class AdminService {
   ) {
     // TODO: Create AdminLog model for persistent logging
     logger.info({
-      type: "admin_action",
+      type: 'admin_action',
       adminId,
       action,
       targetType,
@@ -646,29 +892,29 @@ class AdminService {
   // System Management
   // ======================================
 
-  static async broadcastNotification(adminId, content, targetGroup = "all") {
+  static async broadcastNotification(adminId, content, targetGroup = 'all') {
     let users;
 
     switch (targetGroup) {
-      case "all":
-        users = await User.find({ isActive: true }).select("_id").lean();
+      case 'all':
+        users = await User.find({ isActive: true }).select('_id').lean();
         break;
-      case "active":
+      case 'active':
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         users = await User.find({
           isActive: true,
           lastActiveAt: { $gte: weekAgo },
         })
-          .select("_id")
+          .select('_id')
           .lean();
         break;
       default:
-        throw new Error("Invalid target group");
+        throw new Error('Invalid target group');
     }
 
-    const notifications = users.map((user) => ({
+    const notifications = users.map(user => ({
       recipient: user._id,
-      type: "system",
+      type: 'system',
       content,
       metadata: { broadcastBy: adminId },
     }));
@@ -677,13 +923,164 @@ class AdminService {
 
     await this._logAdminAction(
       adminId,
-      "broadcast_notification",
-      "system",
+      'broadcast_notification',
+      'system',
       null,
       { content, targetGroup, count: users.length }
     );
 
     return { sentCount: users.length };
+  }
+  // ======================================
+  // Settings Management
+  // ======================================
+
+  static async getSystemSettings() {
+    let settings = await SystemSetting.findOne().lean();
+    if (!settings) {
+      settings = await SystemSetting.create({});
+    }
+    return settings;
+  }
+
+  static async updateSystemSettings(updateData, adminId) {
+    const settings = await SystemSetting.findOneAndUpdate(
+      {},
+      {
+        $set: {
+          ...updateData,
+          updatedBy: adminId,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    await this._logAdminAction(adminId, 'update_settings', 'system', null, {
+      changes: Object.keys(updateData),
+    });
+
+    return settings;
+  }
+
+  // ======================================
+  // Revenue & Transactions
+  // ======================================
+
+  static async getRevenueStats() {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const [
+      totalRevenue,
+      thisMonthRevenue,
+      lastMonthRevenue,
+      transactionCount,
+      monthlyData,
+    ] = await Promise.all([
+      // Total Revenue
+      Transaction.aggregate([
+        { $match: { status: 'completed' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      // This Month
+      Transaction.aggregate([
+        {
+          $match: { status: 'completed', createdAt: { $gte: firstDayOfMonth } },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      // Last Month
+      Transaction.aggregate([
+        {
+          $match: {
+            status: 'completed',
+            createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      // Transaction Count
+      Transaction.countDocuments({ status: 'completed' }),
+      // Monthly Data for Chart (Last 6 months)
+      Transaction.aggregate([
+        {
+          $match: {
+            status: 'completed',
+            createdAt: {
+              $gte: new Date(now.getFullYear(), now.getMonth() - 5, 1),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              month: { $month: '$createdAt' },
+              year: { $year: '$createdAt' },
+            },
+            revenue: { $sum: '$amount' },
+          },
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+    ]);
+
+    const total = totalRevenue[0]?.total || 0;
+    const thisMonth = thisMonthRevenue[0]?.total || 0;
+    const lastMonth = lastMonthRevenue[0]?.total || 0;
+
+    // Calculate growth
+    let growth = 0;
+    if (lastMonth > 0) {
+      growth = ((thisMonth - lastMonth) / lastMonth) * 100;
+    } else if (thisMonth > 0) {
+      growth = 100;
+    }
+
+    const avgTransaction = transactionCount > 0 ? total / transactionCount : 0;
+
+    return {
+      total,
+      thisMonth,
+      lastMonth,
+      growth,
+      transactions: transactionCount,
+      avgTransaction,
+      chartData: monthlyData.map(d => ({
+        month: `T${d._id.month}`,
+        revenue: d.revenue,
+      })),
+    };
+  }
+
+  static async getTransactions(options = {}) {
+    const { page = 1, limit = 20, status, type } = options;
+    const query = {};
+    if (status) query.status = status;
+    if (type) query.type = type;
+
+    const [transactions, total] = await Promise.all([
+      Transaction.find(query)
+        .populate('user', 'username name avatar email')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Transaction.countDocuments(query),
+    ]);
+
+    return {
+      transactions,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
   }
 }
 

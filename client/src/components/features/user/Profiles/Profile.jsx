@@ -128,14 +128,25 @@ const Profile = () => {
   const handleMessage = useCallback(async () => {
     try {
       const result = await dispatch(createConversation(profileId)).unwrap();
-      if (result.data) {
-        navigate(`/messages/${result.data._id}`, {
+      // Support both response formats: result.conversationId or result.data._id
+      const conversationId =
+        result?.conversationId ||
+        result?.data?.conversationId ||
+        result?.data?._id ||
+        result?._id;
+      if (conversationId) {
+        navigate(`/messages/${conversationId}`, {
           state: { selectedUser: currentProfile },
+        });
+      } else {
+        // Navigate to messages page with the profile as the target
+        navigate(`/messages`, {
+          state: { selectedUser: currentProfile, targetUserId: profileId },
         });
       }
     } catch (error) {
       // If conversation already exists, navigate to it
-      if (error.includes('already exists')) {
+      if (typeof error === 'string' && error.includes('already exists')) {
         navigate(`/messages/${profileId}`, {
           state: { selectedUser: currentProfile },
         });

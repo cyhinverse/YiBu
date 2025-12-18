@@ -135,44 +135,7 @@ router.delete(
 // ======================================
 // User Settings
 // ======================================
-router.get('/settings', UserController.getUserSettings);
-router.put(
-  '/settings/privacy',
-  validateBody(updatePrivacyBody),
-  UserController.updatePrivacySettings
-);
-router.put(
-  '/settings/notifications',
-  validateBody(updateNotificationBody),
-  UserController.updateNotificationSettings
-);
-router.put(
-  '/settings/security',
-  validateBody(updateSecurityBody),
-  UserController.updateSecuritySettings
-);
-router.put(
-  '/settings/content',
-  validateBody(updateContentBody),
-  UserController.updateContentSettings
-);
-router.put(
-  '/settings/theme',
-  validateBody(updateThemeBody),
-  UserController.updateThemeSettings
-);
-
-// Trusted Devices
-router.post(
-  '/settings/devices',
-  validateBody(addDeviceBody),
-  UserController.addTrustedDevice
-);
-router.delete(
-  '/settings/devices/:deviceId',
-  validateParams(deviceIdParam),
-  UserController.removeTrustedDevice
-);
+// User Settings & Devices moved to separate router (/api/settings)
 
 // ======================================
 // User Detail (keep last)

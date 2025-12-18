@@ -1,14 +1,5 @@
 import { Schema, Types, model } from "mongoose";
 
-/**
- * Message Model - Optimized for chat with conversation grouping
- *
- * Features:
- * 1. Conversation ID for efficient thread queries
- * 2. Message status tracking (sent, delivered, read)
- * 3. Media support with proper structure
- * 4. Soft delete support
- */
 const MessageSchema = new Schema(
   {
     conversationId: {
@@ -26,10 +17,17 @@ const MessageSchema = new Schema(
 
     receiver: {
       type: Types.ObjectId,
-      ref: "User",
       required: true,
       index: true,
     },
+
+    // Individual tracking for group messages
+    seenBy: [
+      {
+        user: { type: Types.ObjectId, ref: "User" },
+        at: { type: Date, default: Date.now },
+      },
+    ],
 
     // Message content
     content: {

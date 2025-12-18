@@ -130,17 +130,7 @@ router.get('/unread-count', MessageController.GetUnreadCount);
 // ======================================
 // Reactions
 // ======================================
-router.post(
-  '/messages/:messageId/reactions',
-  validateParams(addReactionParam),
-  validateBody(addReactionBody),
-  MessageController.AddReaction
-);
-router.delete(
-  '/messages/:messageId/reactions',
-  validateParams(removeReactionParam),
-  MessageController.RemoveReaction
-);
+
 
 // ======================================
 // Typing & Search
@@ -166,27 +156,6 @@ router.get(
   MessageController.GetUsersForChat
 );
 
-// ======================================
-// Mute
-// ======================================
-router.post(
-  '/conversations/:conversationId/mute',
-  validateParams(conversationIdParam),
-  MessageController.MuteConversation
-);
-router.delete(
-  '/conversations/:conversationId/mute',
-  validateParams(conversationIdParam),
-  MessageController.UnmuteConversation
-);
 
-// ======================================
-// Media
-// ======================================
-router.get(
-  '/conversations/:conversationId/media',
-  validateParams(conversationIdParam),
-  MessageController.GetConversationMedia
-);
 
 export default router;

@@ -1,8 +1,8 @@
-import User from "../models/User.js";
-import UserSettings from "../models/UserSettings.js";
-import Message from "../models/Message.js";
-import Notification from "../models/Notification.js";
-import logger from "../configs/logger.js";
+import User from '../models/User.js';
+import UserSettings from '../models/UserSettings.js';
+import Message from '../models/Message.js';
+import Notification from '../models/Notification.js';
+import logger from '../configs/logger.js';
 
 /**
  * Socket Service - Refactored for new model structure
@@ -26,7 +26,7 @@ class SocketService {
 
   init(io) {
     this.io = io;
-    logger.info("SocketService initialized");
+    logger.info('SocketService initialized');
   }
 
   // Alias for backward compatibility
@@ -94,43 +94,41 @@ class SocketService {
 
   async sendMessage(senderId, receiverId, message) {
     const settings = await UserSettings.findOne({ user: receiverId })
-      .select("blockedUsers")
+      .select('blockedUsers')
       .lean();
 
     if (
-      settings?.blockedUsers?.some(
-        (id) => id.toString() === senderId.toString()
-      )
+      settings?.blockedUsers?.some(id => id.toString() === senderId.toString())
     ) {
-      return { delivered: false, reason: "blocked" };
+      return { delivered: false, reason: 'blocked' };
     }
 
     const receiverSockets = this.getUserSockets(receiverId);
 
     if (receiverSockets.size > 0) {
-      receiverSockets.forEach((socketId) => {
-        this.io.to(socketId).emit("new_message", {
+      receiverSockets.forEach(socketId => {
+        this.io.to(socketId).emit('new_message', {
           ...message,
           receivedAt: new Date(),
         });
       });
 
       await Message.findByIdAndUpdate(message._id, {
-        status: "delivered",
+        status: 'delivered',
         deliveredAt: new Date(),
       });
 
       return { delivered: true, socketCount: receiverSockets.size };
     }
 
-    return { delivered: false, reason: "offline" };
+    return { delivered: false, reason: 'offline' };
   }
 
   sendTypingStatus(senderId, receiverId, isTyping) {
     const receiverSockets = this.getUserSockets(receiverId);
 
-    receiverSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("typing_status", {
+    receiverSockets.forEach(socketId => {
+      this.io.to(socketId).emit('typing_status', {
         userId: senderId,
         isTyping,
         timestamp: new Date(),
@@ -141,12 +139,62 @@ class SocketService {
   sendMessageStatus(senderId, receiverId, messageId, status) {
     const senderSockets = this.getUserSockets(senderId);
 
-    senderSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("message_status", {
+    senderSockets.forEach(socketId => {
+      this.io.to(socketId).emit('message_status', {
         messageId,
         status,
         updatedAt: new Date(),
       });
+    });
+  }
+
+  sendConversationRead(senderId, readerId, conversationId) {
+    const senderSockets = this.getUserSockets(senderId);
+
+    senderSockets.forEach(socketId => {
+      this.io.to(socketId).emit('conversation_read', {
+        conversationId,
+        readerId,
+        readAt: new Date(),
+      });
+    });
+  }
+
+  // Alias methods for backward compatibility
+  emitNotification(userId, notification) {
+    return this.sendNotification(userId, notification);
+  }
+
+  emitTyping(conversationId, userId, isTyping) {
+    if (this.io) {
+      this.io
+        .to(conversationId)
+        .emit(isTyping ? 'user_typing' : 'user_stop_typing', {
+          userId,
+          conversationId,
+          timestamp: new Date(),
+        });
+    }
+  }
+
+  emitGroupCreated(userId, data) {
+    const userSockets = this.getUserSockets(userId);
+    userSockets.forEach(socketId => {
+      this.io.to(socketId).emit('group_created', data);
+    });
+  }
+
+  emitAddedToGroup(userId, data) {
+    const userSockets = this.getUserSockets(userId);
+    userSockets.forEach(socketId => {
+      this.io.to(socketId).emit('added_to_group', data);
+    });
+  }
+
+  emitRemovedFromGroup(userId, data) {
+    const userSockets = this.getUserSockets(userId);
+    userSockets.forEach(socketId => {
+      this.io.to(socketId).emit('removed_from_group', data);
     });
   }
 
@@ -156,33 +204,33 @@ class SocketService {
 
   async sendNotification(userId, notification) {
     const settings = await UserSettings.findOne({ user: userId })
-      .select("notifications")
+      .select('notifications')
       .lean();
 
     const typeMap = {
-      like: "likes",
-      comment: "comments",
-      follow: "follows",
-      mention: "mentions",
-      message: "messages",
+      like: 'likes',
+      comment: 'comments',
+      follow: 'follows',
+      mention: 'mentions',
+      message: 'messages',
     };
 
     const settingKey = typeMap[notification.type];
     if (settingKey && settings?.notifications?.[settingKey] === false) {
-      return { sent: false, reason: "disabled" };
+      return { sent: false, reason: 'disabled' };
     }
 
     const userSockets = this.getUserSockets(userId);
 
     if (userSockets.size > 0) {
-      userSockets.forEach((socketId) => {
-        this.io.to(socketId).emit("new_notification", notification);
+      userSockets.forEach(socketId => {
+        this.io.to(socketId).emit('new_notification', notification);
       });
 
       return { sent: true, socketCount: userSockets.size };
     }
 
-    return { sent: false, reason: "offline" };
+    return { sent: false, reason: 'offline' };
   }
 
   async broadcastNotification(userIds, notification) {
@@ -207,25 +255,25 @@ class SocketService {
   emitPostLike(postOwnerId, data) {
     const ownerSockets = this.getUserSockets(postOwnerId);
 
-    ownerSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("post_liked", data);
+    ownerSockets.forEach(socketId => {
+      this.io.to(socketId).emit('post_liked', data);
     });
   }
 
   emitPostComment(postOwnerId, data) {
     const ownerSockets = this.getUserSockets(postOwnerId);
 
-    ownerSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("post_commented", data);
+    ownerSockets.forEach(socketId => {
+      this.io.to(socketId).emit('post_commented', data);
     });
   }
 
   emitNewPost(followerIds, post) {
-    followerIds.forEach((followerId) => {
+    followerIds.forEach(followerId => {
       const followerSockets = this.getUserSockets(followerId);
 
-      followerSockets.forEach((socketId) => {
-        this.io.to(socketId).emit("new_post", {
+      followerSockets.forEach(socketId => {
+        this.io.to(socketId).emit('new_post', {
           postId: post._id,
           userId: post.user._id || post.user,
           preview: {
@@ -245,16 +293,16 @@ class SocketService {
   emitFollowEvent(targetUserId, data) {
     const targetSockets = this.getUserSockets(targetUserId);
 
-    targetSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("new_follower", data);
+    targetSockets.forEach(socketId => {
+      this.io.to(socketId).emit('new_follower', data);
     });
   }
 
   emitFollowRequestEvent(targetUserId, data) {
     const targetSockets = this.getUserSockets(targetUserId);
 
-    targetSockets.forEach((socketId) => {
-      this.io.to(socketId).emit("follow_request", data);
+    targetSockets.forEach(socketId => {
+      this.io.to(socketId).emit('follow_request', data);
     });
   }
 
@@ -296,23 +344,23 @@ class SocketService {
     if (isOnline) {
       return {
         userId,
-        status: "online",
+        status: 'online',
         lastActiveAt: new Date(),
       };
     }
 
-    const user = await User.findById(userId).select("lastActiveAt").lean();
+    const user = await User.findById(userId).select('lastActiveAt').lean();
 
     return {
       userId,
-      status: "offline",
+      status: 'offline',
       lastActiveAt: user?.lastActiveAt,
     };
   }
 
   async getMultiplePresence(userIds) {
     const presenceList = await Promise.all(
-      userIds.map((userId) => this.getUserPresence(userId))
+      userIds.map(userId => this.getUserPresence(userId))
     );
 
     return presenceList;
@@ -324,20 +372,20 @@ class SocketService {
 
   broadcastSystemMessage(message) {
     if (this.io) {
-      this.io.emit("system_message", {
+      this.io.emit('system_message', {
         message,
         timestamp: new Date(),
       });
     }
   }
 
-  disconnectUser(userId, reason = "forced_disconnect") {
+  disconnectUser(userId, reason = 'forced_disconnect') {
     const userSockets = this.getUserSockets(userId);
 
-    userSockets.forEach((socketId) => {
+    userSockets.forEach(socketId => {
       const socket = this.io?.sockets.sockets.get(socketId);
       if (socket) {
-        socket.emit("forced_disconnect", { reason });
+        socket.emit('forced_disconnect', { reason });
         socket.disconnect(true);
       }
     });

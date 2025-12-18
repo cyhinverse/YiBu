@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import User from "../models/User.js";
-import UserSettings from "../models/UserSettings.js";
-import Follow from "../models/Follow.js";
-import UserInteraction from "../models/UserInteraction.js";
-import Post from "../models/Post.js";
-import Comment from "../models/Comment.js";
-import Like from "../models/Like.js";
-import SavePost from "../models/SavePost.js";
-import Message from "../models/Message.js";
-import Notification from "../models/Notification.js";
-import logger from "../configs/logger.js";
+import mongoose from 'mongoose';
+import User from '../models/User.js';
+import UserSettings from '../models/UserSettings.js';
+import Follow from '../models/Follow.js';
+import UserInteraction from '../models/UserInteraction.js';
+import Post from '../models/Post.js';
+import Comment from '../models/Comment.js';
+import Like from '../models/Like.js';
+import SavePost from '../models/SavePost.js';
+import Message from '../models/Message.js';
+import Notification from '../models/Notification.js';
+import logger from '../configs/logger.js';
 
 /**
  * User Service - Refactored for new model structure
@@ -22,6 +22,40 @@ import logger from "../configs/logger.js";
  */
 class UserService {
   // ======================================
+  // Helper Methods
+  // ======================================
+
+  /**
+   * Check if a string is a valid MongoDB ObjectId
+   */
+  static isValidObjectId(str) {
+    return (
+      mongoose.Types.ObjectId.isValid(str) && /^[a-fA-F0-9]{24}$/.test(str)
+    );
+  }
+
+  /**
+   * Resolve a user ID or username to a user ID string
+   * Returns the user's _id as a string, or null if not found
+   */
+  static async resolveUserIdOrUsername(identifier) {
+    if (!identifier) return null;
+
+    // If it's already a valid ObjectId, verify the user exists and return the ID
+    if (this.isValidObjectId(identifier)) {
+      const user = await User.findById(identifier).select('_id').lean();
+      return user ? user._id.toString() : null;
+    }
+
+    // Otherwise, look up by username
+    const user = await User.findOne({ username: identifier.toLowerCase() })
+      .select('_id')
+      .lean();
+
+    return user ? user._id.toString() : null;
+  }
+
+  // ======================================
   // User Core Methods
   // ======================================
 
@@ -30,11 +64,11 @@ class UserService {
    */
   static async findUserByEmail(email) {
     if (!email) {
-      throw new Error("Email is required");
+      throw new Error('Email is required');
     }
 
     const user = await User.findOne({ email: email.toLowerCase() })
-      .select("+password")
+      .select('+password')
       .lean();
 
     return user;
@@ -45,11 +79,11 @@ class UserService {
    */
   static async getUserByUsername(username) {
     if (!username) {
-      throw new Error("Username is required");
+      throw new Error('Username is required');
     }
 
     const user = await User.findOne({ username: username.toLowerCase() })
-      .select("-loginAttempts")
+      .select('-loginAttempts')
       .lean();
 
     return user;
@@ -60,18 +94,18 @@ class UserService {
    */
   static async getUserById(userId, requesterId = null) {
     if (!userId) {
-      throw new Error("User ID is required");
+      throw new Error('User ID is required');
     }
 
-    const user = await User.findById(userId).select("-loginAttempts").lean();
+    const user = await User.findById(userId).select('-loginAttempts').lean();
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     // Check privacy settings if requester is different user
     if (requesterId && requesterId !== userId.toString()) {
-      if (user.privacy?.profileVisibility === "private") {
+      if (user.privacy?.profileVisibility === 'private') {
         const isFollowing = await Follow.isFollowing(requesterId, userId);
         if (!isFollowing) {
           return {
@@ -90,10 +124,10 @@ class UserService {
 
     // Get follow status if requester provided
     let isFollowing = false;
-    let followStatus = "none";
+    let followStatus = 'none';
     if (requesterId && requesterId !== userId.toString()) {
       followStatus = await Follow.getFollowStatus(requesterId, userId);
-      isFollowing = followStatus === "active";
+      isFollowing = followStatus === 'active';
     }
 
     return {
@@ -119,18 +153,40 @@ class UserService {
       isDeleted: false,
       visibility:
         requesterId === userId.toString()
-          ? { $in: ["public", "followers", "private"] }
-          : "public",
+          ? { $in: ['public', 'followers', 'private'] }
+          : 'public',
     })
       .sort({ createdAt: -1 })
       .limit(12)
-      .select("_id caption media likesCount commentsCount createdAt")
+      .select('_id caption media likesCount commentsCount createdAt')
       .lean();
 
     return {
       ...user,
       posts,
     };
+  }
+
+  /**
+   * Get user profile by ID or username
+   */
+  static async getUserProfileByIdOrUsername(identifier, requesterId = null) {
+    let userId;
+
+    if (this.isValidObjectId(identifier)) {
+      userId = identifier;
+    } else {
+      // It's a username
+      const user = await User.findOne({ username: identifier.toLowerCase() })
+        .select('_id')
+        .lean();
+      if (!user) {
+        throw new Error('User not found');
+      }
+      userId = user._id;
+    }
+
+    return this.getUserProfile(userId, requesterId);
   }
 
   /**
@@ -151,10 +207,10 @@ class UserService {
       userId,
       { $set: safeData },
       { new: true, runValidators: true }
-    ).select("-loginAttempts");
+    ).select('-loginAttempts');
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     return user;
@@ -165,26 +221,26 @@ class UserService {
    */
   static async updateProfile(userId, profileData) {
     const allowedFields = [
-      "name",
-      "bio",
-      "birthday",
-      "gender",
-      "website",
-      "avatar",
-      "cover",
-      "location",
-      "interests",
+      'name',
+      'bio',
+      'birthday',
+      'gender',
+      'website',
+      'avatar',
+      'cover',
+      'location',
+      'interests',
     ];
     const updateData = {};
 
     for (const [key, value] of Object.entries(profileData)) {
       if (allowedFields.includes(key)) {
-        if (key === "birthday" && value) {
+        if (key === 'birthday' && value) {
           updateData[key] = new Date(value);
-        } else if (key === "interests" && typeof value === "string") {
+        } else if (key === 'interests' && typeof value === 'string') {
           updateData[key] = value
-            .split(",")
-            .map((i) => i.trim().toLowerCase())
+            .split(',')
+            .map(i => i.trim().toLowerCase())
             .filter(Boolean);
         } else {
           updateData[key] = value;
@@ -196,10 +252,10 @@ class UserService {
       userId,
       { $set: updateData },
       { new: true }
-    ).select("-loginAttempts");
+    ).select('-loginAttempts');
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     return user;
@@ -215,14 +271,14 @@ class UserService {
     try {
       const user = await User.findById(userId).session(session);
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       // Get all user's posts for cleanup
       const userPosts = await Post.find({ user: userId })
-        .select("_id")
+        .select('_id')
         .session(session);
-      const postIds = userPosts.map((p) => p._id);
+      const postIds = userPosts.map(p => p._id);
 
       await Promise.all([
         Post.updateMany({ user: userId }, { isDeleted: true }).session(session),
@@ -252,7 +308,7 @@ class UserService {
       return user;
     } catch (error) {
       await session.abortTransaction();
-      logger.error("Error deleting user:", error);
+      logger.error('Error deleting user:', error);
       throw error;
     } finally {
       session.endSession();
@@ -261,14 +317,14 @@ class UserService {
 
   static async _updateFollowCountsOnDelete(userId, session) {
     const followers = await Follow.find({ following: userId })
-      .select("follower")
+      .select('follower')
       .session(session);
     const following = await Follow.find({ follower: userId })
-      .select("following")
+      .select('following')
       .session(session);
 
     if (followers.length > 0) {
-      const followerIds = followers.map((f) => f.follower);
+      const followerIds = followers.map(f => f.follower);
       await User.updateMany(
         { _id: { $in: followerIds } },
         { $inc: { followingCount: -1 } }
@@ -276,7 +332,7 @@ class UserService {
     }
 
     if (following.length > 0) {
-      const followingIds = following.map((f) => f.following);
+      const followingIds = following.map(f => f.following);
       await User.updateMany(
         { _id: { $in: followingIds } },
         { $inc: { followersCount: -1 } }
@@ -296,7 +352,7 @@ class UserService {
     }
 
     const settings = await UserSettings.findOne({ user: currentUserId })
-      .select("blockedUsers mutedUsers")
+      .select('blockedUsers mutedUsers')
       .lean();
 
     const excludeIds = [
@@ -308,15 +364,15 @@ class UserService {
     const searchQuery = {
       _id: { $nin: excludeIds },
       $or: [
-        { username: { $regex: query, $options: "i" } },
-        { name: { $regex: query, $options: "i" } },
+        { username: { $regex: query, $options: 'i' } },
+        { name: { $regex: query, $options: 'i' } },
       ],
     };
 
     const [users, total] = await Promise.all([
       User.find(searchQuery)
-        .select("username name avatar verified followersCount bio")
-        .sort({ "metrics.engagementRate": -1, followersCount: -1 })
+        .select('username name avatar verified followersCount bio')
+        .sort({ 'metrics.engagementRate': -1, followersCount: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -324,7 +380,7 @@ class UserService {
     ]);
 
     const usersWithStatus = await Promise.all(
-      users.map(async (user) => ({
+      users.map(async user => ({
         ...user,
         isFollowing: await Follow.isFollowing(currentUserId, user._id),
       }))
@@ -349,15 +405,15 @@ class UserService {
   static async followUser(currentUserId, targetUserId) {
     const result = await Follow.follow(currentUserId, targetUserId);
 
-    if (result.success && result.status === "active") {
+    if (result.success && result.status === 'active') {
       const currentUser = await User.findById(currentUserId)
-        .select("username name avatar")
+        .select('username name avatar')
         .lean();
 
       await Notification.createNotification({
         recipient: targetUserId,
         sender: currentUserId,
-        type: "follow",
+        type: 'follow',
         content: `${currentUser.username} đã theo dõi bạn`,
         groupKey: `follow_${targetUserId}`,
       });
@@ -393,8 +449,8 @@ class UserService {
       await Notification.createNotification({
         recipient: followerId,
         sender: userId,
-        type: "follow",
-        content: "đã chấp nhận yêu cầu theo dõi của bạn",
+        type: 'follow',
+        content: 'đã chấp nhận yêu cầu theo dõi của bạn',
       });
     }
 
@@ -422,10 +478,10 @@ class UserService {
 
     const updateData = {};
     if (profileVisibility)
-      updateData["privacy.profileVisibility"] = profileVisibility;
-    if (allowMessages) updateData["privacy.allowMessages"] = allowMessages;
+      updateData['privacy.profileVisibility'] = profileVisibility;
+    if (allowMessages) updateData['privacy.allowMessages'] = allowMessages;
     if (showActivity !== undefined)
-      updateData["privacy.showActivity"] = showActivity;
+      updateData['privacy.showActivity'] = showActivity;
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -435,9 +491,9 @@ class UserService {
 
     const settingsUpdate = {};
     if (privacySettings.postVisibility)
-      settingsUpdate["privacy.postVisibility"] = privacySettings.postVisibility;
+      settingsUpdate['privacy.postVisibility'] = privacySettings.postVisibility;
     if (privacySettings.searchable !== undefined)
-      settingsUpdate["privacy.searchable"] = privacySettings.searchable;
+      settingsUpdate['privacy.searchable'] = privacySettings.searchable;
 
     if (Object.keys(settingsUpdate).length > 0) {
       await UserSettings.findOneAndUpdate(
@@ -465,9 +521,9 @@ class UserService {
 
     const updateData = {};
     if (twoFactorEnabled !== undefined)
-      updateData["security.twoFactorEnabled"] = twoFactorEnabled;
+      updateData['security.twoFactorEnabled'] = twoFactorEnabled;
     if (loginAlerts !== undefined)
-      updateData["security.loginAlerts"] = loginAlerts;
+      updateData['security.loginAlerts'] = loginAlerts;
 
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -524,12 +580,12 @@ class UserService {
 
   static async blockUser(userId, targetUserId) {
     if (userId === targetUserId) {
-      throw new Error("Cannot block yourself");
+      throw new Error('Cannot block yourself');
     }
 
     const targetUser = await User.findById(targetUserId);
     if (!targetUser) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     await UserSettings.findOneAndUpdate(
@@ -545,9 +601,9 @@ class UserService {
 
     await UserInteraction.record({
       user: userId,
-      targetType: "user",
+      targetType: 'user',
       targetId: targetUserId,
-      interactionType: "block",
+      interactionType: 'block',
     });
 
     return { success: true };
@@ -564,7 +620,7 @@ class UserService {
 
   static async muteUser(userId, targetUserId) {
     if (userId === targetUserId) {
-      throw new Error("Cannot mute yourself");
+      throw new Error('Cannot mute yourself');
     }
 
     await UserSettings.findOneAndUpdate(
@@ -575,9 +631,9 @@ class UserService {
 
     await UserInteraction.record({
       user: userId,
-      targetType: "user",
+      targetType: 'user',
       targetId: targetUserId,
-      interactionType: "mute",
+      interactionType: 'mute',
     });
 
     return { success: true };
@@ -594,7 +650,7 @@ class UserService {
 
   static async getBlockedUsers(userId) {
     const settings = await UserSettings.findOne({ user: userId })
-      .populate("blockedUsers", "username name avatar")
+      .populate('blockedUsers', 'username name avatar')
       .lean();
 
     return settings?.blockedUsers || [];
@@ -602,7 +658,7 @@ class UserService {
 
   static async getMutedUsers(userId) {
     const settings = await UserSettings.findOne({ user: userId })
-      .populate("mutedUsers", "username name avatar")
+      .populate('mutedUsers', 'username name avatar')
       .lean();
 
     return settings?.mutedUsers || [];
@@ -614,12 +670,12 @@ class UserService {
 
   // Alias for backward compatibility
   static async updateBlockedUsers(userId, action, blockedUserId) {
-    if (action === "block") {
+    if (action === 'block') {
       return this.blockUser(userId, blockedUserId);
-    } else if (action === "unblock") {
+    } else if (action === 'unblock') {
       return this.unblockUser(userId, blockedUserId);
     }
-    throw new Error("Invalid action");
+    throw new Error('Invalid action');
   }
 
   // ======================================
@@ -640,12 +696,12 @@ class UserService {
   static async getTopUsersByEngagement(limit = 10) {
     return User.find({
       isActive: true,
-      "moderation.status": "active",
+      'moderation.status': 'active',
     })
-      .sort({ "metrics.engagementRate": -1 })
+      .sort({ 'metrics.engagementRate': -1 })
       .limit(limit)
       .select(
-        "username name avatar verified followersCount metrics.engagementRate"
+        'username name avatar verified followersCount metrics.engagementRate'
       )
       .lean();
   }
@@ -671,15 +727,15 @@ class UserService {
       throw new Error(`Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`);
     }
 
-    const cloudinary = (await import("../configs/cloudinaryConfig.js")).default;
+    const cloudinary = (await import('../configs/cloudinaryConfig.js')).default;
 
     const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
-      folder: "avatars",
+      folder: 'avatars',
       public_id: `avatar_${userId}_${Date.now()}`,
-      resource_type: "image",
+      resource_type: 'image',
       transformation: [
-        { width: 400, height: 400, crop: "fill" },
-        { quality: "auto" },
+        { width: 400, height: 400, crop: 'fill' },
+        { quality: 'auto' },
       ],
     });
 
@@ -731,17 +787,17 @@ class UserService {
   }
 
   static async createProfile(profileData) {
-    if (!profileData.userId) throw new Error("UserId required");
+    if (!profileData.userId) throw new Error('UserId required');
     return this.updateProfile(profileData.userId, profileData);
   }
 
   static async deleteProfile(userId) {
     return this.updateProfile(userId, {
-      bio: "",
-      website: "",
+      bio: '',
+      website: '',
       interests: [],
       avatar:
-        "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1",
+        'https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1',
     });
   }
 }

@@ -1,19 +1,26 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../axios/axiosConfig";
-import { ADMIN_API } from "../../axios/apiEndpoint";
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../axios/axiosConfig';
+import { ADMIN_API, REPORT_API } from '../../axios/apiEndpoint';
+
+// Helper to extract data from response
+// Server returns { code, message, data } format, we need to extract the actual data
+const extractData = response => {
+  const responseData = response.data;
+  return responseData?.data !== undefined ? responseData.data : responseData;
+};
 
 // ========== Dashboard ==========
 
 // Get Dashboard Stats
 export const getDashboardStats = createAsyncThunk(
-  "admin/getDashboardStats",
+  'admin/getDashboardStats',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_DASHBOARD_STATS);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy thống kê dashboard thất bại"
+        error.response?.data?.message || 'Lấy thống kê dashboard thất bại'
       );
     }
   }
@@ -21,16 +28,16 @@ export const getDashboardStats = createAsyncThunk(
 
 // Get User Growth
 export const getUserGrowth = createAsyncThunk(
-  "admin/getUserGrowth",
-  async ({ startDate, endDate }, { rejectWithValue }) => {
+  'admin/getUserGrowth',
+  async ({ startDate, endDate } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_USER_GROWTH, {
         params: { startDate, endDate },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy phân tích tăng trưởng thất bại"
+        error.response?.data?.message || 'Lấy phân tích tăng trưởng thất bại'
       );
     }
   }
@@ -38,16 +45,16 @@ export const getUserGrowth = createAsyncThunk(
 
 // Get Post Stats
 export const getPostStats = createAsyncThunk(
-  "admin/getPostStats",
-  async ({ period = "month" }, { rejectWithValue }) => {
+  'admin/getPostStats',
+  async ({ period = 'month' } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_POST_STATS, {
         params: { period },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy thống kê bài viết thất bại"
+        error.response?.data?.message || 'Lấy thống kê bài viết thất bại'
       );
     }
   }
@@ -55,16 +62,16 @@ export const getPostStats = createAsyncThunk(
 
 // Get Top Users
 export const getTopUsers = createAsyncThunk(
-  "admin/getTopUsers",
-  async ({ page = 1, limit = 50 }, { rejectWithValue }) => {
+  'admin/getTopUsers',
+  async ({ page = 1, limit = 50 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_TOP_USERS, {
         params: { page, limit },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy top người dùng thất bại"
+        error.response?.data?.message || 'Lấy top người dùng thất bại'
       );
     }
   }
@@ -74,19 +81,20 @@ export const getTopUsers = createAsyncThunk(
 
 // Get All Users
 export const getAllUsers = createAsyncThunk(
-  "admin/getAllUsers",
+  'admin/getAllUsers',
   async (
-    { page = 1, limit = 20, search, status, role },
+    { page = 1, limit = 20, search, status, role } = {},
     { rejectWithValue }
   ) => {
     try {
       const response = await api.get(ADMIN_API.GET_ALL_USERS, {
         params: { page, limit, search, status, role },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách người dùng thất bại"
+        error.response?.data?.message || 'Lấy danh sách người dùng thất bại'
       );
     }
   }
@@ -94,17 +102,17 @@ export const getAllUsers = createAsyncThunk(
 
 // Get Banned Users
 export const getBannedUsers = createAsyncThunk(
-  "admin/getBannedUsers",
-  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+  'admin/getBannedUsers',
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_BANNED_USERS, {
         params: { page, limit },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Lấy danh sách người dùng bị cấm thất bại"
+          'Lấy danh sách người dùng bị cấm thất bại'
       );
     }
   }
@@ -112,14 +120,14 @@ export const getBannedUsers = createAsyncThunk(
 
 // Get User by ID
 export const getUserById = createAsyncThunk(
-  "admin/getUserById",
+  'admin/getUserById',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_USER_DETAILS(userId));
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy thông tin người dùng thất bại"
+        error.response?.data?.message || 'Lấy thông tin người dùng thất bại'
       );
     }
   }
@@ -127,14 +135,14 @@ export const getUserById = createAsyncThunk(
 
 // Update User
 export const updateUser = createAsyncThunk(
-  "admin/updateUser",
+  'admin/updateUser',
   async ({ userId, data }, { rejectWithValue }) => {
     try {
       const response = await api.put(ADMIN_API.UPDATE_USER(userId), data);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật người dùng thất bại"
+        error.response?.data?.message || 'Cập nhật người dùng thất bại'
       );
     }
   }
@@ -142,14 +150,14 @@ export const updateUser = createAsyncThunk(
 
 // Delete User
 export const deleteUser = createAsyncThunk(
-  "admin/deleteUser",
+  'admin/deleteUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.delete(ADMIN_API.DELETE_USER(userId));
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xóa người dùng thất bại"
+        error.response?.data?.message || 'Xóa người dùng thất bại'
       );
     }
   }
@@ -157,7 +165,7 @@ export const deleteUser = createAsyncThunk(
 
 // Ban User
 export const banUser = createAsyncThunk(
-  "admin/banUser",
+  'admin/banUser',
   async ({ userId, reason, duration }, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.BAN_USER, {
@@ -165,15 +173,16 @@ export const banUser = createAsyncThunk(
         reason,
         duration,
       });
+      const data = extractData(response);
       return {
         userId,
         reason,
         bannedAt: new Date().toISOString(),
-        ...response.data,
+        ...data,
       };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cấm người dùng thất bại"
+        error.response?.data?.message || 'Cấm người dùng thất bại'
       );
     }
   }
@@ -181,14 +190,14 @@ export const banUser = createAsyncThunk(
 
 // Unban User
 export const unbanUser = createAsyncThunk(
-  "admin/unbanUser",
+  'admin/unbanUser',
   async (userId, { rejectWithValue }) => {
     try {
       await api.post(ADMIN_API.UNBAN_USER, { userId });
       return { userId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Bỏ cấm người dùng thất bại"
+        error.response?.data?.message || 'Bỏ cấm người dùng thất bại'
       );
     }
   }
@@ -196,7 +205,7 @@ export const unbanUser = createAsyncThunk(
 
 // Suspend User
 export const suspendUser = createAsyncThunk(
-  "admin/suspendUser",
+  'admin/suspendUser',
   async ({ userId, reason, duration }, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.SUSPEND_USER, {
@@ -204,10 +213,11 @@ export const suspendUser = createAsyncThunk(
         reason,
         duration,
       });
-      return response.data;
+      const data = extractData(response);
+      return { userId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Tạm khóa người dùng thất bại"
+        error.response?.data?.message || 'Tạm khóa người dùng thất bại'
       );
     }
   }
@@ -215,17 +225,18 @@ export const suspendUser = createAsyncThunk(
 
 // Warn User
 export const warnUser = createAsyncThunk(
-  "admin/warnUser",
+  'admin/warnUser',
   async ({ userId, reason }, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.WARN_USER, {
         userId,
         reason,
       });
-      return response.data;
+      const data = extractData(response);
+      return { userId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cảnh báo người dùng thất bại"
+        error.response?.data?.message || 'Cảnh báo người dùng thất bại'
       );
     }
   }
@@ -235,16 +246,20 @@ export const warnUser = createAsyncThunk(
 
 // Get All Posts
 export const getAllPosts = createAsyncThunk(
-  "admin/getAllPosts",
-  async ({ page = 1, limit = 20, search, status }, { rejectWithValue }) => {
+  'admin/getAllPosts',
+  async (
+    { page = 1, limit = 20, search, status } = {},
+    { rejectWithValue }
+  ) => {
     try {
       const response = await api.get(ADMIN_API.GET_ALL_POSTS, {
         params: { page, limit, search, status },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách bài viết thất bại"
+        error.response?.data?.message || 'Lấy danh sách bài viết thất bại'
       );
     }
   }
@@ -252,17 +267,18 @@ export const getAllPosts = createAsyncThunk(
 
 // Moderate Post
 export const moderatePost = createAsyncThunk(
-  "admin/moderatePost",
+  'admin/moderatePost',
   async ({ postId, action, reason }, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.MODERATE_POST(postId), {
         action,
         reason,
       });
-      return { postId, ...response.data };
+      const data = extractData(response);
+      return { postId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xử lý bài viết thất bại"
+        error.response?.data?.message || 'Xử lý bài viết thất bại'
       );
     }
   }
@@ -270,14 +286,14 @@ export const moderatePost = createAsyncThunk(
 
 // Approve Post
 export const approvePost = createAsyncThunk(
-  "admin/approvePost",
+  'admin/approvePost',
   async (postId, { rejectWithValue }) => {
     try {
       await api.post(ADMIN_API.APPROVE_POST(postId));
       return { postId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Duyệt bài viết thất bại"
+        error.response?.data?.message || 'Duyệt bài viết thất bại'
       );
     }
   }
@@ -285,14 +301,35 @@ export const approvePost = createAsyncThunk(
 
 // Delete Post
 export const deletePost = createAsyncThunk(
-  "admin/deletePost",
+  'admin/deletePost',
   async (postId, { rejectWithValue }) => {
     try {
       await api.delete(ADMIN_API.DELETE_POST(postId));
       return { postId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xóa bài viết thất bại"
+        error.response?.data?.message || 'Xóa bài viết thất bại'
+      );
+    }
+  }
+);
+
+// Get All Comments
+export const getAllComments = createAsyncThunk(
+  'admin/getAllComments',
+  async (
+    { page = 1, limit = 20, search, status } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.get(ADMIN_API.GET_ALL_COMMENTS, {
+        params: { page, limit, search, status },
+      });
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách bình luận thất bại'
       );
     }
   }
@@ -300,17 +337,18 @@ export const deletePost = createAsyncThunk(
 
 // Moderate Comment
 export const moderateComment = createAsyncThunk(
-  "admin/moderateComment",
+  'admin/moderateComment',
   async ({ commentId, action, reason }, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.MODERATE_COMMENT(commentId), {
         action,
         reason,
       });
-      return { commentId, ...response.data };
+      const data = extractData(response);
+      return { commentId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xử lý bình luận thất bại"
+        error.response?.data?.message || 'Xử lý bình luận thất bại'
       );
     }
   }
@@ -318,14 +356,14 @@ export const moderateComment = createAsyncThunk(
 
 // Delete Comment
 export const deleteComment = createAsyncThunk(
-  "admin/deleteComment",
+  'admin/deleteComment',
   async (commentId, { rejectWithValue }) => {
     try {
       await api.delete(ADMIN_API.DELETE_COMMENT(commentId));
       return { commentId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xóa bình luận thất bại"
+        error.response?.data?.message || 'Xóa bình luận thất bại'
       );
     }
   }
@@ -335,16 +373,17 @@ export const deleteComment = createAsyncThunk(
 
 // Get All Reports
 export const getAllReports = createAsyncThunk(
-  "admin/getAllReports",
-  async ({ page = 1, limit = 20, status, type }, { rejectWithValue }) => {
+  'admin/getAllReports',
+  async ({ page = 1, limit = 20, status, type } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_REPORTS, {
         params: { page, limit, status, type },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách báo cáo thất bại"
+        error.response?.data?.message || 'Lấy danh sách báo cáo thất bại'
       );
     }
   }
@@ -352,16 +391,16 @@ export const getAllReports = createAsyncThunk(
 
 // Get Pending Reports
 export const getPendingReports = createAsyncThunk(
-  "admin/getPendingReports",
-  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+  'admin/getPendingReports',
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_PENDING_REPORTS, {
         params: { page, limit },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy báo cáo chờ xử lý thất bại"
+        error.response?.data?.message || 'Lấy báo cáo chờ xử lý thất bại'
       );
     }
   }
@@ -369,14 +408,14 @@ export const getPendingReports = createAsyncThunk(
 
 // Get User Reports
 export const getUserReports = createAsyncThunk(
-  "admin/getUserReports",
+  'admin/getUserReports',
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_USER_REPORTS(userId));
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy báo cáo người dùng thất bại"
+        error.response?.data?.message || 'Lấy báo cáo người dùng thất bại'
       );
     }
   }
@@ -384,17 +423,18 @@ export const getUserReports = createAsyncThunk(
 
 // Review Report
 export const reviewReport = createAsyncThunk(
-  "admin/reviewReport",
-  async ({ reportId, status, resolution }, { rejectWithValue }) => {
+  'admin/reviewReport',
+  async ({ reportId, decision, actionTaken, notes }, { rejectWithValue }) => {
     try {
-      const response = await api.put(ADMIN_API.REVIEW_REPORT(reportId), {
-        status,
-        resolution,
+      const response = await api.post(ADMIN_API.REVIEW_REPORT(reportId), {
+        decision,
+        actionTaken,
+        notes,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật trạng thái báo cáo thất bại"
+        error.response?.data?.message || 'Cập nhật trạng thái báo cáo thất bại'
       );
     }
   }
@@ -402,14 +442,15 @@ export const reviewReport = createAsyncThunk(
 
 // Start Report Review
 export const startReportReview = createAsyncThunk(
-  "admin/startReportReview",
+  'admin/startReportReview',
   async (reportId, { rejectWithValue }) => {
     try {
       const response = await api.post(ADMIN_API.START_REPORT_REVIEW(reportId));
-      return { reportId, ...response.data };
+      const data = extractData(response);
+      return { reportId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Bắt đầu xem xét báo cáo thất bại"
+        error.response?.data?.message || 'Bắt đầu xem xét báo cáo thất bại'
       );
     }
   }
@@ -417,16 +458,38 @@ export const startReportReview = createAsyncThunk(
 
 // Resolve Report
 export const resolveReport = createAsyncThunk(
-  "admin/resolveReport",
-  async ({ reportId, resolution }, { rejectWithValue }) => {
+  'admin/resolveReport',
+  async ({ reportId, decision, actionTaken, notes }, { rejectWithValue }) => {
     try {
-      const response = await api.post(ADMIN_API.RESOLVE_REPORT(reportId), {
-        resolution,
+      const response = await api.put(ADMIN_API.RESOLVE_REPORT(reportId), {
+        decision,
+        actionTaken,
+        notes,
       });
-      return { reportId, ...response.data };
+      const data = extractData(response);
+      return { reportId, ...data };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Giải quyết báo cáo thất bại"
+        error.response?.data?.message || 'Giải quyết báo cáo thất bại'
+      );
+    }
+  }
+);
+
+// Update Report Status
+export const updateReportStatus = createAsyncThunk(
+  'admin/updateReportStatus',
+  async ({ reportId, status, notes }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(REPORT_API.UPDATE_STATUS(reportId), {
+        status,
+        notes,
+      });
+      const data = extractData(response);
+      return { reportId, ...data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Cập nhật trạng thái báo cáo thất bại'
       );
     }
   }
@@ -434,14 +497,14 @@ export const resolveReport = createAsyncThunk(
 
 // Health Check
 export const healthCheck = createAsyncThunk(
-  "admin/healthCheck",
+  'admin/healthCheck',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.HEALTH);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Kiểm tra trạng thái hệ thống thất bại"
+        error.response?.data?.message || 'Kiểm tra trạng thái hệ thống thất bại'
       );
     }
   }
@@ -449,18 +512,24 @@ export const healthCheck = createAsyncThunk(
 
 // Broadcast Notification
 export const broadcastNotification = createAsyncThunk(
-  "admin/broadcastNotification",
-  async ({ title, message, targetUsers }, { rejectWithValue }) => {
+  'admin/broadcastNotification',
+  async (
+    { title, message, type, targetAudience, priority, link },
+    { rejectWithValue }
+  ) => {
     try {
       const response = await api.post(ADMIN_API.BROADCAST, {
         title,
         message,
-        targetUsers,
+        type,
+        targetAudience,
+        priority,
+        link,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Gửi thông báo hàng loạt thất bại"
+        error.response?.data?.message || 'Gửi thông báo hàng loạt thất bại'
       );
     }
   }
@@ -468,14 +537,14 @@ export const broadcastNotification = createAsyncThunk(
 
 // Get System Health
 export const getSystemHealth = createAsyncThunk(
-  "admin/getSystemHealth",
+  'admin/getSystemHealth',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(ADMIN_API.GET_SYSTEM_HEALTH);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy trạng thái hệ thống thất bại"
+        error.response?.data?.message || 'Lấy trạng thái hệ thống thất bại'
       );
     }
   }
@@ -483,19 +552,110 @@ export const getSystemHealth = createAsyncThunk(
 
 // Get Admin Logs
 export const getAdminLogs = createAsyncThunk(
-  "admin/getAdminLogs",
+  'admin/getAdminLogs',
   async (
-    { page = 1, limit = 50, level, startDate, endDate },
+    { page = 1, limit = 50, level, startDate, endDate } = {},
     { rejectWithValue }
   ) => {
     try {
       const response = await api.get(ADMIN_API.GET_LOGS, {
         params: { page, limit, level, startDate, endDate },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy nhật ký admin thất bại"
+        error.response?.data?.message || 'Lấy nhật ký admin thất bại'
+      );
+    }
+  }
+);
+
+// ======================================
+// Settings Actions
+// ======================================
+
+export const getSystemSettings = createAsyncThunk(
+  'admin/getSystemSettings',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get(ADMIN_API.GET_SYSTEM_SETTINGS);
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy cài đặt hệ thống thất bại'
+      );
+    }
+  }
+);
+
+export const updateSystemSettings = createAsyncThunk(
+  'admin/updateSystemSettings',
+  async (settings, { rejectWithValue }) => {
+    try {
+      const response = await api.put(
+        ADMIN_API.UPDATE_SYSTEM_SETTINGS,
+        settings
+      );
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Cập nhật cài đặt thất bại'
+      );
+    }
+  }
+);
+
+// ======================================
+// Revenue Actions
+// ======================================
+
+export const getRevenueStats = createAsyncThunk(
+  'admin/getRevenueStats',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get(ADMIN_API.GET_REVENUE_STATS);
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy thống kê doanh thu thất bại'
+      );
+    }
+  }
+);
+
+export const getTransactions = createAsyncThunk(
+  'admin/getTransactions',
+  async ({ page = 1, limit = 20, status, type } = {}, { rejectWithValue }) => {
+    try {
+      const response = await api.get(ADMIN_API.GET_TRANSACTIONS, {
+        params: { page, limit, status, type },
+      });
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách giao dịch thất bại'
+      );
+    }
+  }
+);
+
+// ======================================
+// Interactions Actions
+// ======================================
+
+export const getInteractions = createAsyncThunk(
+  'admin/getInteractions',
+  async ({ page = 1, limit = 20, type, search } = {}, { rejectWithValue }) => {
+    try {
+      const response = await api.get(ADMIN_API.GET_INTERACTIONS, {
+        params: { page, limit, type, search },
+      });
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách tương tác thất bại'
       );
     }
   }

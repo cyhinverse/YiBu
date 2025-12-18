@@ -30,10 +30,23 @@ export const suggestionsQuery = Joi.object({
 
 // ======================================
 // GET /profile/:id
-// Params: { id }
+// Params: { id } - can be ObjectId or username
 // ======================================
 export const profileIdParam = Joi.object({
-  id: objectId.required(),
+  id: Joi.alternatives()
+    .try(
+      objectId,
+      Joi.string()
+        .trim()
+        .min(3)
+        .max(30)
+        .pattern(/^[a-zA-Z0-9_]+$/)
+    )
+    .required()
+    .messages({
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+      'any.required': 'ID hoặc username là bắt buộc',
+    }),
 });
 
 // ======================================
@@ -63,30 +76,57 @@ export const updateProfileBody = Joi.object({
 
 // ======================================
 // GET /check-follow/:targetUserId
-// Params: { targetUserId }
+// Params: { targetUserId } - can be ObjectId or username
 // ======================================
 export const targetUserIdParam = Joi.object({
-  targetUserId: objectId.required(),
+  targetUserId: Joi.alternatives()
+    .try(
+      objectId,
+      Joi.string()
+        .trim()
+        .min(3)
+        .max(30)
+        .pattern(/^[a-zA-Z0-9_]+$/)
+    )
+    .required()
+    .messages({
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+      'any.required': 'ID hoặc username là bắt buộc',
+    }),
 });
 
 // ======================================
 // POST /follow
-// Body: { targetUserId }
+// Body: { targetUserId } - can be ObjectId or username
 // ======================================
+const usernamePattern = Joi.string()
+  .pattern(/^[a-zA-Z0-9_]{3,30}$/)
+  .messages({
+    'string.pattern.base': 'Username không hợp lệ',
+  });
+
 export const followBody = Joi.object({
-  targetUserId: objectId.required().messages({
-    'any.required': 'ID người dùng cần follow là bắt buộc',
-  }),
+  targetUserId: Joi.alternatives()
+    .try(objectId, usernamePattern)
+    .required()
+    .messages({
+      'any.required': 'ID người dùng cần follow là bắt buộc',
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+    }),
 });
 
 // ======================================
 // POST /unfollow
-// Body: { targetUserId }
+// Body: { targetUserId } - can be ObjectId or username
 // ======================================
 export const unfollowBody = Joi.object({
-  targetUserId: objectId.required().messages({
-    'any.required': 'ID người dùng cần unfollow là bắt buộc',
-  }),
+  targetUserId: Joi.alternatives()
+    .try(objectId, usernamePattern)
+    .required()
+    .messages({
+      'any.required': 'ID người dùng cần unfollow là bắt buộc',
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+    }),
 });
 
 // ======================================
@@ -179,9 +219,15 @@ export const updateThemeBody = Joi.object({
   }),
   fontSize: Joi.string().valid('small', 'medium', 'large'),
   accentColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
-  primaryColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
-  secondaryColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
-  textColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).allow(''),
+  primaryColor: Joi.string()
+    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
+    .allow(''),
+  secondaryColor: Joi.string()
+    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
+    .allow(''),
+  textColor: Joi.string()
+    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
+    .allow(''),
 });
 
 // ======================================

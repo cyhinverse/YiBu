@@ -13,6 +13,16 @@ const startServer = async () => {
     // Create HTTP Server
     const server = http.createServer(app);
 
+    server.on("error", (error) => {
+      if (error.code === "EADDRINUSE") {
+        logger.error(
+          `Port ${config.port} is already in use. Please stop other server instances running on this port.`
+        );
+        process.exit(1);
+      }
+      throw error;
+    });
+
     // Initialize Socket.IO
     initSocket(server);
 

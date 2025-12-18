@@ -1,11 +1,11 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   getSavedPosts,
   getCollections,
   checkSaveStatus,
   savePost,
   unsavePost,
-} from "../actions/savePostActions";
+} from '../actions/savePostActions';
 
 const initialState = {
   savedPosts: [],
@@ -22,34 +22,34 @@ const initialState = {
 };
 
 const savePostSlice = createSlice({
-  name: "savePost",
+  name: 'savePost',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
-    clearSavedPosts: (state) => {
+    clearSavedPosts: state => {
       state.savedPosts = [];
       state.pagination = { ...initialState.pagination };
     },
     resetSavePostState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Get Saved Posts
-      .addCase(getSavedPosts.pending, (state) => {
+      .addCase(getSavedPosts.pending, state => {
         state.loading = true;
       })
       .addCase(getSavedPosts.fulfilled, (state, action) => {
         state.loading = false;
-        const { isLoadMore } = action.payload;
-        const posts = action.payload.data?.posts || action.payload.posts || [];
-        const pagination = action.payload.data?.pagination || action.payload.pagination;
+        const { isLoadMore, posts, savedPosts, pagination } = action.payload;
+        // Data is already extracted
+        const postsArray = posts || savedPosts || [];
 
         if (isLoadMore) {
-          state.savedPosts = [...state.savedPosts, ...posts];
+          state.savedPosts = [...state.savedPosts, ...postsArray];
         } else {
-          state.savedPosts = posts;
+          state.savedPosts = postsArray;
         }
         if (pagination) {
           state.pagination = pagination;
@@ -60,12 +60,13 @@ const savePostSlice = createSlice({
         state.error = action.payload;
       })
       // Get Collections
-      .addCase(getCollections.pending, (state) => {
+      .addCase(getCollections.pending, state => {
         state.loading = true;
       })
       .addCase(getCollections.fulfilled, (state, action) => {
         state.loading = false;
-        state.collections = action.payload.data || action.payload;
+        // Data is already extracted
+        state.collections = action.payload.collections || action.payload || [];
       })
       .addCase(getCollections.rejected, (state, action) => {
         state.loading = false;
@@ -88,7 +89,7 @@ const savePostSlice = createSlice({
       .addCase(unsavePost.fulfilled, (state, action) => {
         const { postId } = action.payload;
         state.saveStatus[postId] = { isSaved: false, collectionId: null };
-        state.savedPosts = state.savedPosts.filter((p) => p._id !== postId);
+        state.savedPosts = state.savedPosts.filter(p => p._id !== postId);
       });
   },
 });

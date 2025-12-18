@@ -50,6 +50,7 @@ router.get('/dashboard/stats', AdminController.getDashboardStats);
 router.get('/analytics/user-growth', AdminController.getUserGrowthStats);
 router.get('/analytics/posts', AdminController.getPostStats);
 router.get('/analytics/top-users', AdminController.getTopEngagedUsers);
+router.get('/analytics/interactions', AdminController.getInteractions);
 
 // ======================================
 // User Management
@@ -112,6 +113,12 @@ router.delete(
   AdminController.deletePost
 );
 
+router.get(
+  '/comments',
+  validateQuery(getPostsQuery), // Reuse getPostsQuery or create getCommentsQuery if specific params needed. For now getPostsQuery has search/status/page/limit so it's fine.
+  AdminController.getAllComments
+);
+
 router.post(
   '/comments/:commentId/moderate',
   validateParams(commentIdParam),
@@ -155,6 +162,18 @@ router.put(
   validateBody(resolveReportBody),
   ReportController.resolveReport
 );
+
+// ======================================
+// Settings Management
+// ======================================
+router.get('/settings', AdminController.getSystemSettings);
+router.put('/settings', AdminController.updateSystemSettings);
+
+// ======================================
+// Revenue & Transactions
+// ======================================
+router.get('/revenue/stats', AdminController.getRevenueStats);
+router.get('/transactions', AdminController.getTransactions);
 
 // ======================================
 // System Management

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Bell } from 'lucide-react';
 import { getUnreadCount } from '../../../redux/actions/notificationActions';
@@ -11,6 +11,24 @@ const NotificationBell = ({ onClick }) => {
   useEffect(() => {
     dispatch(getUnreadCount());
   }, [dispatch]);
+
+  // Listen for refresh notifications event (triggered by socket)
+  const handleRefreshNotifications = useCallback(() => {
+    dispatch(getUnreadCount());
+  }, [dispatch]);
+
+  useEffect(() => {
+    document.addEventListener(
+      'refresh:notifications',
+      handleRefreshNotifications
+    );
+    return () => {
+      document.removeEventListener(
+        'refresh:notifications',
+        handleRefreshNotifications
+      );
+    };
+  }, [handleRefreshNotifications]);
 
   return (
     <button

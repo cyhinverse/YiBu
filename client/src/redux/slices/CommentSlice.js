@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   createComment,
   getCommentsByPost,
@@ -7,7 +7,7 @@ import {
   deleteComment,
   likeComment,
   unlikeComment,
-} from "../actions/commentActions";
+} from '../actions/commentActions';
 
 const initialState = {
   comments: {},
@@ -18,10 +18,10 @@ const initialState = {
 };
 
 const commentSlice = createSlice({
-  name: "comment",
+  name: 'comment',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
     clearComments: (state, action) => {
@@ -40,15 +40,17 @@ const commentSlice = createSlice({
     },
     resetCommentState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Create Comment
-      .addCase(createComment.pending, (state) => {
+      .addCase(createComment.pending, state => {
         state.createLoading = true;
       })
       .addCase(createComment.fulfilled, (state, action) => {
         state.createLoading = false;
-        const { postId, comment } = action.payload;
+        const { postId } = action.payload;
+        // Handle { comment } or direct object
+        const comment = action.payload.comment || action.payload;
         if (!state.comments[postId]) {
           state.comments[postId] = [];
         }
@@ -59,13 +61,21 @@ const commentSlice = createSlice({
         state.error = action.payload;
       })
       // Get Comments by Post
-      .addCase(getCommentsByPost.pending, (state) => {
+      .addCase(getCommentsByPost.pending, state => {
         state.loading = true;
       })
       .addCase(getCommentsByPost.fulfilled, (state, action) => {
         state.loading = false;
-        const { postId, comments } = action.payload;
-        state.comments[postId] = comments;
+        const { postId, isLoadMore } = action.payload;
+        // Handle { comments } or direct array
+        const comments =
+          action.payload.comments ||
+          (Array.isArray(action.payload) ? action.payload : []);
+        if (isLoadMore && state.comments[postId]) {
+          state.comments[postId] = [...state.comments[postId], ...comments];
+        } else {
+          state.comments[postId] = comments;
+        }
       })
       .addCase(getCommentsByPost.rejected, (state, action) => {
         state.loading = false;
@@ -73,15 +83,25 @@ const commentSlice = createSlice({
       })
       // Get Comment Replies
       .addCase(getCommentReplies.fulfilled, (state, action) => {
-        const { commentId, replies } = action.payload;
-        state.replies[commentId] = replies;
+        const { commentId, isLoadMore } = action.payload;
+        // Handle { replies } or direct array
+        const replies =
+          action.payload.replies ||
+          (Array.isArray(action.payload) ? action.payload : []);
+        if (isLoadMore && state.replies[commentId]) {
+          state.replies[commentId] = [...state.replies[commentId], ...replies];
+        } else {
+          state.replies[commentId] = replies;
+        }
       })
       // Update Comment
       .addCase(updateComment.fulfilled, (state, action) => {
-        const { postId, comment } = action.payload;
+        const { postId } = action.payload;
+        // Handle { comment } or direct object
+        const comment = action.payload.comment || action.payload;
         if (state.comments[postId]) {
           const index = state.comments[postId].findIndex(
-            (c) => c.id === comment.id
+            c => c._id === comment._id || c.id === comment.id
           );
           if (index !== -1) {
             state.comments[postId][index] = comment;
@@ -93,7 +113,7 @@ const commentSlice = createSlice({
         const { postId, commentId } = action.payload;
         if (state.comments[postId]) {
           state.comments[postId] = state.comments[postId].filter(
-            (c) => c.id !== commentId
+            c => c._id !== commentId && c.id !== commentId
           );
         }
       })
@@ -102,7 +122,7 @@ const commentSlice = createSlice({
         const { postId, commentId } = action.payload;
         if (state.comments[postId]) {
           const comment = state.comments[postId].find(
-            (c) => c.id === commentId
+            c => c._id === commentId || c.id === commentId
           );
           if (comment) {
             comment.isLiked = true;
@@ -115,7 +135,7 @@ const commentSlice = createSlice({
         const { postId, commentId } = action.payload;
         if (state.comments[postId]) {
           const comment = state.comments[postId].find(
-            (c) => c.id === commentId
+            c => c._id === commentId || c.id === commentId
           );
           if (comment) {
             comment.isLiked = false;

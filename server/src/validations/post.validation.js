@@ -111,11 +111,24 @@ export const createPostBody = Joi.object({
 
 // ======================================
 // GET /user/:id (GetPostUserById)
-// Params: { id }
+// Params: { id } - can be ObjectId or username
 // Query: { page?, limit? }
 // ======================================
 export const userPostsParam = Joi.object({
-  id: objectId.required(),
+  id: Joi.alternatives()
+    .try(
+      objectId,
+      Joi.string()
+        .trim()
+        .min(3)
+        .max(30)
+        .pattern(/^[a-zA-Z0-9_]+$/)
+    )
+    .required()
+    .messages({
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+      'any.required': 'ID hoặc username là bắt buộc',
+    }),
 });
 
 export const userPostsQuery = Joi.object({

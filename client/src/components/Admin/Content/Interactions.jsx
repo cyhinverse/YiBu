@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Search,
   Calendar,
@@ -9,240 +10,133 @@ import {
   Share2,
   UserPlus,
   Bookmark,
-  Eye,
-  TrendingUp,
   Activity,
-} from "lucide-react";
+  RefreshCcw,
+  Loader2,
+} from 'lucide-react';
+import { getInteractions } from '../../../redux/actions/adminActions';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
-const FAKE_INTERACTIONS = [
-  {
-    id: 1,
-    user: {
-      name: "Nguyễn Văn A",
-      username: "@nguyenvana",
-      avatar: "https://i.pravatar.cc/150?img=1",
-    },
-    type: "like",
-    target: {
-      type: "post",
-      preview: "Hôm nay trời đẹp quá, ra ngoài chụp ảnh thôi...",
-      author: "Trần Thị B",
-    },
-    createdAt: "2024-01-15 10:30",
-  },
-  {
-    id: 2,
-    user: {
-      name: "Trần Thị B",
-      username: "@tranthib",
-      avatar: "https://i.pravatar.cc/150?img=2",
-    },
-    type: "comment",
-    target: {
-      type: "post",
-      preview: "Video mới về công thức nấu ăn đơn giản...",
-      author: "Lê Văn C",
-    },
-    content: "Công thức này dễ làm quá! 👍",
-    createdAt: "2024-01-15 10:15",
-  },
-  {
-    id: 3,
-    user: {
-      name: "Lê Văn C",
-      username: "@levanc",
-      avatar: "https://i.pravatar.cc/150?img=3",
-    },
-    type: "follow",
-    target: {
-      type: "user",
-      name: "Phạm Thị D",
-      username: "@phamthid",
-    },
-    createdAt: "2024-01-15 09:45",
-  },
-  {
-    id: 4,
-    user: {
-      name: "Phạm Thị D",
-      username: "@phamthid",
-      avatar: "https://i.pravatar.cc/150?img=4",
-    },
-    type: "share",
-    target: {
-      type: "post",
-      preview: "Chia sẻ kinh nghiệm học lập trình web cho người mới...",
-      author: "Hoàng Văn E",
-    },
-    createdAt: "2024-01-15 09:30",
-  },
-  {
-    id: 5,
-    user: {
-      name: "Hoàng Văn E",
-      username: "@hoangvane",
-      avatar: "https://i.pravatar.cc/150?img=5",
-    },
-    type: "save",
-    target: {
-      type: "post",
-      preview: "Album ảnh du lịch Đà Nẵng 🏖️ Cảnh đẹp và đồ ăn ngon!",
-      author: "Ngô Thị F",
-    },
-    createdAt: "2024-01-15 09:00",
-  },
-  {
-    id: 6,
-    user: {
-      name: "Ngô Thị F",
-      username: "@ngothif",
-      avatar: "https://i.pravatar.cc/150?img=6",
-    },
-    type: "like",
-    target: {
-      type: "comment",
-      preview: "Cảnh đẹp thật! Bạn chụp ở đâu vậy?",
-      author: "Đặng Văn G",
-    },
-    createdAt: "2024-01-15 08:45",
-  },
-  {
-    id: 7,
-    user: {
-      name: "Đặng Văn G",
-      username: "@dangvang",
-      avatar: "https://i.pravatar.cc/150?img=7",
-    },
-    type: "comment",
-    target: {
-      type: "post",
-      preview: "Review quán cafe mới mở ở quận 1...",
-      author: "Nguyễn Văn A",
-    },
-    content: "Quán này đẹp lắm, cuối tuần mình sẽ ghé!",
-    createdAt: "2024-01-15 08:30",
-  },
-  {
-    id: 8,
-    user: {
-      name: "Vũ Thị H",
-      username: "@vuthih",
-      avatar: "https://i.pravatar.cc/150?img=8",
-    },
-    type: "follow",
-    target: {
-      type: "user",
-      name: "Trần Thị B",
-      username: "@tranthib",
-    },
-    createdAt: "2024-01-15 08:00",
-  },
-  {
-    id: 9,
-    user: {
-      name: "Bùi Văn I",
-      username: "@buivani",
-      avatar: "https://i.pravatar.cc/150?img=9",
-    },
-    type: "share",
-    target: {
-      type: "post",
-      preview: "Tips học tiếng Anh hiệu quả cho người đi làm...",
-      author: "Lê Văn C",
-    },
-    createdAt: "2024-01-15 07:45",
-  },
-  {
-    id: 10,
-    user: {
-      name: "Cao Thị K",
-      username: "@caothik",
-      avatar: "https://i.pravatar.cc/150?img=10",
-    },
-    type: "save",
-    target: {
-      type: "post",
-      preview: "Hướng dẫn tự làm bánh tại nhà cực đơn giản...",
-      author: "Phạm Thị D",
-    },
-    createdAt: "2024-01-15 07:30",
-  },
-];
-
-const STATS = {
-  likes: 1234,
-  comments: 567,
-  shares: 234,
-  follows: 89,
-  saves: 156,
-};
-
-const getInteractionIcon = (type) => {
+const getInteractionIcon = type => {
   switch (type) {
-    case "like":
+    case 'like':
       return <Heart size={18} className="text-red-500" fill="#ef4444" />;
-    case "comment":
+    case 'comment':
       return <MessageCircle size={18} className="text-blue-500" />;
-    case "share":
+    case 'share':
       return <Share2 size={18} className="text-green-500" />;
-    case "follow":
+    case 'follow':
       return <UserPlus size={18} className="text-purple-500" />;
-    case "save":
+    case 'save':
       return <Bookmark size={18} className="text-yellow-500" />;
     default:
       return <Activity size={18} className="text-neutral-500" />;
   }
 };
 
-const getInteractionText = (type) => {
+const getInteractionText = type => {
   switch (type) {
-    case "like":
-      return "đã thích";
-    case "comment":
-      return "đã bình luận";
-    case "share":
-      return "đã chia sẻ";
-    case "follow":
-      return "đã theo dõi";
-    case "save":
-      return "đã lưu";
+    case 'like':
+      return 'đã thích';
+    case 'comment':
+      return 'đã bình luận';
+    case 'share':
+      return 'đã chia sẻ';
+    case 'follow':
+      return 'đã theo dõi';
+    case 'save':
+      return 'đã lưu';
     default:
-      return "";
+      return '';
   }
 };
 
-const getInteractionBg = (type) => {
+const getInteractionBg = type => {
   switch (type) {
-    case "like":
-      return "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
-    case "comment":
-      return "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
-    case "share":
-      return "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
-    case "follow":
-      return "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800";
-    case "save":
-      return "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800";
+    case 'like':
+      return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+    case 'comment':
+      return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+    case 'share':
+      return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+    case 'follow':
+      return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+    case 'save':
+      return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
     default:
-      return "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700";
+      return 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700';
+  }
+};
+
+const formatTime = date => {
+  try {
+    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
+  } catch {
+    return date;
   }
 };
 
 export default function Interactions() {
-  const [interactions] = useState(FAKE_INTERACTIONS);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
+  const dispatch = useDispatch();
+  const { interactions, interactionStats, pagination, loading } = useSelector(
+    state => state.admin
+  );
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredInteractions = interactions.filter((interaction) => {
-    const matchSearch =
-      interaction.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      interaction.user.username
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-    const matchType = filterType === "all" || interaction.type === filterType;
-    return matchSearch && matchType;
-  });
+  // Fetch interactions on mount and when filters change
+  useEffect(() => {
+    const params = {
+      page: currentPage,
+      limit: 20,
+    };
+    if (filterType !== 'all') params.type = filterType;
+
+    dispatch(getInteractions(params));
+  }, [dispatch, currentPage, filterType]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== undefined) {
+        const params = {
+          page: 1,
+          limit: 20,
+          search: searchTerm || undefined,
+        };
+        if (filterType !== 'all') params.type = filterType;
+        dispatch(getInteractions(params));
+        setCurrentPage(1);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleRefresh = () => {
+    const params = {
+      page: currentPage,
+      limit: 20,
+    };
+    if (filterType !== 'all') params.type = filterType;
+    if (searchTerm) params.search = searchTerm;
+    dispatch(getInteractions(params));
+  };
+
+  const handlePageChange = newPage => {
+    setCurrentPage(newPage);
+  };
+
+  const interactionsList = Array.isArray(interactions) ? interactions : [];
+  const stats = interactionStats || {
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    follows: 0,
+    saves: 0,
+  };
 
   return (
     <div className="space-y-6">
@@ -256,6 +150,14 @@ export default function Interactions() {
             Theo dõi các tương tác trên nền tảng
           </p>
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
+          Làm mới
+        </button>
       </div>
 
       {/* Stats */}
@@ -268,7 +170,7 @@ export default function Interactions() {
             </span>
           </div>
           <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-            {STATS.likes.toLocaleString()}
+            {(stats.likes || 0).toLocaleString()}
           </p>
         </div>
 
@@ -280,7 +182,7 @@ export default function Interactions() {
             </span>
           </div>
           <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-            {STATS.comments.toLocaleString()}
+            {(stats.comments || 0).toLocaleString()}
           </p>
         </div>
 
@@ -292,7 +194,7 @@ export default function Interactions() {
             </span>
           </div>
           <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-            {STATS.shares.toLocaleString()}
+            {(stats.shares || 0).toLocaleString()}
           </p>
         </div>
 
@@ -304,7 +206,7 @@ export default function Interactions() {
             </span>
           </div>
           <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-            {STATS.follows.toLocaleString()}
+            {(stats.follows || 0).toLocaleString()}
           </p>
         </div>
 
@@ -316,7 +218,7 @@ export default function Interactions() {
             </span>
           </div>
           <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
-            {STATS.saves.toLocaleString()}
+            {(stats.saves || 0).toLocaleString()}
           </p>
         </div>
       </div>
@@ -332,14 +234,17 @@ export default function Interactions() {
             type="text"
             placeholder="Tìm kiếm người dùng..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
           />
         </div>
 
         <select
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
+          onChange={e => {
+            setFilterType(e.target.value);
+            setCurrentPage(1);
+          }}
           className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
         >
           <option value="all">Tất cả tương tác</option>
@@ -351,101 +256,127 @@ export default function Interactions() {
         </select>
       </div>
 
-      {/* Interactions List */}
-      <div className="space-y-3">
-        {filteredInteractions.map((interaction) => (
-          <div
-            key={interaction.id}
-            className={`rounded-2xl border p-4 ${getInteractionBg(
-              interaction.type
-            )}`}
-          >
-            <div className="flex items-start gap-3">
-              {/* User Avatar */}
-              <img
-                src={interaction.user.avatar}
-                alt={interaction.user.name}
-                className="w-10 h-10 rounded-full border-2 border-white dark:border-neutral-700 flex-shrink-0"
-              />
+      {/* Loading State */}
+      {loading && interactionsList.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-neutral-400" />
+        </div>
+      ) : interactionsList.length === 0 ? (
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-12 text-center">
+          <Activity size={48} className="mx-auto mb-4 text-neutral-300" />
+          <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
+            Chưa có tương tác
+          </h3>
+          <p className="text-neutral-500">Không có tương tác nào để hiển thị</p>
+        </div>
+      ) : (
+        <>
+          {/* Interactions List */}
+          <div className="space-y-3">
+            {interactionsList.map(interaction => (
+              <div
+                key={interaction._id}
+                className={`rounded-2xl border p-4 ${getInteractionBg(
+                  interaction.type
+                )}`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* User Avatar */}
+                  <img
+                    src={
+                      interaction.user?.avatar ||
+                      `https://ui-avatars.com/api/?name=${
+                        interaction.user?.name || 'U'
+                      }&background=random`
+                    }
+                    alt={interaction.user?.name || 'User'}
+                    className="w-10 h-10 rounded-full border-2 border-white dark:border-neutral-700 flex-shrink-0 object-cover"
+                  />
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-black dark:text-white">
-                    {interaction.user.name}
-                  </span>
-                  <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                    {interaction.user.username}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-sm">
-                    {getInteractionIcon(interaction.type)}
-                    <span className="text-neutral-600 dark:text-neutral-400">
-                      {getInteractionText(interaction.type)}
-                    </span>
-                  </span>
-                </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-black dark:text-white">
+                        {interaction.user?.name || 'Người dùng'}
+                      </span>
+                      <span className="text-neutral-500 dark:text-neutral-400 text-sm">
+                        @{interaction.user?.username || 'unknown'}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-sm">
+                        {getInteractionIcon(interaction.type)}
+                        <span className="text-neutral-600 dark:text-neutral-400">
+                          {getInteractionText(interaction.type)}
+                        </span>
+                      </span>
+                    </div>
 
-                {/* Target */}
-                {interaction.target.type === "user" ? (
-                  <p className="mt-2 text-sm text-black dark:text-white">
-                    <span className="font-medium">
-                      {interaction.target.name}
-                    </span>{" "}
-                    <span className="text-neutral-500 dark:text-neutral-400">
-                      {interaction.target.username}
-                    </span>
-                  </p>
-                ) : (
-                  <div className="mt-2 p-2 bg-white/50 dark:bg-black/20 rounded-lg">
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                      "{interaction.target.preview}"
-                    </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                      bởi {interaction.target.author}
-                    </p>
+                    {/* Target */}
+                    {interaction.target?.type === 'user' ? (
+                      <p className="mt-2 text-sm text-black dark:text-white">
+                        <span className="font-medium">
+                          {interaction.target.name}
+                        </span>{' '}
+                        <span className="text-neutral-500 dark:text-neutral-400">
+                          {interaction.target.username}
+                        </span>
+                      </p>
+                    ) : interaction.target ? (
+                      <div className="mt-2 p-2 bg-white/50 dark:bg-black/20 rounded-lg">
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">
+                          "{interaction.target.preview}"
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+                          bởi {interaction.target.author}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {/* Comment Content */}
+                    {interaction.content && (
+                      <p className="mt-2 text-sm text-black dark:text-white p-2 bg-white/50 dark:bg-black/20 rounded-lg">
+                        "{interaction.content}"
+                      </p>
+                    )}
+
+                    {/* Time */}
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                      <Calendar size={12} />
+                      {formatTime(interaction.createdAt)}
+                    </div>
                   </div>
-                )}
-
-                {/* Comment Content */}
-                {interaction.content && (
-                  <p className="mt-2 text-sm text-black dark:text-white p-2 bg-white/50 dark:bg-black/20 rounded-lg">
-                    "{interaction.content}"
-                  </p>
-                )}
-
-                {/* Time */}
-                <div className="flex items-center gap-1.5 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                  <Calendar size={12} />
-                  {interaction.createdAt}
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Hiển thị {interactionsList.length} / {pagination?.total || 0}{' '}
+              tương tác
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1 || loading}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="px-4 py-2 text-sm">
+                Trang {currentPage} / {pagination?.totalPages || 1}
+              </span>
+              <button
+                disabled={!pagination?.hasMore || loading}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Hiển thị {filteredInteractions.length} tương tác
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
-            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <span className="px-4 py-2 text-sm">Trang {currentPage}</span>
-          <button
-            onClick={() => setCurrentPage((p) => p + 1)}
-            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

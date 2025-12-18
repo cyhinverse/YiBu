@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import {
   getAllUsers,
-  getUserById,
   deleteUser,
   banUser,
   unbanUser,
@@ -57,10 +56,10 @@ const Users = () => {
   } = useSelector(state => state.admin);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterRole, setFilterRole] = useState('all');
+  const [filterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showBanModal, setShowBanModal] = useState(false);
+
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionType, setActionType] = useState('');
   const [actionReason, setActionReason] = useState('');
@@ -77,7 +76,7 @@ const Users = () => {
     if (filterRole !== 'all') params.role = filterRole;
 
     dispatch(getAllUsers(params));
-  }, [dispatch, currentPage, filterStatus, filterRole]);
+  }, [dispatch, currentPage, filterStatus, filterRole, searchQuery]);
 
   // Debounced search
   useEffect(() => {
@@ -95,7 +94,7 @@ const Users = () => {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, filterStatus, filterRole, dispatch]);
 
   const users = Array.isArray(usersList) ? usersList : [];
 
@@ -116,11 +115,7 @@ const Users = () => {
     setShowActionModal(true);
   };
 
-  const handleSuspendUser = user => {
-    setSelectedUser(user);
-    setActionType('suspend');
-    setShowActionModal(true);
-  };
+
 
   const handleWarnUser = user => {
     setSelectedUser(user);
@@ -151,14 +146,14 @@ const Users = () => {
           await dispatch(
             suspendUser({
               userId: selectedUser._id,
-              duration: 7,
+              days: 7,
               reason: actionReason,
             })
           ).unwrap();
           break;
         case 'warn':
           await dispatch(
-            warnUser({ userId: selectedUser._id, message: actionReason })
+            warnUser({ userId: selectedUser._id, reason: actionReason })
           ).unwrap();
           break;
         case 'delete':

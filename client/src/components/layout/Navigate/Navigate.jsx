@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Home,
   MessageCircle,
@@ -16,15 +16,15 @@ import {
   PenSquare,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
-import { logout } from "../../../redux/actions/authActions";
-import toast from "react-hot-toast";
+} from 'lucide-react';
+import { logout } from '../../../redux/actions/authActions';
+import toast from 'react-hot-toast';
 
 // Fake user data - fallback if no user from Redux
 const DEFAULT_USER = {
-  name: "John Doe",
-  username: "johndoe",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe",
+  name: 'John Doe',
+  username: 'johndoe',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
 };
 
 // Custom Nav Item
@@ -38,23 +38,23 @@ const NavItem = ({
   collapsed,
 }) => {
   return (
-    <NavLink to={to || "#"} onClick={onClick} className="group w-full">
+    <NavLink to={to || '#'} onClick={onClick} className="group w-full">
       {({ isActive }) => {
         const active = forceActive !== undefined ? forceActive : isActive;
         return (
           <div
             className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full ${
               active
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white"
-            } ${collapsed ? "justify-center px-2" : ""}`}
+                ? 'bg-primary text-primary-foreground font-medium'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white'
+            } ${collapsed ? 'justify-center px-2' : ''}`}
             title={collapsed ? label : undefined}
           >
             <div className="relative flex-shrink-0">
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               {badge > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center px-1">
-                  {badge > 99 ? "99+" : badge}
+                  {badge > 99 ? '99+' : badge}
                 </span>
               )}
             </div>
@@ -69,31 +69,31 @@ const NavItem = ({
 const Navigate = ({ mobile = false, onCollapsedChange }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector(state => state.auth);
   const [collapsed, setCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first, then system preference
-    const saved = localStorage.getItem("theme");
+    const saved = localStorage.getItem('theme');
     if (saved) {
-      return saved === "dark";
+      return saved === 'dark';
     }
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   const handleLogout = async () => {
     await dispatch(logout());
-    toast.success("Đăng xuất thành công");
-    navigate("/auth/login");
+    toast.success('Đăng xuất thành công');
+    navigate('/auth/login');
   };
 
   const toggleTheme = () => {
     const newDark = !isDarkMode;
     setIsDarkMode(newDark);
-    localStorage.setItem("theme", newDark ? "dark" : "light");
+    localStorage.setItem('theme', newDark ? 'dark' : 'light');
     if (newDark) {
-      document.documentElement.classList.add("dark");
+      document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove('dark');
     }
   };
 
@@ -103,13 +103,30 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
     onCollapsedChange?.(newCollapsed);
   };
 
+  const { unreadCount: messageUnreadCount } = useSelector(
+    state => state.message
+  );
+  const { unreadCount: notificationUnreadCount } = useSelector(
+    state => state.notification
+  );
+
   const navItems = [
-    { icon: Home, path: "/", label: "Home" },
-    { icon: Search, path: "/explore", label: "Explore" },
-    { icon: Bell, path: "/notifications", label: "Notifications", badge: 3 },
-    { icon: MessageCircle, path: "/messages", label: "Messages", badge: 5 },
-    { icon: Bookmark, path: "/saved", label: "Saved" },
-    { icon: User, path: "/profile", label: "Profile" },
+    { icon: Home, path: '/', label: 'Home' },
+    { icon: Search, path: '/explore', label: 'Explore' },
+    {
+      icon: Bell,
+      path: '/notifications',
+      label: 'Notifications',
+      badge: notificationUnreadCount,
+    },
+    {
+      icon: MessageCircle,
+      path: '/messages',
+      label: 'Messages',
+      badge: messageUnreadCount,
+    },
+    { icon: Bookmark, path: '/saved', label: 'Saved' },
+    { icon: User, path: '/profile', label: 'Profile' },
   ];
 
   // Mobile Bottom Navigation
@@ -123,8 +140,8 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
             className={({ isActive }) =>
               `relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${
                 isActive
-                  ? "text-black dark:text-white"
-                  : "text-neutral-400 hover:text-black dark:hover:text-white"
+                  ? 'text-black dark:text-white'
+                  : 'text-neutral-400 hover:text-black dark:hover:text-white'
               }`
             }
           >
@@ -133,7 +150,14 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
                 {isActive && (
                   <div className="absolute -top-1 w-6 h-0.5 rounded-full bg-black dark:bg-white" />
                 )}
-                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                <div className="relative">
+                  <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                  {item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center px-1">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </div>
               </>
             )}
           </NavLink>
@@ -146,14 +170,14 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
   return (
     <div
       className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ease-in-out ${
-        collapsed ? "px-2 w-[72px]" : "px-4 w-full"
+        collapsed ? 'px-2 w-[72px]' : 'px-4 w-full'
       }`}
     >
       {/* Logo */}
       <Link
         to="/"
         className={`flex items-center gap-3 mb-8 ${
-          collapsed ? "justify-center px-0" : "px-1"
+          collapsed ? 'justify-center px-0' : 'px-1'
         }`}
       >
         <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center flex-shrink-0">
@@ -170,7 +194,7 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
       <button
         onClick={toggleSidebar}
         className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 transition-all self-center"
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
           <ChevronRight size={16} className="text-neutral-500" />
@@ -204,10 +228,10 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
         <div
           onClick={toggleTheme}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all cursor-pointer text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white ${
-            collapsed ? "justify-center px-2" : ""
+            collapsed ? 'justify-center px-2' : ''
           }`}
           title={
-            collapsed ? (isDarkMode ? "Light mode" : "Dark mode") : undefined
+            collapsed ? (isDarkMode ? 'Light mode' : 'Dark mode') : undefined
           }
         >
           <div className="flex-shrink-0">
@@ -215,7 +239,7 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
           </div>
           {!collapsed && (
             <span className="text-sm">
-              {isDarkMode ? "Light mode" : "Dark mode"}
+              {isDarkMode ? 'Light mode' : 'Dark mode'}
             </span>
           )}
         </div>
@@ -240,7 +264,7 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
       <div className="mt-auto pt-4 border-t border-neutral-200 dark:border-neutral-800">
         <div
           className={`flex items-center gap-3 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all group ${
-            collapsed ? "justify-center" : ""
+            collapsed ? 'justify-center' : ''
           }`}
           title={collapsed ? user?.name || DEFAULT_USER.name : undefined}
         >

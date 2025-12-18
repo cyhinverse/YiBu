@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   getNotifications,
   getUnreadCount,
@@ -10,7 +10,7 @@ import {
   deleteAllNotifications,
   getPreferences,
   updatePreferences,
-} from "../actions/notificationActions";
+} from '../actions/notificationActions';
 
 const initialState = {
   notifications: [],
@@ -27,10 +27,10 @@ const initialState = {
 };
 
 const notificationSlice = createSlice({
-  name: "notification",
+  name: 'notification',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
     addNotification: (state, action) => {
@@ -41,16 +41,16 @@ const notificationSlice = createSlice({
           (state.unreadByType[action.payload.type] || 0) + 1;
       }
     },
-    clearNotifications: (state) => {
+    clearNotifications: state => {
       state.notifications = [];
       state.pagination = { ...initialState.pagination };
     },
     resetNotificationState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Get Notifications
-      .addCase(getNotifications.pending, (state) => {
+      .addCase(getNotifications.pending, state => {
         state.loading = true;
       })
       .addCase(getNotifications.fulfilled, (state, action) => {
@@ -69,7 +69,9 @@ const notificationSlice = createSlice({
       })
       // Get Unread Count
       .addCase(getUnreadCount.fulfilled, (state, action) => {
-        state.unreadCount = action.payload;
+        // Action payload is already a number from the action
+        state.unreadCount = action.payload ?? 0;
+        console.log('Notification unreadCount set to:', state.unreadCount);
       })
       // Get Unread Count by Type
       .addCase(getUnreadCountByType.fulfilled, (state, action) => {
@@ -77,8 +79,9 @@ const notificationSlice = createSlice({
       })
       // Get Notification by ID
       .addCase(getNotificationById.fulfilled, (state, action) => {
+        const notifId = action.payload._id || action.payload.id;
         const index = state.notifications.findIndex(
-          (n) => n.id === action.payload.id
+          n => (n._id || n.id) === notifId
         );
         if (index !== -1) {
           state.notifications[index] = action.payload;
@@ -87,7 +90,7 @@ const notificationSlice = createSlice({
       // Mark as Read
       .addCase(markAsRead.fulfilled, (state, action) => {
         const notification = state.notifications.find(
-          (n) => n.id === action.payload.notificationId
+          n => (n._id || n.id) === action.payload.notificationId
         );
         if (notification && !notification.isRead) {
           notification.isRead = true;
@@ -98,8 +101,8 @@ const notificationSlice = createSlice({
         }
       })
       // Mark All as Read
-      .addCase(markAllAsRead.fulfilled, (state) => {
-        state.notifications.forEach((n) => {
+      .addCase(markAllAsRead.fulfilled, state => {
+        state.notifications.forEach(n => {
           n.isRead = true;
         });
         state.unreadCount = 0;
@@ -108,17 +111,17 @@ const notificationSlice = createSlice({
       // Delete Notification
       .addCase(deleteNotification.fulfilled, (state, action) => {
         const notification = state.notifications.find(
-          (n) => n.id === action.payload.notificationId
+          n => (n._id || n.id) === action.payload.notificationId
         );
         if (notification && !notification.isRead) {
           state.unreadCount = Math.max(state.unreadCount - 1, 0);
         }
         state.notifications = state.notifications.filter(
-          (n) => n.id !== action.payload.notificationId
+          n => (n._id || n.id) !== action.payload.notificationId
         );
       })
       // Delete All Notifications
-      .addCase(deleteAllNotifications.fulfilled, (state) => {
+      .addCase(deleteAllNotifications.fulfilled, state => {
         state.notifications = [];
         state.unreadCount = 0;
         state.unreadByType = {};

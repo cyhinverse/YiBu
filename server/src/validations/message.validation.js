@@ -17,20 +17,44 @@ export const getConversationsQuery = Joi.object({
 
 // ======================================
 // POST /conversations (GetOrCreateConversation)
-// Body: { participantId }
+// Body: { participantId } - can be ObjectId or username
 // ======================================
+const usernamePattern = Joi.string()
+  .pattern(/^[a-zA-Z0-9_]{3,30}$/)
+  .messages({
+    'string.pattern.base': 'Username không hợp lệ',
+  });
+
 export const createConversationBody = Joi.object({
-  participantId: objectId.required().messages({
-    'any.required': 'ID người tham gia là bắt buộc',
-  }),
+  participantId: Joi.alternatives()
+    .try(objectId, usernamePattern)
+    .required()
+    .messages({
+      'any.required': 'ID người tham gia là bắt buộc',
+      'alternatives.match': 'ID hoặc username không hợp lệ',
+    }),
 });
+
+const conversationIdFormat = Joi.string()
+  .pattern(/^[0-9a-fA-F]{24}_[0-9a-fA-F]{24}$/)
+  .messages({
+    'string.pattern.base': 'ConversationId không hợp lệ',
+  });
+
+// Shared flexible ID
+const flexibleConversationId = Joi.alternatives()
+  .try(objectId, conversationIdFormat)
+  .required();
 
 // ======================================
 // GET /conversations/:conversationId
-// Params: { conversationId }
+// Params: { conversationId } - can be ObjectId or format "userId1_userId2"
 // ======================================
 export const conversationIdParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId.messages({
+    'any.required': 'ConversationId là bắt buộc',
+    'alternatives.match': 'ConversationId không hợp lệ',
+  }),
 });
 
 // ======================================
@@ -38,7 +62,9 @@ export const conversationIdParam = Joi.object({
 // Params: { conversationId }
 // ======================================
 export const deleteConversationParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId.messages({
+    'any.required': 'ConversationId là bắt buộc',
+  }),
 });
 
 // ======================================
@@ -70,7 +96,7 @@ export const createGroupBody = Joi.object({
 // Body: { name?, avatar? }
 // ======================================
 export const updateGroupParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 export const updateGroupBody = Joi.object({
@@ -86,7 +112,7 @@ export const updateGroupBody = Joi.object({
 // Body: { memberIds }
 // ======================================
 export const addMembersParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 export const addMembersBody = Joi.object({
@@ -102,7 +128,7 @@ export const addMembersBody = Joi.object({
 // Params: { conversationId, memberId }
 // ======================================
 export const removeMemberParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
   memberId: objectId.required(),
 });
 
@@ -111,7 +137,7 @@ export const removeMemberParam = Joi.object({
 // Params: { conversationId }
 // ======================================
 export const leaveGroupParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 // ======================================
@@ -120,7 +146,7 @@ export const leaveGroupParam = Joi.object({
 // Query: { page?, limit?, before? }
 // ======================================
 export const getMessagesParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 export const getMessagesQuery = Joi.object({
@@ -135,8 +161,9 @@ export const getMessagesQuery = Joi.object({
 // Note: files được xử lý bởi multer
 // ======================================
 export const sendMessageBody = Joi.object({
-  conversationId: objectId.required().messages({
+  conversationId: flexibleConversationId.messages({
     'any.required': 'Conversation ID là bắt buộc',
+    'alternatives.match': 'ID cuộc hội thoại không hợp lệ',
   }),
   content: Joi.string().trim().min(1).max(2000).required().messages({
     'string.empty': 'Nội dung tin nhắn không được để trống',
@@ -162,7 +189,7 @@ export const deleteMessageParam = Joi.object({
 // Params: { conversationId }
 // ======================================
 export const markAsReadParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 // ======================================
@@ -203,7 +230,7 @@ export const removeReactionParam = Joi.object({
 // Body: { isTyping }
 // ======================================
 export const typingParam = Joi.object({
-  conversationId: objectId.required(),
+  conversationId: flexibleConversationId,
 });
 
 export const typingBody = Joi.object({
@@ -219,7 +246,7 @@ export const searchMessagesQuery = Joi.object({
     'string.empty': 'Từ khóa tìm kiếm không được để trống',
     'any.required': 'Từ khóa tìm kiếm là bắt buộc',
   }),
-  conversationId: objectId.allow(null),
+  conversationId: Joi.alternatives().try(objectId, conversationIdFormat).allow(null),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
 });

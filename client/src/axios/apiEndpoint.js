@@ -53,15 +53,15 @@ export const USER_API = {
   MUTE_USER: userId => `/api/user/mute/${userId}`,
   UNMUTE_USER: userId => `/api/user/mute/${userId}`,
   // Settings
-  GET_SETTINGS: '/api/user/settings',
-  UPDATE_PRIVACY: '/api/user/settings/privacy',
-  UPDATE_NOTIFICATIONS: '/api/user/settings/notifications',
-  UPDATE_SECURITY: '/api/user/settings/security',
-  UPDATE_CONTENT: '/api/user/settings/content',
-  UPDATE_THEME: '/api/user/settings/theme',
+  GET_SETTINGS: '/api/settings',
+  UPDATE_PRIVACY: '/api/settings/privacy',
+  UPDATE_NOTIFICATIONS: '/api/settings/notifications',
+  UPDATE_SECURITY: '/api/settings/security',
+  UPDATE_CONTENT: '/api/settings/content',
+  UPDATE_THEME: '/api/settings/theme',
   // Trusted Devices
-  ADD_DEVICE: '/api/user/settings/devices',
-  REMOVE_DEVICE: deviceId => `/api/user/settings/devices/${deviceId}`,
+  ADD_DEVICE: '/api/settings/devices',
+  REMOVE_DEVICE: deviceId => `/api/settings/devices/${deviceId}`,
 };
 
 // ======================================
@@ -211,6 +211,7 @@ export const ADMIN_API = {
   GET_USER_GROWTH: '/api/admin/analytics/user-growth',
   GET_POST_STATS: '/api/admin/analytics/posts',
   GET_TOP_USERS: '/api/admin/analytics/top-users',
+  GET_INTERACTIONS: '/api/admin/analytics/interactions',
   // User Management
   GET_ALL_USERS: '/api/admin/users',
   GET_BANNED_USERS: '/api/admin/users/banned',
@@ -227,6 +228,7 @@ export const ADMIN_API = {
   MODERATE_POST: id => `/api/admin/posts/${id}/moderate`,
   APPROVE_POST: id => `/api/admin/posts/${id}/approve`,
   DELETE_POST: id => `/api/admin/posts/${id}`,
+  GET_ALL_COMMENTS: '/api/admin/comments',
   MODERATE_COMMENT: id => `/api/admin/comments/${id}/moderate`,
   DELETE_COMMENT: id => `/api/admin/comments/${id}`,
   // Reports
@@ -240,4 +242,10 @@ export const ADMIN_API = {
   BROADCAST: '/api/admin/broadcast',
   GET_SYSTEM_HEALTH: '/api/admin/system/health',
   GET_LOGS: '/api/admin/logs',
+  // Settings
+  GET_SYSTEM_SETTINGS: '/api/admin/settings',
+  UPDATE_SYSTEM_SETTINGS: '/api/admin/settings',
+  // Revenue
+  GET_REVENUE_STATS: '/api/admin/revenue/stats',
+  GET_TRANSACTIONS: '/api/admin/transactions',
 };

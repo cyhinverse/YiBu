@@ -1,7 +1,7 @@
-import { CatchError } from "../configs/CatchError.js";
-import UserService from "../services/User.Service.js";
-import { formatResponse } from "../helpers/formatResponse.js";
-import logger from "../configs/logger.js";
+import { CatchError } from '../configs/CatchError.js';
+import UserService from '../services/User.Service.js';
+import { formatResponse } from '../helpers/formatResponse.js';
+import logger from '../configs/logger.js';
 
 const UserController = {
   // ======================================
@@ -13,7 +13,7 @@ const UserController = {
     const requesterId = req.user?.id;
 
     const user = await UserService.getUserById(id, requesterId);
-    return formatResponse(res, 200, 1, "Get user successfully!", user);
+    return formatResponse(res, 200, 1, 'Get user successfully!', user);
   }),
 
   getUserProfile: CatchError(async (req, res) => {
@@ -21,19 +21,19 @@ const UserController = {
     const requesterId = req.user?.id;
 
     const profile = await UserService.getUserProfile(id, requesterId);
-    return formatResponse(res, 200, 1, "Get profile successfully!", profile);
+    return formatResponse(res, 200, 1, 'Get profile successfully!', profile);
   }),
 
   getAllUsers: CatchError(async (req, res) => {
     const currentUserId = req.user.id;
     const users = await UserService.getUsersForChat(currentUserId);
-    return formatResponse(res, 200, 1, "Success", users);
+    return formatResponse(res, 200, 1, 'Success', users);
   }),
 
   GET_TOP_USERS_BY_LIKES: CatchError(async (req, res) => {
     const { limit = 10 } = req.query;
     const topUsers = await UserService.getTopUsersByEngagement(parseInt(limit));
-    return formatResponse(res, 200, 1, "Get top users successfully", topUsers);
+    return formatResponse(res, 200, 1, 'Get top users successfully', topUsers);
   }),
 
   getRecommendedUsers: CatchError(async (req, res) => {
@@ -44,7 +44,7 @@ const UserController = {
       userId,
       parseInt(limit)
     );
-    return formatResponse(res, 200, 1, "Success", users);
+    return formatResponse(res, 200, 1, 'Success', users);
   }),
 
   // ======================================
@@ -61,7 +61,7 @@ const UserController = {
         res,
         400,
         0,
-        "Search query must be at least 2 characters"
+        'Search query must be at least 2 characters'
       );
     }
 
@@ -69,7 +69,7 @@ const UserController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, "Success", result);
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   // ======================================
@@ -80,13 +80,21 @@ const UserController = {
     const { targetUserId } = req.params;
     const currentUserId = req.user.id;
 
-    const status = await UserService.checkFollowStatus(
-      currentUserId,
+    // Resolve targetUserId to actual user ID if it's a username
+    const resolvedTargetId = await UserService.resolveUserIdOrUsername(
       targetUserId
     );
-    return formatResponse(res, 200, 1, "Success", {
+    if (!resolvedTargetId) {
+      return formatResponse(res, 404, 0, 'Người dùng không tồn tại');
+    }
+
+    const status = await UserService.checkFollowStatus(
+      currentUserId,
+      resolvedTargetId
+    );
+    return formatResponse(res, 200, 1, 'Success', {
       status,
-      isFollowing: status === "active",
+      isFollowing: status === 'active',
     });
   }),
 
@@ -95,15 +103,22 @@ const UserController = {
     const currentUserId = req.user.id;
 
     if (!targetUserId) {
-      return formatResponse(res, 400, 0, "Target user ID is required");
+      return formatResponse(res, 400, 0, 'Target user ID is required');
     }
 
-    const result = await UserService.followUser(currentUserId, targetUserId);
+    // Resolve username to userId if needed
+    const resolvedTargetId = await UserService.resolveUserIdOrUsername(
+      targetUserId
+    );
+    const result = await UserService.followUser(
+      currentUserId,
+      resolvedTargetId
+    );
 
     const message =
-      result.status === "pending"
-        ? "Đã gửi yêu cầu theo dõi"
-        : "Theo dõi thành công";
+      result.status === 'pending'
+        ? 'Đã gửi yêu cầu theo dõi'
+        : 'Theo dõi thành công';
 
     return formatResponse(res, 200, 1, message, result);
   }),
@@ -113,11 +128,18 @@ const UserController = {
     const currentUserId = req.user.id;
 
     if (!targetUserId) {
-      return formatResponse(res, 400, 0, "Target user ID is required");
+      return formatResponse(res, 400, 0, 'Target user ID is required');
     }
 
-    const result = await UserService.unfollowUser(currentUserId, targetUserId);
-    return formatResponse(res, 200, 1, "Đã hủy theo dõi", result);
+    // Resolve username to userId if needed
+    const resolvedTargetId = await UserService.resolveUserIdOrUsername(
+      targetUserId
+    );
+    const result = await UserService.unfollowUser(
+      currentUserId,
+      resolvedTargetId
+    );
+    return formatResponse(res, 200, 1, 'Đã hủy theo dõi', result);
   }),
 
   getFollowers: CatchError(async (req, res) => {
@@ -128,7 +150,7 @@ const UserController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, "Success", result);
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   getFollowing: CatchError(async (req, res) => {
@@ -139,7 +161,7 @@ const UserController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, "Success", result);
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   getMutualFollowers: CatchError(async (req, res) => {
@@ -152,7 +174,7 @@ const UserController = {
       targetUserId,
       parseInt(limit)
     );
-    return formatResponse(res, 200, 1, "Success", result);
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   // Follow Requests (for private accounts)
@@ -164,7 +186,7 @@ const UserController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, "Success", result);
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   acceptFollowRequest: CatchError(async (req, res) => {
@@ -172,11 +194,11 @@ const UserController = {
     const { followerId } = req.body;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, "Follower ID is required");
+      return formatResponse(res, 400, 0, 'Follower ID is required');
     }
 
     const result = await UserService.acceptFollowRequest(userId, followerId);
-    return formatResponse(res, 200, 1, "Đã chấp nhận yêu cầu theo dõi", result);
+    return formatResponse(res, 200, 1, 'Đã chấp nhận yêu cầu theo dõi', result);
   }),
 
   rejectFollowRequest: CatchError(async (req, res) => {
@@ -184,11 +206,11 @@ const UserController = {
     const { followerId } = req.body;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, "Follower ID is required");
+      return formatResponse(res, 400, 0, 'Follower ID is required');
     }
 
     const result = await UserService.rejectFollowRequest(userId, followerId);
-    return formatResponse(res, 200, 1, "Đã từ chối yêu cầu theo dõi", result);
+    return formatResponse(res, 200, 1, 'Đã từ chối yêu cầu theo dõi', result);
   }),
 
   // ======================================
@@ -197,11 +219,14 @@ const UserController = {
 
   GET_PROFILE_BY_ID: CatchError(async (req, res) => {
     const { id } = req.params;
-    logger.info(`Fetching profile for user ID: ${id}`);
+    logger.info(`Fetching profile for user ID or username: ${id}`);
     const requesterId = req.user?.id;
 
-    const profile = await UserService.getUserProfile(id, requesterId);
-    return formatResponse(res, 200, 0, "Get profile successfully!", profile);
+    const profile = await UserService.getUserProfileByIdOrUsername(
+      id,
+      requesterId
+    );
+    return formatResponse(res, 200, 0, 'Get profile successfully!', profile);
   }),
 
   updateProfileSettings: CatchError(async (req, res) => {
@@ -223,7 +248,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật thông tin hồ sơ thành công",
+      'Cập nhật thông tin hồ sơ thành công',
       user
     );
   }),
@@ -235,7 +260,7 @@ const UserController = {
   getUserSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
     const settings = await UserService.getUserSettings(userId);
-    return formatResponse(res, 200, 1, "Success", settings);
+    return formatResponse(res, 200, 1, 'Success', settings);
   }),
 
   updatePrivacySettings: CatchError(async (req, res) => {
@@ -256,7 +281,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật cài đặt quyền riêng tư thành công",
+      'Cập nhật cài đặt quyền riêng tư thành công',
       updated
     );
   }),
@@ -283,7 +308,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật cài đặt thông báo thành công",
+      'Cập nhật cài đặt thông báo thành công',
       updated
     );
   }),
@@ -300,7 +325,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật cài đặt bảo mật thành công",
+      'Cập nhật cài đặt bảo mật thành công',
       updated
     );
   }),
@@ -319,7 +344,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật cài đặt nội dung thành công",
+      'Cập nhật cài đặt nội dung thành công',
       updated
     );
   }),
@@ -340,7 +365,7 @@ const UserController = {
       res,
       200,
       1,
-      "Cập nhật cài đặt giao diện thành công",
+      'Cập nhật cài đặt giao diện thành công',
       updated
     );
   }),
@@ -354,11 +379,11 @@ const UserController = {
     const { blockedUserId } = req.body;
 
     if (!blockedUserId) {
-      return formatResponse(res, 400, 0, "Thiếu ID người dùng cần chặn");
+      return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần chặn');
     }
 
     await UserService.blockUser(userId, blockedUserId);
-    return formatResponse(res, 200, 1, "Chặn người dùng thành công");
+    return formatResponse(res, 200, 1, 'Chặn người dùng thành công');
   }),
 
   unblockUser: CatchError(async (req, res) => {
@@ -366,11 +391,11 @@ const UserController = {
     const { blockedUserId } = req.params;
 
     if (!blockedUserId) {
-      return formatResponse(res, 400, 0, "Thiếu ID người dùng cần bỏ chặn");
+      return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần bỏ chặn');
     }
 
     await UserService.unblockUser(userId, blockedUserId);
-    return formatResponse(res, 200, 1, "Bỏ chặn người dùng thành công");
+    return formatResponse(res, 200, 1, 'Bỏ chặn người dùng thành công');
   }),
 
   muteUser: CatchError(async (req, res) => {
@@ -378,11 +403,11 @@ const UserController = {
     const { targetUserId } = req.body;
 
     if (!targetUserId) {
-      return formatResponse(res, 400, 0, "Thiếu ID người dùng cần ẩn");
+      return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần ẩn');
     }
 
     await UserService.muteUser(userId, targetUserId);
-    return formatResponse(res, 200, 1, "Đã ẩn người dùng thành công");
+    return formatResponse(res, 200, 1, 'Đã ẩn người dùng thành công');
   }),
 
   unmuteUser: CatchError(async (req, res) => {
@@ -390,19 +415,19 @@ const UserController = {
     const { targetUserId } = req.params;
 
     await UserService.unmuteUser(userId, targetUserId);
-    return formatResponse(res, 200, 1, "Đã bỏ ẩn người dùng thành công");
+    return formatResponse(res, 200, 1, 'Đã bỏ ẩn người dùng thành công');
   }),
 
   getBlockList: CatchError(async (req, res) => {
     const userId = req.user.id;
     const blockedUsers = await UserService.getBlockedUsers(userId);
-    return formatResponse(res, 200, 1, "Success", blockedUsers);
+    return formatResponse(res, 200, 1, 'Success', blockedUsers);
   }),
 
   getMuteList: CatchError(async (req, res) => {
     const userId = req.user.id;
     const mutedUsers = await UserService.getMutedUsers(userId);
-    return formatResponse(res, 200, 1, "Success", mutedUsers);
+    return formatResponse(res, 200, 1, 'Success', mutedUsers);
   }),
 
   // ======================================
@@ -411,12 +436,12 @@ const UserController = {
 
   addTrustedDevice: CatchError(async (req, res) => {
     // Moved to Auth service - keeping for backward compatibility
-    return formatResponse(res, 200, 1, "Feature moved to auth/sessions");
+    return formatResponse(res, 200, 1, 'Feature moved to auth/sessions');
   }),
 
   removeTrustedDevice: CatchError(async (req, res) => {
     // Moved to Auth service - keeping for backward compatibility
-    return formatResponse(res, 200, 1, "Feature moved to auth/sessions");
+    return formatResponse(res, 200, 1, 'Feature moved to auth/sessions');
   }),
 };
 

@@ -53,7 +53,7 @@ const userSlice = createSlice({
       state.searchResults = [];
     },
     setCurrentProfile: (state, action) => {
-      state.currentProfile = action.payload.data;
+      state.currentProfile = action.payload.user || action.payload;
     },
     updateFollowStatus: (state, action) => {
       const { userId, isFollowing } = action.payload;
@@ -94,7 +94,8 @@ const userSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentProfile = action.payload.data;
+        // Data is already extracted by extractData helper
+        state.currentProfile = action.payload.user || action.payload;
       })
       .addCase(getProfile.rejected, (state, action) => {
         state.loading = false;
@@ -106,7 +107,9 @@ const userSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentProfile = { ...state.currentProfile, ...action.payload.data };
+        // Data is already extracted
+        const updatedUser = action.payload.user || action.payload;
+        state.currentProfile = { ...state.currentProfile, ...updatedUser };
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
@@ -140,15 +143,27 @@ const userSlice = createSlice({
       })
       // Get Followers
       .addCase(getFollowers.fulfilled, (state, action) => {
-        state.followers = action.payload;
+        // Handle { users, total, hasMore } or direct array
+        state.followers =
+          action.payload?.users ||
+          action.payload?.followers ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       // Get Following
       .addCase(getFollowing.fulfilled, (state, action) => {
-        state.following = action.payload;
+        // Handle { users, total, hasMore } or direct array
+        state.following =
+          action.payload?.users ||
+          action.payload?.following ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       // Follow Requests
       .addCase(getFollowRequests.fulfilled, (state, action) => {
-        state.followRequests = action.payload;
+        // Handle { requests, total, hasMore } or direct array
+        state.followRequests =
+          action.payload?.requests ||
+          action.payload?.followRequests ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       .addCase(acceptFollowRequest.fulfilled, (state, action) => {
         state.followRequests = state.followRequests.filter(
@@ -162,7 +177,11 @@ const userSlice = createSlice({
       })
       // Blocked Users
       .addCase(getBlockedUsers.fulfilled, (state, action) => {
-        state.blockedUsers = action.payload;
+        // Handle { users } or direct array
+        state.blockedUsers =
+          action.payload?.users ||
+          action.payload?.blockedUsers ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       .addCase(blockUser.fulfilled, (state, action) => {
         state.blockedUsers.push(action.payload.user);
@@ -174,7 +193,11 @@ const userSlice = createSlice({
       })
       // Muted Users
       .addCase(getMutedUsers.fulfilled, (state, action) => {
-        state.mutedUsers = action.payload;
+        // Handle { users } or direct array
+        state.mutedUsers =
+          action.payload?.users ||
+          action.payload?.mutedUsers ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       .addCase(muteUser.fulfilled, (state, action) => {
         state.mutedUsers.push(action.payload.user);

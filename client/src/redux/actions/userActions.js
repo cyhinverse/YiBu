@@ -2,6 +2,13 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../axios/axiosConfig';
 import { USER_API } from '../../axios/apiEndpoint';
 
+// Helper to extract data from response
+// Server returns { code, message, data } format, we need to extract the actual data
+const extractData = response => {
+  const responseData = response.data;
+  return responseData?.data !== undefined ? responseData.data : responseData;
+};
+
 // Search Users
 export const searchUsers = createAsyncThunk(
   'user/searchUsers',
@@ -10,7 +17,8 @@ export const searchUsers = createAsyncThunk(
       const response = await api.get(USER_API.SEARCH, {
         params: { q: query, page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Tìm kiếm người dùng thất bại'
@@ -27,7 +35,7 @@ export const getSuggestions = createAsyncThunk(
       const response = await api.get(USER_API.SUGGESTIONS, {
         params: { limit },
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy gợi ý người dùng thất bại'
@@ -42,7 +50,7 @@ export const getProfile = createAsyncThunk(
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_PROFILE(userId));
-      return response.data;
+      return extractData(response);
     } catch (error) {
       console.error('getProfile error:', error);
       return rejectWithValue(
@@ -58,7 +66,7 @@ export const updateProfile = createAsyncThunk(
   async (profileData, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_PROFILE, profileData);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật thông tin thất bại'
@@ -73,7 +81,7 @@ export const getUserById = createAsyncThunk(
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_BY_ID(userId));
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy thông tin người dùng thất bại'
@@ -88,7 +96,8 @@ export const followUser = createAsyncThunk(
   async (targetUserId, { rejectWithValue }) => {
     try {
       const response = await api.post(USER_API.FOLLOW, { targetUserId });
-      return { userId: targetUserId, ...response.data };
+      const data = extractData(response);
+      return { userId: targetUserId, ...data };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Theo dõi người dùng thất bại'
@@ -118,7 +127,8 @@ export const checkFollowStatus = createAsyncThunk(
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.CHECK_FOLLOW(userId));
-      return { userId, ...response.data };
+      const data = extractData(response);
+      return { userId, ...data };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Kiểm tra trạng thái theo dõi thất bại'
@@ -135,7 +145,8 @@ export const getFollowers = createAsyncThunk(
       const response = await api.get(USER_API.GET_FOLLOWERS(userId), {
         params: { page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách người theo dõi thất bại'
@@ -152,7 +163,8 @@ export const getFollowing = createAsyncThunk(
       const response = await api.get(USER_API.GET_FOLLOWING(userId), {
         params: { page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách đang theo dõi thất bại'
@@ -164,12 +176,13 @@ export const getFollowing = createAsyncThunk(
 // Get Follow Requests
 export const getFollowRequests = createAsyncThunk(
   'user/getFollowRequests',
-  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_FOLLOW_REQUESTS, {
         params: { page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -245,7 +258,7 @@ export const getBlockedUsers = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_BLOCKED);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách người bị chặn thất bại'
@@ -290,7 +303,7 @@ export const getMutedUsers = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_MUTED);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách người bị ẩn thất bại'
@@ -305,7 +318,7 @@ export const getSettings = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(USER_API.GET_SETTINGS);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy cài đặt thất bại'
@@ -320,7 +333,7 @@ export const updatePrivacySettings = createAsyncThunk(
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_PRIVACY, settings);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -336,7 +349,7 @@ export const updateNotificationSettings = createAsyncThunk(
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_NOTIFICATIONS, settings);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật cài đặt thông báo thất bại'
@@ -351,7 +364,7 @@ export const updateSecuritySettings = createAsyncThunk(
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_SECURITY, settings);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật cài đặt bảo mật thất bại'
@@ -366,7 +379,7 @@ export const updateContentSettings = createAsyncThunk(
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_CONTENT, settings);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật cài đặt nội dung thất bại'
@@ -381,7 +394,7 @@ export const updateThemeSettings = createAsyncThunk(
   async (settings, { rejectWithValue }) => {
     try {
       const response = await api.put(USER_API.UPDATE_THEME, settings);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật cài đặt giao diện thất bại'
@@ -396,7 +409,7 @@ export const addDevice = createAsyncThunk(
   async (deviceData, { rejectWithValue }) => {
     try {
       const response = await api.post(USER_API.ADD_DEVICE, deviceData);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Thêm thiết bị thất bại'

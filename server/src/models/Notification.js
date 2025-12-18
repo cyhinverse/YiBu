@@ -67,6 +67,31 @@ const NotificationSchema = new Schema(
       ref: "Comment",
     },
 
+    relatedPost: {
+      type: Types.ObjectId,
+      ref: "Post",
+      index: true,
+    },
+
+    relatedComment: {
+      type: Types.ObjectId,
+      ref: "Comment",
+    },
+
+    // Grouped senders for better performance
+    groupedSenders: [
+      {
+        user: { type: Types.ObjectId, ref: "User" },
+        username: String,
+        avatar: String,
+      },
+    ],
+
+    metadata: {
+      type: Schema.Types.Mixed,
+    },
+
+
     // Preview data (denormalized for fast rendering)
     preview: {
       thumbnail: { type: String }, // Post thumbnail
@@ -78,6 +103,11 @@ const NotificationSchema = new Schema(
       default: false,
       index: true,
     },
+
+    readAt: {
+      type: Date,
+    },
+
 
     // For grouping similar notifications
     groupKey: {
@@ -125,8 +155,12 @@ NotificationSchema.index({ recipient: 1, sender: 1, type: 1, post: 1 });
 
 // ============ STATICS ============
 NotificationSchema.statics.createNotification = async function (data) {
-  const { recipient, sender, type, content, post, comment, preview, groupKey } =
+  const { recipient, sender, type, content, preview, groupKey, metadata } =
     data;
+
+  const post = data.post || data.relatedPost;
+  const comment = data.comment || data.relatedComment;
+
 
   // Don't notify yourself
   if (recipient.toString() === sender.toString()) {
@@ -183,8 +217,11 @@ NotificationSchema.statics.createNotification = async function (data) {
     content,
     post,
     comment,
+    relatedPost: post,
+    relatedComment: comment,
     preview,
     groupKey,
+    metadata,
     actionUrl: post ? `/post/${post}` : sender ? `/profile/${sender}` : null,
   });
 };

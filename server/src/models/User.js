@@ -122,9 +122,9 @@ const UserSchema = new Schema(
 );
 
 // ============ INDEXES ============
-// Primary lookups
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
+// Primary lookups - Already defined in schema with unique: true
+// UserSchema.index({ username: 1 });
+// UserSchema.index({ email: 1 });
 
 // Recommendation & Search
 UserSchema.index({ interests: 1 });

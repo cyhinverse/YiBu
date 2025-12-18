@@ -123,7 +123,7 @@ const PostSchema = new Schema(
     moderation: {
       status: {
         type: String,
-        enum: ["approved", "pending", "flagged", "removed"],
+        enum: ["approved", "pending", "flagged", "removed", "rejected"],
         default: "approved",
       },
       reason: { type: String },

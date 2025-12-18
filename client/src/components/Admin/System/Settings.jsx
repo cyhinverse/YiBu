@@ -1,66 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Save,
   Globe,
   Bell,
   Shield,
-  Mail,
-  Database,
-  Palette,
-  Users,
   FileText,
-  Lock,
-  Eye,
-  EyeOff,
+  Users,
   Check,
-  X,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
-
-const FAKE_SETTINGS = {
-  general: {
-    siteName: "YiBu Social",
-    siteDescription: "Nền tảng mạng xã hội kết nối mọi người",
-    siteUrl: "https://yibu.social",
-    contactEmail: "admin@yibu.social",
-    supportEmail: "support@yibu.social",
-  },
-  features: {
-    allowRegistration: true,
-    emailVerification: true,
-    twoFactorAuth: false,
-    publicProfiles: true,
-    allowComments: true,
-    allowSharing: true,
-  },
-  content: {
-    maxPostLength: 5000,
-    maxImageSize: 10,
-    maxVideoSize: 100,
-    allowedImageTypes: "jpg, png, gif, webp",
-    allowedVideoTypes: "mp4, mov, avi",
-    autoModeration: true,
-  },
-  notifications: {
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    digestFrequency: "daily",
-  },
-  security: {
-    sessionTimeout: 30,
-    maxLoginAttempts: 5,
-    passwordMinLength: 8,
-    requireSpecialChar: true,
-    requireNumber: true,
-  },
-};
+import {
+  getSystemSettings,
+  updateSystemSettings,
+} from "../../../redux/actions/adminActions";
 
 export default function Settings() {
-  const [settings, setSettings] = useState(FAKE_SETTINGS);
+  const dispatch = useDispatch();
+  const { systemSettings, loading } = useSelector((state) => state.admin);
+  const [settings, setSettings] = useState(null);
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    dispatch(getSystemSettings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    // When Redux state updates (fetched from API), update local state
+    // We access .data if it's nested (based on formatResponse) or direct object
+    if (systemSettings) {
+      setSettings(systemSettings.data || systemSettings);
+    }
+  }, [systemSettings]);
 
   const tabs = [
     { id: "general", label: "Chung", icon: Globe },
@@ -70,16 +44,22 @@ export default function Settings() {
     { id: "security", label: "Bảo mật", icon: Shield },
   ];
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!settings) return;
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await dispatch(updateSystemSettings(settings)).unwrap();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggle = (category, key) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       [category]: {
@@ -90,6 +70,7 @@ export default function Settings() {
   };
 
   const handleChange = (category, key, value) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       [category]: {
@@ -98,6 +79,22 @@ export default function Settings() {
       },
     });
   };
+
+  if (loading && !settings) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 size={32} className="animate-spin text-neutral-400" />
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <div className="text-center py-10 text-neutral-500">
+        Không thể tải cài đặt hệ thống.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +116,7 @@ export default function Settings() {
         >
           {isSaving ? (
             <>
-              <div className="w-4 h-4 border-2 border-white dark:border-black border-t-transparent rounded-full animate-spin" />
+              <Loader2 size={18} className="animate-spin" />
               Đang lưu...
             </>
           ) : (
@@ -133,7 +130,7 @@ export default function Settings() {
 
       {/* Success Message */}
       {showSuccess && (
-        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl animate-fade-in">
           <Check size={20} className="text-green-600" />
           <span className="text-green-700 dark:text-green-400">
             Cài đặt đã được lưu thành công!
@@ -144,7 +141,7 @@ export default function Settings() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Tabs */}
         <div className="lg:w-64 flex-shrink-0">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-2">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-2 sticky top-4">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -167,7 +164,7 @@ export default function Settings() {
           <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6">
             {/* General Settings */}
             {activeTab === "general" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
                   <Globe size={20} />
                   Cài đặt chung
@@ -262,7 +259,7 @@ export default function Settings() {
 
             {/* Features Settings */}
             {activeTab === "features" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
                   <Users size={20} />
                   Cài đặt tính năng
@@ -337,7 +334,7 @@ export default function Settings() {
 
             {/* Content Settings */}
             {activeTab === "content" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
                   <FileText size={20} />
                   Cài đặt nội dung
@@ -467,7 +464,7 @@ export default function Settings() {
 
             {/* Notifications Settings */}
             {activeTab === "notifications" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
                   <Bell size={20} />
                   Cài đặt thông báo
@@ -549,7 +546,7 @@ export default function Settings() {
 
             {/* Security Settings */}
             {activeTab === "security" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
                   <Shield size={20} />
                   Cài đặt bảo mật

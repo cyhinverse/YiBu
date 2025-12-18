@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   createLike,
   deleteLike,
@@ -7,7 +7,7 @@ import {
   getBatchLikeStatus,
   getPostLikes,
   getMyLikedPosts,
-} from "../actions/likeActions";
+} from '../actions/likeActions';
 
 const initialState = {
   likeStatus: {},
@@ -18,10 +18,10 @@ const initialState = {
 };
 
 const likeSlice = createSlice({
-  name: "like",
+  name: 'like',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
     setLikeStatusOptimistic: (state, action) => {
@@ -30,67 +30,69 @@ const likeSlice = createSlice({
     },
     resetLikeState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Create Like
       .addCase(createLike.fulfilled, (state, action) => {
-        const { postId } = action.payload;
-        const data = action.payload.data || action.payload;
-        const { likesCount } = data;
-        state.likeStatus[postId] = { isLiked: true, likesCount };
+        const { postId, isLiked, likesCount } = action.payload;
+        // Data is already extracted
+        state.likeStatus[postId] = { isLiked: isLiked ?? true, likesCount };
       })
       // Delete Like
       .addCase(deleteLike.fulfilled, (state, action) => {
-        const { postId } = action.payload;
-        const data = action.payload.data || action.payload;
-        const { likesCount } = data;
+        const { postId, likesCount } = action.payload;
+        // Data is already extracted
         state.likeStatus[postId] = { isLiked: false, likesCount };
       })
       // Toggle Like
       .addCase(toggleLike.fulfilled, (state, action) => {
-        const { postId } = action.payload;
-        const data = action.payload.data || action.payload;
-        const { isLiked, likesCount } = data;
+        const { postId, isLiked, likesCount } = action.payload;
+        // Data is already extracted
         state.likeStatus[postId] = { isLiked, likesCount };
       })
       // Get Like Status
       .addCase(getLikeStatus.fulfilled, (state, action) => {
-        const { postId } = action.payload;
-        const data = action.payload.data || action.payload;
-        const { isLiked, likesCount } = data;
+        const { postId, isLiked, likesCount } = action.payload;
+        // Data is already extracted
         state.likeStatus[postId] = { isLiked, likesCount };
       })
       // Get Batch Like Status
       .addCase(getBatchLikeStatus.fulfilled, (state, action) => {
-         // Batch status usually returns array in data
-         const batchData = action.payload.data || [];
-         if (Array.isArray(batchData)) {
-            batchData.forEach(({ postId, isLiked, likesCount }) => {
-                state.likeStatus[postId] = { isLiked, likesCount };
-            });
-         }
+        // Data is already extracted - should be an array or object with likeStatuses
+        const batchData = action.payload.likeStatuses || action.payload || [];
+        if (Array.isArray(batchData)) {
+          batchData.forEach(({ postId, isLiked, likesCount }) => {
+            state.likeStatus[postId] = { isLiked, likesCount };
+          });
+        } else if (typeof batchData === 'object') {
+          // Handle object format { postId: { isLiked, likesCount } }
+          Object.entries(batchData).forEach(([postId, status]) => {
+            state.likeStatus[postId] = status;
+          });
+        }
       })
       // Get Post Likes
-      .addCase(getPostLikes.pending, (state) => {
+      .addCase(getPostLikes.pending, state => {
         state.loading = true;
       })
       .addCase(getPostLikes.fulfilled, (state, action) => {
         state.loading = false;
-        const { postId } = action.payload;
-        const users = action.payload.data?.users || [];
-        state.postLikes[postId] = users;
+        const { postId, users, likes } = action.payload;
+        // Data is already extracted
+        state.postLikes[postId] = users || likes || [];
       })
       .addCase(getPostLikes.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
       // Get My Liked Posts
-      .addCase(getMyLikedPosts.pending, (state) => {
+      .addCase(getMyLikedPosts.pending, state => {
         state.loading = true;
       })
       .addCase(getMyLikedPosts.fulfilled, (state, action) => {
         state.loading = false;
-        state.likedPosts = action.payload.data?.posts || [];
+        // Data is already extracted
+        state.likedPosts = action.payload.posts || [];
       })
       .addCase(getMyLikedPosts.rejected, (state, action) => {
         state.loading = false;

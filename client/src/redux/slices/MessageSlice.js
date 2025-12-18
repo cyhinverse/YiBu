@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   getConversations,
   getConversationById,
@@ -15,14 +15,10 @@ import {
   markMessagesAsRead,
   markMessageAsRead,
   getUnreadCount,
-  addReaction,
-  removeReaction,
   searchMessages,
   getUsersForChat,
-  muteConversation,
-  unmuteConversation,
-  getConversationMedia,
-} from "../actions/messageActions";
+  getConversationForList,
+} from '../actions/messageActions';
 
 const initialState = {
   conversations: [],
@@ -37,10 +33,10 @@ const initialState = {
 };
 
 const messageSlice = createSlice({
-  name: "message",
+  name: 'message',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
     setCurrentConversation: (state, action) => {
@@ -57,60 +53,118 @@ const messageSlice = createSlice({
       const { conversationId, messageId, status } = action.payload;
       if (state.messages[conversationId]) {
         const message = state.messages[conversationId].find(
-          (m) => m.id === messageId
+          m => m.id === messageId
         );
         if (message) {
           message.status = status;
         }
       }
     },
+    conversationRead: (state, action) => {
+      const { conversationId } = action.payload;
+      if (state.messages[conversationId]) {
+        state.messages[conversationId].forEach(m => {
+          if (!m.isMine) return; // Only update own messages
+          m.status = 'read';
+          m.isRead = true; // Support both flags
+        });
+      }
+    },
     receiveMessage: (state, action) => {
       const message = action.payload;
       const conversationId = message.conversationId;
-      if (!state.messages[conversationId]) {
-        state.messages[conversationId] = [];
+
+      // Find the conversation to get its _id (may differ from conversationId in message)
+      const conv = state.conversations.find(
+        c =>
+          (c._id || c.id || c.conversationId) === conversationId ||
+          c.directId === conversationId
+      );
+
+      // Use conversation._id as primary key if available, fallback to message.conversationId
+      const messageKey = conv?._id || conv?.id || conversationId;
+
+      if (!state.messages[messageKey]) {
+        state.messages[messageKey] = [];
       }
-      const exists = state.messages[conversationId].some(
-        (m) => m.id === message.id
+      const exists = state.messages[messageKey].some(
+        m => (m._id || m.id) === (message._id || message.id)
       );
       if (!exists) {
-        state.messages[conversationId].push(message);
+        state.messages[messageKey].push(message);
       }
-      // Update conversation last message
-      const convIndex = state.conversations.findIndex(
-        (c) => c.id === conversationId
-      );
-      if (convIndex !== -1) {
-        state.conversations[convIndex].lastMessage = message;
-        state.conversations[convIndex].updatedAt = message.createdAt;
+
+      // Update conversation last message and unread count
+      if (conv) {
+        const convIndex = state.conversations.indexOf(conv);
+        conv.lastMessage = message;
+        conv.updatedAt = message.createdAt;
+
+        // Increment unread count if it's not the current conversation and not our own message
+        const currentConvId =
+          state.currentConversation?._id ||
+          state.currentConversation?.id ||
+          state.currentConversation?.conversationId;
+        const isCurrentConv =
+          currentConvId &&
+          (currentConvId === conversationId ||
+            currentConvId === conv._id ||
+            currentConvId === conv.id);
+
+        if (!isCurrentConv && !message.isMine) {
+          conv.unreadCount = (conv.unreadCount || 0) + 1;
+          state.unreadCount = (state.unreadCount || 0) + 1;
+        }
+
         // Move to top
-        const [conv] = state.conversations.splice(convIndex, 1);
-        state.conversations.unshift(conv);
+        if (convIndex !== -1) {
+          state.conversations.splice(convIndex, 1);
+          state.conversations.unshift(conv);
+        }
+      } else if (!message.isMine) {
+        // If conversation is not in list but we received a message, increment global unread
+        state.unreadCount = (state.unreadCount || 0) + 1;
       }
     },
     setTyping: (state, action) => {
       const { conversationId, userId, isTyping } = action.payload;
-      const conv = state.conversations.find((c) => c.id === conversationId);
+      const conv = state.conversations.find(c => c.id === conversationId);
       if (conv) {
         if (!conv.typingUsers) conv.typingUsers = [];
         if (isTyping && !conv.typingUsers.includes(userId)) {
           conv.typingUsers.push(userId);
         } else if (!isTyping) {
-          conv.typingUsers = conv.typingUsers.filter((id) => id !== userId);
+          conv.typingUsers = conv.typingUsers.filter(id => id !== userId);
         }
       }
     },
     resetMessageState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Get Conversations
-      .addCase(getConversations.pending, (state) => {
+      .addCase(getConversations.pending, state => {
         state.loading = true;
       })
       .addCase(getConversations.fulfilled, (state, action) => {
         state.loading = false;
-        state.conversations = action.payload;
+        // Data is already extracted
+        const fetchedConversations =
+          action.payload.conversations || action.payload || [];
+
+        // If we have a currentConversation (e.g. from deep link) that isn't in the fetched list, add it
+        if (
+          state.currentConversation &&
+          !fetchedConversations.find(
+            c =>
+              (c._id || c.id) ===
+              (state.currentConversation._id || state.currentConversation.id)
+          )
+        ) {
+          fetchedConversations.unshift(state.currentConversation);
+        }
+
+        state.conversations = fetchedConversations;
       })
       .addCase(getConversations.rejected, (state, action) => {
         state.loading = false;
@@ -118,22 +172,50 @@ const messageSlice = createSlice({
       })
       // Create Conversation
       .addCase(createConversation.fulfilled, (state, action) => {
+        // Data is already extracted
+        const conversation = action.payload.conversation || action.payload;
+        const convId =
+          conversation._id || conversation.id || conversation.conversationId;
         const exists = state.conversations.some(
-          (c) => c.id === action.payload.id
+          c => (c._id || c.id || c.conversationId) === convId
         );
         if (!exists) {
-          state.conversations.unshift(action.payload);
+          state.conversations.unshift(conversation);
         }
-        state.currentConversation = action.payload;
+        state.currentConversation = conversation;
       })
       // Get Conversation by ID
       .addCase(getConversationById.fulfilled, (state, action) => {
-        state.currentConversation = action.payload;
+        // Data is already extracted
+        const conversation = action.payload.conversation || action.payload;
+        state.currentConversation = conversation;
+
+        // Add to conversations list if not exists (for sidebar)
+        const convId =
+          conversation._id || conversation.id || conversation.conversationId;
+        const exists = state.conversations.some(
+          c => (c._id || c.id || c.conversationId) === convId
+        );
+        if (!exists) {
+          state.conversations.unshift(conversation);
+        }
+      })
+      // Get Conversation for List (Background)
+      .addCase(getConversationForList.fulfilled, (state, action) => {
+        const conversation = action.payload.conversation || action.payload;
+        const convId =
+          conversation._id || conversation.id || conversation.conversationId;
+        const exists = state.conversations.some(
+          c => (c._id || c.id || c.conversationId) === convId
+        );
+        if (!exists) {
+          state.conversations.unshift(conversation);
+        }
       })
       // Delete Conversation
       .addCase(deleteConversation.fulfilled, (state, action) => {
         state.conversations = state.conversations.filter(
-          (c) => c.id !== action.payload.conversationId
+          c => c.id !== action.payload.conversationId
         );
         if (state.currentConversation?.id === action.payload.conversationId) {
           state.currentConversation = null;
@@ -142,25 +224,32 @@ const messageSlice = createSlice({
       })
       // Create Group
       .addCase(createGroup.fulfilled, (state, action) => {
-        state.conversations.unshift(action.payload);
-        state.currentConversation = action.payload;
+        // Data is already extracted
+        const group = action.payload.group || action.payload;
+        state.conversations.unshift(group);
+        state.currentConversation = group;
       })
       // Update Group
       .addCase(updateGroup.fulfilled, (state, action) => {
+        // Data is already extracted
+        const updatedGroup = action.payload.group || action.payload;
         const index = state.conversations.findIndex(
-          (c) => c.id === action.payload.id
+          c => c._id === updatedGroup._id || c.id === updatedGroup.id
         );
         if (index !== -1) {
-          state.conversations[index] = action.payload;
+          state.conversations[index] = updatedGroup;
         }
-        if (state.currentConversation?.id === action.payload.id) {
-          state.currentConversation = action.payload;
+        if (
+          state.currentConversation?._id === updatedGroup._id ||
+          state.currentConversation?.id === updatedGroup.id
+        ) {
+          state.currentConversation = updatedGroup;
         }
       })
       // Add Group Member
       .addCase(addGroupMember.fulfilled, (state, action) => {
         const { conversationId, member } = action.payload;
-        const conv = state.conversations.find((c) => c.id === conversationId);
+        const conv = state.conversations.find(c => c.id === conversationId);
         if (conv) {
           if (!conv.members) conv.members = [];
           conv.members.push(member);
@@ -169,27 +258,29 @@ const messageSlice = createSlice({
       // Remove Group Member
       .addCase(removeGroupMember.fulfilled, (state, action) => {
         const { conversationId, memberId } = action.payload;
-        const conv = state.conversations.find((c) => c.id === conversationId);
+        const conv = state.conversations.find(c => c.id === conversationId);
         if (conv && conv.members) {
-          conv.members = conv.members.filter((m) => m.id !== memberId);
+          conv.members = conv.members.filter(m => m.id !== memberId);
         }
       })
       // Leave Group
       .addCase(leaveGroup.fulfilled, (state, action) => {
         state.conversations = state.conversations.filter(
-          (c) => c.id !== action.payload.conversationId
+          c => c.id !== action.payload.conversationId
         );
         if (state.currentConversation?.id === action.payload.conversationId) {
           state.currentConversation = null;
         }
       })
       // Get Messages
-      .addCase(getMessages.pending, (state) => {
+      .addCase(getMessages.pending, state => {
         state.loading = true;
       })
       .addCase(getMessages.fulfilled, (state, action) => {
         state.loading = false;
-        const { conversationId, messages, isLoadMore } = action.payload;
+        const { conversationId, isLoadMore } = action.payload;
+        // Data is already extracted
+        const messages = action.payload.messages || [];
         if (isLoadMore) {
           state.messages[conversationId] = [
             ...messages,
@@ -204,33 +295,53 @@ const messageSlice = createSlice({
         state.error = action.payload;
       })
       // Send Message
-      .addCase(sendMessage.pending, (state) => {
+      .addCase(sendMessage.pending, state => {
         state.sendingMessage = true;
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
         state.sendingMessage = false;
-        const message = action.payload;
-        const conversationId = message.conversationId;
+        // Data is already extracted
+        const message = action.payload.message || action.payload;
+        // ALWAYS use the conversationId from URL (originalConversationId)
+        const conversationId = action.payload.conversationId;
+
+        console.log('sendMessage.fulfilled - conversationId:', conversationId);
+        console.log('sendMessage.fulfilled - message:', message);
+        console.log(
+          'sendMessage.fulfilled - current messages keys:',
+          Object.keys(state.messages)
+        );
+
         if (!state.messages[conversationId]) {
           state.messages[conversationId] = [];
         }
-        // Replace optimistic message or add new
-        const tempIndex = state.messages[conversationId].findIndex(
-          (m) => m.tempId === message.tempId
+
+        // Check if message already exists (avoid duplicates)
+        const exists = state.messages[conversationId].some(
+          m => (m._id || m.id) === (message._id || message.id)
         );
-        if (tempIndex !== -1) {
-          state.messages[conversationId][tempIndex] = message;
-        } else {
+
+        if (!exists) {
           state.messages[conversationId].push(message);
+          console.log(
+            'sendMessage.fulfilled - message added to:',
+            conversationId
+          );
+        } else {
+          console.log('sendMessage.fulfilled - message already exists');
         }
-        // Update conversation
-        const convIndex = state.conversations.findIndex(
-          (c) => c.id === conversationId
+
+        // Update conversation lastMessage
+        const conv = state.conversations.find(
+          c => c._id === conversationId || c.id === conversationId
         );
-        if (convIndex !== -1) {
-          state.conversations[convIndex].lastMessage = message;
-          const [conv] = state.conversations.splice(convIndex, 1);
-          state.conversations.unshift(conv);
+        if (conv) {
+          conv.lastMessage = message;
+          const convIndex = state.conversations.indexOf(conv);
+          if (convIndex > 0) {
+            state.conversations.splice(convIndex, 1);
+            state.conversations.unshift(conv);
+          }
         }
       })
       .addCase(sendMessage.rejected, (state, action) => {
@@ -243,15 +354,23 @@ const messageSlice = createSlice({
         if (state.messages[conversationId]) {
           state.messages[conversationId] = state.messages[
             conversationId
-          ].filter((m) => m.id !== messageId);
+          ].filter(m => m.id !== messageId);
         }
       })
       // Mark Messages As Read
       .addCase(markMessagesAsRead.fulfilled, (state, action) => {
         const { conversationId } = action.payload;
-        const conv = state.conversations.find((c) => c.id === conversationId);
+        const conv = state.conversations.find(
+          c =>
+            (c._id || c.id || c.conversationId) === conversationId ||
+            c.directId === conversationId
+        );
         if (conv) {
+          const count = conv.unreadCount || 0;
           conv.unreadCount = 0;
+          if (count > 0) {
+            state.unreadCount = Math.max(0, (state.unreadCount || 0) - count);
+          }
         }
       })
       // Mark Message As Read
@@ -259,7 +378,7 @@ const messageSlice = createSlice({
         const { conversationId, messageId } = action.payload;
         if (state.messages[conversationId]) {
           const message = state.messages[conversationId].find(
-            (m) => m.id === messageId
+            m => m.id === messageId
           );
           if (message) {
             message.isRead = true;
@@ -268,65 +387,18 @@ const messageSlice = createSlice({
       })
       // Get Unread Count
       .addCase(getUnreadCount.fulfilled, (state, action) => {
-        state.unreadCount = action.payload;
-      })
-      // Add Reaction
-      .addCase(addReaction.fulfilled, (state, action) => {
-        const { conversationId, messageId, reaction } = action.payload;
-        if (state.messages[conversationId]) {
-          const message = state.messages[conversationId].find(
-            (m) => m.id === messageId
-          );
-          if (message) {
-            if (!message.reactions) message.reactions = [];
-            message.reactions.push(reaction);
-          }
-        }
-      })
-      // Remove Reaction
-      .addCase(removeReaction.fulfilled, (state, action) => {
-        const { conversationId, messageId, userId } = action.payload;
-        if (state.messages[conversationId]) {
-          const message = state.messages[conversationId].find(
-            (m) => m.id === messageId
-          );
-          if (message && message.reactions) {
-            message.reactions = message.reactions.filter(
-              (r) => r.userId !== userId
-            );
-          }
-        }
+        // Action payload is already a number from the action
+        state.unreadCount = action.payload ?? 0;
+        console.log('Message unreadCount set to:', state.unreadCount);
       })
       // Search Messages
-      .addCase(searchMessages.fulfilled, (state, action) => {
+      .addCase(searchMessages.fulfilled, () => {
         // Handle search results
       })
       // Get Users for Chat
       .addCase(getUsersForChat.fulfilled, (state, action) => {
-        state.usersForChat = action.payload;
-      })
-      // Mute Conversation
-      .addCase(muteConversation.fulfilled, (state, action) => {
-        const conv = state.conversations.find(
-          (c) => c.id === action.payload.conversationId
-        );
-        if (conv) {
-          conv.isMuted = true;
-        }
-      })
-      // Unmute Conversation
-      .addCase(unmuteConversation.fulfilled, (state, action) => {
-        const conv = state.conversations.find(
-          (c) => c.id === action.payload.conversationId
-        );
-        if (conv) {
-          conv.isMuted = false;
-        }
-      })
-      // Get Conversation Media
-      .addCase(getConversationMedia.fulfilled, (state, action) => {
-        const { conversationId, media } = action.payload;
-        state.conversationMedia[conversationId] = media;
+        // Data is already extracted
+        state.usersForChat = action.payload.users || action.payload || [];
       });
   },
 });
@@ -336,6 +408,7 @@ export const {
   setCurrentConversation,
   addMessageOptimistic,
   updateMessageStatus,
+  conversationRead,
   receiveMessage,
   setTyping,
   resetMessageState,

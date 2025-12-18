@@ -2,17 +2,25 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../axios/axiosConfig';
 import { MESSAGE_API } from '../../axios/apiEndpoint';
 
+// Helper to extract data from response
+// Server returns { code, message, data } format, we need to extract the actual data
+const extractData = response => {
+  const responseData = response.data;
+  return responseData?.data !== undefined ? responseData.data : responseData;
+};
+
 // ========== Conversations ==========
 
 // Get Conversations
 export const getConversations = createAsyncThunk(
   'message/getConversations',
-  async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(MESSAGE_API.GET_CONVERSATIONS, {
         params: { page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách hội thoại thất bại'
@@ -29,11 +37,42 @@ export const getConversationById = createAsyncThunk(
       const response = await api.get(
         MESSAGE_API.GET_CONVERSATION(conversationId)
       );
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy thông tin hội thoại thất bại'
       );
+    }
+  }
+);
+
+// Get Conversation by ID (For List/Background)
+export const getConversationForList = createAsyncThunk(
+  'message/getConversationForList',
+  async (conversationId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(
+        MESSAGE_API.GET_CONVERSATION(conversationId)
+      );
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy thông tin hội thoại thất bại'
+      );
+    }
+  }
+);
+
+// Check and Fetch Conversation (Middleware logic)
+export const checkAndFetchConversation = createAsyncThunk(
+  'message/checkAndFetch',
+  async (conversationId, { getState, dispatch }) => {
+    const { message } = getState();
+    const exists = message.conversations.some(
+      c => (c._id || c.id || c.conversationId) === conversationId
+    );
+    if (!exists) {
+      await dispatch(getConversationForList(conversationId));
     }
   }
 );
@@ -46,7 +85,7 @@ export const createConversation = createAsyncThunk(
       const response = await api.post(MESSAGE_API.CREATE_CONVERSATION, {
         participantId,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Tạo hội thoại thất bại'
@@ -81,7 +120,7 @@ export const createGroup = createAsyncThunk(
         name,
         participantIds,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Tạo nhóm thất bại'
@@ -96,7 +135,7 @@ export const updateGroup = createAsyncThunk(
   async ({ groupId, data }, { rejectWithValue }) => {
     try {
       const response = await api.put(MESSAGE_API.UPDATE_GROUP(groupId), data);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Cập nhật nhóm thất bại'
@@ -115,7 +154,8 @@ export const addGroupMember = createAsyncThunk(
       const response = await api.post(MESSAGE_API.ADD_MEMBERS(groupId), {
         memberIds: ids,
       });
-      return { groupId, ...response.data };
+      const data = extractData(response);
+      return { groupId, ...data };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Thêm thành viên thất bại'
@@ -167,7 +207,8 @@ export const getMessages = createAsyncThunk(
       const response = await api.get(MESSAGE_API.GET_MESSAGES(conversationId), {
         params: { page, limit, before },
       });
-      return { ...response.data, conversationId, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, conversationId, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy tin nhắn thất bại'
@@ -198,7 +239,14 @@ export const sendMessage = createAsyncThunk(
           'Content-Type': 'multipart/form-data',
         },
       });
-      return { ...response.data, conversationId };
+      const data = extractData(response);
+      console.log(
+        'Send message response:',
+        data,
+        'Original conversationId:',
+        conversationId
+      );
+      return { ...data, conversationId };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Gửi tin nhắn thất bại'
@@ -229,7 +277,7 @@ export const markMessagesAsRead = createAsyncThunk(
   'message/markAsRead',
   async (conversationId, { rejectWithValue }) => {
     try {
-      await api.put(MESSAGE_API.MARK_CONVERSATION_READ(conversationId));
+      await api.post(MESSAGE_API.MARK_CONVERSATION_READ(conversationId));
       return { conversationId };
     } catch (error) {
       return rejectWithValue(
@@ -244,7 +292,7 @@ export const markMessageAsRead = createAsyncThunk(
   'message/markMessageAsRead',
   async (messageId, { rejectWithValue }) => {
     try {
-      await api.put(MESSAGE_API.MARK_MESSAGE_READ(messageId));
+      await api.post(MESSAGE_API.MARK_MESSAGE_READ(messageId));
       return { messageId };
     } catch (error) {
       return rejectWithValue(
@@ -260,42 +308,15 @@ export const getUnreadCount = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(MESSAGE_API.GET_UNREAD_COUNT);
-      return response.data;
+      const data = extractData(response);
+      console.log('Message unread count response:', data);
+      // Extract count from response
+      const count = data?.unreadCount ?? data?.count ?? data ?? 0;
+      return typeof count === 'number' ? count : 0;
     } catch (error) {
+      console.error('Failed to get message unread count:', error);
       return rejectWithValue(
         error.response?.data?.message || 'Lấy số tin nhắn chưa đọc thất bại'
-      );
-    }
-  }
-);
-
-// Add Reaction
-export const addReaction = createAsyncThunk(
-  'message/addReaction',
-  async ({ messageId, emoji }, { rejectWithValue }) => {
-    try {
-      const response = await api.post(MESSAGE_API.ADD_REACTION(messageId), {
-        emoji,
-      });
-      return { messageId, ...response.data };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Thêm reaction thất bại'
-      );
-    }
-  }
-);
-
-// Remove Reaction
-export const removeReaction = createAsyncThunk(
-  'message/removeReaction',
-  async (messageId, { rejectWithValue }) => {
-    try {
-      await api.delete(MESSAGE_API.REMOVE_REACTION(messageId));
-      return { messageId };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Xóa reaction thất bại'
       );
     }
   }
@@ -331,7 +352,8 @@ export const searchMessages = createAsyncThunk(
       const response = await api.get(MESSAGE_API.SEARCH, {
         params: { q: query, conversationId, page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Tìm kiếm tin nhắn thất bại'
@@ -343,72 +365,17 @@ export const searchMessages = createAsyncThunk(
 // Get Users for Chat
 export const getUsersForChat = createAsyncThunk(
   'message/getUsersForChat',
-  async ({ query, page = 1, limit = 20 }, { rejectWithValue }) => {
+  async ({ query, page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get(MESSAGE_API.GET_USERS, {
         params: { q: query, page, limit },
       });
-      return { ...response.data, isLoadMore: page > 1 };
+      const data = extractData(response);
+      return { ...data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
           'Lấy danh sách người dùng để chat thất bại'
-      );
-    }
-  }
-);
-
-// ========== Mute ==========
-
-// Mute Conversation
-export const muteConversation = createAsyncThunk(
-  'message/muteConversation',
-  async ({ conversationId, duration }, { rejectWithValue }) => {
-    try {
-      const response = await api.post(MESSAGE_API.MUTE(conversationId), {
-        duration,
-      });
-      return { conversationId, ...response.data };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Tắt thông báo hội thoại thất bại'
-      );
-    }
-  }
-);
-
-// Unmute Conversation
-export const unmuteConversation = createAsyncThunk(
-  'message/unmuteConversation',
-  async (conversationId, { rejectWithValue }) => {
-    try {
-      await api.delete(MESSAGE_API.UNMUTE(conversationId));
-      return { conversationId };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Bật thông báo hội thoại thất bại'
-      );
-    }
-  }
-);
-
-// ========== Media ==========
-
-// Get Conversation Media
-export const getConversationMedia = createAsyncThunk(
-  'message/getMedia',
-  async (
-    { conversationId, type = 'all', page = 1, limit = 20 },
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await api.get(MESSAGE_API.GET_MEDIA(conversationId), {
-        params: { type, page, limit },
-      });
-      return { ...response.data, conversationId, isLoadMore: page > 1 };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Lấy media thất bại'
       );
     }
   }

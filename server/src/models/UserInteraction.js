@@ -1,16 +1,6 @@
 import { Schema, Types, model } from "mongoose";
 
-/**
- * UserInteraction Model - Core for Recommendation Engine
- *
- * Purpose:
- * 1. Track all user interactions for personalized recommendations
- * 2. Build user preference profiles
- * 3. Enable collaborative filtering
- * 4. Feed machine learning models
- *
- * This is the MOST IMPORTANT model for recommendation algorithms
- */
+
 const UserInteractionSchema = new Schema(
   {
     user: {

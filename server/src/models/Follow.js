@@ -1,4 +1,5 @@
 import { Schema, Types, model } from 'mongoose';
+import { retryOperation } from '../helpers/retryOperation.js';
 
 /**
  * Follow Model - Separated from User for scalability
@@ -175,11 +176,14 @@ FollowSchema.statics.unfollow = async function (followerId, followingId) {
 
 FollowSchema.statics.acceptFollowRequest = async function (userId, followerId) {
   const User = model('User');
+  const self = this;
 
-  const follow = await this.findOneAndUpdate(
-    { follower: followerId, following: userId, status: 'pending' },
-    { status: 'active' },
-    { new: true }
+  const follow = await retryOperation(() =>
+    self.findOneAndUpdate(
+      { follower: followerId, following: userId, status: 'pending' },
+      { status: 'active' },
+      { new: true }
+    )
   );
 
   if (!follow) {
@@ -196,10 +200,14 @@ FollowSchema.statics.acceptFollowRequest = async function (userId, followerId) {
 };
 
 FollowSchema.statics.rejectFollowRequest = async function (userId, followerId) {
-  const follow = await this.findOneAndUpdate(
-    { follower: followerId, following: userId, status: 'pending' },
-    { status: 'rejected' },
-    { new: true }
+  const self = this;
+
+  const follow = await retryOperation(() =>
+    self.findOneAndUpdate(
+      { follower: followerId, following: userId, status: 'pending' },
+      { status: 'rejected' },
+      { new: true }
+    )
   );
 
   if (!follow) {

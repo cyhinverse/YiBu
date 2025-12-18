@@ -18,10 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CommentModal } from '../Comment';
-import {
-  createLike,
-  deleteLike,
-} from '../../../../redux/actions/likeActions';
+import { createLike, deleteLike } from '../../../../redux/actions/likeActions';
 import {
   savePost,
   unsavePost,
@@ -140,7 +137,7 @@ const Post = ({ data, onDelete }) => {
         await dispatch(unsavePost(data._id)).unwrap();
         toast.success('Đã bỏ lưu bài viết');
       } else {
-        await dispatch(savePost(data._id)).unwrap();
+        await dispatch(savePost({ postId: data._id })).unwrap();
         toast.success('Đã lưu bài viết');
       }
     } catch (error) {

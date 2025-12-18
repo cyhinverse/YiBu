@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
 import {
   login,
   register,
@@ -13,7 +13,7 @@ import {
   disable2FA,
   getSessions,
   revokeSession,
-} from "../actions/authActions";
+} from '../actions/authActions';
 
 const initialState = {
   user: null,
@@ -26,10 +26,10 @@ const initialState = {
 };
 
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
     setUser: (state, action) => {
@@ -43,10 +43,10 @@ const authSlice = createSlice({
     },
     resetAuthState: () => initialState,
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Login
-      .addCase(login.pending, (state) => {
+      .addCase(login.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -61,7 +61,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // Register
-      .addCase(register.pending, (state) => {
+      .addCase(register.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -75,7 +75,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // Google Auth
-      .addCase(googleAuth.pending, (state) => {
+      .addCase(googleAuth.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -93,11 +93,11 @@ const authSlice = createSlice({
       .addCase(logout.rejected, () => initialState)
       .addCase(logoutAll.fulfilled, () => initialState)
       // Update Password
-      .addCase(updatePassword.pending, (state) => {
+      .addCase(updatePassword.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updatePassword.fulfilled, (state) => {
+      .addCase(updatePassword.fulfilled, state => {
         state.loading = false;
       })
       .addCase(updatePassword.rejected, (state, action) => {
@@ -105,11 +105,11 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // Password Reset Request
-      .addCase(requestPasswordReset.pending, (state) => {
+      .addCase(requestPasswordReset.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(requestPasswordReset.fulfilled, (state) => {
+      .addCase(requestPasswordReset.fulfilled, state => {
         state.loading = false;
       })
       .addCase(requestPasswordReset.rejected, (state, action) => {
@@ -117,11 +117,11 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // Reset Password
-      .addCase(resetPassword.pending, (state) => {
+      .addCase(resetPassword.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(resetPassword.fulfilled, (state) => {
+      .addCase(resetPassword.fulfilled, state => {
         state.loading = false;
       })
       .addCase(resetPassword.rejected, (state, action) => {
@@ -129,7 +129,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // 2FA Enable
-      .addCase(enable2FA.pending, (state) => {
+      .addCase(enable2FA.pending, state => {
         state.loading = true;
       })
       .addCase(enable2FA.fulfilled, (state, action) => {
@@ -141,10 +141,10 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // 2FA Verify
-      .addCase(verify2FA.pending, (state) => {
+      .addCase(verify2FA.pending, state => {
         state.loading = true;
       })
-      .addCase(verify2FA.fulfilled, (state) => {
+      .addCase(verify2FA.fulfilled, state => {
         state.loading = false;
         state.twoFactorEnabled = true;
         state.twoFactorPending = false;
@@ -154,16 +154,19 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
       // 2FA Disable
-      .addCase(disable2FA.fulfilled, (state) => {
+      .addCase(disable2FA.fulfilled, state => {
         state.twoFactorEnabled = false;
       })
       // Sessions
       .addCase(getSessions.fulfilled, (state, action) => {
-        state.sessions = action.payload;
+        // Handle { sessions } or direct array
+        state.sessions =
+          action.payload?.sessions ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       .addCase(revokeSession.fulfilled, (state, action) => {
         state.sessions = state.sessions.filter(
-          (session) => session.id !== action.payload.sessionId
+          session => session.id !== action.payload.sessionId
         );
       });
   },

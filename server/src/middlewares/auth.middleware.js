@@ -23,7 +23,7 @@ const VerifyToken = {
         if (err) {
           logger.error("JWT Verify Error:", err.message);
           return res
-            .status(403)
+            .status(401)
             .json({ code: 0, message: "Token is not valid" });
         }
 

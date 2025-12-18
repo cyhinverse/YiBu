@@ -96,7 +96,7 @@ export const registerChatHandlers = (io, socket) => {
     });
   });
 
-  // Typing
+  // Typing - support both event names for compatibility
   socket.on('typing', data => {
     if (!data.senderId) return;
     if (data.receiverId) {
@@ -109,11 +109,33 @@ export const registerChatHandlers = (io, socket) => {
     }
   });
 
+  socket.on('user_typing', data => {
+    if (!data.senderId) return;
+    if (data.receiverId) {
+      socket.to(data.receiverId.toString()).emit('user_typing', data);
+      const room1 = `chat_${data.senderId}_${data.receiverId}`;
+      const room2 = `chat_${data.receiverId}_${data.senderId}`;
+      socket.to(room1).emit('user_typing', data);
+      socket.to(room2).emit('user_typing', data);
+    }
+  });
+
   socket.on('stop_typing', data => {
     if (!data.senderId) return;
     if (data.receiverId) {
       socket.to(data.receiverId.toString()).emit('user_stop_typing', data);
       // Also rooms
+      const room1 = `chat_${data.senderId}_${data.receiverId}`;
+      const room2 = `chat_${data.receiverId}_${data.senderId}`;
+      socket.to(room1).emit('user_stop_typing', data);
+      socket.to(room2).emit('user_stop_typing', data);
+    }
+  });
+
+  socket.on('user_stop_typing', data => {
+    if (!data.senderId) return;
+    if (data.receiverId) {
+      socket.to(data.receiverId.toString()).emit('user_stop_typing', data);
       const room1 = `chat_${data.senderId}_${data.receiverId}`;
       const room2 = `chat_${data.receiverId}_${data.senderId}`;
       socket.to(room1).emit('user_stop_typing', data);

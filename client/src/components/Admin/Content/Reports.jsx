@@ -21,9 +21,9 @@ import {
 import {
   getAllReports,
   getPendingReports,
-  reviewReport,
   resolveReport,
   startReportReview,
+  updateReportStatus,
 } from '../../../redux/actions/adminActions';
 
 const getTargetIcon = type => {
@@ -110,7 +110,7 @@ export default function Reports() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, filterStatus, filterType, dispatch]);
 
   const reports = Array.isArray(reportsList) ? reportsList : [];
   const pendingCount = Array.isArray(pendingReports)
@@ -122,7 +122,7 @@ export default function Reports() {
       await dispatch(
         resolveReport({
           reportId: report._id || report.id,
-          resolution: 'resolved',
+          decision: 'resolved',
           notes: resolutionNote || 'Report resolved by admin',
         })
       ).unwrap();
@@ -140,7 +140,7 @@ export default function Reports() {
       await dispatch(
         resolveReport({
           reportId: report._id || report.id,
-          resolution: 'rejected',
+          decision: 'rejected',
           notes: resolutionNote || 'Report rejected by admin',
         })
       ).unwrap();
@@ -159,6 +159,23 @@ export default function Reports() {
       dispatch(getAllReports({ page: currentPage, limit: 10 }));
     } catch (error) {
       console.error('Failed to start review:', error);
+    }
+    setActiveDropdown(null);
+  };
+
+  const handleUpdateStatus = async (report, newStatus) => {
+    try {
+      await dispatch(
+        updateReportStatus({
+          reportId: report._id || report.id,
+          status: newStatus,
+          notes: 'Status updated manually by admin',
+        })
+      ).unwrap();
+      dispatch(getAllReports({ page: currentPage, limit: 10 }));
+      dispatch(getPendingReports());
+    } catch (error) {
+      console.error('Failed to update status:', error);
     }
     setActiveDropdown(null);
   };
@@ -396,7 +413,23 @@ export default function Reports() {
                                     <XCircle size={16} />
                                     Từ chối báo cáo
                                   </button>
+                                  <button
+                                    onClick={() => handleUpdateStatus(report, 'pending')}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-yellow-600"
+                                  >
+                                    <RefreshCcw size={16} />
+                                    Đặt lại Pending
+                                  </button>
                                 </>
+                              )}
+                              {report.status !== 'resolved' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(report, 'resolved')}
+                                  className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
+                                >
+                                  <CheckCircle size={16} />
+                                  Đánh dấu đã xử lý
+                                </button>
                               )}
                             </div>
                           )}
@@ -542,7 +575,7 @@ export default function Reports() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      handleReject(selectedReport.id);
+                      handleReject(selectedReport);
                       setSelectedReport(null);
                     }}
                     className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
@@ -552,7 +585,7 @@ export default function Reports() {
                   </button>
                   <button
                     onClick={() => {
-                      handleResolve(selectedReport.id);
+                      handleResolve(selectedReport);
                       setSelectedReport(null);
                     }}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
