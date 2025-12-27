@@ -58,6 +58,24 @@ export const useTopUsers = (page = 1, limit = 50) => {
   });
 };
 
+export const useAdminInteractions = ({
+  page = 1,
+  limit = 20,
+  type,
+  search,
+} = {}) => {
+  return useQuery({
+    queryKey: ['admin', 'interactions', 'list', { page, limit, type, search }],
+    queryFn: async () => {
+      const response = await api.get(ADMIN_API.GET_INTERACTIONS, {
+        params: { page, limit, type, search },
+      });
+      return extractData(response);
+    },
+    keepPreviousData: true,
+  });
+};
+
 // ==================== USERS ====================
 
 export const useAdminUsers = ({
