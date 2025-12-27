@@ -214,7 +214,7 @@ const Profile = () => {
             </div>
           );
         }
-        return likedPosts.map(post => <Post key={post._id} data={post} />);
+        return Array.isArray(likedPosts) ? likedPosts.map(post => <Post key={post._id} data={post} />) : null;
 
       case 'saved':
         if (!savedPosts || savedPosts.length === 0) {

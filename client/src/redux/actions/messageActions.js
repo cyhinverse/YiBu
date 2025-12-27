@@ -240,12 +240,6 @@ export const sendMessage = createAsyncThunk(
         },
       });
       const data = extractData(response);
-      console.log(
-        'Send message response:',
-        data,
-        'Original conversationId:',
-        conversationId
-      );
       return { ...data, conversationId };
     } catch (error) {
       return rejectWithValue(
@@ -309,12 +303,10 @@ export const getUnreadCount = createAsyncThunk(
     try {
       const response = await api.get(MESSAGE_API.GET_UNREAD_COUNT);
       const data = extractData(response);
-      console.log('Message unread count response:', data);
       // Extract count from response
       const count = data?.unreadCount ?? data?.count ?? data ?? 0;
       return typeof count === 'number' ? count : 0;
     } catch (error) {
-      console.error('Failed to get message unread count:', error);
       return rejectWithValue(
         error.response?.data?.message || 'Lấy số tin nhắn chưa đọc thất bại'
       );

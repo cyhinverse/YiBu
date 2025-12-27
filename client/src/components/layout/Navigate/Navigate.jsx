@@ -20,13 +20,6 @@ import {
 import { logout } from '../../../redux/actions/authActions';
 import toast from 'react-hot-toast';
 
-// Fake user data - fallback if no user from Redux
-const DEFAULT_USER = {
-  name: 'John Doe',
-  username: 'johndoe',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
-};
-
 // Custom Nav Item
 const NavItem = ({
   to,
@@ -66,7 +59,7 @@ const NavItem = ({
   );
 };
 
-const Navigate = ({ mobile = false, onCollapsedChange }) => {
+export default function Navigate({ mobile = false, onCollapsedChange }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
@@ -311,6 +304,4 @@ const Navigate = ({ mobile = false, onCollapsedChange }) => {
       </div>
     </div>
   );
-};
-
-export default Navigate;
+}

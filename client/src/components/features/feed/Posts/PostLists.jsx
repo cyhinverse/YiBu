@@ -63,13 +63,15 @@ const PostLists = ({ activeTab = 'forYou' }) => {
   }, [dispatch, activeTab]);
 
   // Fetch like statuses when displayPosts change
+  const postIdsString = displayPosts?.map(p => p._id).join(',');
+  
   useEffect(() => {
     if (displayPosts?.length > 0) {
       // Ensure postIds are strings for backend validation
       const postIds = displayPosts.map(post => String(post._id));
       dispatch(getBatchLikeStatus(postIds));
     }
-  }, [displayPosts, dispatch]);
+  }, [postIdsString, dispatch]);
 
   // Infinite scroll
   const loadMore = useCallback(() => {

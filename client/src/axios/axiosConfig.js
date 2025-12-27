@@ -44,16 +44,30 @@ const onRefreshError = error => {
   refreshSubscribers = [];
 };
 
+let store;
+
+export const injectStore = _store => {
+  store = _store;
+};
+
 // Redirect về login
 const redirectToLogin = () => {
   setAccessToken(null);
   refreshAttempts = 0;
+
+  if (store) {
+    store.dispatch({ type: 'auth/resetAuthState' });
+  }
+
   const currentPath = window.location.pathname;
   if (
     !currentPath.includes('/auth/login') &&
     !currentPath.includes('/auth/register')
   ) {
-    window.location.href = '/auth/login';
+    // Only force reload if store is not available (fallback)
+    if (!store) {
+      window.location.href = '/auth/login';
+    }
   }
 };
 
@@ -88,16 +102,23 @@ api.interceptors.response.use(
 
     const status = error.response.status;
 
-    // Không xử lý 401 nếu:
-    // 1. Request đã retry rồi
-    // 2. Đây là request refresh token
-    // 3. Đã vượt quá số lần retry
     if (status === 401) {
+      // Prevent infinite loop on login page
+      if (window.location.pathname.includes('/auth/login')) {
+        return Promise.reject(error);
+      }
+
       // Nếu đây là request refresh token bị lỗi -> logout
       if (originalRequest.url?.includes('/auth/refresh')) {
         console.error('Refresh token failed, redirecting to login');
         isRefreshing = false;
         onRefreshError(error);
+        // Clean up server-side cookies
+        try {
+          await axios.post(`${backendUrl}/api/auth/logout`);
+        } catch {
+          // Ignore logout error
+        }
         redirectToLogin();
         return Promise.reject(error);
       }
@@ -139,8 +160,6 @@ api.interceptors.response.use(
       }
 
       try {
-        console.log('Attempting to refresh token...');
-
         // Dùng axios thuần để gọi refresh, tránh interceptor loop
         const res = await axios.post(
           `${backendUrl}/api/auth/refresh`,
@@ -161,8 +180,6 @@ api.interceptors.response.use(
           throw new Error('No access token in refresh response');
         }
 
-        console.log('Token refreshed successfully');
-
         // Lưu token mới
         setAccessToken(newAccessToken);
 
@@ -180,6 +197,12 @@ api.interceptors.response.use(
         console.error('Token refresh failed:', refreshError);
         isRefreshing = false;
         onRefreshError(refreshError);
+        // Clean up server-side cookies
+        try {
+          await axios.post(`${backendUrl}/api/auth/logout`);
+        } catch {
+          // Ignore logout error
+        }
         redirectToLogin();
         return Promise.reject(refreshError);
       }

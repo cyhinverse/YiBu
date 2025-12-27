@@ -18,18 +18,9 @@ const AdminRoute = () => {
 
     // Kiểm tra quyền admin
     const isUserAdmin = user.isAdmin || user.role === "admin";
-    console.log("AdminRoute - Checking admin status:", {
-      user,
-      isAdmin: user.isAdmin,
-      role: user.role,
-      isUserAdmin,
-    });
 
     if (!isUserAdmin) {
-      console.log("User is not admin, redirecting to access-denied");
       navigate("/access-denied", { replace: true });
-    } else {
-      console.log("User is admin, allowing access to admin routes");
     }
   }, [isAuthenticated, user, navigate]);
 

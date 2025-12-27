@@ -88,10 +88,10 @@ export const updateComment = createAsyncThunk(
 // Delete Comment
 export const deleteComment = createAsyncThunk(
   'comment/deleteComment',
-  async ({ commentId, postId }, { rejectWithValue }) => {
+  async ({ commentId, postId, isReply = false }, { rejectWithValue }) => {
     try {
       await api.delete(COMMENT_API.DELETE(commentId));
-      return { commentId, postId };
+      return { commentId, postId, isReply };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Xóa bình luận thất bại'

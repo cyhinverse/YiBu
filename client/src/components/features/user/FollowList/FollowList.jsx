@@ -26,7 +26,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
       setLoading(true);
       try {
         const action = type === 'followers' ? getFollowers : getFollowing;
-        const result = await dispatch(action(userId)).unwrap();
+        const result = await dispatch(action({ userId })).unwrap();
         const userList =
           result.users || result.followers || result.following || result || [];
         setUsers(userList);
@@ -88,7 +88,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-xl"
+        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -151,36 +151,36 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Follow Button - Don't show for self */}
-                  {user._id !== authUser?._id && (
-                    <button
-                      onClick={() => handleFollow(user._id)}
-                      disabled={loadingStates[user._id]}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        loadingStates[user._id]
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      } ${
-                        followingStates[user._id]
-                          ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
-                          : 'bg-primary text-primary-foreground hover:opacity-90'
-                      }`}
-                    >
-                      {loadingStates[user._id] ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : followingStates[user._id] ? (
-                        <>
-                          <Check size={14} />
-                          Following
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus size={14} />
-                          Follow
-                        </>
-                      )}
-                    </button>
-                  )}
+                  {user._id !== authUser?._id &&
+                    !(type === 'following' && followingStates[user._id]) && (
+                      <button
+                        onClick={() => handleFollow(user._id)}
+                        disabled={loadingStates[user._id]}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          loadingStates[user._id]
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
+                        } ${
+                          followingStates[user._id]
+                            ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
+                            : 'bg-primary text-primary-foreground hover:opacity-90'
+                        }`}
+                      >
+                        {loadingStates[user._id] ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : followingStates[user._id] ? (
+                          <>
+                            <Check size={14} />
+                            Following
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus size={14} />
+                            Follow
+                          </>
+                        )}
+                      </button>
+                    )}
                 </div>
               ))}
             </div>

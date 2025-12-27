@@ -51,10 +51,31 @@ const commentSlice = createSlice({
         const { postId } = action.payload;
         // Handle { comment } or direct object
         const comment = action.payload.comment || action.payload;
+        
         if (!state.comments[postId]) {
           state.comments[postId] = [];
         }
-        state.comments[postId].unshift(comment);
+
+        if (comment.parentComment) {
+          // Recursive helper to find parent and add reply
+          const addReply = (comments) => {
+             for (const cmt of comments) {
+               if (cmt._id === comment.parentComment || cmt.id === comment.parentComment) {
+                 if (!cmt.replies) cmt.replies = [];
+                 cmt.replies.push(comment);
+                 cmt.repliesCount = (cmt.repliesCount || 0) + 1;
+                 return true;
+               }
+               if (cmt.replies?.length > 0) {
+                 if (addReply(cmt.replies)) return true;
+               }
+             }
+             return false;
+          };
+          addReply(state.comments[postId]);
+        } else {
+          state.comments[postId].unshift(comment);
+        }
       })
       .addCase(createComment.rejected, (state, action) => {
         state.createLoading = false;

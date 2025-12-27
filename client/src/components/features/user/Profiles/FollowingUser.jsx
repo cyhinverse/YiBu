@@ -28,7 +28,7 @@ const FollowingUser = () => {
 
     try {
       const action = activeTab === 'followers' ? getFollowers : getFollowing;
-      const result = await dispatch(action(authUser._id)).unwrap();
+      const result = await dispatch(action({ userId: authUser._id })).unwrap();
       const userList =
         result.users || result.followers || result.following || result || [];
 

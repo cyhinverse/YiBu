@@ -10,6 +10,59 @@ import {
   unlikeComment,
 } from '../redux/actions/commentActions';
 
+// Recursive helper to add reply to tree
+const addReplyToTree = (comments, newComment) => {
+  return comments.map(cmt => {
+    // If this is the direct parent
+    if (cmt._id === newComment.parentComment) {
+      return {
+        ...cmt,
+        replies: [...(cmt.replies || []), newComment],
+        repliesCount: (cmt.repliesCount || 0) + 1,
+      };
+    }
+    // If it has replies, look deeper
+    if (cmt.replies?.length > 0) {
+      return {
+        ...cmt,
+        replies: addReplyToTree(cmt.replies, newComment),
+      };
+    }
+    return cmt;
+  });
+};
+
+// Recursive helper to update comment in tree
+const updateCommentInTree = (comments, updatedComment) => {
+  return comments.map(cmt => {
+    if (cmt._id === updatedComment._id) {
+      return { ...cmt, content: updatedComment.content };
+    }
+    if (cmt.replies?.length > 0) {
+      return {
+        ...cmt,
+        replies: updateCommentInTree(cmt.replies, updatedComment),
+      };
+    }
+    return cmt;
+  });
+};
+
+// Recursive helper to remove comment from tree
+const removeCommentFromTree = (comments, commentId) => {
+  return comments
+    .filter(cmt => cmt._id !== commentId)
+    .map(cmt => {
+      if (cmt.replies?.length > 0) {
+        return {
+          ...cmt,
+          replies: removeCommentFromTree(cmt.replies, commentId),
+        };
+      }
+      return cmt;
+    });
+};
+
 /**
  * Custom hook để quản lý comments của một post
  * @param {string} postId - ID của post
@@ -40,7 +93,6 @@ const useComments = postId => {
       setComments(result.comments || []);
     } catch (err) {
       setError(err?.message || 'Không thể tải bình luận');
-      console.error('Fetch comments error:', err);
     } finally {
       setLoading(false);
     }
@@ -83,9 +135,9 @@ const useComments = postId => {
 
   // Delete comment
   const removeComment = useCallback(
-    async commentId => {
+    async (commentId, isReply = false) => {
       try {
-        await dispatch(deleteComment({ commentId, postId })).unwrap();
+        await dispatch(deleteComment({ commentId, postId, isReply })).unwrap();
         return true;
       } catch (err) {
         setError(err?.message || 'Không thể xóa bình luận');
@@ -125,24 +177,21 @@ const useComments = postId => {
   // Socket handlers
   const handleNewComment = useCallback(
     data => {
+      // data: { postId, comment, timestamp }
       if (data.postId !== postId) return;
 
       const newComment = data.comment;
+
       setComments(prev => {
-        // Nếu là reply
-        if (newComment.parentComment) {
-          return prev.map(cmt => {
-            if (cmt._id === newComment.parentComment) {
-              return {
-                ...cmt,
-                replies: [...(cmt.replies || []), newComment],
-              };
-            }
-            return cmt;
-          });
+        // If it's a root comment
+        if (!newComment.parentComment) {
+          // Avoid duplicates
+          if (prev.some(c => c._id === newComment._id)) return prev;
+          return [{ ...newComment, replies: [] }, ...prev];
         }
-        // Comment mới
-        return [{ ...newComment, replies: [] }, ...prev];
+
+        // If it's a reply, find parent and add
+        return addReplyToTree(prev, newComment);
       });
     },
     [postId]
@@ -152,24 +201,8 @@ const useComments = postId => {
     data => {
       if (data.postId !== postId) return;
 
-      const updated = data.comment;
-      setComments(prev =>
-        prev.map(cmt => {
-          if (cmt._id === updated._id) {
-            return { ...cmt, content: updated.content };
-          }
-          // Check replies
-          if (cmt.replies?.length) {
-            return {
-              ...cmt,
-              replies: cmt.replies.map(r =>
-                r._id === updated._id ? { ...r, content: updated.content } : r
-              ),
-            };
-          }
-          return cmt;
-        })
-      );
+      const updated = data.comment || data;
+      setComments(prev => updateCommentInTree(prev, updated));
     },
     [postId]
   );
@@ -177,19 +210,8 @@ const useComments = postId => {
   const handleDeleteComment = useCallback(
     data => {
       if (data.postId !== postId) return;
-
       const { commentId } = data;
-      setComments(prev => {
-        // Check root comments
-        if (prev.some(c => c._id === commentId)) {
-          return prev.filter(c => c._id !== commentId);
-        }
-        // Check replies
-        return prev.map(cmt => ({
-          ...cmt,
-          replies: cmt.replies?.filter(r => r._id !== commentId) || [],
-        }));
-      });
+      setComments(prev => removeCommentFromTree(prev, commentId));
     },
     [postId]
   );
@@ -229,15 +251,12 @@ const useComments = postId => {
   );
 
   return {
-    // State
     comments,
     loading,
     error,
     totalCount,
     currentUser: user,
     replyingTo,
-
-    // Actions
     addComment,
     editComment,
     removeComment,

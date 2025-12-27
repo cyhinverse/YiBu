@@ -252,13 +252,6 @@ const MessageDetail = () => {
   );
 
   const messages = useMemo(() => {
-    console.log('MessageDetail - conversationId from URL:', conversationId);
-    console.log('MessageDetail - messagesMap keys:', Object.keys(messagesMap));
-    console.log(
-      'MessageDetail - messagesMap[conversationId]:',
-      messagesMap[conversationId]
-    );
-
     // Try current conversationId from URL
     if (messagesMap[conversationId]) return messagesMap[conversationId];
 

@@ -143,23 +143,27 @@ const UserController = {
   }),
 
   getFollowers: CatchError(async (req, res) => {
-    const { id } = req.params;
+    const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
+    const requesterId = req.user?._id || req.user?.id;
 
-    const result = await UserService.getFollowers(id, {
+    const result = await UserService.getFollowers(userId, {
       page: parseInt(page),
       limit: parseInt(limit),
+      requesterId,
     });
     return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   getFollowing: CatchError(async (req, res) => {
-    const { id } = req.params;
+    const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
+    const requesterId = req.user?._id || req.user?.id;
 
-    const result = await UserService.getFollowing(id, {
+    const result = await UserService.getFollowing(userId, {
       page: parseInt(page),
       limit: parseInt(limit),
+      requesterId,
     });
     return formatResponse(res, 200, 1, 'Success', result);
   }),

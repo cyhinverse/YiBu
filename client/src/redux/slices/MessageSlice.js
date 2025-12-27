@@ -305,13 +305,6 @@ const messageSlice = createSlice({
         // ALWAYS use the conversationId from URL (originalConversationId)
         const conversationId = action.payload.conversationId;
 
-        console.log('sendMessage.fulfilled - conversationId:', conversationId);
-        console.log('sendMessage.fulfilled - message:', message);
-        console.log(
-          'sendMessage.fulfilled - current messages keys:',
-          Object.keys(state.messages)
-        );
-
         if (!state.messages[conversationId]) {
           state.messages[conversationId] = [];
         }
@@ -323,12 +316,6 @@ const messageSlice = createSlice({
 
         if (!exists) {
           state.messages[conversationId].push(message);
-          console.log(
-            'sendMessage.fulfilled - message added to:',
-            conversationId
-          );
-        } else {
-          console.log('sendMessage.fulfilled - message already exists');
         }
 
         // Update conversation lastMessage
@@ -389,7 +376,6 @@ const messageSlice = createSlice({
       .addCase(getUnreadCount.fulfilled, (state, action) => {
         // Action payload is already a number from the action
         state.unreadCount = action.payload ?? 0;
-        console.log('Message unreadCount set to:', state.unreadCount);
       })
       // Search Messages
       .addCase(searchMessages.fulfilled, () => {

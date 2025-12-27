@@ -45,26 +45,21 @@ const useSocket = userId => {
       reconnectAttempts.current = 0;
       setIsConnected(true);
 
-      // Register user as online
       socket.emit('register_user', { userId });
 
-      // Join self room and rejoin active rooms
       socket.emit('join_room', userId);
       activeRooms.current.add(userId);
       activeRooms.current.forEach(room => {
         if (room !== userId) socket.emit('join_room', room);
       });
 
-      // Request initial online users list
       socket.emit('get_online_users');
 
-      // Fetch unread counts when socket connects
       dispatch(getMessageUnreadCount());
       dispatch(getNotificationUnreadCount());
     });
 
     socket.on('disconnect', reason => {
-      console.log('Socket disconnected:', reason);
       setIsConnected(false);
       if (reason === 'io server disconnect') {
         setTimeout(() => socket.connect(), 1000);
@@ -72,7 +67,6 @@ const useSocket = userId => {
     });
 
     socket.on('connect_error', err => {
-      console.error('Socket error:', err);
       setIsConnected(false);
       reconnectAttempts.current++;
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
@@ -80,23 +74,18 @@ const useSocket = userId => {
       }
     });
 
-    // Register Business Logic Handlers
     registerMessageHandlers(socket, dispatch, userId);
     registerNotificationHandlers(socket, dispatch);
     registerLikeHandlers(socket, dispatch, userId);
+    registerCommentHandlers(socket, dispatch, userId);
     registerUserStatusHandlers(socket, setOnlineUsers);
-
-    const roomsToCleanup = activeRooms.current;
 
     return () => {
       if (socket) {
-        roomsToCleanup.forEach(room => {
-          if (socket.connected) socket.emit('leave_room', room);
-        });
-        roomsToCleanup.clear();
         socket.disconnect();
         socketRef.current = null;
         setIsConnected(false);
+        activeRooms.current.clear();
       }
     };
   }, [userId, dispatch]);
@@ -107,7 +96,6 @@ const useSocket = userId => {
     if (activeRooms.current.has(roomId)) return;
 
     if (socketRef.current?.connected) {
-      console.log('Joining room:', roomId);
       socketRef.current.emit('join_room', roomId);
     }
     activeRooms.current.add(roomId);
@@ -120,7 +108,6 @@ const useSocket = userId => {
 
     activeRooms.current.delete(roomId);
     if (socketRef.current?.connected) {
-      console.log('Leaving room:', roomId);
       socketRef.current.emit('leave_room', roomId);
     }
   }, []);
@@ -180,20 +167,16 @@ const useSocket = userId => {
 const registerMessageHandlers = (socket, dispatch, userId) => {
   socket.on('new_message', message => {
     if (!message?._id) return;
-    console.log('New message:', message);
 
-    // Determine if this message is from current user (sender may be object or string)
     const senderId = message.sender?._id || message.sender;
     const isMine =
       senderId && userId && senderId.toString() === userId.toString();
 
-    // Enrich message with isMine property before dispatching
     const enrichedMessage = { ...message, isMine };
 
     dispatch(receiveMessage(enrichedMessage));
     dispatch(checkAndFetchConversation(message.conversationId));
 
-    // Only show toast for messages from others
     if (!isMine) {
       const senderName =
         message.sender?.firstName || message.sender?.name || 'Người dùng';
@@ -207,25 +190,19 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
     }
   });
 
-  socket.on('user_typing', data => console.log('User typing:', data));
-  socket.on('user_stop_typing', data => console.log('User stop typing:', data));
+  socket.on('user_typing', () => {}); // No-op instead of log
+  socket.on('user_stop_typing', () => {}); // No-op
 };
 
 const registerNotificationHandlers = (socket, dispatch) => {
-  // Listen for both event names for compatibility
   const handleNotification = notification => {
-    console.log('New notification received:', notification);
-
     if (!notification?._id) {
-      // If no _id, just refresh the count from server
       dispatch(getNotificationUnreadCount());
       return;
     }
 
-    // Always dispatch the notification to update UI immediately
     dispatch(addNotification(notification));
 
-    // Show toast
     let msg = notification.content || 'Bạn có thông báo mới';
     if (notification.type === 'like' && notification.post?.caption) {
       msg += ` - "${notification.post.caption.substring(0, 20)}..."`;
@@ -248,7 +225,6 @@ const registerLikeHandlers = (socket, dispatch, currentUserId) => {
 
 const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   socket.on('get_users_online', users => {
-    console.log('Online users:', users);
     const map = {};
     if (Array.isArray(users)) users.forEach(id => (map[id] = true));
     else Object.assign(map, users || {});
@@ -258,9 +234,38 @@ const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   socket.on('user_status_change', ({ userId, status }) => {
     setOnlineUsers(prev => ({ ...prev, [userId]: status === 'online' }));
   });
+};
 
-  // Initial Request
-  socket.emit('get_online_users');
+const registerCommentHandlers = (socket, dispatch, currentUserId) => {
+  socket.on('new_comment', data => {
+    // data: { postId, comment, userId }
+    const { postId, comment, userId } = data;
+    if (userId === currentUserId) return; // Already handled by thunk
+
+    // Only increment if it's a top-level comment
+    if (comment && !comment.parentComment) {
+      // We can use the same logic as in postSlice or dispatch a specific action
+      // Since we don't have a specific action for just updating count,
+      // we can reuse the updatePostInList if we want or just add it to postSlice
+      dispatch({
+        type: 'post/updateCommentCount',
+        payload: { postId, action: 'increment' },
+      });
+    }
+  });
+
+  socket.on('delete_comment', data => {
+    // data: { postId, commentId, isReply }
+    const { postId, isReply, userId } = data;
+    if (userId === currentUserId) return;
+
+    if (!isReply) {
+      dispatch({
+        type: 'post/updateCommentCount',
+        payload: { postId, action: 'decrement' },
+      });
+    }
+  });
 };
 
 export default useSocket;

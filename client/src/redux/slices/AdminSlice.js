@@ -8,6 +8,8 @@ import {
   // Users
   getAllUsers,
   getUserById,
+  getAdminUserPosts,
+  getAdminUserReports,
   updateUser,
   deleteUser,
   banUser,
@@ -17,6 +19,7 @@ import {
   warnUser,
   // Posts
   getAllPosts,
+  getAdminPostReports,
   moderatePost,
   approvePost,
   deletePost,
@@ -56,8 +59,11 @@ const initialState = {
   users: [],
   bannedUsers: [],
   currentUser: null,
+  currentUserPosts: [],
+  currentUserReports: [],
   // Posts
   posts: [],
+  currentPostReports: [],
   // Comments
   comments: [],
   // Reports
@@ -161,6 +167,18 @@ const adminSlice = createSlice({
       .addCase(getUserById.fulfilled, (state, action) => {
         state.currentUser = action.payload;
       })
+      // Get Admin User Posts
+      .addCase(getAdminUserPosts.fulfilled, (state, action) => {
+        state.currentUserPosts =
+          action.payload?.posts ||
+          (Array.isArray(action.payload) ? action.payload : []);
+      })
+      // Get Admin User Reports
+      .addCase(getAdminUserReports.fulfilled, (state, action) => {
+        state.currentUserReports =
+          action.payload?.reports ||
+          (Array.isArray(action.payload) ? action.payload : []);
+      })
       // Update User
       .addCase(updateUser.fulfilled, (state, action) => {
         const index = state.users.findIndex(u => u.id === action.payload.id);
@@ -240,6 +258,11 @@ const adminSlice = createSlice({
           state.posts = posts;
         }
         if (pagination) state.pagination = pagination;
+      })
+      .addCase(getAdminPostReports.fulfilled, (state, action) => {
+        state.currentPostReports =
+          action.payload?.reports ||
+          (Array.isArray(action.payload) ? action.payload : []);
       })
       .addCase(getAllPosts.rejected, (state, action) => {
         state.loading = false;
@@ -385,7 +408,7 @@ const adminSlice = createSlice({
         );
       })
       // Health Check
-      .addCase(healthCheck.fulfilled, (state, action) => {
+      .addCase(healthCheck.fulfilled, () => {
         // Can be used to check system health status
       })
       // Broadcast Notification
@@ -409,7 +432,23 @@ const adminSlice = createSlice({
       })
       .addCase(getAdminLogs.fulfilled, (state, action) => {
         state.loading = false;
-        state.adminLogs = action.payload;
+        // Handle { logs, total } or direct array
+        state.adminLogs =
+          action.payload?.logs ||
+          action.payload?.adminLogs ||
+          (Array.isArray(action.payload) ? action.payload : []);
+        
+        // Update pagination if present
+        if (action.payload?.total !== undefined) {
+             state.pagination = {
+                ...state.pagination,
+                total: action.payload.total,
+                page: action.payload.page || 1, 
+                limit: action.payload.limit || 20,
+             }
+        } else if (action.payload?.pagination) {
+             state.pagination = action.payload.pagination;
+        }
       })
       .addCase(getAdminLogs.rejected, (state, action) => {
         state.loading = false;

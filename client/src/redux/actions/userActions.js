@@ -146,7 +146,8 @@ export const getFollowers = createAsyncThunk(
         params: { page, limit },
       });
       const data = extractData(response);
-      return { ...data, isLoadMore: page > 1 };
+      // Data is an array, we must wrap it, not spread it
+      return { users: data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách người theo dõi thất bại'
@@ -164,7 +165,8 @@ export const getFollowing = createAsyncThunk(
         params: { page, limit },
       });
       const data = extractData(response);
-      return { ...data, isLoadMore: page > 1 };
+      // Data is an array, we must wrap it, not spread it
+      return { users: data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách đang theo dõi thất bại'
@@ -182,7 +184,8 @@ export const getFollowRequests = createAsyncThunk(
         params: { page, limit },
       });
       const data = extractData(response);
-      return { ...data, isLoadMore: page > 1 };
+      // Data is an array, we must wrap it, not spread it
+      return { users: data, isLoadMore: page > 1 };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||

@@ -154,9 +154,9 @@ const CommentItem = memo(
     }, [comment._id, editValue, onEdit]);
 
     const handleDelete = useCallback(async () => {
-      await onDelete(comment._id);
+      await onDelete(comment._id, depth > 0);
       setShowDeleteConfirm(false);
-    }, [comment._id, onDelete]);
+    }, [comment._id, onDelete, depth]);
 
     const handleReply = useCallback(() => {
       onReply(comment._id, comment.user?.name || 'người dùng');
@@ -167,28 +167,39 @@ const CommentItem = memo(
     }, [comment._id, isLiked, onLike]);
 
     return (
-      <div className={`${depth > 0 ? 'ml-10 mt-3' : ''}`}>
+      <div
+        className={`relative group/comment ${depth > 0 ? 'ml-12 mt-3' : ''}`}
+      >
+        {/* Soft Thread Guide - Only visible on hover */}
+        {depth > 0 && (
+          <div className="absolute -left-6 top-0 bottom-0 w-px bg-transparent group-hover/comment:bg-neutral-200 dark:group-hover/comment:bg-neutral-800 transition-colors" />
+        )}
+
         {/* Main Comment */}
-        <div className="flex gap-3">
-          {/* Avatar */}
-          <img
-            src={
-              comment.user?.profile?.avatar ||
-              `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?._id}`
-            }
-            alt=""
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
+        <div className="flex gap-3 relative z-10">
+          {/* Avatar - using Design System class */}
+          <div className="relative">
+            <img
+              src={
+                comment.user?.profile?.avatar ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?._id}`
+              }
+              alt=""
+              className={`yb-avatar bg-white dark:bg-neutral-800 object-cover flex-shrink-0 ${
+                depth > 0 ? 'w-8 h-8' : 'w-10 h-10'
+              }`}
+            />
+          </div>
 
           <div className="flex-1 min-w-0">
             {/* Comment Content */}
             {isEditing ? (
-              <div className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-3">
+              <div className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-3 animate-scale-in">
                 <textarea
                   value={editValue}
                   onChange={e => setEditValue(e.target.value)}
-                  className="w-full bg-transparent text-sm text-neutral-900 dark:text-white 
-                           resize-none focus:outline-none"
+                  className="w-full bg-transparent text-[var(--color-content)] text-sm 
+                           resize-none focus:outline-none font-sans"
                   rows={2}
                   autoFocus
                 />
@@ -198,35 +209,82 @@ const CommentItem = memo(
                       setIsEditing(false);
                       setEditValue(comment.content);
                     }}
-                    className="px-3 py-1 text-xs text-neutral-600 dark:text-neutral-400 
-                             hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md"
+                    className="px-3 py-1 text-xs font-medium text-[var(--color-text-tertiary)] 
+                             hover:bg-[var(--color-surface-hover)] rounded-lg transition-all"
                   >
                     Hủy
                   </button>
                   <button
                     onClick={handleEdit}
                     disabled={!editValue.trim()}
-                    className="px-3 py-1 text-xs bg-neutral-900 dark:bg-white text-white 
-                             dark:text-neutral-900 rounded-md hover:opacity-80 
-                             disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-xs font-medium bg-[var(--color-primary)] text-[var(--color-primary-foreground)]
+                             rounded-lg hover:opacity-90 disabled:opacity-50 transition-all"
                   >
                     Lưu
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-3 py-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-content dark:text-white">
-                    {comment.user?.name || 'Người dùng'}
-                  </span>
-                  <div className="flex items-center gap-1 relative">
-                    <span className="text-xs text-secondary">{timeAgo}</span>
+              <div className="group/content">
+                <div className="bg-[var(--color-surface-secondary)] rounded-[1.25rem] px-4 py-3 inline-block max-w-full hover-lift">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[13px] font-semibold text-[var(--color-content)]">
+                      {comment.user?.name || 'Người dùng'}
+                    </span>
+                    {comment.user?.verified && (
+                      <span className="text-blue-500">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                        </svg>
+                      </span>
+                    )}
+                    <span className="text-[11px] text-[var(--color-text-tertiary)] ml-1">
+                      {timeAgo}
+                    </span>
+                  </div>
+                  <p className="text-[14px] text-[var(--color-text-secondary)] leading-relaxed break-words font-normal">
+                    {comment.content}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-4 mt-1.5 px-3">
+                  <button
+                    onClick={handleLike}
+                    className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
+                      isLiked
+                        ? 'text-[var(--color-like)]'
+                        : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-like)]'
+                    }`}
+                  >
+                    {isLiked ? 'Đã thích' : 'Thích'}
+                    {likeCount > 0 && (
+                      <span className="text-[11px]">{likeCount}</span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleReply}
+                    className="text-xs font-medium text-[var(--color-text-tertiary)] 
+                             hover:text-[var(--color-text-secondary)] transition-colors"
+                  >
+                    Trả lời
+                  </button>
+
+                  <div className="relative opacity-0 group-hover/content:opacity-100 transition-opacity">
                     <button
                       onClick={() => setShowOptions(!showOptions)}
-                      className="p-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                      className="p-1 rounded-full hover:bg-[var(--color-surface-hover)] transition-colors"
                     >
-                      <MoreHorizontal size={14} className="text-neutral-500" />
+                      <MoreHorizontal
+                        size={14}
+                        className="text-[var(--color-text-tertiary)]"
+                      />
                     </button>
                     {showOptions && (
                       <OptionsMenu
@@ -238,40 +296,12 @@ const CommentItem = memo(
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-content dark:text-neutral-300 mt-0.5 break-words">
-                  {comment.content}
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            {!isEditing && (
-              <div className="flex items-center gap-4 mt-1 px-2">
-                <button
-                  onClick={handleLike}
-                  className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-                    isLiked
-                      ? 'text-red-500'
-                      : 'text-neutral-500 hover:text-red-500'
-                  }`}
-                >
-                  <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
-                  {likeCount > 0 && likeCount}
-                </button>
-                <button
-                  onClick={handleReply}
-                  className="flex items-center gap-1 text-xs font-medium text-neutral-500 
-                           hover:text-neutral-700 dark:hover:text-neutral-300"
-                >
-                  <MessageSquare size={14} />
-                  Trả lời
-                </button>
               </div>
             )}
 
             {/* Reply Input */}
             {isReplying && (
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-3 flex items-start gap-3 animate-fade-in pl-1">
                 <div className="flex-1">
                   <CommentInput
                     onSubmit={content => onAddReply(content, comment._id)}
@@ -281,7 +311,7 @@ const CommentItem = memo(
                 </div>
                 <button
                   onClick={onCancelReply}
-                  className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  className="p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
                 >
                   <X size={16} />
                 </button>
@@ -290,9 +320,9 @@ const CommentItem = memo(
           </div>
         </div>
 
-        {/* Replies */}
+        {/* Replies Container - Pure whitespace, no borders */}
         {comment.replies?.length > 0 && (
-          <div className="mt-2">
+          <div className="relative">
             {comment.replies.map(reply => (
               <CommentItem
                 key={reply._id}
@@ -311,34 +341,33 @@ const CommentItem = memo(
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
+        {/* Delete Modal - Keeps original style as it's functional */}
         {showDeleteConfirm && (
+          /* ... existing modal code ... */
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
             onClick={() => setShowDeleteConfirm(false)}
           >
             <div
-              className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-sm mx-4 
-                        shadow-xl"
+              className="yb-card p-6 w-full max-w-sm mx-4 shadow-2xl animate-scale-in"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-[var(--color-content)]">
                 Xóa bình luận?
               </h3>
-              <p className="text-sm text-neutral-500 mt-2">
-                Hành động này không thể hoàn tác.
+              <p className="text-sm text-[var(--color-text-tertiary)] mt-2">
+                Bạn có chắc muốn xóa bình luận này không?
               </p>
-              <div className="flex justify-end gap-2 mt-4">
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 
-                           hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg"
+                  className="yb-btn yb-btn-ghost text-sm px-4 py-2"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="yb-btn bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 shadow-sm"
                 >
                   Xóa
                 </button>

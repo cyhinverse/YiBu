@@ -251,8 +251,11 @@ const PostController = {
     const userId = req.user.id;
     const { page = 1, limit = 20 } = req.query;
 
-    // This would need to be implemented in PostService if needed
-    return formatResponse(res, 200, 1, 'Feature coming soon', []);
+    const result = await PostService.getLikedPosts(userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, 'Success', result);
   }),
 
   GetAllLikeFromPosts: CatchError(async (req, res) => {
@@ -372,11 +375,11 @@ const PostController = {
 
     // Emit socket event
     const post = await PostService.getPostById(postId);
-    
-    socketService.emitToRoom(`post:${postId}`, "new_comment", {
-        postId,
-        comment, 
-        timestamp: new Date()
+
+    socketService.emitToRoom(`post:${postId}`, 'new_comment', {
+      postId,
+      comment,
+      timestamp: new Date(),
     });
 
     if (post.user && post.user._id.toString() !== userId) {

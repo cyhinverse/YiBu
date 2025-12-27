@@ -198,9 +198,9 @@ export const enable2FA = createAsyncThunk(
 // Verify 2FA
 export const verify2FA = createAsyncThunk(
   "auth/verify2FA",
-  async (code, { rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.VERIFY_2FA, { code });
+      const response = await api.post(AUTH_API.VERIFY_2FA, payload);
       return response.data;
     } catch (error) {
       return rejectWithValue(

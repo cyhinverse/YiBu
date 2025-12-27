@@ -74,7 +74,9 @@ const SecuritySettings = () => {
   const handleEnable2FA = async () => {
     try {
       const result = await dispatch(enable2FA()).unwrap();
-      setQrCode(result.qrCode);
+      // Support both direct object and nested data response formats
+      const qrCodeData = result.qrCode || result.data?.qrCode;
+      setQrCode(qrCodeData);
       setShow2FAModal(true);
     } catch (error) {
       toast.error(error || 'Không thể bật 2FA');

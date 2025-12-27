@@ -38,7 +38,20 @@ const NotificationSettings = () => {
   // Sync local state with Redux state
   useEffect(() => {
     if (settings?.notifications) {
-      setNotifications(settings.notifications);
+      const apiSettings = { ...settings.notifications };
+      
+      // Handle legacy/nested structure where email/push might be objects
+      if (typeof apiSettings.email === 'object' && apiSettings.email !== null) {
+        apiSettings.email = apiSettings.email.enabled;
+      }
+      if (typeof apiSettings.push === 'object' && apiSettings.push !== null) {
+        apiSettings.push = apiSettings.push.enabled;
+      }
+      
+      setNotifications(prev => ({
+        ...prev,
+        ...apiSettings,
+      }));
     }
   }, [settings]);
 

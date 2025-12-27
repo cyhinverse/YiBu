@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { Schema, model } from 'mongoose';
 
 /**
  * User Model - Optimized for Ranking & Recommendation
@@ -27,23 +27,24 @@ const UserSchema = new Schema(
       trim: true,
     },
     password: { type: String, required: true, select: false },
-    name: { type: String, default: "", trim: true },
+    name: { type: String, default: '', trim: true },
 
     // Profile (lightweight, frequently accessed)
     avatar: {
       type: String,
       default:
-        "https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1",
+        'https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1',
     },
-    bio: { type: String, default: "", maxlength: 500 },
+    bio: { type: String, default: '', maxlength: 500 },
     birthday: { type: Date, default: null },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      default: "other",
+      enum: ['male', 'female', 'other'],
+      default: 'other',
     },
-    website: { type: String, default: "" },
-    cover: { type: String, default: "" },
+    website: { type: String, default: '' },
+    location: { type: String, default: '', trim: true },
+    cover: { type: String, default: '' },
 
     // Interests for recommendation (stored as array for efficient matching)
     interests: [{ type: String, lowercase: true, trim: true }],
@@ -82,12 +83,12 @@ const UserSchema = new Schema(
     moderation: {
       status: {
         type: String,
-        enum: ["active", "warned", "suspended", "banned"],
-        default: "active",
+        enum: ['active', 'warned', 'suspended', 'banned'],
+        default: 'active',
       },
-      reason: { type: String, default: "" },
+      reason: { type: String, default: '' },
       expiresAt: { type: Date, default: null },
-      moderatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      moderatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
       moderatedAt: { type: Date },
     },
 
@@ -104,19 +105,19 @@ const UserSchema = new Schema(
     privacy: {
       profileVisibility: {
         type: String,
-        enum: ["public", "followers", "private"],
-        default: "public",
+        enum: ['public', 'followers', 'private'],
+        default: 'public',
       },
       allowMessages: {
         type: String,
-        enum: ["everyone", "followers", "none"],
-        default: "everyone",
+        enum: ['everyone', 'followers', 'none'],
+        default: 'everyone',
       },
       showActivity: { type: Boolean, default: true },
     },
   },
   {
-    collection: "Users",
+    collection: 'Users',
     timestamps: true,
   }
 );
@@ -128,12 +129,12 @@ const UserSchema = new Schema(
 
 // Recommendation & Search
 UserSchema.index({ interests: 1 });
-UserSchema.index({ "metrics.engagementRate": -1 });
-UserSchema.index({ "metrics.activityScore": -1 });
-UserSchema.index({ verified: 1, "metrics.engagementRate": -1 });
+UserSchema.index({ 'metrics.engagementRate': -1 });
+UserSchema.index({ 'metrics.activityScore': -1 });
+UserSchema.index({ verified: 1, 'metrics.engagementRate': -1 });
 
 // Admin & Moderation
-UserSchema.index({ "moderation.status": 1 });
+UserSchema.index({ 'moderation.status': 1 });
 UserSchema.index({ isAdmin: 1 });
 
 // Activity-based queries
@@ -143,16 +144,16 @@ UserSchema.index({ createdAt: -1 });
 // Compound index for user discovery
 UserSchema.index({
   isActive: 1,
-  "moderation.status": 1,
-  "metrics.engagementRate": -1,
+  'moderation.status': 1,
+  'metrics.engagementRate': -1,
 });
 
 // Text search index
 UserSchema.index(
   {
-    username: "text",
-    name: "text",
-    bio: "text",
+    username: 'text',
+    name: 'text',
+    bio: 'text',
   },
   {
     weights: { username: 10, name: 5, bio: 1 },
@@ -161,18 +162,18 @@ UserSchema.index(
 
 // ============ METHODS ============
 UserSchema.methods.updateEngagementMetrics = async function () {
-  const Post = model("Post");
+  const Post = model('Post');
 
   const stats = await Post.aggregate([
     { $match: { user: this._id, isDeleted: false } },
     {
       $group: {
         _id: null,
-        totalLikes: { $sum: "$likesCount" },
-        totalComments: { $sum: "$commentsCount" },
-        totalSaves: { $sum: "$savesCount" },
+        totalLikes: { $sum: '$likesCount' },
+        totalComments: { $sum: '$commentsCount' },
+        totalSaves: { $sum: '$savesCount' },
         postCount: { $sum: 1 },
-        avgEngagement: { $avg: "$engagementScore" },
+        avgEngagement: { $avg: '$engagementScore' },
       },
     },
   ]);
@@ -215,16 +216,16 @@ UserSchema.methods.calculateActivityScore = function () {
 
 // ============ STATICS ============
 UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
-  const user = await this.findById(userId).select("interests");
-  const Follow = model("Follow");
+  const user = await this.findById(userId).select('interests');
+  const Follow = model('Follow');
 
   if (!user) return [];
 
   // Get users that current user is following
   const following = await Follow.find({ follower: userId })
-    .select("following")
+    .select('following')
     .lean();
-  const followingIds = following.map((f) => f.following);
+  const followingIds = following.map(f => f.following);
 
   // Find users with similar interests who are not followed
   return this.aggregate([
@@ -232,21 +233,21 @@ UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
       $match: {
         _id: { $ne: userId, $nin: followingIds },
         isActive: true,
-        "moderation.status": "active",
+        'moderation.status': 'active',
         interests: { $in: user.interests || [] },
       },
     },
     {
       $addFields: {
         commonInterests: {
-          $size: { $setIntersection: ["$interests", user.interests || []] },
+          $size: { $setIntersection: ['$interests', user.interests || []] },
         },
         score: {
           $add: [
-            { $multiply: ["$metrics.engagementRate", 0.3] },
-            { $multiply: ["$metrics.activityScore", 0.3] },
-            { $multiply: [{ $log10: { $add: ["$followersCount", 1] } }, 0.2] },
-            { $multiply: ["$commonInterests", 10] }, // Boost for common interests
+            { $multiply: ['$metrics.engagementRate', 0.3] },
+            { $multiply: ['$metrics.activityScore', 0.3] },
+            { $multiply: [{ $log10: { $add: ['$followersCount', 1] } }, 0.2] },
+            { $multiply: ['$commonInterests', 10] }, // Boost for common interests
           ],
         },
       },
@@ -264,5 +265,5 @@ UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
   ]);
 };
 
-export const User = model("User", UserSchema);
+export const User = model('User', UserSchema);
 export default User;

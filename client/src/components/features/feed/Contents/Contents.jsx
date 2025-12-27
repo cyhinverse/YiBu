@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import CreatePost from '../Posts/CreatePost';
 import PostLists from '../Posts/PostLists';
 import TrendingTopics from '../TrendingTopics/TrendingTopics';
@@ -27,14 +27,17 @@ const Contents = () => {
   const contentRef = useRef(null);
 
   // Redux state
-  const { trendingHashtags } = useSelector(
-    state => state.post
+  const trendingHashtags = useSelector(
+    state => state.post.trendingHashtags
   );
-  const {
-    suggestions,
-    searchResults,
-    loading: userLoading,
-  } = useSelector(state => state.user);
+  const { suggestions, searchResults, loading: userLoading } = useSelector(
+    state => ({
+      suggestions: state.user.suggestions,
+      searchResults: state.user.searchResults,
+      loading: state.user.loading
+    }),
+    shallowEqual
+  );
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300);

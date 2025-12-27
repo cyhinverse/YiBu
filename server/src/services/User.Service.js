@@ -431,11 +431,51 @@ class UserService {
   }
 
   static async getFollowers(userId, options = {}) {
-    return Follow.getFollowers(userId, options);
+    const users = await Follow.getFollowers(userId, options);
+
+    if (options.requesterId && users.length > 0) {
+      const userIds = users.map(u => u._id);
+      const follows = await Follow.find({
+        follower: options.requesterId,
+        following: { $in: userIds },
+        status: 'active',
+      })
+        .select('following')
+        .lean();
+
+      const followingSet = new Set(follows.map(f => f.following.toString()));
+
+      return users.map(user => ({
+        ...user,
+        isFollowing: followingSet.has(user._id.toString()),
+      }));
+    }
+
+    return users;
   }
 
   static async getFollowing(userId, options = {}) {
-    return Follow.getFollowing(userId, options);
+    const users = await Follow.getFollowing(userId, options);
+
+    if (options.requesterId && users.length > 0) {
+      const userIds = users.map(u => u._id);
+      const follows = await Follow.find({
+        follower: options.requesterId,
+        following: { $in: userIds },
+        status: 'active',
+      })
+        .select('following')
+        .lean();
+
+      const followingSet = new Set(follows.map(f => f.following.toString()));
+
+      return users.map(user => ({
+        ...user,
+        isFollowing: followingSet.has(user._id.toString()),
+      }));
+    }
+
+    return users;
   }
 
   static async getMutualFollowers(userId1, userId2, limit = 10) {
@@ -500,11 +540,11 @@ class UserService {
         follows: push.follows ?? true,
         messages: push.messages ?? true,
         mentions: push.mentions ?? true,
-        
+
         // Delivery methods
         push: push.enabled ?? true,
         email: email.enabled ?? true,
-        
+
         // Preserve other legacy/nested fields if needed
         ...settings.notifications,
       };
@@ -545,7 +585,7 @@ class UserService {
 
     // Get latest settings to return merged result
     const latestUserSettings = await UserSettings.findOne({ user: userId });
-    
+
     return {
       profileVisibility: user.privacy?.profileVisibility || 'public',
       allowMessages: user.privacy?.allowMessages || 'everyone',
@@ -553,7 +593,7 @@ class UserService {
       messagePermission: user.privacy?.allowMessages || 'everyone',
       showActivity: user.privacy?.showActivity ?? true,
       activityStatus: user.privacy?.showActivity ?? true,
-      
+
       postVisibility: latestUserSettings?.privacy?.postVisibility || 'public',
       searchable: latestUserSettings?.privacy?.searchable ?? true,
     };
@@ -561,7 +601,7 @@ class UserService {
 
   static async updateNotificationSettings(userId, notificationSettings) {
     const updateOps = {};
-    
+
     // Map of flat keys to schema paths
     const keyMapping = {
       likes: 'notifications.push.likes',
@@ -606,9 +646,9 @@ class UserService {
     // Return flattened structure for checking immediately in FE without reload
     const push = settings.notifications?.push || {};
     const email = settings.notifications?.email || {};
-    
+
     return {
-      ...settings.notifications?.toObject?.() || settings.notifications,
+      ...(settings.notifications?.toObject?.() || settings.notifications),
       likes: push.likes,
       comments: push.comments,
       follows: push.follows,

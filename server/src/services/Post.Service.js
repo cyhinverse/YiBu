@@ -101,6 +101,38 @@ class PostService {
     return processedTags;
   }
 
+  static async getLikedPosts(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const likes = await Like.find({ user: userId, targetType: 'post' })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate({
+        path: 'post',
+        match: { isDeleted: false },
+        populate: { path: 'user', select: 'username name avatar verified' },
+      })
+      .lean();
+
+    const posts = likes
+      .filter(like => like.post) // Filter out null posts (deleted)
+      .map(like => like.post);
+
+    const postsWithStatus = await this._addUserStatus(posts, userId);
+
+    const total = await Like.countDocuments({
+      user: userId,
+      targetType: 'post',
+    });
+
+    return {
+      posts: postsWithStatus,
+      total,
+      hasMore: page * limit < total,
+    };
+  }
+
   static async updatePost(postId, userId, updateData) {
     const post = await Post.findOne({
       _id: postId,
@@ -852,10 +884,10 @@ class PostService {
     // But wait, the hook DOES handle parent repliesCount too.
     // However, keeping the retry logic for parent might be safer if we want to ensure it?
     // Actually, the hook does: if (doc.parentComment) { increment repliesCount }
-    // So both are doubled if we don't be careful. 
-    
+    // So both are doubled if we don't be careful.
+
     // Let's remove BOTH manual updates as the Hook handles both.
-    
+
     /* 
     The Hook in Comment.js:
     if (doc.parentComment) { updateOne(parent, $inc repliesCount) }
@@ -912,7 +944,7 @@ class PostService {
       limit,
       sortBy: sort === 'best' ? 'likesCount' : 'createdAt',
       includeReplies: true,
-      replyLimit: 3
+      replyLimit: 3,
     });
 
     // Count top-level comments for pagination check
@@ -920,12 +952,12 @@ class PostService {
       post: postId,
       parentComment: null,
       isDeleted: false,
-      "moderation.status": "approved"
+      'moderation.status': 'approved',
     });
 
     return {
       comments,
-      hasMore: (page * limit) < totalTopLevel,
+      hasMore: page * limit < totalTopLevel,
     };
   }
 

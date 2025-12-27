@@ -133,6 +133,40 @@ export const getUserById = createAsyncThunk(
   }
 );
 
+// Get User Posts (Admin)
+export const getAdminUserPosts = createAsyncThunk(
+  'admin/getAdminUserPosts',
+  async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/api/admin/users/${userId}/posts`, {
+        params: { page, limit },
+      });
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách bài viết thất bại'
+      );
+    }
+  }
+);
+
+// Get User Reports (Admin)
+export const getAdminUserReports = createAsyncThunk(
+  'admin/getAdminUserReports',
+  async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/api/admin/users/${userId}/reports`, {
+        params: { page, limit },
+      });
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách báo cáo thất bại'
+      );
+    }
+  }
+);
+
 // Update User
 export const updateUser = createAsyncThunk(
   'admin/updateUser',
@@ -191,7 +225,7 @@ export const banUser = createAsyncThunk(
 // Unban User
 export const unbanUser = createAsyncThunk(
   'admin/unbanUser',
-  async (userId, { rejectWithValue }) => {
+  async ({ userId }, { rejectWithValue }) => {
     try {
       await api.post(ADMIN_API.UNBAN_USER, { userId });
       return { userId };
@@ -260,6 +294,23 @@ export const getAllPosts = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Lấy danh sách bài viết thất bại'
+      );
+    }
+  }
+);
+
+// Get Post Reports (Admin)
+export const getAdminPostReports = createAsyncThunk(
+  'admin/getPostReports',
+  async ({ postId, page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/api/admin/posts/${postId}/reports`, {
+        params: { page, limit },
+      });
+      return extractData(response);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy danh sách báo cáo bài viết thất bại'
       );
     }
   }

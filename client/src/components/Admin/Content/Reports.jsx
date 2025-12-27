@@ -17,6 +17,7 @@ import {
   FileText,
   RefreshCcw,
   Loader2,
+  Check,
 } from 'lucide-react';
 import {
   getAllReports,
@@ -29,26 +30,26 @@ import {
 const getTargetIcon = type => {
   switch (type) {
     case 'post':
-      return <FileText size={16} />;
+      return <FileText size={18} />;
     case 'comment':
-      return <MessageCircle size={16} />;
+      return <MessageCircle size={18} />;
     case 'user':
-      return <User size={16} />;
+      return <User size={18} />;
     default:
-      return <Flag size={16} />;
+      return <Flag size={18} />;
   }
 };
 
 const getStatusStyle = status => {
   switch (status) {
     case 'pending':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
     case 'resolved':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800';
     case 'rejected':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      return 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800';
     default:
-      return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400';
+      return 'bg-neutral-100 text-neutral-700 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700';
   }
 };
 
@@ -57,11 +58,24 @@ const getStatusText = status => {
     case 'pending':
       return 'Chờ xử lý';
     case 'resolved':
-      return 'Đã xử lý';
+      return 'Đã giải quyết';
     case 'rejected':
-      return 'Từ chối';
+      return 'Đã từ chối';
     default:
       return status;
+  }
+};
+
+const getTargetTypeText = type => {
+  switch (type) {
+    case 'post':
+      return 'bài viết';
+    case 'comment':
+      return 'bình luận';
+    case 'user':
+      return 'người dùng';
+    default:
+      return type;
   }
 };
 
@@ -81,7 +95,6 @@ export default function Reports() {
   const [currentPage, setCurrentPage] = useState(1);
   const [resolutionNote, setResolutionNote] = useState('');
 
-  // Fetch reports on mount and when filters change
   useEffect(() => {
     const params = {
       page: currentPage,
@@ -94,7 +107,6 @@ export default function Reports() {
     dispatch(getPendingReports());
   }, [dispatch, currentPage, filterStatus, filterType]);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm !== undefined) {
@@ -123,7 +135,7 @@ export default function Reports() {
         resolveReport({
           reportId: report._id || report.id,
           decision: 'resolved',
-          notes: resolutionNote || 'Report resolved by admin',
+          notes: resolutionNote || 'Đã giải quyết bởi quản trị viên',
         })
       ).unwrap();
       dispatch(getAllReports({ page: currentPage, limit: 10 }));
@@ -141,7 +153,7 @@ export default function Reports() {
         resolveReport({
           reportId: report._id || report.id,
           decision: 'rejected',
-          notes: resolutionNote || 'Report rejected by admin',
+          notes: resolutionNote || 'Đã từ chối bởi quản trị viên',
         })
       ).unwrap();
       dispatch(getAllReports({ page: currentPage, limit: 10 }));
@@ -169,7 +181,7 @@ export default function Reports() {
         updateReportStatus({
           reportId: report._id || report.id,
           status: newStatus,
-          notes: 'Status updated manually by admin',
+          notes: 'Trạng thái được cập nhật thủ công bởi quản trị viên',
         })
       ).unwrap();
       dispatch(getAllReports({ page: currentPage, limit: 10 }));
@@ -192,50 +204,67 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="yb-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">
-            Quản lý báo cáo
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+            Trung tâm Báo cáo
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
-            {pendingCount} báo cáo chờ xử lý
+          <p className="text-sm text-neutral-500 mt-1">
+            Có {pendingCount} báo cáo đang chờ xử lý
           </p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+          className="yb-btn yb-btn-primary h-11 w-11 !p-0 flex items-center justify-center"
+          title="Làm mới"
         >
-          <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
-          Refresh
+          <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4 border border-yellow-200 dark:border-yellow-800">
-          <p className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">
-            Chờ xử lý
-          </p>
-          <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300 mt-1">
-            {reports.filter(r => r.status === 'pending').length}
-          </p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="yb-card p-6 flex items-center justify-between border-l-4 border-l-amber-500">
+          <div>
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+              Chờ xử lý
+            </p>
+            <p className="text-3xl font-black text-amber-500">
+              {reports.filter(r => r.status === 'pending').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <AlertTriangle size={24} />
+          </div>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 border border-green-200 dark:border-green-800">
-          <p className="text-green-600 dark:text-green-400 text-sm font-medium">
-            Đã xử lý
-          </p>
-          <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">
-            {reports.filter(r => r.status === 'resolved').length}
-          </p>
+
+        <div className="yb-card p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
+          <div>
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+              Đã giải quyết
+            </p>
+            <p className="text-3xl font-black text-emerald-500">
+              {reports.filter(r => r.status === 'resolved').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <CheckCircle size={24} />
+          </div>
         </div>
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 border border-red-200 dark:border-red-800">
-          <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-            Từ chối
-          </p>
-          <p className="text-2xl font-bold text-red-700 dark:text-red-300 mt-1">
-            {reports.filter(r => r.status === 'rejected').length}
-          </p>
+
+        <div className="yb-card p-6 flex items-center justify-between border-l-4 border-l-rose-500">
+          <div>
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+              Đã từ chối
+            </p>
+            <p className="text-3xl font-black text-rose-500">
+              {reports.filter(r => r.status === 'rejected').length}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 dark:text-rose-400">
+            <XCircle size={24} />
+          </div>
         </div>
       </div>
 
@@ -244,14 +273,14 @@ export default function Reports() {
         <div className="relative flex-1">
           <Search
             size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
           />
           <input
             type="text"
             placeholder="Tìm kiếm báo cáo..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="yb-input pl-11"
           />
         </div>
 
@@ -259,7 +288,7 @@ export default function Reports() {
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="yb-input min-w-[140px] cursor-pointer"
           >
             <option value="all">Tất cả loại</option>
             <option value="post">Bài viết</option>
@@ -270,224 +299,236 @@ export default function Reports() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="yb-input min-w-[140px] cursor-pointer"
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="pending">Chờ xử lý</option>
-            <option value="resolved">Đã xử lý</option>
-            <option value="rejected">Từ chối</option>
+            <option value="resolved">Đã giải quyết</option>
+            <option value="rejected">Đã từ chối</option>
           </select>
         </div>
       </div>
 
       {/* Reports List */}
-      {loading && reports.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-neutral-400" />
-        </div>
-      ) : reports.length === 0 ? (
-        <div className="text-center py-12 text-neutral-500">
-          Không có báo cáo nào
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reports.map(report => {
-            const reporter = report.reporter || report.reportedBy || {};
-            const targetType =
-              report.targetType || report.target?.type || 'post';
-            const targetContent =
-              report.targetContent ||
-              report.target?.content ||
-              report.content ||
-              '';
-            const targetAuthor =
-              report.targetAuthor || report.target?.author || '';
+      <div className="yb-card overflow-hidden">
+        {loading && reports.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2
+              size={40}
+              className="animate-spin text-neutral-900 dark:text-white mb-4"
+            />
+            <p className="text-neutral-500 font-medium">Đang tải báo cáo...</p>
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
+            <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4">
+              <CheckCircle size={40} className="text-emerald-500/50" />
+            </div>
+            <p className="font-bold text-lg text-neutral-900 dark:text-white">
+              Không tìm thấy báo cáo nào
+            </p>
+            <p className="text-sm">Làm tốt lắm! Hệ thống hiện đang an toàn.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+            {reports.map(report => {
+              const reporter = report.reporter || report.reportedBy || {};
+              const targetType =
+                report.targetType || report.target?.type || 'post';
+              const targetContent =
+                report.targetContent ||
+                report.target?.content ||
+                report.content ||
+                '';
+              const targetAuthor =
+                report.targetAuthor || report.target?.author || '';
 
-            return (
-              <div
-                key={report._id || report.id}
-                className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5"
-              >
-                <div className="flex items-start gap-4">
-                  {/* Reporter Avatar */}
-                  <img
-                    src={reporter.avatar || '/images/default-avatar.png'}
-                    alt={reporter.name || reporter.username || 'Reporter'}
-                    className="w-10 h-10 rounded-full border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
-                  />
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-black dark:text-white">
-                            {reporter.name || reporter.username || 'Unknown'}
-                          </h3>
-                          <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                            báo cáo
-                          </span>
-                          <span className="flex items-center gap-1 text-sm font-medium text-black dark:text-white">
-                            {getTargetIcon(targetType)}
-                            {targetType === 'post'
-                              ? 'bài viết'
-                              : targetType === 'comment'
-                              ? 'bình luận'
-                              : 'người dùng'}
-                          </span>
-                          <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                            của
-                          </span>
-                          <span className="font-medium text-black dark:text-white text-sm">
-                            {targetAuthor || 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                          <Calendar size={14} />
-                          {report.createdAt
-                            ? new Date(report.createdAt).toLocaleString()
-                            : 'N/A'}
-                        </div>
+              return (
+                <div
+                  key={report._id || report.id}
+                  className="p-6 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors duration-200"
+                >
+                  <div className="flex items-start gap-5">
+                    {/* Reporter Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={reporter.avatar || '/images/default-avatar.png'}
+                        alt={reporter.name || reporter.username || 'Reporter'}
+                        className="yb-avatar w-12 h-12 !rounded-2xl border-2 border-white dark:border-neutral-800 shadow-sm"
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-white dark:bg-neutral-900 flex items-center justify-center shadow-sm border border-neutral-100 dark:border-neutral-800">
+                        {getTargetIcon(targetType)}
                       </div>
+                    </div>
 
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(
-                            report.status || 'pending'
-                          )}`}
-                        >
-                          {getStatusText(report.status || 'pending')}
-                        </span>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-bold text-neutral-900 dark:text-white">
+                              {reporter.name || reporter.username || 'Ẩn danh'}
+                            </h3>
+                            <span className="text-neutral-400 text-sm">
+                              báo cáo một
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-bold uppercase tracking-wider">
+                              {getTargetTypeText(targetType)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs font-medium text-neutral-400">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar size={12} />
+                              {report.createdAt
+                                ? new Date(report.createdAt).toLocaleString(
+                                    'vi-VN'
+                                  )
+                                : 'N/A'}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-mono">
+                              ID: {report._id?.slice(-6) || '...'}
+                            </span>
+                          </div>
+                        </div>
 
-                        {/* Actions Dropdown */}
-                        <div className="relative">
-                          <button
-                            onClick={() =>
-                              setActiveDropdown(
-                                activeDropdown === (report._id || report.id)
-                                  ? null
-                                  : report._id || report.id
-                              )
-                            }
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${getStatusStyle(
+                              report.status || 'pending'
+                            )}`}
                           >
-                            <MoreHorizontal
-                              size={18}
-                              className="text-neutral-500"
-                            />
-                          </button>
+                            {getStatusText(report.status || 'pending')}
+                          </span>
 
-                          {activeDropdown === (report._id || report.id) && (
-                            <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10">
-                              <button
-                                onClick={() => {
-                                  setSelectedReport(report);
-                                  setActiveDropdown(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
-                              >
-                                <Eye size={16} />
-                                Xem chi tiết
-                              </button>
-                              {(report.status === 'pending' ||
-                                !report.status) && (
-                                <>
-                                  <button
-                                    onClick={() => handleStartReview(report)}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-blue-600"
-                                  >
-                                    <Eye size={16} />
-                                    Bắt đầu xem xét
-                                  </button>
-                                  <button
-                                    onClick={() => handleResolve(report)}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
-                                  >
-                                    <CheckCircle size={16} />
-                                    Chấp nhận xử lý
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(report)}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-red-600"
-                                  >
-                                    <XCircle size={16} />
-                                    Từ chối báo cáo
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateStatus(report, 'pending')}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-yellow-600"
-                                  >
-                                    <RefreshCcw size={16} />
-                                    Đặt lại Pending
-                                  </button>
-                                </>
-                              )}
-                              {report.status !== 'resolved' && (
+                          {/* Actions Dropdown */}
+                          <div className="relative">
+                            <button
+                              onClick={() =>
+                                setActiveDropdown(
+                                  activeDropdown === (report._id || report.id)
+                                    ? null
+                                    : report._id || report.id
+                                )
+                              }
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-xl transition-colors text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                            >
+                              <MoreHorizontal size={18} />
+                            </button>
+
+                            {activeDropdown === (report._id || report.id) && (
+                              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-100 dark:border-neutral-800 py-2 z-20 overflow-hidden animate-scale-in">
                                 <button
-                                  onClick={() => handleUpdateStatus(report, 'resolved')}
-                                  className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 text-green-600"
+                                  onClick={() => {
+                                    setSelectedReport(report);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800/50 flex items-center gap-3 text-neutral-700 dark:text-neutral-300"
                                 >
-                                  <CheckCircle size={16} />
-                                  Đánh dấu đã xử lý
+                                  <Eye size={16} />
+                                  Xem chi tiết
                                 </button>
-                              )}
-                            </div>
-                          )}
+
+                                {(report.status === 'pending' ||
+                                  !report.status) && (
+                                  <>
+                                    <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1" />
+                                    <button
+                                      onClick={() => handleStartReview(report)}
+                                      className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-amber-50 dark:hover:bg-amber-900/10 flex items-center gap-3 text-amber-600"
+                                    >
+                                      <RefreshCcw size={16} />
+                                      Bắt đầu xem xét
+                                    </button>
+                                    <button
+                                      onClick={() => handleResolve(report)}
+                                      className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/10 flex items-center gap-3 text-emerald-600"
+                                    >
+                                      <CheckCircle size={16} />
+                                      Chấp nhận
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(report)}
+                                      className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-3 text-rose-600"
+                                    >
+                                      <XCircle size={16} />
+                                      Từ chối
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Reason */}
-                    <div className="mt-3">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm font-medium">
-                        <AlertTriangle size={14} />
-                        {report.reason || report.type || 'Violation'}
-                      </span>
-                    </div>
+                      {/* Reason Badge */}
+                      <div className="mb-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 text-sm font-black border border-rose-100/50 dark:border-rose-900/30">
+                          <AlertTriangle size={14} />
+                          {report.reason || report.type || 'Vi phạm'}
+                        </span>
+                      </div>
 
-                    {/* Description */}
-                    <p className="mt-3 text-neutral-600 dark:text-neutral-400 text-sm">
-                      {report.description ||
-                        report.details ||
-                        'No additional details'}
-                    </p>
-
-                    {/* Target Content Preview */}
-                    <div className="mt-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        Nội dung bị báo cáo:
+                      {/* Description */}
+                      <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-4 leading-relaxed bg-neutral-50/50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 italic">
+                        {report.description ||
+                          report.details ||
+                          'Không có chi tiết bổ sung.'}
                       </p>
-                      <p className="text-sm text-black dark:text-white mt-1 truncate">
-                        &quot;{targetContent || 'Content not available'}&quot;
-                      </p>
+
+                      {/* Target Content Preview */}
+                      <div className="flex items-center gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">
+                            Nội dung bị báo cáo
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex-shrink-0" />
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                              "{targetContent || 'Nội dung không khả dụng'}"
+                            </p>
+                          </div>
+                        </div>
+                        {targetAuthor && (
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">
+                              Tác giả
+                            </p>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                              {targetAuthor}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Page {currentPage} of {pagination?.pages || 1} (
-          {pagination?.total || reports.length} reports)
-        </p>
+      <div className="yb-card flex items-center justify-between px-6 py-4">
+        <span className="text-sm font-bold text-neutral-500">
+          Trang {currentPage} / {pagination?.pages || 1}
+        </span>
         <div className="flex items-center gap-2">
           <button
             disabled={currentPage <= 1}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-neutral-600 dark:text-neutral-400"
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="px-4 py-2 text-sm">Trang {currentPage}</span>
+          <div className="h-10 px-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-xl text-sm font-black flex items-center justify-center shadow-lg shadow-neutral-900/10">
+            {currentPage}
+          </div>
           <button
             disabled={currentPage >= (pagination?.pages || 1)}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-neutral-600 dark:text-neutral-400"
           >
             <ChevronRight size={18} />
           </button>
@@ -496,91 +537,105 @@ export default function Reports() {
 
       {/* View Report Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-lg">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-black dark:text-white">
-                  Chi tiết báo cáo
-                </h2>
-                <button
-                  onClick={() => setSelectedReport(null)}
-                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="yb-card !bg-white dark:!bg-neutral-900 w-full max-w-lg shadow-2xl transform animate-scale-in overflow-hidden border-none">
+            {/* Header */}
+            <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/30">
+              <h2 className="text-xl font-black text-neutral-900 dark:text-white uppercase tracking-tight">
+                Chi tiết báo cáo
+              </h2>
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full transition-colors text-neutral-500"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-              {/* Reporter */}
-              <div className="flex items-center gap-3 mb-4 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+            <div className="p-6">
+              {/* Reporter Info */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-700">
                 <img
-                  src={selectedReport.reporter.avatar}
-                  alt={selectedReport.reporter.name}
-                  className="w-10 h-10 rounded-full border-2 border-neutral-200 dark:border-neutral-700"
+                  src={
+                    selectedReport.reporter?.avatar ||
+                    '/images/default-avatar.png'
+                  }
+                  alt="Reporter"
+                  className="yb-avatar w-14 h-14 !rounded-2xl border-2 border-white dark:border-neutral-700 shadow-sm"
                 />
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">
                     Người báo cáo
                   </p>
-                  <p className="font-semibold text-black dark:text-white">
-                    {selectedReport.reporter.name}
+                  <p className="font-black text-neutral-900 dark:text-white text-lg leading-tight">
+                    {selectedReport.reporter?.name || 'Ẩn danh'}
+                  </p>
+                  <p className="text-xs text-neutral-500 font-mono mt-1">
+                    @{selectedReport.reporter?.username || 'unknown'}
                   </p>
                 </div>
               </div>
 
-              {/* Target */}
-              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-2 mb-2">
-                  {getTargetIcon(selectedReport.target.type)}
-                  <span className="text-sm font-medium text-red-700 dark:text-red-400">
-                    {selectedReport.target.type === 'post'
-                      ? 'Bài viết'
-                      : selectedReport.target.type === 'comment'
-                      ? 'Bình luận'
-                      : 'Người dùng'}{' '}
-                    bị báo cáo
-                  </span>
-                </div>
-                <p className="text-sm text-black dark:text-white">
-                  Tác giả: <strong>{selectedReport.target.author}</strong>
+              {/* Report Reason */}
+              <div className="mb-6">
+                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">
+                  Lý do
                 </p>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
-                  "{selectedReport.target.content}"
-                </p>
-              </div>
-
-              {/* Reason */}
-              <div className="mb-4">
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
-                  Lý do báo cáo
-                </p>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 font-black text-sm">
                   <AlertTriangle size={16} />
                   {selectedReport.reason}
-                </span>
+                </div>
               </div>
 
               {/* Description */}
               <div className="mb-6">
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">
                   Mô tả chi tiết
                 </p>
-                <p className="text-black dark:text-white">
-                  {selectedReport.description}
+                <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-800/30 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 italic text-sm">
+                  {selectedReport.description || 'Không có mô tả bổ sung.'}
                 </p>
               </div>
 
+              {/* Target Content */}
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                    {getTargetIcon(selectedReport.target?.type)}
+                  </div>
+                  <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
+                    {getTargetTypeText(selectedReport.target?.type)} bị báo cáo
+                  </p>
+                </div>
+                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/30 rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-700 shadow-inner">
+                  <p className="text-xs font-black text-neutral-500 mb-2 flex items-center gap-2">
+                    <User size={12} />
+                    Tác giả:{' '}
+                    <span className="text-neutral-900 dark:text-white">
+                      {selectedReport.target?.author}
+                    </span>
+                  </p>
+                  <p className="text-neutral-900 dark:text-white font-bold leading-relaxed">
+                    "{selectedReport.target?.content}"
+                  </p>
+                </div>
+              </div>
+
               {/* Actions */}
-              {selectedReport.status === 'pending' && (
-                <div className="flex gap-3">
+              {(selectedReport.status === 'pending' ||
+                !selectedReport.status) && (
+                <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
                   <button
                     onClick={() => {
                       handleReject(selectedReport);
                       setSelectedReport(null);
                     }}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                    className="yb-btn flex-1 !bg-neutral-100 dark:!bg-neutral-800 !text-neutral-700 dark:!text-neutral-300 !border-none hover:!bg-rose-500 hover:!text-white transition-all flex items-center justify-center gap-2 group"
                   >
-                    <XCircle size={18} />
+                    <XCircle
+                      size={18}
+                      className="group-hover:scale-110 transition-transform"
+                    />
                     Từ chối
                   </button>
                   <button
@@ -588,10 +643,10 @@ export default function Reports() {
                       handleResolve(selectedReport);
                       setSelectedReport(null);
                     }}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    className="yb-btn yb-btn-primary flex-1 flex items-center justify-center gap-2 h-12 shadow-neutral-900/10"
                   >
                     <CheckCircle size={18} />
-                    Xử lý
+                    Chấp nhận
                   </button>
                 </div>
               )}

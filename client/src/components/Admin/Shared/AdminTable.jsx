@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,7 +6,7 @@ import {
   ChevronDown,
   Search,
   MoreHorizontal,
-} from "lucide-react";
+} from 'lucide-react';
 
 /**
  * Reusable Admin Table Component
@@ -25,27 +25,27 @@ export default function AdminTable({
   data = [],
   onRowClick,
   searchable = false,
-  searchPlaceholder = "Tìm kiếm...",
+  searchPlaceholder = 'Tìm kiếm...',
   renderActions,
   pageSize = 10,
 }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [activeDropdown, setActiveDropdown] = useState(null);
 
   // Filter data based on search term
-  const filteredData = data.filter((item) => {
+  const filteredData = data.filter(item => {
     if (!searchTerm) return true;
-    return columns.some((col) => {
+    return columns.some(col => {
       const value = item[col.key];
-      if (typeof value === "string") {
+      if (typeof value === 'string') {
         return value.toLowerCase().includes(searchTerm.toLowerCase());
       }
-      if (typeof value === "object" && value !== null) {
+      if (typeof value === 'object' && value !== null) {
         return Object.values(value).some(
-          (v) =>
-            typeof v === "string" &&
+          v =>
+            typeof v === 'string' &&
             v.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
@@ -61,11 +61,11 @@ export default function AdminTable({
     let bValue = b[sortConfig.key];
 
     // Handle nested objects
-    if (typeof aValue === "object") aValue = JSON.stringify(aValue);
-    if (typeof bValue === "object") bValue = JSON.stringify(bValue);
+    if (typeof aValue === 'object') aValue = JSON.stringify(aValue);
+    if (typeof bValue === 'object') bValue = JSON.stringify(bValue);
 
-    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
   });
 
@@ -76,18 +76,18 @@ export default function AdminTable({
     currentPage * pageSize
   );
 
-  const handleSort = (key) => {
-    if (!columns.find((col) => col.key === key)?.sortable) return;
+  const handleSort = key => {
+    if (!columns.find(col => col.key === key)?.sortable) return;
 
-    setSortConfig((prev) => ({
+    setSortConfig(prev => ({
       key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
-  const renderSortIcon = (key) => {
+  const renderSortIcon = key => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === "asc" ? (
+    return sortConfig.direction === 'asc' ? (
       <ChevronUp size={14} />
     ) : (
       <ChevronDown size={14} />
@@ -95,62 +95,85 @@ export default function AdminTable({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Search */}
+    <div className="space-y-6">
+      {/* Search & Actions */}
       {searchable && (
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-          />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors"
+            />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchTerm}
+              onChange={e => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="yb-input pl-11 py-2.5 w-full text-sm"
+            />
+          </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      {/* Table Container */}
+      <div className="yb-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-neutral-200 dark:border-neutral-700">
-                {columns.map((col) => (
+              <tr className="border-b border-border bg-surface-secondary/50">
+                {columns.map(col => (
                   <th
                     key={col.key}
                     onClick={() => col.sortable && handleSort(col.key)}
-                    className={`text-left px-5 py-4 text-sm font-semibold text-neutral-500 dark:text-neutral-400 ${
+                    className={`text-left px-6 py-4 text-xs font-bold text-secondary uppercase tracking-wider ${
                       col.sortable
-                        ? "cursor-pointer hover:text-black dark:hover:text-white"
-                        : ""
+                        ? 'cursor-pointer hover:text-primary transition-colors'
+                        : ''
                     }`}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       {col.label}
-                      {col.sortable && renderSortIcon(col.key)}
+                      {col.sortable && (
+                        <div className="flex flex-col text-border">
+                          <ChevronUp
+                            size={12}
+                            className={
+                              sortConfig.key === col.key &&
+                              sortConfig.direction === 'asc'
+                                ? 'text-primary'
+                                : ''
+                            }
+                          />
+                          <ChevronDown
+                            size={12}
+                            className={
+                              sortConfig.key === col.key &&
+                              sortConfig.direction === 'desc'
+                                ? 'text-primary'
+                                : ''
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
                   </th>
                 ))}
                 {renderActions && (
-                  <th className="text-left px-5 py-4 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+                  <th className="px-6 py-4 text-xs font-bold text-secondary uppercase tracking-wider text-right">
                     Thao tác
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {paginatedData.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length + (renderActions ? 1 : 0)}
-                    className="px-5 py-12 text-center text-neutral-500 dark:text-neutral-400"
+                    className="px-6 py-16 text-center text-secondary font-medium"
                   >
                     Không có dữ liệu
                   </td>
@@ -160,48 +183,25 @@ export default function AdminTable({
                   <tr
                     key={row.id || rowIndex}
                     onClick={() => onRowClick && onRowClick(row)}
-                    className={`border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors ${
-                      onRowClick ? "cursor-pointer" : ""
+                    className={`group hover:bg-surface-secondary/50 transition-colors ${
+                      onRowClick ? 'cursor-pointer' : ''
                     }`}
                   >
-                    {columns.map((col) => (
-                      <td key={col.key} className="px-5 py-4">
+                    {columns.map(col => (
+                      <td key={col.key} className="px-6 py-5 text-sm">
                         {col.render ? (
                           col.render(row[col.key], row)
                         ) : (
-                          <span className="text-black dark:text-white">
+                          <span className="text-content font-medium">
                             {row[col.key]}
                           </span>
                         )}
                       </td>
                     ))}
                     {renderActions && (
-                      <td className="px-5 py-4">
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveDropdown(
-                                activeDropdown === row.id ? null : row.id
-                              );
-                            }}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-                          >
-                            <MoreHorizontal
-                              size={18}
-                              className="text-neutral-500"
-                            />
-                          </button>
-                          {activeDropdown === row.id && (
-                            <div
-                              className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-10"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {renderActions(row, () =>
-                                setActiveDropdown(null)
-                              )}
-                            </div>
-                          )}
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          {renderActions(row, () => setActiveDropdown(null))}
                         </div>
                       </td>
                     )}
@@ -215,22 +215,28 @@ export default function AdminTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Hiển thị {(currentPage - 1) * pageSize + 1} -{" "}
-            {Math.min(currentPage * pageSize, sortedData.length)} trên{" "}
-            {sortedData.length}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+          <p className="text-sm text-secondary font-medium order-2 sm:order-1">
+            Hiển thị{' '}
+            <span className="text-primary">
+              {(currentPage - 1) * pageSize + 1}
+            </span>{' '}
+            -{' '}
+            <span className="text-primary">
+              {Math.min(currentPage * pageSize, sortedData.length)}
+            </span>{' '}
+            trong <span className="text-primary">{sortedData.length}</span> bản
+            ghi
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="p-2 rounded-xl border border-border bg-surface hover:bg-surface-hover disabled:opacity-40 transition-all text-secondary"
             >
               <ChevronLeft size={18} />
             </button>
 
-            {/* Page Numbers */}
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNum;
@@ -248,10 +254,10 @@ export default function AdminTable({
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
                       currentPage === pageNum
-                        ? "bg-black dark:bg-white text-white dark:text-black"
-                        : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                        : 'hover:bg-surface-hover text-secondary'
                     }`}
                   >
                     {pageNum}
@@ -262,8 +268,8 @@ export default function AdminTable({
 
             <button
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="p-2 rounded-xl border border-border bg-surface hover:bg-surface-hover disabled:opacity-40 transition-all text-secondary"
             >
               <ChevronRight size={18} />
             </button>

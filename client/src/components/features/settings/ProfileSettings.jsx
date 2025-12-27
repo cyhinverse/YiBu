@@ -1,8 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, User, FileText, Link2, MapPin, Loader2 } from 'lucide-react';
+import {
+  Camera,
+  User,
+  FileText,
+  Link2,
+  MapPin,
+  Loader2,
+  Map as MapIcon,
+} from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateProfile, getProfile } from '../../../redux/actions/userActions';
 import toast from 'react-hot-toast';
+import LocationPickerModal from '../../common/LocationPickerModal';
 
 const InputField = ({
   icon: Icon,
@@ -11,6 +20,7 @@ const InputField = ({
   onChange,
   placeholder,
   multiline = false,
+  rightElement = null,
 }) => (
   <div className="space-y-2">
     <label className="text-sm font-medium text-black dark:text-white">
@@ -37,8 +47,15 @@ const InputField = ({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className={`w-full pl-10 ${
+            rightElement ? 'pr-12' : 'pr-4'
+          } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
         />
+      )}
+      {rightElement && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          {rightElement}
+        </div>
       )}
     </div>
   </div>
@@ -56,6 +73,8 @@ const ProfileSettings = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
 
+  // Location Picker State
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -125,11 +144,14 @@ const ProfileSettings = () => {
         setCoverFile(null);
         setAvatarPreview(null);
         setCoverPreview(null);
+        // Dispatch getProfile again to ensure latest data
+        dispatch(getProfile(user._id));
       } else {
         toast.error(result.payload || 'Cập nhật thất bại');
       }
     } catch (error) {
-      toast.error('Có lỗi xảy ra',error);
+      console.error(error);
+      toast.error('Có lỗi xảy ra');
     } finally {
       setIsSaving(false);
     }
@@ -137,6 +159,10 @@ const ProfileSettings = () => {
 
   const handleChange = field => e => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleLocationSelect = address => {
+    setFormData(prev => ({ ...prev, location: address }));
   };
 
   if (loading && !currentProfile) {
@@ -254,6 +280,16 @@ const ProfileSettings = () => {
           value={formData.location}
           onChange={handleChange('location')}
           placeholder="Where are you based?"
+          rightElement={
+            <button
+              type="button"
+              onClick={() => setIsLocationPickerOpen(true)}
+              className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 hover:text-primary transition-colors"
+              title="Pick from map"
+            >
+              <MapIcon size={18} />
+            </button>
+          }
         />
       </div>
 
@@ -268,6 +304,14 @@ const ProfileSettings = () => {
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
+
+      {/* Modals */}
+      <LocationPickerModal
+        isOpen={isLocationPickerOpen}
+        onClose={() => setIsLocationPickerOpen(false)}
+        onSelect={handleLocationSelect}
+        initialLocation={formData.location}
+      />
     </div>
   );
 };

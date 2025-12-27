@@ -240,7 +240,7 @@ FollowSchema.statics.getFollowers = async function (userId, options = {}) {
     .limit(limit)
     .populate('follower', 'username name avatar verified followersCount')
     .lean()
-    .then(follows => follows.map(f => f.follower));
+    .then(follows => follows.map(f => f.follower).filter(user => user));
 };
 
 FollowSchema.statics.getFollowing = async function (userId, options = {}) {
@@ -252,7 +252,7 @@ FollowSchema.statics.getFollowing = async function (userId, options = {}) {
     .limit(limit)
     .populate('following', 'username name avatar verified followersCount')
     .lean()
-    .then(follows => follows.map(f => f.following));
+    .then(follows => follows.map(f => f.following).filter(user => user));
 };
 
 FollowSchema.statics.getFollowingForFeed = async function (

@@ -67,6 +67,42 @@ const postSlice = createSlice({
       state.posts = state.posts.filter(p => p._id !== action.payload);
       state.userPosts = state.userPosts.filter(p => p._id !== action.payload);
     },
+    updateCommentCount: (state, action) => {
+      const { postId, action: updateAction } = action.payload;
+      const updateCount = posts => {
+        const index = posts.findIndex(p => p._id === postId);
+        if (index !== -1) {
+          if (updateAction === 'increment') {
+            posts[index].commentsCount = (posts[index].commentsCount || 0) + 1;
+          } else {
+            posts[index].commentsCount = Math.max(
+              (posts[index].commentsCount || 1) - 1,
+              0
+            );
+          }
+        }
+      };
+
+      updateCount(state.posts);
+      updateCount(state.userPosts);
+      updateCount(state.personalizedPosts);
+      updateCount(state.trendingPosts);
+      updateCount(state.explorePosts);
+      updateCount(state.hashtagPosts);
+      updateCount(state.searchResults);
+
+      if (state.currentPost?._id === postId) {
+        if (updateAction === 'increment') {
+          state.currentPost.commentsCount =
+            (state.currentPost.commentsCount || 0) + 1;
+        } else {
+          state.currentPost.commentsCount = Math.max(
+            (state.currentPost.commentsCount || 1) - 1,
+            0
+          );
+        }
+      }
+    },
     resetPostState: () => initialState,
   },
   extraReducers: builder => {
@@ -269,7 +305,70 @@ const postSlice = createSlice({
           state.posts[index].reportsCount =
             (state.posts[index].reportsCount || 0) + 1;
         }
-      });
+      })
+      // Synchronize comment count from comment actions
+      .addMatcher(
+        action => action.type === 'comment/createComment/fulfilled',
+        (state, action) => {
+          const { postId, comment } = action.payload;
+          // Only increment if it's a top-level comment (not a reply)
+          // Replies increment parent comment's repliesCount handled in CommentSlice
+          if (comment && !comment.parentComment) {
+            const updateCount = posts => {
+              const index = posts.findIndex(p => p._id === postId);
+              if (index !== -1) {
+                posts[index].commentsCount =
+                  (posts[index].commentsCount || 0) + 1;
+              }
+            };
+
+            updateCount(state.posts);
+            updateCount(state.userPosts);
+            updateCount(state.personalizedPosts);
+            updateCount(state.trendingPosts);
+            updateCount(state.explorePosts);
+            updateCount(state.hashtagPosts);
+            updateCount(state.searchResults);
+
+            if (state.currentPost?._id === postId) {
+              state.currentPost.commentsCount =
+                (state.currentPost.commentsCount || 0) + 1;
+            }
+          }
+        }
+      )
+      .addMatcher(
+        action => action.type === 'comment/deleteComment/fulfilled',
+        (state, action) => {
+          const { postId, commentId, isReply } = action.payload;
+          // We only decrement post's commentsCount if it was a top-level comment
+          // Backend handles depth, but if we don't have it in payload, this is tricky
+          // For now, assume if isReply is not set, it's a top-level comment
+          if (!isReply) {
+            const updateCount = posts => {
+              const index = posts.findIndex(p => p._id === postId);
+              if (index !== -1) {
+                posts[index].commentsCount = Math.max(
+                  (posts[index].commentsCount || 1) - 1,
+                  0
+                );
+              }
+            };
+
+            updateCount(state.posts);
+            updateCount(state.userPosts);
+            updateCount(state.personalizedPosts);
+            updateCount(state.trendingPosts);
+
+            if (state.currentPost?._id === postId) {
+              state.currentPost.commentsCount = Math.max(
+                (state.currentPost.commentsCount || 1) - 1,
+                0
+              );
+            }
+          }
+        }
+      );
   },
 });
 
@@ -281,6 +380,7 @@ export const {
   addNewPost,
   updatePostInList,
   removePostFromList,
+  updateCommentCount,
   resetPostState,
 } = postSlice.actions;
 export default postSlice.reducer;

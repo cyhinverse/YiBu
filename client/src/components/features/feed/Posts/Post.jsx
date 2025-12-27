@@ -172,7 +172,7 @@ const Post = ({ data, onDelete }) => {
     setShareLoading(true);
 
     try {
-      await dispatch(sharePost(data._id)).unwrap();
+      await dispatch(sharePost({ postId: data._id })).unwrap();
       toast.success('Đã chia sẻ bài viết');
       setShowOptions(false);
     } catch (error) {

@@ -4,259 +4,354 @@ import {
   Users,
   FileText,
   MessageSquare,
-  DollarSign,
   TrendingUp,
   TrendingDown,
   Eye,
   Heart,
-  Share2,
   ArrowUpRight,
   MoreHorizontal,
-  Loader2,
   RefreshCcw,
+  Activity,
+  Calendar,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import {
   getDashboardStats,
   getUserGrowth,
-  getPostStats,
   getTopUsers,
 } from '../../../redux/actions/adminActions';
 
-// Default stats for fallback
-const DEFAULT_STATS = [
-  {
-    id: 1,
-    title: 'Total Users',
-    value: '0',
-    change: '+0%',
-    trend: 'up',
-    icon: Users,
-    color: 'bg-blue-500',
-    key: 'totalUsers',
-  },
-  {
-    id: 2,
-    title: 'Total Posts',
-    value: '0',
-    change: '+0%',
-    trend: 'up',
-    icon: FileText,
-    color: 'bg-purple-500',
-    key: 'totalPosts',
-  },
-  {
-    id: 3,
-    title: 'Comments',
-    value: '0',
-    change: '+0%',
-    trend: 'up',
-    icon: MessageSquare,
-    color: 'bg-green-500',
-    key: 'totalComments',
-  },
-  {
-    id: 4,
-    title: 'Active Users',
-    value: '0',
-    change: '+0%',
-    trend: 'up',
-    icon: Users,
-    color: 'bg-orange-500',
-    key: 'activeUsers',
-  },
-];
-
 const StatCard = ({ stat, isLoading }) => (
-  <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-    <div className="flex items-center justify-between mb-4">
-      <div
-        className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}
-      >
-        <stat.icon size={24} className="text-white" />
-      </div>
-      {!isLoading && (
+  <div className="yb-card p-6 relative overflow-hidden group hover:border-primary/30 transition-all duration-300">
+    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+      <stat.icon size={80} className={stat.iconColor} />
+    </div>
+
+    <div className="relative z-10">
+      <div className="flex items-center gap-4 mb-4">
         <div
-          className={`flex items-center gap-1 text-sm font-medium ${
-            stat.trend === 'up' ? 'text-green-500' : 'text-red-500'
-          }`}
+          className={`w-14 h-14 rounded-2xl ${stat.bg} flex items-center justify-center shadow-inner transition-transform group-hover:scale-105 duration-300`}
         >
-          {stat.trend === 'up' ? (
-            <TrendingUp size={16} />
-          ) : (
-            <TrendingDown size={16} />
-          )}
-          {stat.change}
+          <stat.icon size={28} className={stat.iconColor} />
         </div>
+        <div>
+          <p className="text-xs font-bold text-secondary uppercase tracking-wider">
+            {stat.title}
+          </p>
+          {!isLoading && (
+            <div
+              className={`flex items-center gap-1 text-sm font-bold ${
+                stat.trend === 'up' ? 'text-success' : 'text-error'
+              }`}
+            >
+              {stat.trend === 'up' ? (
+                <TrendingUp size={16} />
+              ) : (
+                <TrendingDown size={16} />
+              )}
+              {stat.change}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="h-10 w-32 bg-surface-secondary rounded-lg animate-pulse" />
+      ) : (
+        <h3 className="text-3xl font-black text-primary tracking-tight">
+          {stat.value}
+        </h3>
       )}
     </div>
-    {isLoading ? (
-      <div className="h-8 w-24 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
-    ) : (
-      <h3 className="text-2xl font-bold text-black dark:text-white">
-        {stat.value}
-      </h3>
-    )}
-    <p className="text-sm text-neutral-500 mt-1">{stat.title}</p>
   </div>
 );
 
 const Dashboard = () => {
   const dispatch = useDispatch();
-  const { stats, topUsers, loading } = useSelector(state => state.admin);
-  const [period, setPeriod] = useState('week');
+  const { stats, topUsers, userGrowth, loading } = useSelector(
+    state => state.admin
+  );
+  const [period, setPeriod] = useState(30);
 
-  // Fetch data on mount
   useEffect(() => {
-    dispatch(getDashboardStats());
-    dispatch(getTopUsers({ limit: 10 }));
-  }, [dispatch]);
+    const fetchData = () => {
+      dispatch(getDashboardStats());
+      dispatch(getTopUsers({ limit: 5 }));
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - period);
+      dispatch(
+        getUserGrowth({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        })
+      );
+    };
+    fetchData();
+  }, [dispatch, period]);
 
-  // Build stats from API response
   const buildStats = () => {
-    if (!stats) return DEFAULT_STATS;
+    const userStats = stats?.users || {};
+    const postStats = stats?.posts || {};
+    const reportStats = stats?.reports || {};
 
-    // Use optional chaining carefully since stats structure is nested: { users: {...}, posts: {...} }
-    const userStats = stats.users || {};
-    const postStats = stats.posts || {};
-    // Calculate comments stats if available, or allow them to be flat if API changes. 
-    // Currently Service doesn't return comments count in getDashboardStats explicitly in the "top level" object I saw in Step 217 
-    // (It returns users, posts, reports). 
-    // Wait, let me check Admin.Service.js getDashboardStats in Step 217.
-    // It returns: users, posts, reports. NO comments!
-    // So 'totalComments' will be 0 unless I update Service or remove it.
-    // However, I can't easily update Service's getDashboardStats query quickly without adding another Promise. 
-    // Let's just map what we have.
-    
     return [
       {
         id: 1,
         title: 'Total Users',
         value: (userStats.total || 0).toLocaleString(),
-        change: `+${userStats.newThisWeek || 0}`,
+        change: `${userStats.newThisWeek || 0} new`,
         trend: 'up',
         icon: Users,
-        color: 'bg-blue-500',
+        bg: 'bg-primary/5 dark:bg-primary/10',
+        iconColor: 'text-primary',
       },
       {
         id: 2,
         title: 'Total Posts',
         value: (postStats.total || 0).toLocaleString(),
-        change: `+${postStats.thisWeek || 0}`,
+        change: `${postStats.thisWeek || 0} n mới`,
         trend: 'up',
         icon: FileText,
-        color: 'bg-purple-500',
+        bg: 'bg-accent/5 dark:bg-accent/10',
+        iconColor: 'text-accent',
       },
       {
         id: 3,
-        title: 'Pending Reports', // Changed from Comments since we have Reports data
-        value: (stats.reports?.pending || 0).toLocaleString(),
-        change: `${stats.reports?.total || 0} total`,
-        trend: 'up',
+        title: 'Pending Reports',
+        value: (reportStats.pending || 0).toLocaleString(),
+        change: 'Cần xử lý',
+        trend: reportStats.pending > 0 ? 'down' : 'up',
         icon: MessageSquare,
-        color: 'bg-yellow-500', // Changed color to indicate attention
+        bg: 'bg-warning/5 dark:bg-warning/10',
+        iconColor: 'text-warning',
       },
       {
         id: 4,
-        title: 'Active Users',
+        title: 'Active Now',
         value: (userStats.active || 0).toLocaleString(),
-        change: 'This Week',
+        change: 'Trực tuyến',
         trend: 'up',
-        icon: Users,
-        color: 'bg-orange-500',
+        icon: Activity,
+        bg: 'bg-success/5 dark:bg-success/10',
+        iconColor: 'text-success',
       },
     ];
   };
 
-  // Get recent activities from stats
+  const chartData =
+    userGrowth?.map(item => ({
+      name: new Date(item._id).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
+      users: item.count,
+    })) || [];
+
   const activities = stats?.recentActivities || [];
   const recentUsers = stats?.recentUsers || [];
   const topPosts = stats?.topPosts || [];
 
   const handleRefresh = () => {
     dispatch(getDashboardStats());
-    dispatch(getTopUsers({ limit: 10 }));
+    dispatch(getTopUsers({ limit: 5 }));
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - period);
+    dispatch(
+      getUserGrowth({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      })
+    );
   };
+
   return (
-    <div className="space-y-6">
-      {/* Header with Refresh */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Header */}
+      {/* Header */}
+      <div className="yb-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-secondary/30">
         <div>
-          <h2 className="text-2xl font-bold text-black dark:text-white">
-            Dashboard
+          <h2 className="text-2xl font-black text-primary tracking-tight">
+            Tổng quan
           </h2>
-          <p className="text-sm text-neutral-500 mt-1">Welcome back, Admin</p>
+          <p className="text-sm text-secondary mt-1 flex items-center gap-2 font-medium">
+            <Calendar size={14} />
+            {new Date().toLocaleDateString('vi-VN', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
-        >
-          <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <select
+            value={period}
+            onChange={e => setPeriod(Number(e.target.value))}
+            className="yb-input py-2.5 px-4 text-sm font-bold min-w-[160px]"
+          >
+            <option value={7}>7 ngày qua</option>
+            <option value={30}>30 ngày qua</option>
+            <option value={90}>3 tháng qua</option>
+          </select>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="yb-btn yb-btn-primary p-2.5 shadow-lg shadow-primary/10"
+          >
+            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {buildStats().map(stat => (
           <StatCard key={stat.id} stat={stat} isLoading={loading && !stats} />
         ))}
       </div>
 
-      {/* Charts & Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Chart Placeholder */}
-        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-black dark:text-white">
-              Activity Overview
-            </h3>
-            <select className="px-3 py-1.5 text-sm rounded-lg bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border-0 focus:ring-2 focus:ring-neutral-300">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-            </select>
-          </div>
-          {/* Chart Placeholder */}
-          <div className="h-64 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-            <div className="text-center text-neutral-400">
-              <TrendingUp size={48} className="mx-auto mb-2 opacity-50" />
-              <p>Chart visualization here</p>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Chart Section */}
+        <div className="lg:col-span-2 yb-card p-8 group">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-lg font-black text-primary tracking-tight">
+                Tăng trưởng người dùng
+              </h3>
+              <p className="text-sm text-secondary font-medium">
+                Số lượng đăng ký mới theo thời gian
+              </p>
             </div>
+            <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-secondary">
+              <TrendingUp size={20} />
+            </div>
+          </div>
+          <div className="h-80 w-full">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor="var(--color-primary)"
+                        stopOpacity={0.2}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--color-primary)"
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="var(--color-border)"
+                    opacity={0.5}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{
+                      fontSize: 11,
+                      fill: 'var(--color-text-secondary)',
+                      fontWeight: 600,
+                    }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{
+                      fontSize: 11,
+                      fill: 'var(--color-text-secondary)',
+                      fontWeight: 600,
+                    }}
+                    dx={-10}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--color-surface)',
+                      borderRadius: 'var(--radius-xl)',
+                      border: '1px solid var(--color-border)',
+                      boxShadow: 'var(--shadow-xl)',
+                      padding: '12px 16px',
+                    }}
+                    itemStyle={{
+                      color: 'var(--color-text-primary)',
+                      fontWeight: 700,
+                    }}
+                    cursor={{
+                      stroke: 'var(--color-primary)',
+                      strokeWidth: 2,
+                      strokeDasharray: '5 5',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="users"
+                    stroke="var(--color-primary)"
+                    strokeWidth={4}
+                    fillOpacity={1}
+                    fill="url(#colorUsers)"
+                    animationDuration={1500}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-secondary/40">
+                <Activity size={48} className="mb-4 opacity-20" />
+                <p className="font-bold">Không có dữ liệu cho giai đoạn này</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-black dark:text-white">
-              Recent Activity
+        <div className="yb-card p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-black text-primary tracking-tight">
+              Hoạt động gần đây
             </h3>
-            <button className="text-sm text-neutral-500 hover:text-black dark:hover:text-white">
-              View all
+            <button className="text-sm font-bold text-primary hover:underline decoration-2 underline-offset-4">
+              Xem tất cả
             </button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {activities.length === 0 ? (
-              <p className="text-sm text-neutral-500 text-center py-4">
-                No recent activities
-              </p>
+              <div className="text-center py-12 text-secondary font-medium">
+                Chưa có hoạt động nào
+              </div>
             ) : (
               activities.slice(0, 5).map((activity, index) => (
-                <div
-                  key={activity._id || index}
-                  className="flex items-start gap-3"
-                >
-                  <div className="w-2 h-2 rounded-full bg-black dark:bg-white mt-2 flex-shrink-0" />
+                <div key={activity._id || index} className="flex gap-4 group">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-2xl bg-surface-secondary flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300 shadow-sm border border-border/50">
+                      <Activity size={18} />
+                    </div>
+                    {index !== activities.slice(0, 5).length - 1 && (
+                      <div className="absolute top-12 left-1/2 -translate-x-1/2 w-px h-10 bg-border/50" />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-black dark:text-white">
-                      {activity.message || activity.action}
+                    <p className="text-sm font-bold text-primary line-clamp-2">
+                      {activity.details || activity.message || activity.action}
                     </p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {activity.user?.name || 'System'} ·{' '}
-                      {activity.createdAt
-                        ? new Date(activity.createdAt).toLocaleString()
-                        : 'Just now'}
+                    <p className="text-xs text-secondary font-medium mt-1">
+                      {new Date(activity.createdAt).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -266,113 +361,87 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Users */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-black dark:text-white">
-              New Users
+      {/* Bottom Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* New Users */}
+        <div className="yb-card p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-black text-primary tracking-tight">
+              Thành viên mới
             </h3>
-            <button className="flex items-center gap-1 text-sm text-neutral-500 hover:text-black dark:hover:text-white">
-              View all
-              <ArrowUpRight size={14} />
+            <button className="p-2 hover:bg-surface-secondary rounded-xl transition-colors text-secondary">
+              <MoreHorizontal size={20} />
             </button>
           </div>
-          <div className="space-y-3">
-            {recentUsers.length === 0 ? (
-              <p className="text-sm text-neutral-500 text-center py-4">
-                No recent users
-              </p>
-            ) : (
-              recentUsers.slice(0, 5).map(user => (
-                <div
-                  key={user._id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  <img
-                    src={user.avatar || '/images/default-avatar.png'}
-                    alt={user.name || user.username}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-black dark:text-white truncate">
-                      {user.name || user.username}
-                    </p>
-                    <p className="text-sm text-neutral-500 truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                        user.status === 'active'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                          : user.status === 'banned'
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-                      }`}
-                    >
-                      {user.status || 'active'}
-                    </span>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      {user.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString()
-                        : 'Recently'}
-                    </p>
-                  </div>
+          <div className="space-y-4">
+            {recentUsers.slice(0, 5).map(user => (
+              <div
+                key={user._id}
+                className="flex items-center gap-4 p-4 hover:bg-surface-secondary/50 rounded-2xl transition-all group cursor-pointer border border-transparent hover:border-border/30"
+              >
+                <img
+                  src={user.avatar || '/images/default-avatar.png'}
+                  alt={user.name}
+                  className="yb-avatar w-12 h-12 border-2 border-surface shadow-md"
+                />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-black text-primary truncate">
+                    {user.name}
+                  </h4>
+                  <p className="text-xs text-secondary font-bold">
+                    @{user.username}
+                  </p>
                 </div>
-              ))
-            )}
+                <div className="text-right">
+                  <span
+                    className={`yb-badge ${
+                      user.status === 'active'
+                        ? 'bg-success/10 text-success'
+                        : 'bg-error/10 text-error'
+                    }`}
+                  >
+                    {user.status || 'Active'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Top Posts */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-black dark:text-white">
-              Top Posts
+        <div className="yb-card p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-black text-primary tracking-tight">
+              Xu hướng nội dung
             </h3>
-            <button className="flex items-center gap-1 text-sm text-neutral-500 hover:text-black dark:hover:text-white">
-              View all
-              <ArrowUpRight size={14} />
+            <button className="p-2 hover:bg-surface-secondary rounded-xl transition-colors text-secondary">
+              <ArrowUpRight size={20} />
             </button>
           </div>
-          <div className="space-y-3">
-            {topPosts.length === 0 ? (
-              <p className="text-sm text-neutral-500 text-center py-4">
-                No top posts
-              </p>
-            ) : (
-              topPosts.slice(0, 5).map((post, index) => (
-                <div
-                  key={post._id || index}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-sm font-medium text-neutral-500">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-black dark:text-white truncate">
-                      {post.caption || post.content || 'Untitled Post'}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="flex items-center gap-1 text-xs text-neutral-500">
-                        <Eye size={12} />
-                        {(post.views || 0).toLocaleString()}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-neutral-500">
-                        <Heart size={12} />
-                        {(post.likesCount || post.likes || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  <button className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-                    <MoreHorizontal size={16} className="text-neutral-400" />
-                  </button>
+          <div className="space-y-4">
+            {topPosts.slice(0, 5).map((post, index) => (
+              <div
+                key={post._id || index}
+                className="flex items-center gap-4 p-4 hover:bg-surface-secondary/50 rounded-2xl transition-all group cursor-pointer border border-transparent hover:border-border/30"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-surface-secondary flex items-center justify-center font-black text-secondary text-sm shadow-inner group-hover:scale-110 transition-transform">
+                  #{index + 1}
                 </div>
-              ))
-            )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-primary line-clamp-1 group-hover:text-accent transition-colors">
+                    {post.content || post.caption || 'Nội dung không tiêu đề'}
+                  </p>
+                  <div className="flex items-center gap-4 mt-1.5 text-xs text-secondary font-bold">
+                    <span className="flex items-center gap-1">
+                      <Heart size={12} /> {post.likesCount}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye size={12} /> {post.views}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

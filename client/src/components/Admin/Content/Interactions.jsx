@@ -21,7 +21,7 @@ import { vi } from 'date-fns/locale';
 const getInteractionIcon = type => {
   switch (type) {
     case 'like':
-      return <Heart size={18} className="text-red-500" fill="#ef4444" />;
+      return <Heart size={18} className="text-red-500" fill="currentColor" />;
     case 'comment':
       return <MessageCircle size={18} className="text-blue-500" />;
     case 'share':
@@ -29,7 +29,9 @@ const getInteractionIcon = type => {
     case 'follow':
       return <UserPlus size={18} className="text-purple-500" />;
     case 'save':
-      return <Bookmark size={18} className="text-yellow-500" />;
+      return (
+        <Bookmark size={18} className="text-amber-500" fill="currentColor" />
+      );
     default:
       return <Activity size={18} className="text-neutral-500" />;
   }
@@ -48,24 +50,24 @@ const getInteractionText = type => {
     case 'save':
       return 'đã lưu';
     default:
-      return '';
+      return 'tương tác';
   }
 };
 
 const getInteractionBg = type => {
   switch (type) {
     case 'like':
-      return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+      return 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20';
     case 'comment':
-      return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+      return 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20';
     case 'share':
-      return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+      return 'bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20';
     case 'follow':
-      return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+      return 'bg-purple-50/50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20';
     case 'save':
-      return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+      return 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20';
     default:
-      return 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700';
+      return 'bg-neutral-50/50 dark:bg-neutral-800/50 border-neutral-100 dark:border-neutral-800';
   }
 };
 
@@ -73,7 +75,7 @@ const formatTime = date => {
   try {
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
   } catch {
-    return date;
+    return 'vừa xong';
   }
 };
 
@@ -94,23 +96,22 @@ export default function Interactions() {
       limit: 20,
     };
     if (filterType !== 'all') params.type = filterType;
+    if (searchTerm) params.search = searchTerm;
 
     dispatch(getInteractions(params));
   }, [dispatch, currentPage, filterType]);
 
-  // Debounced search
+  // Handle search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchTerm !== undefined) {
-        const params = {
-          page: 1,
-          limit: 20,
-          search: searchTerm || undefined,
-        };
-        if (filterType !== 'all') params.type = filterType;
-        dispatch(getInteractions(params));
-        setCurrentPage(1);
-      }
+      const params = {
+        page: 1,
+        limit: 20,
+        search: searchTerm || undefined,
+      };
+      if (filterType !== 'all') params.type = filterType;
+      dispatch(getInteractions(params));
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -139,92 +140,103 @@ export default function Interactions() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">
+          <h1 className="text-2xl font-bold text-black dark:text-white flex items-center gap-2">
+            <Activity className="text-indigo-500" size={24} />
             Hoạt động tương tác
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1">
-            Theo dõi các tương tác trên nền tảng
+            Theo dõi và quản lý các lượt tương tác của người dùng
           </p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg font-medium text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+          className="yb-btn yb-btn-secondary"
         >
           <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
-          Làm mới
+          <span>Làm mới</span>
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 border border-red-200 dark:border-red-800">
-          <div className="flex items-center gap-2 mb-2">
-            <Heart size={18} className="text-red-500" fill="#ef4444" />
-            <span className="text-red-600 dark:text-red-400 text-sm font-medium">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="yb-card p-4 border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-950/10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+              <Heart size={20} fill="currentColor" />
+            </div>
+            <span className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               Lượt thích
             </span>
           </div>
-          <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+          <p className="text-2xl font-bold text-black dark:text-white">
             {(stats.likes || 0).toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2 mb-2">
-            <MessageCircle size={18} className="text-blue-500" />
-            <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">
+        <div className="yb-card p-4 border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+              <MessageCircle size={20} />
+            </div>
+            <span className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               Bình luận
             </span>
           </div>
-          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+          <p className="text-2xl font-bold text-black dark:text-white">
             {(stats.comments || 0).toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 border border-green-200 dark:border-green-800">
-          <div className="flex items-center gap-2 mb-2">
-            <Share2 size={18} className="text-green-500" />
-            <span className="text-green-600 dark:text-green-400 text-sm font-medium">
+        <div className="yb-card p-4 border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-950/10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+              <Share2 size={20} />
+            </div>
+            <span className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               Chia sẻ
             </span>
           </div>
-          <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+          <p className="text-2xl font-bold text-black dark:text-white">
             {(stats.shares || 0).toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-200 dark:border-purple-800">
-          <div className="flex items-center gap-2 mb-2">
-            <UserPlus size={18} className="text-purple-500" />
-            <span className="text-purple-600 dark:text-purple-400 text-sm font-medium">
+        <div className="yb-card p-4 border-l-4 border-l-purple-500 bg-purple-50/30 dark:bg-purple-950/10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+              <UserPlus size={20} />
+            </div>
+            <span className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               Theo dõi
             </span>
           </div>
-          <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+          <p className="text-2xl font-bold text-black dark:text-white">
             {(stats.follows || 0).toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4 border border-yellow-200 dark:border-yellow-800 col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Bookmark size={18} className="text-yellow-500" />
-            <span className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">
+        <div className="yb-card p-4 border-l-4 border-l-amber-500 bg-amber-50/30 dark:bg-amber-950/10 col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+              <Bookmark size={20} fill="currentColor" />
+            </div>
+            <span className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               Lưu bài
             </span>
           </div>
-          <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+          <p className="text-2xl font-bold text-black dark:text-white">
             {(stats.saves || 0).toLocaleString()}
           </p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filters & Search */}
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search
             size={18}
@@ -232,10 +244,10 @@ export default function Interactions() {
           />
           <input
             type="text"
-            placeholder="Tìm kiếm người dùng..."
+            placeholder="Tìm kiếm theo tên người dùng..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="yb-input pl-10 radius-lg"
           />
         </div>
 
@@ -245,7 +257,7 @@ export default function Interactions() {
             setFilterType(e.target.value);
             setCurrentPage(1);
           }}
-          className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+          className="yb-input w-full md:w-64 radius-lg"
         >
           <option value="all">Tất cả tương tác</option>
           <option value="like">Lượt thích</option>
@@ -256,127 +268,216 @@ export default function Interactions() {
         </select>
       </div>
 
-      {/* Loading State */}
-      {loading && interactionsList.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-neutral-400" />
-        </div>
-      ) : interactionsList.length === 0 ? (
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-12 text-center">
-          <Activity size={48} className="mx-auto mb-4 text-neutral-300" />
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
-            Chưa có tương tác
-          </h3>
-          <p className="text-neutral-500">Không có tương tác nào để hiển thị</p>
-        </div>
-      ) : (
-        <>
-          {/* Interactions List */}
-          <div className="space-y-3">
-            {interactionsList.map(interaction => (
-              <div
-                key={interaction._id}
-                className={`rounded-2xl border p-4 ${getInteractionBg(
-                  interaction.type
-                )}`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* User Avatar */}
-                  <img
-                    src={
-                      interaction.user?.avatar ||
-                      `https://ui-avatars.com/api/?name=${
-                        interaction.user?.name || 'U'
-                      }&background=random`
-                    }
-                    alt={interaction.user?.name || 'User'}
-                    className="w-10 h-10 rounded-full border-2 border-white dark:border-neutral-700 flex-shrink-0 object-cover"
-                  />
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-black dark:text-white">
-                        {interaction.user?.name || 'Người dùng'}
-                      </span>
-                      <span className="text-neutral-500 dark:text-neutral-400 text-sm">
-                        @{interaction.user?.username || 'unknown'}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-sm">
+      {/* Content Area */}
+      <div className="relative">
+        {loading && interactionsList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
+            <p className="text-neutral-500">Đang tải dữ liệu...</p>
+          </div>
+        ) : interactionsList.length === 0 ? (
+          <div className="yb-card p-20 text-center">
+            <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity size={32} className="text-neutral-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
+              Chưa có tương tác nào
+            </h3>
+            <p className="text-neutral-500 max-w-xs mx-auto">
+              Không tìm thấy hoạt động tương tác nào phù hợp với bộ lọc hiện
+              tại.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              {interactionsList.map(interaction => (
+                <div
+                  key={interaction._id}
+                  className={`yb-card p-4 transition-all hover:shadow-lg border-2 ${getInteractionBg(
+                    interaction.type
+                  )}`}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* User Avatar */}
+                    <div className="relative">
+                      <img
+                        src={
+                          interaction.user?.avatar ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            interaction.user?.name || 'U'
+                          )}&background=random`
+                        }
+                        alt={interaction.user?.name || 'User'}
+                        className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-neutral-700 object-cover shadow-sm bg-neutral-200"
+                      />
+                      <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm ring-1 ring-neutral-200 dark:ring-neutral-700">
                         {getInteractionIcon(interaction.type)}
+                      </div>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="flex-1 min-w-0">
+                      {/* Header: User & Sentiment */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-x-2">
+                          <span className="font-bold text-black dark:text-white hover:underline cursor-pointer">
+                            {interaction.user?.name || 'Người dùng'}
+                          </span>
+                          <span className="text-neutral-500 text-sm">
+                            @{interaction.user?.username || 'unknown'}
+                          </span>
+                        </div>
+
+                        {interaction.sentiment && (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              interaction.sentiment === 'positive'
+                                ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400'
+                                : interaction.sentiment === 'negative'
+                                ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400'
+                                : 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400'
+                            }`}
+                          >
+                            {interaction.sentiment === 'positive'
+                              ? 'Tích cực'
+                              : interaction.sentiment === 'negative'
+                              ? 'Tiêu cực'
+                              : 'Trung lập'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action & Target */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-sm mb-3">
                         <span className="text-neutral-600 dark:text-neutral-400">
                           {getInteractionText(interaction.type)}
                         </span>
-                      </span>
-                    </div>
 
-                    {/* Target */}
-                    {interaction.target?.type === 'user' ? (
-                      <p className="mt-2 text-sm text-black dark:text-white">
-                        <span className="font-medium">
-                          {interaction.target.name}
-                        </span>{' '}
-                        <span className="text-neutral-500 dark:text-neutral-400">
-                          {interaction.target.username}
-                        </span>
-                      </p>
-                    ) : interaction.target ? (
-                      <div className="mt-2 p-2 bg-white/50 dark:bg-black/20 rounded-lg">
-                        <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                          "{interaction.target.preview}"
-                        </p>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                          bởi {interaction.target.author}
-                        </p>
+                        {interaction.target?.type === 'user' ? (
+                          <span className="text-neutral-600 dark:text-neutral-400">
+                            người dùng{' '}
+                            <span className="font-semibold text-black dark:text-white cursor-pointer hover:text-indigo-500 transition-colors">
+                              {interaction.target.name}
+                            </span>
+                          </span>
+                        ) : interaction.target ? (
+                          <span className="text-neutral-600 dark:text-neutral-400">
+                            bài viết của{' '}
+                            <span className="font-semibold text-black dark:text-white cursor-pointer hover:text-indigo-500 transition-colors">
+                              {interaction.target.author}
+                            </span>
+                          </span>
+                        ) : null}
                       </div>
-                    ) : null}
 
-                    {/* Comment Content */}
-                    {interaction.content && (
-                      <p className="mt-2 text-sm text-black dark:text-white p-2 bg-white/50 dark:bg-black/20 rounded-lg">
-                        "{interaction.content}"
-                      </p>
-                    )}
+                      {/* Content Preview */}
+                      {(interaction.content || interaction.target?.preview) && (
+                        <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-black/5 dark:border-white/5 mb-3 group relative">
+                          {interaction.target?.preview && (
+                            <div className="text-[10px] text-neutral-400 uppercase font-bold mb-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                              Xem trước bài viết
+                            </div>
+                          )}
+                          <p className="text-sm text-neutral-700 dark:text-neutral-300 italic leading-snug">
+                            "
+                            {interaction.content || interaction.target?.preview}
+                            "
+                          </p>
+                        </div>
+                      )}
 
-                    {/* Time */}
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                      <Calendar size={12} />
-                      {formatTime(interaction.createdAt)}
+                      {/* Footer: Meta Info */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-black/5 dark:border-white/5 text-[11px] text-neutral-500 dark:text-neutral-400">
+                        <div
+                          className="flex items-center gap-1.5"
+                          title="Thời gian"
+                        >
+                          <Calendar size={12} />
+                          <span>{formatTime(interaction.createdAt)}</span>
+                        </div>
+
+                        {interaction.context?.source && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="opacity-60">Nguồn:</span>
+                            <span className="font-semibold text-neutral-700 dark:text-neutral-300 capitalize">
+                              {interaction.context.source}
+                            </span>
+                          </div>
+                        )}
+
+                        {interaction.context?.deviceType && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="opacity-60">Thiết bị:</span>
+                            <span className="font-semibold text-neutral-700 dark:text-neutral-300 capitalize">
+                              {interaction.context.deviceType}
+                            </span>
+                          </div>
+                        )}
+
+                        {interaction.weight !== undefined && (
+                          <div
+                            className="ml-auto flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded font-mono"
+                            title="Độ ưu tiên / Trọng số AI"
+                          >
+                            <span className="opacity-60">SCORE:</span>
+                            <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                              {interaction.weight}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Hiển thị {interactionsList.length} / {pagination?.total || 0}{' '}
-              tương tác
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1 || loading}
-                onClick={() => handlePageChange(currentPage - 1)}
-                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span className="px-4 py-2 text-sm">
-                Trang {currentPage} / {pagination?.totalPages || 1}
-              </span>
-              <button
-                disabled={!pagination?.hasMore || loading}
-                onClick={() => handlePageChange(currentPage + 1)}
-                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={18} />
-              </button>
+            {/* Pagination */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm text-neutral-500">
+                Hiển thị{' '}
+                <span className="font-semibold text-black dark:text-white">
+                  {interactionsList.length}
+                </span>{' '}
+                /{' '}
+                <span className="font-semibold text-black dark:text-white">
+                  {pagination?.total || 0}
+                </span>{' '}
+                tương tác
+              </p>
+
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={currentPage === 1 || loading}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 transition-colors shadow-sm"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Trang</span>
+                  <div className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    {currentPage}
+                  </div>
+                  <span className="text-sm font-medium">
+                    / {pagination?.totalPages || 1}
+                  </span>
+                </div>
+
+                <button
+                  disabled={!pagination?.hasMore || loading}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 transition-colors shadow-sm"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
             </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

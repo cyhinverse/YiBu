@@ -35,7 +35,6 @@ export const getUnreadCount = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(NOTIFICATION_API.GET_UNREAD_COUNT);
-      console.log('Notification unread count response:', response.data);
       // Return raw value, let reducer handle extraction
       const count =
         response.data.data?.unreadCount ??
@@ -44,7 +43,6 @@ export const getUnreadCount = createAsyncThunk(
         0;
       return typeof count === 'number' ? count : 0;
     } catch (error) {
-      console.error('Failed to get notification unread count:', error);
       return rejectWithValue(
         error.response?.data?.message || 'Lấy số thông báo chưa đọc thất bại'
       );
