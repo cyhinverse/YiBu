@@ -20,24 +20,17 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  receiveMessage,
-  updateMessageStatus,
-  conversationRead,
-  setCurrentConversation,
-} from '../../../redux/slices/MessageSlice';
-
-import {
-  getMessages,
-  sendMessage,
-  markMessagesAsRead,
-  markMessageAsRead,
-  getConversationById,
-  deleteMessage,
-  updateGroup,
-  addGroupMember,
-  removeGroupMember,
-  leaveGroup,
-} from '../../../redux/actions/messageActions';
+  useConversations,
+  useConversationById,
+  useMessages,
+  useMarkAsRead,
+  useSendMessage,
+  useDeleteMessage,
+  useUpdateGroup,
+  useAddGroupMember,
+  useRemoveGroupMember,
+  useLeaveGroup,
+} from '../../../hooks/useMessageQuery';
 import { useSocketContext } from '../../../contexts/SocketContext';
 import { lazy, Suspense } from 'react';
 
@@ -220,17 +213,34 @@ const MessageBubble = ({
 const MessageDetail = () => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { socket, isConnected, joinRoom, leaveRoom, isUserOnline } =
     useSocketContext() || {};
 
   const { user: currentUser } = useSelector(state => state.auth);
-  const {
-    conversations,
-    messages: messagesMap,
-    loading,
-    sendLoading,
-  } = useSelector(state => state.message);
+
+  // Queries
+  const { data: conversationsData } = useConversations();
+  const conversationsList =
+    conversationsData?.conversations || conversationsData || [];
+
+  const { data: conversationData, isLoading: conversationLoading } =
+    useConversationById(conversationId);
+
+  const { data: messagesData, isLoading: messagesLoading } = useMessages({
+    conversationId,
+    page: 1,
+    limit: 50,
+  });
+  const messagesList = messagesData?.messages || messagesData || [];
+
+  // Mutations
+  const markAsReadMutation = useMarkAsRead();
+  const sendMessageMutation = useSendMessage();
+  const deleteMessageMutation = useDeleteMessage();
+  const updateGroupMutation = useUpdateGroup();
+  const addMemberMutation = useAddGroupMember();
+  const removeMemberMutation = useRemoveGroupMember();
+  const leaveGroupMutation = useLeaveGroup();
 
   const [messageText, setMessageText] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
@@ -243,33 +253,19 @@ const MessageDetail = () => {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Derive conversation and messages
-  const conversation = useMemo(
-    () =>
-      conversations.find(
-        c =>
-          c._id === conversationId ||
-          c.conversationId === conversationId ||
-          c.id === conversationId ||
-          c.directId === conversationId
-      ),
-    [conversations, conversationId]
-  );
+  // Derive conversation
+  const conversation = useMemo(() => {
+    if (conversationData) return conversationData;
+    return conversationsList.find(
+      c =>
+        c._id === conversationId ||
+        c.conversationId === conversationId ||
+        c.id === conversationId ||
+        c.directId === conversationId
+    );
+  }, [conversationData, conversationsList, conversationId]);
 
-  const messages = useMemo(() => {
-    // Try current conversationId from URL
-    if (messagesMap[conversationId]) return messagesMap[conversationId];
-
-    // Fallback to conversation _id or directId if available
-    if (conversation) {
-      if (conversation._id && messagesMap[conversation._id])
-        return messagesMap[conversation._id];
-      if (conversation.directId && messagesMap[conversation.directId])
-        return messagesMap[conversation.directId];
-    }
-
-    return [];
-  }, [messagesMap, conversationId, conversation]);
+  const messages = messagesList;
 
   const otherUser = useMemo(() => {
     if (!conversation || conversation.isGroup) return null;
@@ -303,29 +299,12 @@ const MessageDetail = () => {
   useEffect(() => {
     if (conversationId) {
       if (joinRoom) joinRoom(conversationId);
-      dispatch(getMessages({ conversationId, page: 1, limit: 50 }));
-      dispatch(markMessagesAsRead(conversationId));
+      markAsReadMutation.mutate(conversationId);
     }
     return () => {
       if (conversationId && leaveRoom) leaveRoom(conversationId);
-      // Clear current conversation when leaving
-      dispatch(setCurrentConversation(null));
     };
-  }, [conversationId, joinRoom, leaveRoom, dispatch]);
-
-  // Set current conversation when it's available (separate effect)
-  useEffect(() => {
-    if (conversation) {
-      dispatch(setCurrentConversation(conversation));
-    }
-  }, [conversation?._id, dispatch]);
-
-  // Fetch conversation details if not available
-  useEffect(() => {
-    if (conversationId && !conversation) {
-      dispatch(getConversationById(conversationId));
-    }
-  }, [conversationId, conversation, dispatch]);
+  }, [conversationId, joinRoom, leaveRoom]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -341,31 +320,6 @@ const MessageDetail = () => {
         (conversation &&
           (id === conversation?._id || id === conversation?.directId))
       );
-    };
-
-    const handleNewMessage = data => {
-      if (isCurrentConversation(data.conversationId)) {
-        dispatch(receiveMessage(data));
-        if (document.hasFocus()) dispatch(markMessageAsRead(data._id));
-      }
-    };
-
-    const handleStatus = data => {
-      if (isCurrentConversation(data.conversationId)) {
-        dispatch(
-          updateMessageStatus({
-            conversationId: data.conversationId,
-            messageId: data.messageId,
-            status: data.status,
-          })
-        );
-      }
-    };
-
-    const handleRead = data => {
-      if (isCurrentConversation(data.conversationId)) {
-        dispatch(conversationRead({ conversationId: data.conversationId }));
-      }
     };
 
     const handleTyping = data => {
@@ -386,26 +340,13 @@ const MessageDetail = () => {
       }
     };
 
-    socket.on('new_message', handleNewMessage);
-    socket.on('message_status', handleStatus);
-    socket.on('conversation_read', handleRead);
     socket.on('user_typing', handleTyping);
     socket.on('user_stop_typing', handleStopTyping);
     return () => {
-      socket.off('new_message', handleNewMessage);
-      socket.off('message_status', handleStatus);
-      socket.off('conversation_read', handleRead);
       socket.off('user_typing', handleTyping);
       socket.off('user_stop_typing', handleStopTyping);
     };
-  }, [
-    socket,
-    isConnected,
-    conversationId,
-    dispatch,
-    currentUser?._id,
-    conversation,
-  ]);
+  }, [socket, isConnected, conversationId, currentUser?._id, conversation]);
 
   // Handlers
   const emitTyping = useCallback(
@@ -430,41 +371,41 @@ const MessageDetail = () => {
     if (!messageText.trim() && selectedImages.length === 0) return;
     emitTyping(false);
     try {
-      await dispatch(
-        sendMessage({
-          conversationId,
-          content: messageText.trim(),
-          type: selectedImages.length > 0 ? 'image' : 'text',
-          attachments: selectedImages.length > 0 ? selectedImages : undefined,
-        })
-      ).unwrap();
+      await sendMessageMutation.mutateAsync({
+        conversationId,
+        content: messageText.trim(),
+        type: selectedImages.length > 0 ? 'image' : 'text',
+        attachments: selectedImages.length > 0 ? selectedImages : undefined,
+      });
       setMessageText('');
       setSelectedImages([]);
     } catch (error) {
-      toast.error(error || 'Gửi tin nhắn thất bại');
+      toast.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
     }
   };
 
   const handleDelete = async mid => {
     try {
-      await dispatch(
-        deleteMessage({ conversationId, messageId: mid })
-      ).unwrap();
+      await deleteMessageMutation.mutateAsync({
+        conversationId,
+        messageId: mid,
+      });
       toast.success('Đã xóa tin nhắn');
     } catch (err) {
-      toast.error(err || 'Không thể xóa tin nhắn');
+      toast.error(err?.response?.data?.message || 'Không thể xóa tin nhắn');
     }
   };
 
   const handleGroupRename = async name => {
     try {
       setIsUpdatingGroup(true);
-      await dispatch(
-        updateGroup({ groupId: conversationId, data: { name } })
-      ).unwrap();
+      await updateGroupMutation.mutateAsync({
+        groupId: conversationId,
+        data: { name },
+      });
       toast.success('Đã đổi tên nhóm');
     } catch (err) {
-      toast.error(err || 'Cập nhật thất bại');
+      toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
     } finally {
       setIsUpdatingGroup(false);
     }
@@ -472,38 +413,40 @@ const MessageDetail = () => {
 
   const handleAddMember = async uid => {
     try {
-      await dispatch(
-        addGroupMember({ groupId: conversationId, memberIds: [uid] })
-      ).unwrap();
+      await addMemberMutation.mutateAsync({
+        groupId: conversationId,
+        memberIds: [uid],
+      });
       toast.success('Đã thêm thành viên');
     } catch (err) {
-      toast.error(err || 'Thêm thành viên thất bại');
+      toast.error(err?.response?.data?.message || 'Thêm thành viên thất bại');
     }
   };
 
   const handleRemoveMember = async uid => {
     try {
-      await dispatch(
-        removeGroupMember({ groupId: conversationId, userId: uid })
-      ).unwrap();
+      await removeMemberMutation.mutateAsync({
+        groupId: conversationId,
+        userId: uid,
+      });
       toast.success('Đã mời thành viên rời nhóm');
     } catch (err) {
-      toast.error(err || 'Thực hiện thất bại');
+      toast.error(err?.response?.data?.message || 'Thực hiện thất bại');
     }
   };
 
   const handleLeave = async () => {
     if (window.confirm('Bạn có chắc muốn rời nhóm này?')) {
       try {
-        await dispatch(leaveGroup(conversationId)).unwrap();
+        await leaveGroupMutation.mutateAsync(conversationId);
         navigate('/messages');
       } catch (err) {
-        toast.error(err || 'Rời nhóm thất bại');
+        toast.error(err?.response?.data?.message || 'Rời nhóm thất bại');
       }
     }
   };
 
-  if (!conversation && loading) {
+  if (!conversation && conversationLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center space-y-4 bg-white dark:bg-neutral-950">
         <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
@@ -513,6 +456,8 @@ const MessageDetail = () => {
       </div>
     );
   }
+
+  const isLoading = messagesLoading || conversationLoading;
 
   return (
     <div className="h-full flex flex-col bg-background animate-fade-in">
@@ -583,7 +528,7 @@ const MessageDetail = () => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 px-6 space-y-4 scroll-smooth custom-scrollbar relative bg-surface-secondary/30">
-        {loading && messages.length === 0 ? (
+        {isLoading && messages.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-surface/50 backdrop-blur-[2px] z-10">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">
@@ -592,7 +537,7 @@ const MessageDetail = () => {
           </div>
         ) : null}
 
-        {messages.length === 0 && !loading ? (
+        {messages.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-6">
             <div className="w-20 h-20 rounded-full bg-surface-secondary flex items-center justify-center border border-border">
               <MessageCircle size={32} className="text-text-tertiary" />
@@ -718,15 +663,16 @@ const MessageDetail = () => {
             onClick={handleSend}
             disabled={
               (!messageText.trim() && selectedImages.length === 0) ||
-              sendLoading
+              sendMessageMutation.isPending
             }
             className={`yb-btn p-4 rounded-full transition-all duration-300 shadow-md ${
-              (messageText.trim() || selectedImages.length > 0) && !sendLoading
+              (messageText.trim() || selectedImages.length > 0) &&
+              !sendMessageMutation.isPending
                 ? 'yb-btn-primary hover:scale-105 active:scale-95'
                 : 'bg-surface-secondary text-text-tertiary cursor-not-allowed'
             }`}
           >
-            {sendLoading ? (
+            {sendMessageMutation.isPending ? (
               <Loader2 size={24} className="animate-spin" />
             ) : (
               <Send

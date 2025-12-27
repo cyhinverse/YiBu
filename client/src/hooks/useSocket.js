@@ -1,15 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
 import { toast } from 'react-hot-toast';
-import { receiveMessage } from '../redux/slices/MessageSlice';
-import {
-  markMessageAsRead,
-  checkAndFetchConversation,
-  getUnreadCount as getMessageUnreadCount,
-} from '../redux/actions/messageActions';
-import { addNotification } from '../redux/slices/NotificationSlice';
-import { getUnreadCount as getNotificationUnreadCount } from '../redux/actions/notificationActions';
 import { setLikeStatusOptimistic } from '../redux/slices/LikeSlice';
 
 const SOCKET_URL = 'http://localhost:5000';
@@ -18,6 +11,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 const useSocket = userId => {
   const socketRef = useRef(null);
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const reconnectAttempts = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
   const activeRooms = useRef(new Set());
@@ -55,8 +49,9 @@ const useSocket = userId => {
 
       socket.emit('get_online_users');
 
-      dispatch(getMessageUnreadCount());
-      dispatch(getNotificationUnreadCount());
+      // Unread counts and notifications handled by React Query cache invalidation
+      queryClient.invalidateQueries(['messages', 'unreadCount']);
+      queryClient.invalidateQueries(['notifications', 'unreadCount']);
     });
 
     socket.on('disconnect', reason => {
@@ -74,8 +69,8 @@ const useSocket = userId => {
       }
     });
 
-    registerMessageHandlers(socket, dispatch, userId);
-    registerNotificationHandlers(socket, dispatch);
+    registerMessageHandlers(socket, dispatch, userId, queryClient);
+    registerNotificationHandlers(socket, queryClient);
     registerLikeHandlers(socket, dispatch, userId);
     registerCommentHandlers(socket, dispatch, userId);
     registerUserStatusHandlers(socket, setOnlineUsers);
@@ -88,7 +83,7 @@ const useSocket = userId => {
         activeRooms.current.clear();
       }
     };
-  }, [userId, dispatch]);
+  }, [userId, dispatch, queryClient]);
 
   const joinRoom = useCallback(roomId => {
     if (!roomId) return;
@@ -148,23 +143,37 @@ const useSocket = userId => {
     [onlineUsers]
   );
 
-  return {
-    socket: socketRef.current,
-    joinRoom,
-    leaveRoom,
-    sendMessage,
-    emitEvent,
-    joinPostRoom,
-    emitLikeAction,
-    isConnected,
-    onlineUsers,
-    isUserOnline,
-  };
+  // Memoize return value to prevent context unnecessary re-renders
+  return useMemo(
+    () => ({
+      socket: socketRef.current,
+      joinRoom,
+      leaveRoom,
+      sendMessage,
+      emitEvent,
+      joinPostRoom,
+      emitLikeAction,
+      isConnected,
+      onlineUsers,
+      isUserOnline,
+    }),
+    [
+      joinRoom,
+      leaveRoom,
+      sendMessage,
+      emitEvent,
+      joinPostRoom,
+      emitLikeAction,
+      isConnected,
+      onlineUsers,
+      isUserOnline,
+    ]
+  );
 };
 
 /* --- Event Handlers Helpers --- */
 
-const registerMessageHandlers = (socket, dispatch, userId) => {
+const registerMessageHandlers = (socket, dispatch, userId, queryClient) => {
   socket.on('new_message', message => {
     if (!message?._id) return;
 
@@ -174,8 +183,15 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
 
     const enrichedMessage = { ...message, isMine };
 
-    dispatch(receiveMessage(enrichedMessage));
-    dispatch(checkAndFetchConversation(message.conversationId));
+    // Support React Query invalidation
+    queryClient.invalidateQueries(['messages', 'list', message.conversationId]);
+    queryClient.invalidateQueries([
+      'messages',
+      'infinite',
+      message.conversationId,
+    ]);
+    queryClient.invalidateQueries(['messages', 'conversations']);
+    queryClient.invalidateQueries(['messages', 'unreadCount']);
 
     if (!isMine) {
       const senderName =
@@ -186,7 +202,7 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
 
   socket.on('message_read', data => {
     if (data?.messageId) {
-      dispatch(markMessageAsRead({ messageId: data.messageId }));
+      queryClient.invalidateQueries(['messages']);
     }
   });
 
@@ -194,14 +210,18 @@ const registerMessageHandlers = (socket, dispatch, userId) => {
   socket.on('user_stop_typing', () => {}); // No-op
 };
 
-const registerNotificationHandlers = (socket, dispatch) => {
+const registerNotificationHandlers = (socket, queryClient) => {
   const handleNotification = notification => {
     if (!notification?._id) {
-      dispatch(getNotificationUnreadCount());
+      queryClient.invalidateQueries(['notifications', 'unreadCount']);
       return;
     }
 
-    dispatch(addNotification(notification));
+    // Invalidate queries to refresh lists and counts
+    queryClient.invalidateQueries(['notifications']);
+
+    // Also invalidate unread count specifically if not covered by 'notifications' key structure
+    queryClient.invalidateQueries(['notifications', 'unreadCount']);
 
     let msg = notification.content || 'Bạn có thông báo mới';
     if (notification.type === 'like' && notification.post?.caption) {

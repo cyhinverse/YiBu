@@ -1,124 +1,52 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { FileText, PenSquare, Loader2 } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
 import Post from './Post';
-import {
-  getAllPosts,
-  getPersonalizedFeed,
-  getTrendingPosts,
-} from '../../../../redux/actions/postActions';
+import { useHomeFeed } from '../../../../hooks/useFeedQuery';
 import { getBatchLikeStatus } from '../../../../redux/actions/likeActions';
 
 const PostLists = ({ activeTab = 'forYou' }) => {
   const dispatch = useDispatch();
-  const {
-    posts,
-    personalizedPosts,
-    trendingPosts,
-    loading,
-    error,
-    pagination,
-  } = useSelector(state => state.post);
   const { likeStatuses } = useSelector(state => state.like);
-  const loadingRef = useRef(false);
-  const observerRef = useRef(null);
-  const prevTabRef = useRef(activeTab);
 
-  // Determine which posts to display based on active tab
-  const getDisplayPosts = () => {
-    switch (activeTab) {
-      case 'forYou':
-        return personalizedPosts?.length > 0 ? personalizedPosts : posts;
-      case 'following':
-        return posts;
-      case 'latest':
-        return trendingPosts?.length > 0 ? trendingPosts : posts;
-      default:
-        return posts;
-    }
-  };
+  // React Query Hook
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error,
+    refetch,
+  } = useHomeFeed(activeTab);
 
-  const displayPosts = getDisplayPosts();
+  // Flatten pages to get all posts
+  const displayPosts = data?.pages?.flatMap(page => page.posts || page) || [];
 
-  // Fetch posts based on active tab
+  // Infinite Scroll Observer
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: '100px',
+  });
+
   useEffect(() => {
-    // Reset when tab changes
-    if (prevTabRef.current !== activeTab) {
-      prevTabRef.current = activeTab;
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-
-    switch (activeTab) {
-      case 'forYou':
-        dispatch(getPersonalizedFeed({ page: 1, limit: 20 }));
-        break;
-      case 'following':
-        dispatch(getAllPosts({ page: 1, limit: 20 }));
-        break;
-      case 'latest':
-        dispatch(getTrendingPosts({ page: 1, limit: 20 }));
-        break;
-      default:
-        dispatch(getAllPosts({ page: 1, limit: 20 }));
-    }
-  }, [dispatch, activeTab]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Fetch like statuses when displayPosts change
   const postIdsString = displayPosts?.map(p => p._id).join(',');
-  
+
   useEffect(() => {
     if (displayPosts?.length > 0) {
-      // Ensure postIds are strings for backend validation
       const postIds = displayPosts.map(post => String(post._id));
       dispatch(getBatchLikeStatus(postIds));
     }
   }, [postIdsString, dispatch]);
 
-  // Infinite scroll
-  const loadMore = useCallback(() => {
-    if (loadingRef.current || !pagination?.hasMore) return;
-    loadingRef.current = true;
-
-    const loadAction = () => {
-      switch (activeTab) {
-        case 'forYou':
-          return getPersonalizedFeed({
-            page: pagination.currentPage + 1,
-            limit: 20,
-          });
-        case 'latest':
-          return getTrendingPosts({
-            page: pagination.currentPage + 1,
-            limit: 20,
-          });
-        default:
-          return getAllPosts({ page: pagination.currentPage + 1, limit: 20 });
-      }
-    };
-
-    dispatch(loadAction()).finally(() => {
-      loadingRef.current = false;
-    });
-  }, [dispatch, pagination, activeTab]);
-
-  // Intersection observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && !loading && pagination?.hasMore) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [loadMore, loading, pagination?.hasMore]);
-
-  if (loading && (!displayPosts || displayPosts.length === 0)) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -136,10 +64,10 @@ const PostLists = ({ activeTab = 'forYou' }) => {
           Có lỗi xảy ra
         </h3>
         <p className="text-xs text-neutral-500 text-center max-w-xs mb-4">
-          {error}
+          {error?.message || 'Không thể tải bài viết'}
         </p>
         <button
-          onClick={() => dispatch(getAllPosts({ page: 1, limit: 20 }))}
+          onClick={() => refetch()}
           className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity"
         >
           Thử lại
@@ -180,15 +108,15 @@ const PostLists = ({ activeTab = 'forYou' }) => {
       ))}
 
       {/* Load more trigger */}
-      <div ref={observerRef} className="h-10">
-        {loading && displayPosts.length > 0 && (
+      <div ref={ref} className="h-10">
+        {isFetchingNextPage && (
           <div className="flex justify-center py-4">
             <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
           </div>
         )}
       </div>
 
-      {!pagination?.hasMore && displayPosts.length > 0 && (
+      {!hasNextPage && displayPosts.length > 0 && (
         <p className="text-center text-xs text-neutral-400 py-4">
           Bạn đã xem hết bài viết
         </p>

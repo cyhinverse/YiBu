@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -20,23 +19,24 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import {
-  getRevenueStats,
-  getTransactions,
-} from '../../../redux/actions/adminActions';
+import { useRevenueStats, useTransactions } from '../../../hooks/useAdminQuery';
 
 export default function Revenue() {
-  const dispatch = useDispatch();
-  const { revenueStats, transactions, loading } = useSelector(
-    state => state.admin
-  );
   const [dateRange, setDateRange] = useState('thisMonth');
   const [transactionType, setTransactionType] = useState('all');
 
-  useEffect(() => {
-    dispatch(getRevenueStats());
-    dispatch(getTransactions({ page: 1, limit: 10 }));
-  }, [dispatch]);
+  // Fetch Revenue Stats
+  const { data: revenueStats, isLoading: loadingStats } = useRevenueStats();
+
+  // Fetch Transactions
+  const { data: transactionsData, isLoading: loadingTransactions } =
+    useTransactions({
+      page: 1,
+      limit: 10,
+      type: transactionType !== 'all' ? transactionType : undefined,
+    });
+
+  const transactions = transactionsData?.transactions || [];
 
   const stats = {
     total: revenueStats?.total ?? 0,
@@ -52,16 +52,10 @@ export default function Revenue() {
 
   const handleTransactionFilter = type => {
     setTransactionType(type);
-    dispatch(
-      getTransactions({
-        page: 1,
-        limit: 10,
-        type: type === 'all' ? undefined : type,
-      })
-    );
+    // React Query will specificially refetch when type changes because it is in queryKey
   };
 
-  if (loading && !revenueStats) {
+  if ((loadingStats || loadingTransactions) && !revenueStats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 size={32} className="animate-spin text-neutral-400" />

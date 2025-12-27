@@ -1,112 +1,126 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
-  Bell,
   CheckCircle,
   Clock,
   Trash2,
   RefreshCcw,
   Check,
-  Filter,
   Loader2,
-  MoreHorizontal,
   Info,
   AlertTriangle,
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
 import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  deleteAllNotifications,
-  getUnreadCount,
-} from '../../../redux/actions/notificationActions';
+  useNotificationsPage,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  useDeleteNotification,
+  useDeleteAllNotifications,
+} from '../../../hooks/useNotificationQuery';
+import toast from 'react-hot-toast';
 
 const Notifications = () => {
-  const dispatch = useDispatch();
-  // Depending on how notificationReducer is set up, state might be in state.notification or state.admin.
-  // Based on actions, it seems notification is a separate slice? 
-  // Wait, I should check rootReducer. But for now I'll assume state.notifications or check where it is.
-  // The user didn't show me rootReducer. I'll robustly check or just assume standard convention.
-  // Let's assume state.notification for now as it's a separate action file, likely separate slice.
-  // Actually, I should probably check if there is a NotificationSlice.
-  // I will check for NotificationSlice later if needed, but for now standard use.
-  
-  const { notifications, unreadCount, loading, pagination } = useSelector(
-    state => state.notification || { notifications: [], unreadCount: 0, loading: false, pagination: {} }
-  );
-
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const LIMIT = 10;
 
-  useEffect(() => {
-    dispatch(getNotifications({ page: currentPage, limit: 10, type: filterType === 'all' ? undefined : filterType }));
-    dispatch(getUnreadCount());
-  }, [dispatch, currentPage, filterType]);
+  // Data Fetching
+  const { data, isLoading, isPreviousData, refetch } = useNotificationsPage(
+    currentPage,
+    LIMIT,
+    filterType
+  );
 
-  const handleMarkAsRead = (id) => {
-    dispatch(markAsRead(id));
+  const { data: unreadCount = 0 } = useUnreadCount();
+
+  // Mutations
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+
+  const { mutateAsync: deleteNotification } = useDeleteNotification();
+  const { mutateAsync: deleteAllNotifications } = useDeleteAllNotifications();
+
+  // Derived state
+  const notifications = data?.notifications || [];
+  const pagination = data?.pagination || {};
+
+  const handleMarkAsRead = id => {
+    markAsRead(id);
   };
 
   const handleMarkAllAsRead = () => {
-    dispatch(markAllAsRead());
-  };
-
-  const handleDelete = (id) => {
-    dispatch(deleteNotification(id)).then(() => {
-       dispatch(getNotifications({ page: currentPage, limit: 10, type: filterType === 'all' ? undefined : filterType }));
+    markAllAsRead(undefined, {
+      onError: () => toast.error('Failed to mark all as read'),
     });
   };
-  
-    const handleDeleteAll = () => {
-    if(window.confirm("Are you sure you want to delete all notifications?")) {
-        dispatch(deleteAllNotifications()).then(() => {
-             dispatch(getNotifications({ page: currentPage, limit: 10, type: filterType === 'all' ? undefined : filterType }));
-        });
+
+  const handleDelete = async id => {
+    try {
+      await deleteNotification(id);
+      // Toast is handled or we can add one here
+    } catch (err) {
+      toast.error('Failed to delete notification');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (window.confirm('Are you sure you want to delete all notifications?')) {
+      try {
+        await deleteAllNotifications();
+        toast.success('All notifications deleted');
+      } catch (err) {
+        toast.error('Failed to delete all notifications');
+      }
     }
   };
 
   const refreshType = () => {
-     dispatch(getNotifications({ page: currentPage, limit: 10, type: filterType === 'all' ? undefined : filterType }));
-     dispatch(getUnreadCount());
-  }
+    refetch();
+  };
 
-  const getIcon = (type) => {
-      switch(type) {
-          case 'info': return <Info size={20} className="text-blue-500" />;
-          case 'success': return <CheckCircle size={20} className="text-green-500" />;
-          case 'warning': return <AlertTriangle size={20} className="text-yellow-500" />;
-          case 'alert': return <AlertCircle size={20} className="text-red-500" />;
-          default: return <Sparkles size={20} className="text-purple-500" />;
-      }
+  const getIcon = type => {
+    switch (type) {
+      case 'info':
+        return <Info size={20} className="text-blue-500" />;
+      case 'success':
+        return <CheckCircle size={20} className="text-green-500" />;
+      case 'warning':
+        return <AlertTriangle size={20} className="text-yellow-500" />;
+      case 'alert':
+        return <AlertCircle size={20} className="text-red-500" />;
+      default:
+        return <Sparkles size={20} className="text-purple-500" />;
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-black dark:text-white">Notifications</h2>
+          <h2 className="text-2xl font-bold text-black dark:text-white">
+            Notifications
+          </h2>
           <p className="text-sm text-neutral-500 mt-1">
             You have {unreadCount} unread notifications
           </p>
         </div>
         <div className="flex gap-2">
-            <button
-            onClick={refreshType}
-             className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
-            >
-                <RefreshCcw size={16} />
-            </button>
           <button
-            onClick={handleMarkAllAsRead}
+            onClick={refreshType}
+            className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
+          >
+            <RefreshCcw size={16} />
+          </button>
+          <button
+            onClick={() => handleMarkAllAsRead()}
             className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
           >
             <Check size={16} />
             Mark all read
           </button>
-           <button
+          <button
             onClick={handleDeleteAll}
             className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/40 transition"
           >
@@ -116,102 +130,121 @@ const Notifications = () => {
         </div>
       </div>
 
-       {/* Filters */}
-       <div className="flex gap-2">
-           {['all', 'info', 'success', 'warning', 'alert'].map(type => (
-               <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition ${
-                    filterType === type 
-                    ? 'bg-black dark:bg-white text-white dark:text-black' 
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
-               >
-                   {type}
-               </button>
-           ))}
-       </div>
+      {/* Filters */}
+      <div className="flex gap-2">
+        {['all', 'info', 'success', 'warning', 'alert'].map(type => (
+          <button
+            key={type}
+            onClick={() => {
+              setFilterType(type);
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition ${
+              filterType === type
+                ? 'bg-black dark:bg-white text-white dark:text-black'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            }`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
 
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        {loading && (!notifications || notifications.length === 0) ? (
-            <div className="p-12 flex justify-center">
-                 <Loader2 size={32} className="animate-spin text-neutral-400" />
-            </div>
+        {isLoading ? (
+          <div className="p-12 flex justify-center">
+            <Loader2 size={32} className="animate-spin text-neutral-400" />
+          </div>
         ) : notifications.length === 0 ? (
-            <div className="p-12 text-center text-neutral-500">
-                No notifications found
-            </div>
+          <div className="p-12 text-center text-neutral-500">
+            No notifications found
+          </div>
         ) : (
-             <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
-            {notifications.map((notification) => (
+          <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {notifications.map(notification => (
               <div
                 key={notification._id}
                 className={`p-4 flex gap-4 transition-colors ${
-                  !notification.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
+                  !notification.isRead
+                    ? 'bg-blue-50/50 dark:bg-blue-900/10'
+                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
                 }`}
               >
                 <div className="mt-1 flex-shrink-0">
-                    {getIcon(notification.type)}
+                  {getIcon(notification.type)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm ${!notification.isRead ? 'font-semibold text-black dark:text-white' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                    <p
+                      className={`text-sm ${
+                        !notification.isRead
+                          ? 'font-semibold text-black dark:text-white'
+                          : 'text-neutral-700 dark:text-neutral-300'
+                      }`}
+                    >
                       {notification.title}
                     </p>
                     <span className="text-xs text-neutral-400 whitespace-nowrap flex items-center gap-1">
-                        <Clock size={12} />
-                        {new Date(notification.createdAt).toLocaleString()}
+                      <Clock size={12} />
+                      {new Date(notification.createdAt).toLocaleString()}
                     </span>
                   </div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                     {notification.message}
                   </p>
                 </div>
-                 <div className="flex items-center gap-2">
-                   {!notification.isRead && (
+                <div className="flex items-center gap-2">
+                  {!notification.isRead && (
                     <button
-                        onClick={() => handleMarkAsRead(notification._id)}
-                        className="p-2 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
-                        title="Mark as read"
+                      onClick={() => handleMarkAsRead(notification._id)}
+                      className="p-2 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full"
+                      title="Mark as read"
                     >
-                        <CheckCircle size={16} />
+                      <CheckCircle size={16} />
                     </button>
-                   )}
-                   <button
-                        onClick={() => handleDelete(notification._id)}
-                        className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
-                        title="Delete"
-                    >
-                        <Trash2 size={16} />
-                    </button>
-                 </div>
+                  )}
+                  <button
+                    onClick={() => handleDelete(notification._id)}
+                    className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-      
-       {/* Pagination */}
-       {pagination && pagination.pages > 1 && (
+
+      {/* Pagination */}
+      {pagination && pagination.pages > 1 && (
         <div className="flex justify-center gap-2 mt-4">
-             <button
-             disabled={currentPage === 1}
-             onClick={() => setCurrentPage(p => p - 1)}
-             className="px-3 py-1 rounded border disabled:opacity-50"
-             >
-                 Prev
-             </button>
-             <span className="px-3 py-1">{currentPage} / {pagination.pages}</span>
-             <button
-             disabled={currentPage >= pagination.pages}
-             onClick={() => setCurrentPage(p => p + 1)}
-             className="px-3 py-1 rounded border disabled:opacity-50"
-             >
-                 Next
-             </button>
+          <button
+            disabled={currentPage === 1 || isLoading}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            className="px-3 py-1 rounded border disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="px-3 py-1">
+            {currentPage} / {pagination.pages}
+          </span>
+          <button
+            disabled={
+              currentPage >= pagination.pages || isLoading || isPreviousData
+            }
+            onClick={() => {
+              if (!isPreviousData && currentPage < pagination.pages) {
+                setCurrentPage(p => p + 1);
+              }
+            }}
+            className="px-3 py-1 rounded border disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
-       )}
+      )}
     </div>
   );
 };

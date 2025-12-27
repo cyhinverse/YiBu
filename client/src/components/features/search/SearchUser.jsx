@@ -1,25 +1,21 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Search, X, UserPlus, Check, Loader2 } from 'lucide-react';
-import {
-  searchUsers,
-  followUser,
-  unfollowUser,
-} from '../../../redux/actions/userActions';
+import { useSearchUsers } from '../../../hooks/useSearchQuery';
+import { useFollowUser, useUnfollowUser } from '../../../hooks/useUserQuery';
 import toast from 'react-hot-toast';
 
 const SearchUser = ({ isOpen, onClose }) => {
-  const dispatch = useDispatch();
-  const { searchResults, loading } = useSelector(state => state.user);
   const { user: currentUser } = useSelector(state => state.auth);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [followingIds, setFollowingIds] = useState(new Set());
-  const [loadingIds, setLoadingIds] = useState(new Set());
   const searchInputRef = useRef(null);
   const modalRef = useRef(null);
-  const searchTimeoutRef = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -43,69 +39,44 @@ const SearchUser = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      return;
-    }
-
-    // Debounce search
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      dispatch(searchUsers({ query: searchQuery, page: 1, limit: 10 }));
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
     }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery, dispatch]);
+  const { data: searchResults, isLoading: loading } = useSearchUsers({
+    query: debouncedSearch,
+    page: 1,
+    limit: 10,
+  });
 
   const handleFollow = useCallback(
-    async (e, userId) => {
+    async (e, userId, isCurrentlyFollowing) => {
       e.preventDefault();
       e.stopPropagation();
 
-      if (loadingIds.has(userId)) return;
-
-      setLoadingIds(prev => new Set([...prev, userId]));
-      const isCurrentlyFollowing = followingIds.has(userId);
-
       try {
         if (isCurrentlyFollowing) {
-          await dispatch(unfollowUser(userId)).unwrap();
-          setFollowingIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(userId);
-            return newSet;
-          });
+          await unfollowMutation.mutateAsync(userId);
           toast.success('Đã bỏ theo dõi');
         } else {
-          await dispatch(followUser(userId)).unwrap();
-          setFollowingIds(prev => new Set([...prev, userId]));
+          await followMutation.mutateAsync(userId);
           toast.success('Đã theo dõi');
         }
       } catch (error) {
-        toast.error(error || 'Thao tác thất bại');
-      } finally {
-        setLoadingIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userId);
-          return newSet;
-        });
+        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
-    [dispatch, followingIds, loadingIds]
+    [followMutation, unfollowMutation]
   );
 
   const handleClearSearch = () => {
     setSearchQuery('');
   };
 
-  // Get users list from Redux
-  const users = searchResults?.data || searchResults || [];
+  const users =
+    searchResults?.users || searchResults?.data || searchResults || [];
 
   if (!isOpen) return null;
 
@@ -165,8 +136,12 @@ const SearchUser = ({ isOpen, onClose }) => {
             </div>
           ) : (
             users.map(user => {
-              const isFollowed = followingIds.has(user._id) || user.isFollowing;
-              const isLoading = loadingIds.has(user._id);
+              const isFollowed = user.isFollowing;
+              const isMutationLoading =
+                (followMutation.isPending &&
+                  followMutation.variables === user._id) ||
+                (unfollowMutation.isPending &&
+                  unfollowMutation.variables === user._id);
               const isSelf = currentUser?._id === user._id;
 
               return (
@@ -206,17 +181,17 @@ const SearchUser = ({ isOpen, onClose }) => {
                   {/* Follow Button - Don't show for self */}
                   {!isSelf && (
                     <button
-                      onClick={e => handleFollow(e, user._id)}
-                      disabled={isLoading}
+                      onClick={e => handleFollow(e, user._id, isFollowed)}
+                      disabled={isMutationLoading}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        isMutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                       } ${
                         isFollowed
                           ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
                           : 'bg-primary text-primary-foreground'
                       }`}
                     >
-                      {isLoading ? (
+                      {isMutationLoading ? (
                         <Loader2 size={14} className="animate-spin" />
                       ) : isFollowed ? (
                         <>

@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { logout } from '../../../redux/actions/authActions';
 import toast from 'react-hot-toast';
+import { useUnreadCount } from '../../../hooks/useNotificationQuery';
+import { useUnreadMessagesCount } from '../../../hooks/useMessageQuery';
 
 // Custom Nav Item
 const NavItem = ({
@@ -63,16 +65,21 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
+  /* State */
   const [collapsed, setCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage first, then system preference
     const saved = localStorage.getItem('theme');
-    if (saved) {
-      return saved === 'dark';
-    }
+    if (saved) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  const DEFAULT_USER = {
+    name: 'Người dùng',
+    username: 'user',
+    avatar: 'https://via.placeholder.com/40',
+  };
+
+  /* Handlers */
   const handleLogout = async () => {
     await dispatch(logout());
     toast.success('Đăng xuất thành công');
@@ -96,12 +103,9 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
     onCollapsedChange?.(newCollapsed);
   };
 
-  const { unreadCount: messageUnreadCount } = useSelector(
-    state => state.message
-  );
-  const { unreadCount: notificationUnreadCount } = useSelector(
-    state => state.notification
-  );
+  const { data: messageUnreadCount = 0 } = useUnreadMessagesCount();
+
+  const { data: notificationUnreadCount = 0 } = useUnreadCount();
 
   const navItems = [
     { icon: Home, path: '/', label: 'Home' },

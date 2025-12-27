@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -20,12 +20,12 @@ import {
   Check,
 } from 'lucide-react';
 import {
-  getAllReports,
-  getPendingReports,
-  resolveReport,
-  startReportReview,
-  updateReportStatus,
-} from '../../../redux/actions/adminActions';
+  useAdminReports,
+  usePendingReports,
+  useResolveReport,
+  useStartReportReview,
+  useUpdateReportStatus,
+} from '../../../hooks/useAdminQuery';
 
 const getTargetIcon = type => {
   switch (type) {
@@ -80,66 +80,68 @@ const getTargetTypeText = type => {
 };
 
 export default function Reports() {
-  const dispatch = useDispatch();
-  const {
-    reports: reportsList,
-    pendingReports,
-    pagination,
-    loading,
-  } = useSelector(state => state.admin);
+  /* State */
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [selectedReport, setSelectedReport] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [newStatus, setNewStatus] = useState('');
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
+  // Reset page on search
   useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 10,
-    };
-    if (filterStatus !== 'all') params.status = filterStatus;
-    if (filterType !== 'all') params.type = filterType;
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-    dispatch(getAllReports(params));
-    dispatch(getPendingReports());
-  }, [dispatch, currentPage, filterStatus, filterType]);
+  // Queries
+  const {
+    data: reportsData,
+    isLoading: reportsLoading,
+    refetch: refetchReports,
+  } = useAdminReports({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearch || undefined,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+    type: filterType !== 'all' ? filterType : undefined,
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== undefined) {
-        const params = {
-          page: 1,
-          limit: 10,
-          search: searchTerm || undefined,
-        };
-        if (filterStatus !== 'all') params.status = filterStatus;
-        if (filterType !== 'all') params.type = filterType;
-        dispatch(getAllReports(params));
-        setCurrentPage(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm, filterStatus, filterType, dispatch]);
+  const { data: pendingReportsData } = usePendingReports({ page: 1, limit: 1 }); // Just to get total count? Or use reportsData stats if available?
+  // pendingReportsData usually returns list + totalDocs.
+  // pendingCount logic below uses pendingReports length if array, or filters reports.
 
+  const reportsList = Array.isArray(reportsData?.reports)
+    ? reportsData.reports
+    : Array.isArray(reportsData?.data)
+    ? reportsData.data
+    : [];
+  const pagination = {
+    pages: reportsData?.totalPages || reportsData?.pages || 1,
+  };
+
+  const pendingCount =
+    pendingReportsData?.totalReports || pendingReportsData?.totalDocs || 0; // Check API response structure for total
+
+  // Mutations
+  const resolveMutation = useResolveReport();
+  const startReviewMutation = useStartReportReview();
+  const updateStatusMutation = useUpdateReportStatus();
+
+  const loading = reportsLoading;
   const reports = Array.isArray(reportsList) ? reportsList : [];
-  const pendingCount = Array.isArray(pendingReports)
-    ? pendingReports.length
-    : reports.filter(r => r.status === 'pending').length;
 
   const handleResolve = async report => {
     try {
-      await dispatch(
-        resolveReport({
-          reportId: report._id || report.id,
-          decision: 'resolved',
-          notes: resolutionNote || 'Đã giải quyết bởi quản trị viên',
-        })
-      ).unwrap();
-      dispatch(getAllReports({ page: currentPage, limit: 10 }));
-      dispatch(getPendingReports());
+      await resolveMutation.mutateAsync({
+        reportId: report._id || report.id,
+        decision: 'resolved',
+        notes: resolutionNote || 'Đã giải quyết bởi quản trị viên',
+      });
+      // refetch is handled by invalidation
     } catch (error) {
       console.error('Failed to resolve report:', error);
     }
@@ -149,15 +151,11 @@ export default function Reports() {
 
   const handleReject = async report => {
     try {
-      await dispatch(
-        resolveReport({
-          reportId: report._id || report.id,
-          decision: 'rejected',
-          notes: resolutionNote || 'Đã từ chối bởi quản trị viên',
-        })
-      ).unwrap();
-      dispatch(getAllReports({ page: currentPage, limit: 10 }));
-      dispatch(getPendingReports());
+      await resolveMutation.mutateAsync({
+        reportId: report._id || report.id,
+        decision: 'rejected',
+        notes: resolutionNote || 'Đã từ chối bởi quản trị viên',
+      });
     } catch (error) {
       console.error('Failed to reject report:', error);
     }
@@ -167,34 +165,41 @@ export default function Reports() {
 
   const handleStartReview = async report => {
     try {
-      await dispatch(startReportReview(report._id || report.id)).unwrap();
-      dispatch(getAllReports({ page: currentPage, limit: 10 }));
+      await startReviewMutation.mutateAsync(report._id || report.id);
     } catch (error) {
       console.error('Failed to start review:', error);
     }
     setActiveDropdown(null);
   };
 
-  const handleUpdateStatus = async (report, newStatus) => {
+  const handleUpdateStatus = async () => {
+    if (!selectedReport) return;
     try {
-      await dispatch(
-        updateReportStatus({
-          reportId: report._id || report.id,
-          status: newStatus,
-          notes: 'Trạng thái được cập nhật thủ công bởi quản trị viên',
-        })
-      ).unwrap();
-      dispatch(getAllReports({ page: currentPage, limit: 10 }));
-      dispatch(getPendingReports());
+      await updateStatusMutation.mutateAsync({
+        reportId: selectedReport._id || selectedReport.id,
+        status: newStatus,
+        notes:
+          resolutionNote ||
+          'Trạng thái được cập nhật thủ công bởi quản trị viên',
+      });
+      setShowStatusModal(false);
+      setSelectedReport(null);
+      setResolutionNote('');
     } catch (error) {
       console.error('Failed to update status:', error);
     }
+  };
+
+  const handleOpenStatusModal = (report, status) => {
+    setSelectedReport(report);
+    setNewStatus(status);
+    setResolutionNote('');
+    setShowStatusModal(true);
     setActiveDropdown(null);
   };
 
   const handleRefresh = () => {
-    dispatch(getAllReports({ page: currentPage, limit: 10 }));
-    dispatch(getPendingReports());
+    refetchReports();
   };
 
   const handlePageChange = newPage => {
@@ -440,14 +445,24 @@ export default function Reports() {
                                       Bắt đầu xem xét
                                     </button>
                                     <button
-                                      onClick={() => handleResolve(report)}
+                                      onClick={() =>
+                                        handleOpenStatusModal(
+                                          report,
+                                          'resolved'
+                                        )
+                                      }
                                       className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/10 flex items-center gap-3 text-emerald-600"
                                     >
                                       <CheckCircle size={16} />
                                       Chấp nhận
                                     </button>
                                     <button
-                                      onClick={() => handleReject(report)}
+                                      onClick={() =>
+                                        handleOpenStatusModal(
+                                          report,
+                                          'rejected'
+                                        )
+                                      }
                                       className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-3 text-rose-600"
                                     >
                                       <XCircle size={16} />
@@ -621,6 +636,21 @@ export default function Reports() {
                 </div>
               </div>
 
+              {/* Resolution Note Input */}
+              {selectedReport.status === 'pending' && (
+                <div className="mb-6">
+                  <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">
+                    Ghi chú giải quyết
+                  </p>
+                  <textarea
+                    value={resolutionNote}
+                    onChange={e => setResolutionNote(e.target.value)}
+                    placeholder="Nhập ghi chú hoặc lý do giải quyết..."
+                    className="yb-input w-full min-h-[100px] py-3 text-sm resize-none bg-neutral-50 dark:bg-neutral-800/50"
+                  />
+                </div>
+              )}
+
               {/* Actions */}
               {(selectedReport.status === 'pending' ||
                 !selectedReport.status) && (
@@ -650,6 +680,58 @@ export default function Reports() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Status Update Modal */}
+      {showStatusModal && selectedReport && (
+        <div className="fixed inset-0 bg-neutral-900/70 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-fade-in">
+          <div className="yb-card bg-white dark:bg-neutral-900 w-full max-w-md p-8 shadow-2xl transform animate-scale-in">
+            <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-6 tracking-tight">
+              Cập nhật trạng thái
+            </h2>
+
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm font-bold text-neutral-500 mb-4">
+                  Chuyển trạng thái báo cáo sang:{' '}
+                  <span className="text-primary uppercase font-black">
+                    {getStatusText(newStatus)}
+                  </span>
+                </p>
+                <label className="block text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
+                  Ghi chú cập nhật
+                </label>
+                <textarea
+                  value={resolutionNote}
+                  onChange={e => setResolutionNote(e.target.value)}
+                  placeholder="Nhập lý do thay đổi trạng thái..."
+                  className="yb-input w-full min-h-[120px] py-3 text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setSelectedReport(null);
+                  }}
+                  className="yb-btn !bg-neutral-100 dark:!bg-neutral-800 !text-neutral-700 dark:!text-neutral-300 flex-1 py-4 font-black"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={updateStatusMutation.isLoading}
+                  className="yb-btn yb-btn-primary flex-1 py-4 font-black flex items-center justify-center gap-2"
+                >
+                  {updateStatusMutation.isLoading && (
+                    <Loader2 size={18} className="animate-spin" />
+                  )}
+                  Cập nhật
+                </button>
+              </div>
             </div>
           </div>
         </div>

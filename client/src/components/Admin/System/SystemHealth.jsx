@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
   Activity,
   Server,
@@ -14,30 +13,17 @@ import {
   Loader2,
   Wifi,
 } from 'lucide-react';
-import { getSystemHealth } from '../../../redux/actions/adminActions';
+import { useSystemHealth } from '../../../hooks/useAdminQuery';
 
 const SystemHealth = () => {
-  const dispatch = useDispatch();
-  const { systemHealth, loading } = useSelector(state => state.admin);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  useEffect(() => {
-    dispatch(getSystemHealth());
-  }, [dispatch]);
+  const { data: systemHealth, isLoading: loading, refetch } = useSystemHealth();
 
   const handleRefresh = () => {
-    dispatch(getSystemHealth());
+    refetch();
     setLastRefresh(new Date());
   };
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      dispatch(getSystemHealth());
-      setLastRefresh(new Date());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [dispatch]);
 
   const getStatusColor = status => {
     switch (status?.toLowerCase()) {
@@ -115,7 +101,7 @@ const SystemHealth = () => {
     return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const healthData = systemHealth?.data || systemHealth || {};
+  const healthData = systemHealth || {};
 
   const healthMetrics = [
     {

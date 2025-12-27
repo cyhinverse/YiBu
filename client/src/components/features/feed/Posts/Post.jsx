@@ -61,8 +61,14 @@ const formatTime = date => {
 
 const Post = ({ data, onDelete }) => {
   const dispatch = useDispatch();
-  const { likeStatus } = useSelector(state => state.like || {});
-  const { saveStatus } = useSelector(state => state.savePost || {});
+  // Select specific data for this post only to prevent unnecessary re-renders
+  const postLikeStatus = useSelector(
+    state => state.like?.likeStatus?.[data?._id]
+  );
+  const isPostSaved = useSelector(
+    state => state.savePost?.saveStatus?.[data?._id]
+  );
+
   const authUser = useSelector(state => state.auth?.user);
 
   const [isLiked, setIsLiked] = useState(data?.isLiked || false);
@@ -83,18 +89,21 @@ const Post = ({ data, onDelete }) => {
 
   const isOwner = authUser?._id === data?.user?._id;
 
-  // Update state from Redux if available
+  // Sync with Redux state
   useEffect(() => {
-    if (data?._id && likeStatus?.[data._id]) {
-      setIsLiked(likeStatus[data._id].isLiked);
-      if (likeStatus[data._id].likesCount !== undefined) {
-        setLikeCount(likeStatus[data._id].likesCount);
+    if (postLikeStatus) {
+      setIsLiked(postLikeStatus.isLiked);
+      if (postLikeStatus.likesCount !== undefined) {
+        setLikeCount(postLikeStatus.likesCount);
       }
     }
-    if (data?._id && saveStatus?.[data._id] !== undefined) {
-      setIsSaved(saveStatus[data._id]);
+  }, [postLikeStatus]);
+
+  useEffect(() => {
+    if (isPostSaved !== undefined) {
+      setIsSaved(isPostSaved);
     }
-  }, [data?._id, likeStatus, saveStatus]);
+  }, [isPostSaved]);
 
   const user = data?.user || {
     name: 'Unknown User',

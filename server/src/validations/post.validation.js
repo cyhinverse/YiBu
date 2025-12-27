@@ -40,6 +40,7 @@ export const personalizedQuery = Joi.object({
 // Query: { limit?, timeframe? }
 // ======================================
 export const trendingQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
   timeframe: Joi.string().valid('day', 'week', 'month').default('day'),
 });

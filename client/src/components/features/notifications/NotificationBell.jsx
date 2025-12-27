@@ -1,21 +1,17 @@
 import { useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { Bell } from 'lucide-react';
-import { getUnreadCount } from '../../../redux/actions/notificationActions';
+import { useUnreadCount } from '../../../hooks/useNotificationQuery';
+import { useQueryClient } from '@tanstack/react-query';
 
 const NotificationBell = ({ onClick }) => {
-  const dispatch = useDispatch();
-  const { unreadCount = 0 } = useSelector(state => state.notification || {});
-
-  // Fetch unread count on mount
-  useEffect(() => {
-    dispatch(getUnreadCount());
-  }, [dispatch]);
+  const queryClient = useQueryClient();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   // Listen for refresh notifications event (triggered by socket)
   const handleRefreshNotifications = useCallback(() => {
-    dispatch(getUnreadCount());
-  }, [dispatch]);
+    queryClient.invalidateQueries(['notifications', 'unreadCount']);
+    queryClient.invalidateQueries(['notifications', 'list']);
+  }, [queryClient]);
 
   useEffect(() => {
     document.addEventListener(

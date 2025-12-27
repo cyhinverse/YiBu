@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
+// import { useDispatch, useSelector } from 'react-redux';
 import {
   Search,
   UserX,
@@ -10,43 +11,41 @@ import {
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
-import { getBannedUsers, unbanUser } from '../../../redux/actions/adminActions';
+import { useBannedUsers, useUnbanUser } from '../../../hooks/useAdminQuery';
 
 const BannedAccounts = () => {
-  const dispatch = useDispatch();
-  const {
-    bannedUsers: bannedUsersList,
-    pagination,
-    loading,
-  } = useSelector(state => state.admin);
+  /* State */
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 500);
   const [showUnbanModal, setShowUnbanModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch banned users on mount
+  // Reset page on search
   useEffect(() => {
-    dispatch(getBannedUsers({ page: currentPage, limit: 10 }));
-  }, [dispatch, currentPage]);
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== undefined) {
-        dispatch(
-          getBannedUsers({
-            page: 1,
-            limit: 10,
-            search: searchQuery || undefined,
-          })
-        );
-        setCurrentPage(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Queries
+  const {
+    data: bannedData,
+    isLoading: loading,
+    refetch: refetchBanned,
+  } = useBannedUsers({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearch || undefined,
+  });
 
+  const bannedUsersList = bannedData?.users || bannedData || []; // Adjust based on API structure
   const bannedUsers = Array.isArray(bannedUsersList) ? bannedUsersList : [];
+  const pagination = {
+    totalPages: bannedData?.totalPages || 1,
+    total: bannedData?.totalUsers || 0,
+  };
+
+  // Mutations
+  const unbanMutation = useUnbanUser();
 
   const handleUnban = user => {
     setSelectedUser(user);
@@ -56,8 +55,7 @@ const BannedAccounts = () => {
   const confirmUnban = async () => {
     if (!selectedUser) return;
     try {
-      await dispatch(unbanUser({ userId: selectedUser._id })).unwrap();
-      dispatch(getBannedUsers({ page: currentPage, limit: 10 }));
+      await unbanMutation.mutateAsync({ userId: selectedUser._id });
     } catch (error) {
       console.error('Failed to unban user:', error);
     }
@@ -66,7 +64,7 @@ const BannedAccounts = () => {
   };
 
   const handleRefresh = () => {
-    dispatch(getBannedUsers({ page: currentPage, limit: 10 }));
+    refetchBanned();
   };
 
   const handlePageChange = newPage => {

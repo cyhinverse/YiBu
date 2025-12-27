@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
-  Filter,
-  MoreHorizontal,
   Eye,
   Ban,
   Trash2,
@@ -23,15 +21,15 @@ import {
   Calendar,
 } from 'lucide-react';
 import {
-  getAllUsers,
-  deleteUser,
-  banUser,
-  unbanUser,
-  suspendUser,
-  warnUser,
-  getAdminUserPosts,
-  getAdminUserReports,
-} from '../../../redux/actions/adminActions';
+  useAdminUsers,
+  useDeleteUser,
+  useBanUser,
+  useUnbanUser,
+  useSuspendUser,
+  useWarnUser,
+  useAdminUserPosts,
+  useAdminUserReports,
+} from '../../../hooks/useAdminQuery'; // useAdminQuery hooks
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -59,19 +57,13 @@ const StatusBadge = ({ status }) => {
 };
 
 const Users = () => {
-  const dispatch = useDispatch();
-  const {
-    users: usersList,
-    pagination,
-    loading,
-    currentUserPosts,
-    currentUserReports,
-  } = useSelector(state => state.admin);
+  /* State */
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 500);
   const [activeTab, setActiveTab] = useState('overview');
 
   const [showActionModal, setShowActionModal] = useState(false);
@@ -79,36 +71,43 @@ const Users = () => {
   const [actionReason, setActionReason] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch users on mount and when filters change
-  useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 10,
-    };
-    if (searchQuery) params.search = searchQuery;
-    if (filterStatus !== 'all') params.status = filterStatus;
-    if (filterRole !== 'all') params.role = filterRole;
+  // Queries
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    refetch: refetchUsers,
+  } = useAdminUsers({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearch || undefined,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+    role: filterRole !== 'all' ? filterRole : undefined,
+  });
 
-    dispatch(getAllUsers(params));
-  }, [dispatch, currentPage, filterStatus, filterRole, searchQuery]);
+  const usersList = usersData?.users || [];
+  const pagination = { pages: usersData?.totalPages || 1 };
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== undefined) {
-        const params = {
-          page: 1,
-          limit: 10,
-          search: searchQuery || undefined,
-        };
-        if (filterStatus !== 'all') params.status = filterStatus;
-        if (filterRole !== 'all') params.role = filterRole;
-        dispatch(getAllUsers(params));
-        setCurrentPage(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, filterStatus, filterRole, dispatch]);
+  // User Details Queries
+  const { data: postsData } = useAdminUserPosts({
+    userId: selectedUser?._id,
+    enabled: !!selectedUser,
+  });
+  const currentUserPosts = postsData?.posts || [];
+
+  const { data: reportsData } = useAdminUserReports({
+    userId: selectedUser?._id,
+    enabled: !!selectedUser,
+  });
+  const currentUserReports = reportsData?.reports || [];
+
+  // Mutations
+  const deleteMutation = useDeleteUser();
+  const banMutation = useBanUser();
+  const unbanMutation = useUnbanUser();
+  const suspendMutation = useSuspendUser();
+  const warnMutation = useWarnUser();
+
+  const loading = usersLoading; // Simplify loading state
 
   const users = Array.isArray(usersList) ? usersList : [];
 
@@ -116,9 +115,6 @@ const Users = () => {
     setSelectedUser(user);
     setActiveTab('overview');
     setShowDetailModal(true);
-    // Fetch detailed data
-    dispatch(getAdminUserPosts({ userId: user._id }));
-    dispatch(getAdminUserReports({ userId: user._id }));
   };
 
   const handleBanUser = user => {
@@ -151,33 +147,31 @@ const Users = () => {
     try {
       switch (actionType) {
         case 'ban':
-          await dispatch(
-            banUser({ userId: selectedUser._id, reason: actionReason })
-          ).unwrap();
+          await banMutation.mutateAsync({
+            userId: selectedUser._id,
+            reason: actionReason,
+          });
           break;
         case 'unban':
-          await dispatch(unbanUser({ userId: selectedUser._id })).unwrap();
+          await unbanMutation.mutateAsync({ userId: selectedUser._id });
           break;
         case 'suspend':
-          await dispatch(
-            suspendUser({
-              userId: selectedUser._id,
-              days: 7,
-              reason: actionReason,
-            })
-          ).unwrap();
+          await suspendMutation.mutateAsync({
+            userId: selectedUser._id,
+            days: 7,
+            reason: actionReason,
+          });
           break;
         case 'warn':
-          await dispatch(
-            warnUser({ userId: selectedUser._id, reason: actionReason })
-          ).unwrap();
+          await warnMutation.mutateAsync({
+            userId: selectedUser._id,
+            reason: actionReason,
+          });
           break;
         case 'delete':
-          await dispatch(deleteUser(selectedUser._id)).unwrap();
+          await deleteMutation.mutateAsync(selectedUser._id);
           break;
       }
-      // Refresh users list
-      dispatch(getAllUsers({ page: currentPage, limit: 10 }));
     } catch (error) {
       console.error(`Failed to ${actionType} user:`, error);
     }
@@ -187,7 +181,7 @@ const Users = () => {
   };
 
   const handleRefresh = () => {
-    dispatch(getAllUsers({ page: currentPage, limit: 10 }));
+    refetchUsers();
   };
 
   const handlePageChange = newPage => {

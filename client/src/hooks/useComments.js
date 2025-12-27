@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useCallback, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { useSocketContext } from '../contexts/SocketContext';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  createComment,
-  getCommentsByPost,
-  updateComment,
-  deleteComment,
-  likeComment,
-  unlikeComment,
-} from '../redux/actions/commentActions';
+  usePostComments,
+  useCreateComment,
+  useUpdateComment,
+  useDeleteComment,
+  useToggleLikeComment,
+} from './useCommentQuery';
 
 // Recursive helper to add reply to tree
 const addReplyToTree = (comments, newComment) => {
@@ -36,7 +36,8 @@ const addReplyToTree = (comments, newComment) => {
 const updateCommentInTree = (comments, updatedComment) => {
   return comments.map(cmt => {
     if (cmt._id === updatedComment._id) {
-      return { ...cmt, content: updatedComment.content };
+      // Preserve replies
+      return { ...cmt, ...updatedComment, replies: cmt.replies };
     }
     if (cmt.replies?.length > 0) {
       return {
@@ -57,6 +58,10 @@ const removeCommentFromTree = (comments, commentId) => {
         return {
           ...cmt,
           replies: removeCommentFromTree(cmt.replies, commentId),
+          // We might want to decrement repliesCount here if we knew the parent
+          // But tree structure naturally removes it.
+          // If we need to update parent's repliesCount, we need more complex logic
+          // For now assuming simplistic removal is fine.
         };
       }
       return cmt;
@@ -69,100 +74,88 @@ const removeCommentFromTree = (comments, commentId) => {
  * @returns {Object} - State và các hàm xử lý comment
  */
 const useComments = postId => {
-  const dispatch = useDispatch();
   const { socket } = useSocketContext();
   const { user } = useSelector(state => state.auth);
-
-  // State
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
   const [replyingTo, setReplyingTo] = useState(null); // { commentId, username }
+  const [localError, setLocalError] = useState(null);
 
-  // Fetch comments
-  const fetchComments = useCallback(async () => {
-    if (!postId) return;
+  // Queries
+  const {
+    data: commentsData,
+    isLoading: loading,
+    refetch,
+  } = usePostComments(postId);
 
-    setLoading(true);
-    setError(null);
+  const comments = commentsData?.comments || commentsData || [];
 
-    try {
-      const result = await dispatch(
-        getCommentsByPost({ postId, page: 1, limit: 50 })
-      ).unwrap();
-      setComments(result.comments || []);
-    } catch (err) {
-      setError(err?.message || 'Không thể tải bình luận');
-    } finally {
-      setLoading(false);
-    }
-  }, [postId, dispatch]);
+  // Mutations
+  const createMutation = useCreateComment();
+  const updateMutation = useUpdateComment();
+  const deleteMutation = useDeleteComment();
+  const likeMutation = useToggleLikeComment();
 
   // Add comment
   const addComment = useCallback(
     async (content, parentId = null) => {
       if (!content.trim()) return null;
-
+      setLocalError(null);
       try {
-        const result = await dispatch(
-          createComment({ postId, content, parentId })
-        ).unwrap();
-        // Socket sẽ broadcast comment mới, không cần update state thủ công
+        const result = await createMutation.mutateAsync({
+          postId,
+          content,
+          parentId,
+        });
         return result;
       } catch (err) {
-        setError(err?.message || 'Không thể thêm bình luận');
+        setLocalError(err?.message || 'Không thể thêm bình luận');
         return null;
       }
     },
-    [postId, dispatch]
+    [postId, createMutation]
   );
 
   // Update comment
   const editComment = useCallback(
     async (commentId, content) => {
       if (!content.trim()) return false;
-
       try {
-        await dispatch(updateComment({ commentId, content })).unwrap();
+        await updateMutation.mutateAsync({ commentId, content });
         return true;
       } catch (err) {
-        setError(err?.message || 'Không thể cập nhật bình luận');
+        setLocalError(err?.message || 'Không thể cập nhật bình luận');
         return false;
       }
     },
-    [dispatch]
+    [updateMutation]
   );
 
   // Delete comment
   const removeComment = useCallback(
-    async (commentId, isReply = false) => {
+    async commentId => {
       try {
-        await dispatch(deleteComment({ commentId, postId, isReply })).unwrap();
+        await deleteMutation.mutateAsync({ commentId });
         return true;
       } catch (err) {
-        setError(err?.message || 'Không thể xóa bình luận');
+        setLocalError(err?.message || 'Không thể xóa bình luận');
         return false;
       }
     },
-    [dispatch, postId]
+    [deleteMutation]
   );
 
   // Like/Unlike comment
   const toggleLike = useCallback(
     async (commentId, isLiked) => {
       try {
-        if (isLiked) {
-          await dispatch(unlikeComment(commentId)).unwrap();
-        } else {
-          await dispatch(likeComment(commentId)).unwrap();
-        }
+        await likeMutation.mutateAsync({ commentId, isLiked });
         return true;
       } catch (err) {
         console.error('Toggle like error:', err);
         return false;
       }
     },
-    [dispatch]
+    [likeMutation]
   );
 
   // Reply handlers
@@ -174,46 +167,55 @@ const useComments = postId => {
     setReplyingTo(null);
   }, []);
 
+  // Update Cache Helper
+  const updateCache = useCallback(
+    updater => {
+      queryClient.setQueryData(['comments', postId], oldData => {
+        const oldComments = oldData?.comments || oldData || [];
+        const newComments = updater(oldComments);
+        // Return same structure as API
+        return oldData?.comments
+          ? { ...oldData, comments: newComments }
+          : newComments;
+      });
+    },
+    [queryClient, postId]
+  );
+
   // Socket handlers
   const handleNewComment = useCallback(
     data => {
-      // data: { postId, comment, timestamp }
       if (data.postId !== postId) return;
-
       const newComment = data.comment;
 
-      setComments(prev => {
-        // If it's a root comment
+      updateCache(prev => {
         if (!newComment.parentComment) {
-          // Avoid duplicates
+          // Check duplicate
           if (prev.some(c => c._id === newComment._id)) return prev;
           return [{ ...newComment, replies: [] }, ...prev];
         }
-
-        // If it's a reply, find parent and add
         return addReplyToTree(prev, newComment);
       });
     },
-    [postId]
+    [postId, updateCache]
   );
 
   const handleUpdateComment = useCallback(
     data => {
       if (data.postId !== postId) return;
-
       const updated = data.comment || data;
-      setComments(prev => updateCommentInTree(prev, updated));
+      updateCache(prev => updateCommentInTree(prev, updated));
     },
-    [postId]
+    [postId, updateCache]
   );
 
   const handleDeleteComment = useCallback(
     data => {
       if (data.postId !== postId) return;
       const { commentId } = data;
-      setComments(prev => removeCommentFromTree(prev, commentId));
+      updateCache(prev => removeCommentFromTree(prev, commentId));
     },
-    [postId]
+    [postId, updateCache]
   );
 
   // Socket setup
@@ -239,13 +241,7 @@ const useComments = postId => {
     handleDeleteComment,
   ]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
-  // Computed
-  const totalCount = comments.reduce(
+  const totalCount = comments?.reduce(
     (sum, cmt) => sum + 1 + (cmt.replies?.length || 0),
     0
   );
@@ -253,8 +249,8 @@ const useComments = postId => {
   return {
     comments,
     loading,
-    error,
-    totalCount,
+    error: localError, // Return local error for mutation failures
+    totalCount: totalCount || 0,
     currentUser: user,
     replyingTo,
     addComment,
@@ -263,7 +259,7 @@ const useComments = postId => {
     toggleLike,
     startReply,
     cancelReply,
-    refresh: fetchComments,
+    refresh: refetch,
   };
 };
 

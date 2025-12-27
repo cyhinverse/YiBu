@@ -1,125 +1,131 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Outlet, useParams } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
+import { Search, Settings, MessageCircle, Loader2, Users } from 'lucide-react';
 import {
-  Search,
-  Settings,
-  MessageCircle,
-  Loader2,
-  Users,
-} from 'lucide-react';
-import {
-  getConversations,
-  createConversation,
-  createGroup,
-  getConversationById,
-} from '../../redux/actions/messageActions';
-import { searchUsers } from '../../redux/actions/userActions';
+  useConversations,
+  useCreateConversation,
+  useCreateGroup,
+} from '../../hooks/useMessageQuery';
+import { useSearchUsers } from '../../hooks/useSearchQuery';
 import ConversationItem from '../../components/features/chat/ConversationItem';
 import CreateGroupModal from '../../components/features/chat/CreateGroupModal';
+import { useDebounce } from '@/hooks/useDebounce';
 
 function Message() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { conversationId } = useParams();
-  
-  const {
-    conversations = [],
-    loading,
-  } = useSelector(state => state.message);
+
+  const { data: conversationsData, isLoading: conversationsLoading } =
+    useConversations();
+  const conversations =
+    conversationsData?.conversations || conversationsData || [];
+
   const { user } = useSelector(state => state.auth);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const debouncedUserSearch = useDebounce(userSearchTerm, 500);
 
-  // Fetch conversations on mount
-  useEffect(() => {
-    dispatch(getConversations());
-  }, [dispatch]);
+  const createConversationMutation = useCreateConversation();
+  const createGroupMutation = useCreateGroup();
 
-  // Handle Deep Linking / Sync Route with Redux
+  const { data: searchResultsData, isLoading: isSearchingUsers } =
+    useSearchUsers({
+      query: debouncedUserSearch,
+      page: 1,
+      limit: 5,
+    });
+  const searchResults = searchResultsData?.users || searchResultsData || [];
+
+  // Handle Deep Linking / Sync Route
   useEffect(() => {
     const handleSync = async () => {
       if (!conversationId || conversationId === 'messages') return;
 
-      // Find existing conversation in list
-      const existing = conversations.find(c => 
-        (c._id === conversationId || c.conversationId === conversationId || c.id === conversationId || c.directId === conversationId)
+      const existing = conversations.find(
+        c =>
+          c._id === conversationId ||
+          c.conversationId === conversationId ||
+          c.id === conversationId ||
+          c.directId === conversationId
       );
 
-      // 1. If we found it in the list but the URL is using the compound directId, redirect to real _id
-      if (existing && conversationId.includes('_') && existing._id && existing._id !== conversationId) {
+      if (
+        existing &&
+        conversationId.includes('_') &&
+        existing._id &&
+        existing._id !== conversationId
+      ) {
         navigate(`/messages/${existing._id}`, { replace: true });
         return;
       }
 
-      // 2. If not in list, resolve it
-      if (!existing && !loading) {
-        if (conversationId.includes('_')) {
-           const [u1, u2] = conversationId.split('_');
-           const targetId = (u1 === user?._id) ? u2 : u1;
-           if (targetId) {
-             try {
-               const result = await dispatch(createConversation(targetId)).unwrap();
-               const conv = result.conversation || result;
-               if (conv?._id && conv?._id !== conversationId) {
-                  navigate(`/messages/${conv._id}`, { replace: true });
-               }
-             } catch (err) {
-               console.error("Failed to create/fetch conversation by pair", err);
-             }
-           }
-        } else if (conversationId.length === 24) {
-           try {
-             const result = await dispatch(getConversationById(conversationId)).unwrap();
-             const conv = result.conversation || result;
-             if (conv?._id && conv?._id !== conversationId) {
+      if (!existing && !conversationsLoading) {
+        // Match user1Id_user2Id format
+        const pairMatch = conversationId.match(
+          /^([a-f\d]{24})_([a-f\d]{24})$/i
+        );
+        if (pairMatch) {
+          const [_, u1, u2] = pairMatch;
+          const targetId = u1 === user?._id ? u2 : u1;
+          if (targetId) {
+            try {
+              const conv = await createConversationMutation.mutateAsync(
+                targetId
+              );
+              if (conv?._id && conv?._id !== conversationId) {
                 navigate(`/messages/${conv._id}`, { replace: true });
-             }
-           } catch {
-             try {
-               const result = await dispatch(createConversation(conversationId)).unwrap();
-               const conv = result.conversation || result;
-               if (conv?._id) navigate(`/messages/${conv._id}`, { replace: true });
-             } catch {
-               console.warn("Could not resolve conversation ID", conversationId);
-             }
-           }
+              }
+            } catch (err) {
+              console.error('Failed to create/fetch conversation by pair', err);
+            }
+          }
         }
       }
     };
 
     if (user) handleSync();
-  }, [conversationId, conversations, dispatch, user, loading, navigate]);
+  }, [
+    conversationId,
+    conversations,
+    user,
+    conversationsLoading,
+    navigate,
+    createConversationMutation,
+  ]);
 
   const filteredConversations = useMemo(() => {
     if (!Array.isArray(conversations)) return [];
     return conversations.filter(c => {
-      const otherUser = c.otherUser || c.participant || c.members?.find(m => m._id !== user?._id);
-      const name = c.isGroup ? (c.name || 'Nhóm') : (otherUser?.name || otherUser?.fullName || otherUser?.username || '');
+      const otherUser =
+        c.otherUser ||
+        c.participant ||
+        c.members?.find(m => m._id !== user?._id);
+      const name = c.isGroup
+        ? c.name || 'Nhóm'
+        : otherUser?.name || otherUser?.fullName || otherUser?.username || '';
       return name.toLowerCase().includes(searchQuery.toLowerCase());
     });
   }, [conversations, searchQuery, user?._id]);
 
-  const handleSearchUsers = async query => {
-    setUserSearchQuery(query);
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setIsSearchingUsers(true);
+  const handleCreateGroup = async () => {
+    if (!groupName.trim() || selectedUsers.length < 2) return;
     try {
-      const result = await dispatch(searchUsers({ query, page: 1, limit: 5 })).unwrap();
-      setSearchResults(result.users || []);
+      const newGroup = await createGroupMutation.mutateAsync({
+        name: groupName,
+        participantIds: selectedUsers.map(u => u._id),
+      });
+
+      setShowGroupModal(false);
+      setGroupName('');
+      setSelectedUsers([]);
+      navigate(`/messages/${newGroup._id || newGroup.id}`);
     } catch (error) {
-      console.error('Failed to search users:', error);
-    } finally {
-      setIsSearchingUsers(false);
+      console.error('Failed to create group:', error);
     }
   };
 
@@ -128,24 +134,6 @@ function Message() {
       setSelectedUsers(selectedUsers.filter(u => u._id !== user._id));
     } else {
       setSelectedUsers([...selectedUsers, user]);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim() || selectedUsers.length < 2) return;
-    try {
-      const result = await dispatch(createGroup({
-        name: groupName,
-        participantIds: selectedUsers.map(u => u._id),
-      })).unwrap();
-      
-      const newGroup = result.group || result;
-      setShowGroupModal(false);
-      setGroupName('');
-      setSelectedUsers([]);
-      navigate(`/messages/${newGroup._id || newGroup.id}`);
-    } catch (error) {
-      console.error('Failed to create group:', error);
     }
   };
 
@@ -194,29 +182,40 @@ function Message() {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 md:pb-0">
-          {loading && conversations.length === 0 ? (
+          {conversationsLoading && conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-xs text-text-tertiary font-medium">Đang tải cuộc trò chuyện...</p>
+              <p className="text-xs text-text-tertiary font-medium">
+                Đang tải cuộc trò chuyện...
+              </p>
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-10 text-center flex flex-col items-center justify-center space-y-4">
               <div className="w-16 h-16 bg-surface-secondary rounded-3xl flex items-center justify-center border border-border">
-                 <MessageCircle size={32} className="text-text-tertiary" />
+                <MessageCircle size={32} className="text-text-tertiary" />
               </div>
               <p className="text-text-tertiary text-sm font-medium">
-                {searchQuery ? 'Không tìm thấy kết quả' : 'Chưa có cuộc trò chuyện nào'}
+                {searchQuery
+                  ? 'Không tìm thấy kết quả'
+                  : 'Chưa có cuộc trò chuyện nào'}
               </p>
             </div>
           ) : (
             <div className="">
               {filteredConversations.map(conversation => {
-                const id = conversation._id || conversation.conversationId || conversation.id;
+                const id =
+                  conversation._id ||
+                  conversation.conversationId ||
+                  conversation.id;
                 return (
                   <ConversationItem
                     key={id}
                     conversation={conversation}
-                    isActive={!!conversationId && (conversationId === id || conversation.directId === conversationId)}
+                    isActive={
+                      !!conversationId &&
+                      (conversationId === id ||
+                        conversation.directId === conversationId)
+                    }
                     onClick={() => navigate(`/messages/${id}`)}
                     currentUserId={user?._id}
                   />
@@ -228,7 +227,11 @@ function Message() {
       </div>
 
       {/* Right Content Area (Rendered via Outlet) */}
-      <div className={`flex-1 min-w-0 bg-background flex flex-col ${conversationId ? 'flex' : 'hidden md:flex'}`}>
+      <div
+        className={`flex-1 min-w-0 bg-background flex flex-col ${
+          conversationId ? 'flex' : 'hidden md:flex'
+        }`}
+      >
         <Outlet />
       </div>
 
@@ -238,8 +241,8 @@ function Message() {
         onClose={() => setShowGroupModal(false)}
         groupName={groupName}
         setGroupName={setGroupName}
-        searchQuery={userSearchQuery}
-        onSearchChange={handleSearchUsers}
+        searchQuery={userSearchTerm}
+        onSearchChange={setUserSearchTerm}
         searchResults={searchResults}
         selectedUsers={selectedUsers}
         onToggleUser={toggleUserSelection}

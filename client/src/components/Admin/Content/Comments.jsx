@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -17,12 +17,13 @@ import {
   Loader2,
   RefreshCcw,
   CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import {
-  getAllComments,
-  moderateComment,
-  deleteComment,
-} from '../../../redux/actions/adminActions';
+  useAdminComments,
+  useModerateComment,
+  useDeleteCommentAdmin,
+} from '../../../hooks/useAdminQuery';
 import { toast } from 'react-hot-toast';
 
 const getStatusStyle = status => {
@@ -54,94 +55,81 @@ const getStatusText = status => {
 };
 
 export default function Comments() {
-  const dispatch = useDispatch();
-  const { comments, loading, totalPages } = useSelector(state => state.admin);
-
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // empty string for all
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [selectedComment, setSelectedComment] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState(null);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
-  // Debounce search
+  // Reset page on search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      dispatch(
-        getAllComments({
-          page: currentPage,
-          limit: 10,
-          search: searchTerm,
-          status: filterStatus || undefined,
-        })
-      );
-    }, 500);
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-    return () => clearTimeout(timer);
-  }, [dispatch, currentPage, searchTerm, filterStatus]);
+  // Query
+  const {
+    data: commentsData,
+    isLoading: loading,
+    refetch,
+  } = useAdminComments({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearch || undefined,
+    status: filterStatus || undefined,
+  });
 
-  const handleDelete = async () => {
+  const { mutate: moderateComment } = useModerateComment();
+  const { mutate: deleteComment } = useDeleteCommentAdmin();
+
+  const comments = Array.isArray(commentsData?.comments)
+    ? commentsData.comments
+    : Array.isArray(commentsData?.data)
+    ? commentsData.data
+    : [];
+  const totalPages = commentsData?.totalPages || 1;
+
+  const handleDelete = () => {
     if (!commentToDelete) return;
-    try {
-      await dispatch(
-        deleteComment({
-          commentId: commentToDelete._id || commentToDelete.id,
-          reason: 'Xóa bởi quản trị viên qua bảng điều khiển',
-        })
-      ).unwrap();
-      toast.success('Đã xóa bình luận');
-      setShowDeleteModal(false);
-      setCommentToDelete(null);
-      dispatch(
-        getAllComments({
-          page: currentPage,
-          limit: 10,
-          search: searchTerm,
-          status: filterStatus || undefined,
-        })
-      );
-    } catch (error) {
-      toast.error('Xóa bình luận thất bại: ' + error);
-    }
+    deleteComment(
+      {
+        commentId: commentToDelete._id || commentToDelete.id,
+        reason: 'Xóa bởi quản trị viên qua bảng điều khiển',
+      },
+      {
+        onSuccess: () => {
+          toast.success('Đã xóa bình luận');
+          setShowDeleteModal(false);
+          setCommentToDelete(null);
+        },
+      }
+    );
   };
 
-  const handleToggleStatus = async comment => {
-    try {
-      // Logic: If active -> remove (hide). If removed -> approve (show)
-      const action = comment.isDeleted ? 'approve' : 'remove';
-      await dispatch(
-        moderateComment({
-          commentId: comment._id || comment.id,
-          action,
-          reason: `Thay đổi trạng thái thành ${action} bởi quản trị viên`,
-        })
-      ).unwrap();
-      toast.success(`Đã ${action === 'remove' ? 'ẩn' : 'khôi phục'} bình luận`);
-      setActiveDropdown(null);
-      // Refresh list
-      dispatch(
-        getAllComments({
-          page: currentPage,
-          limit: 10,
-          search: searchTerm,
-          status: filterStatus || undefined,
-        })
-      );
-    } catch (error) {
-      toast.error('Thay đổi trạng thái thất bại: ' + error);
-    }
+  const handleToggleStatus = comment => {
+    // Logic: If active -> remove (hide). If removed -> approve (show)
+    const action = comment.isDeleted ? 'approve' : 'remove';
+    moderateComment(
+      {
+        commentId: comment._id || comment.id,
+        action,
+        reason: `Thay đổi trạng thái thành ${action} bởi quản trị viên`,
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Đã ${action === 'remove' ? 'ẩn' : 'khôi phục'} bình luận`
+          );
+          setActiveDropdown(null);
+        },
+      }
+    );
   };
 
   const handleRefresh = () => {
-    dispatch(
-      getAllComments({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-        status: filterStatus || undefined,
-      })
-    );
+    refetch();
   };
 
   // Helper to safely get display data

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
   Calendar,
@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { getAdminLogs } from '../../../redux/actions/adminActions';
+import { useAdminLogs } from '../../../hooks/useAdminQuery';
 
 const getLevelIcon = level => {
   switch (level) {
@@ -52,54 +52,43 @@ const getLevelStyle = level => {
 };
 
 const getActionIcon = action => {
-  if (action.includes('login') || action.includes('user'))
+  if (action?.includes('login') || action?.includes('user'))
     return <User size={14} />;
-  if (action.includes('admin')) return <Shield size={14} />;
-  if (action.includes('settings')) return <Settings size={14} />;
-  if (action.includes('backup') || action.includes('database'))
+  if (action?.includes('admin')) return <Shield size={14} />;
+  if (action?.includes('settings')) return <Settings size={14} />;
+  if (action?.includes('backup') || action?.includes('database'))
     return <Database size={14} />;
   return <Activity size={14} />;
 };
 
 export default function Logs() {
-  const dispatch = useDispatch();
-  const { adminLogs, pagination, loading } = useSelector(state => state.admin);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [filterLevel, setFilterLevel] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch logs on mount and when filters change
+  // Reset page on search
   useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 20,
-    };
-    if (filterLevel !== 'all') params.level = filterLevel;
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-    dispatch(getAdminLogs(params));
-  }, [dispatch, currentPage, filterLevel]);
+  const {
+    data: logsData,
+    isLoading: loading,
+    refetch,
+  } = useAdminLogs({
+    page: currentPage,
+    limit: 20,
+    search: debouncedSearch || undefined,
+    level: filterLevel !== 'all' ? filterLevel : undefined,
+  });
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== undefined) {
-        const params = {
-          page: 1,
-          limit: 20,
-          search: searchTerm || undefined,
-        };
-        if (filterLevel !== 'all') params.level = filterLevel;
-        dispatch(getAdminLogs(params));
-        setCurrentPage(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const logs = Array.isArray(adminLogs) ? adminLogs : [];
+  const logs = Array.isArray(logsData?.logs) ? logsData.logs : [];
+  const totalPages = logsData?.totalPages || 1;
+  const totalDocs = logsData?.totalLogs || logsData?.totalDocs || logs.length;
 
   const handleRefresh = () => {
-    dispatch(getAdminLogs({ page: currentPage, limit: 20 }));
+    refetch();
   };
 
   const handlePageChange = newPage => {
@@ -107,7 +96,7 @@ export default function Logs() {
   };
 
   const stats = {
-    total: pagination?.total || logs.length,
+    total: totalDocs,
     info: logs.filter(l => l.level === 'info').length,
     warning: logs.filter(l => l.level === 'warning').length,
     error: logs.filter(l => l.level === 'error').length,
@@ -307,8 +296,7 @@ export default function Logs() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Page {currentPage} of {pagination?.pages || 1} (
-          {pagination?.total || logs.length} logs)
+          Page {currentPage} of {totalPages} ({totalDocs} logs)
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -320,7 +308,7 @@ export default function Logs() {
           </button>
           <span className="px-4 py-2 text-sm">Trang {currentPage}</span>
           <button
-            disabled={currentPage >= (pagination?.pages || 1)}
+            disabled={currentPage >= totalPages}
             onClick={() => handlePageChange(currentPage + 1)}
             className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >

@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import Navigate from '../../components/layout/Navigate/Navigate';
-import { getUnreadCount as getMessageUnreadCount } from '../../redux/actions/messageActions';
-import { getUnreadCount as getNotificationUnreadCount } from '../../redux/actions/notificationActions';
-
 const UserLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
 
-  // Fetch unread counts when user is available
+  // Unread counts are handled by React Query in Navigate/Notification components
   useEffect(() => {
-    if (user?._id) {
-      dispatch(getMessageUnreadCount());
-      dispatch(getNotificationUnreadCount());
-    }
-  }, [dispatch, user?._id]);
+    // No need to dispatch Redux actions for unread counts anymore
+  }, [user?._id]);
 
   return (
     <div className="flex min-h-screen bg-neutral-50 dark:bg-black">

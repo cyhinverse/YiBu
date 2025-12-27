@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -16,24 +16,24 @@ import {
   Loader2,
 } from 'lucide-react';
 import Post from '../../feed/Posts/Post';
-// import FollowList from '../FollowList/FollowList'; // Changed to lazy import
 import { useDispatch, useSelector } from 'react-redux';
+import {
+  useSharedPosts,
+  useUserPosts,
+  useLikedPosts,
+  useSavedPosts,
+} from '../../../../hooks/usePostsQuery';
+import {
+  useProfile,
+  useCheckFollow,
+  useFollowUser,
+  useUnfollowUser,
+} from '../../../../hooks/useUserQuery';
+import { useCreateConversation } from '../../../../hooks/useMessageQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const FollowList = lazy(() => import('../FollowList/FollowList'));
-import {
-  getProfile,
-  followUser,
-  unfollowUser,
-  checkFollowStatus,
-} from '../../../../redux/actions/userActions';
-import { createConversation } from '../../../../redux/actions/messageActions';
-import {
-  getPostsByUser,
-  getSharedPosts,
-} from '../../../../redux/actions/postActions';
-import { getMyLikedPosts } from '../../../../redux/actions/likeActions';
-import { getSavedPosts } from '../../../../redux/actions/savePostActions';
-import toast from 'react-hot-toast';
 
 const formatNumber = num => {
   if (num == null) return '0';
@@ -46,133 +46,107 @@ const Profile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
-  const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [likedPosts, setLikedPosts] = useState([]);
-  const [savedPosts, setSavedPosts] = useState([]);
-  const [sharedPosts, setSharedPosts] = useState([]);
-  const [tabLoading, setTabLoading] = useState(false);
   const [showFollowList, setShowFollowList] = useState(null); // 'followers' | 'following' | null
   const dispatch = useDispatch();
   const authUser = useSelector(state => state.auth?.user);
   const { currentUser } = useSelector(state => state.auth);
-  const { currentProfile, loading, followStatus } = useSelector(
-    state => state.user || {}
-  );
-  const { userPosts } = useSelector(state => state.post || {});
+
   const profileId = userId || authUser?._id || currentUser?._id;
   const isOwnProfile =
     !userId || userId === authUser?._id || userId === currentUser?._id;
 
-  useEffect(() => {
-    if (profileId) {
-      dispatch(getProfile(profileId));
-      dispatch(getPostsByUser({ userId: profileId }));
-      // Check follow status if not own profile
-      if (!isOwnProfile) {
-        dispatch(checkFollowStatus(profileId));
-      }
-    }
-  }, [profileId, dispatch, isOwnProfile]);
+  // React Query Hooks
+  const { data: profileData, isLoading: profileLoading } =
+    useProfile(profileId);
+  const currentProfile = profileData;
 
-  // Fetch tab data when switching tabs
-  useEffect(() => {
-    const fetchTabData = async () => {
-      // Shared posts should be visible to everyone (depending on privacy settings handled by backend)
-      // modifying condition if needed. Assuming shared tab is for everyone for now or just own?
-      // User request: "trong này thiếu cái tab bài viết chia sẽ nữa giúp tôi thêm vào 1 tab nữa , khi tôi bấm nút mũi tên trong bài post thì trong cái tab chia sẽ này sẽ hiện những bài viết mình chia sẽ"
-      // User refers to "bài viết mình chia sẽ" -> their own shared posts. Likely public profile feature too.
+  const { data: followStatusData } = useCheckFollow(profileId, !isOwnProfile);
+  const isFollowing = followStatusData?.isFollowing;
 
-      if (activeTab === 'posts') return;
+  // Posts Query
+  const { data: userPostsData, isLoading: isPostsLoading } = useUserPosts(
+    activeTab === 'posts' ? profileId : null
+  );
 
-      setTabLoading(true);
-      try {
-        if (activeTab === 'likes' && isOwnProfile) {
-          const result = await dispatch(getMyLikedPosts()).unwrap();
-          setLikedPosts(result.posts || result || []);
-        } else if (activeTab === 'saved' && isOwnProfile) {
-          const result = await dispatch(getSavedPosts()).unwrap();
-          setSavedPosts(result.posts || result || []);
-        } else if (activeTab === 'shared') {
-          const result = await dispatch(
-            getSharedPosts({ userId: profileId })
-          ).unwrap();
-          setSharedPosts(result.posts || result || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch tab data:', error);
-      } finally {
-        setTabLoading(false);
-      }
-    };
+  const userPosts =
+    userPostsData?.pages?.flatMap(page => page.posts || page) || [];
 
-    fetchTabData();
-  }, [activeTab, dispatch, isOwnProfile, profileId]);
+  // Liked Posts Query (Only for own profile)
+  const { data: likedPostsData, isLoading: isLikesLoading } = useLikedPosts(
+    activeTab === 'likes' && isOwnProfile
+  );
 
-  // Update following state from Redux
-  useEffect(() => {
-    if (followStatus?.isFollowing !== undefined) {
-      setIsFollowing(followStatus.isFollowing);
-    } else if (currentProfile?.isFollowing !== undefined) {
-      setIsFollowing(currentProfile.isFollowing);
-    }
-  }, [followStatus, currentProfile]);
+  const likedPosts = likedPostsData?.posts || likedPostsData || [];
+
+  // Saved Posts Query (Only for own profile)
+  const { data: savedPostsData, isLoading: isSavedLoading } = useSavedPosts(
+    activeTab === 'saved' && isOwnProfile
+  );
+
+  const savedPosts = savedPostsData?.posts || savedPostsData || [];
+
+  const queryClient = useQueryClient();
+
+  // React Query for Shared Posts
+  const { data: sharedPostsData, isLoading: isSharedLoading } = useSharedPosts(
+    activeTab === 'shared' ? profileId : null
+  );
+
+  const sharedPosts =
+    sharedPostsData?.pages?.flatMap(page => page.posts || page) || [];
+
+  // Mutations
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
+  const createConversationMutation = useCreateConversation();
 
   const handleFollow = useCallback(async () => {
-    if (followLoading || isOwnProfile) return;
-    setFollowLoading(true);
+    if (isOwnProfile) return;
 
     try {
       if (isFollowing) {
-        await dispatch(unfollowUser(profileId)).unwrap();
-        setIsFollowing(false);
+        await unfollowMutation.mutateAsync(profileId);
         toast.success('Đã bỏ theo dõi');
       } else {
-        await dispatch(followUser(profileId)).unwrap();
-        setIsFollowing(true);
+        await followMutation.mutateAsync(profileId);
         toast.success('Đã theo dõi');
       }
-      dispatch(getProfile(profileId));
     } catch (error) {
-      toast.error(error || 'Thao tác thất bại');
-    } finally {
-      setFollowLoading(false);
+      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
-  }, [dispatch, isFollowing, profileId, followLoading, isOwnProfile]);
+  }, [isFollowing, profileId, isOwnProfile, followMutation, unfollowMutation]);
 
   const handleMessage = useCallback(async () => {
     try {
-      const result = await dispatch(createConversation(profileId)).unwrap();
-      // Support both response formats: result.conversationId or result.data._id
-      const conversationId =
-        result?.conversationId ||
-        result?.data?.conversationId ||
-        result?.data?._id ||
-        result?._id;
+      const result = await createConversationMutation.mutateAsync(profileId);
+      const conversationId = result?._id || result?.id;
+
       if (conversationId) {
         navigate(`/messages/${conversationId}`, {
           state: { selectedUser: currentProfile },
         });
       } else {
-        // Navigate to messages page with the profile as the target
         navigate(`/messages`, {
           state: { selectedUser: currentProfile, targetUserId: profileId },
         });
       }
     } catch (error) {
-      // If conversation already exists, navigate to it
-      if (typeof error === 'string' && error.includes('already exists')) {
-        navigate(`/messages/${profileId}`, {
-          state: { selectedUser: currentProfile },
+      if (error?.response?.data?.message?.includes('already exists')) {
+        // Find existing conversation ID if possible or just navigate to messages
+        navigate(`/messages`, {
+          state: { selectedUser: currentProfile, targetUserId: profileId },
         });
       } else {
-        toast.error(error || 'Không thể tạo cuộc trò chuyện');
+        toast.error(
+          error?.response?.data?.message || 'Không thể tạo cuộc trò chuyện'
+        );
       }
     }
-  }, [dispatch, profileId, navigate, currentProfile]);
+  }, [profileId, navigate, currentProfile, createConversationMutation]);
 
   // Show loading state
-  if (loading) {
+  if (profileLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto flex items-center justify-center py-20">
         <div className="w-8 h-8 border-2 border-neutral-300 border-t-black dark:border-t-white rounded-full animate-spin" />
@@ -191,18 +165,16 @@ const Profile = () => {
       : []),
   ];
 
-  // Get posts to display based on active tab
   const getTabContent = () => {
-    if (tabLoading) {
-      return (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={32} className="animate-spin text-neutral-400" />
-        </div>
-      );
-    }
-
     switch (activeTab) {
       case 'posts':
+        if (isPostsLoading) {
+          return (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={32} className="animate-spin text-neutral-400" />
+            </div>
+          );
+        }
         if (!userPosts || userPosts.length === 0) {
           return (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
@@ -215,9 +187,18 @@ const Profile = () => {
             </div>
           );
         }
-        return userPosts.map(post => <Post key={post._id} data={post} />);
+        return userPosts.map((post, index) => (
+          <Post key={post._id || index} data={post} />
+        ));
 
       case 'shared':
+        if (isSharedLoading) {
+          return (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={32} className="animate-spin text-neutral-400" />
+            </div>
+          );
+        }
         if (!sharedPosts || sharedPosts.length === 0) {
           return (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
@@ -230,9 +211,18 @@ const Profile = () => {
             </div>
           );
         }
-        return sharedPosts.map(post => <Post key={post._id} data={post} />);
+        return sharedPosts.map((post, index) => (
+          <Post key={post._id || index} data={post} />
+        ));
 
       case 'likes':
+        if (isLikesLoading) {
+          return (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={32} className="animate-spin text-neutral-400" />
+            </div>
+          );
+        }
         if (!likedPosts || likedPosts.length === 0) {
           return (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
@@ -246,10 +236,19 @@ const Profile = () => {
           );
         }
         return Array.isArray(likedPosts)
-          ? likedPosts.map(post => <Post key={post._id} data={post} />)
+          ? likedPosts.map((post, index) => (
+              <Post key={post._id || index} data={post} />
+            ))
           : null;
 
       case 'saved':
+        if (isSavedLoading) {
+          return (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={32} className="animate-spin text-neutral-400" />
+            </div>
+          );
+        }
         if (!savedPosts || savedPosts.length === 0) {
           return (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
@@ -262,8 +261,8 @@ const Profile = () => {
             </div>
           );
         }
-        return savedPosts.map(post => (
-          <Post key={post._id} data={post.post || post} />
+        return savedPosts.map((post, index) => (
+          <Post key={post._id || index} data={post.post || post} />
         ));
 
       default:
@@ -316,16 +315,20 @@ const Profile = () => {
                 </button>
                 <button
                   onClick={handleFollow}
-                  disabled={followLoading}
+                  disabled={
+                    followMutation.isPending || unfollowMutation.isPending
+                  }
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    followLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    followMutation.isPending || unfollowMutation.isPending
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
                   } ${
                     isFollowing
                       ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
                       : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                   }`}
                 >
-                  {followLoading ? (
+                  {followMutation.isPending || unfollowMutation.isPending ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : isFollowing ? (
                     <>

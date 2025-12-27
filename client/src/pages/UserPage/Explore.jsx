@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   Search,
   TrendingUp,
@@ -14,17 +14,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTrendingHashtags, useExploreFeed } from '../../hooks/usePostsQuery';
 import {
-  getTrendingHashtags,
-  getExploreFeed,
-  searchPosts,
-} from '../../redux/actions/postActions';
-import {
-  getSuggestions,
-  followUser,
-  unfollowUser,
-  searchUsers,
-} from '../../redux/actions/userActions';
+  useSuggestions,
+  useFollowUser,
+  useUnfollowUser,
+} from '../../hooks/useUserQuery';
+import { useSearchUsers, useSearchPosts } from '../../hooks/useSearchQuery';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const formatNumber = num => {
@@ -34,84 +30,60 @@ const formatNumber = num => {
 };
 
 const Explore = () => {
-  const dispatch = useDispatch();
-  const { currentUser } = useSelector(state => state.auth);
-  const {
-    trendingHashtags,
-    posts: explorePosts,
-    searchResults: postSearchResults,
-    loading: postsLoading,
-  } = useSelector(state => state.post);
-  const {
-    suggestions,
-    searchResults,
-    loading: usersLoading,
-  } = useSelector(state => state.user);
+  const { user: currentUser } = useSelector(state => state.auth);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('trending');
-  const [followingIds, setFollowingIds] = useState(new Set());
-  const [loadingIds, setLoadingIds] = useState(new Set());
 
   const debouncedSearch = useDebounce(searchQuery, 500);
 
-  // Load initial data
-  useEffect(() => {
-    dispatch(getTrendingHashtags(10));
-    dispatch(getSuggestions(10));
-    dispatch(getExploreFeed({ page: 1, limit: 18 }));
-  }, [dispatch]);
+  // Queries
+  const { data: trendingHashtags, isLoading: trendingLoading } =
+    useTrendingHashtags(10);
+  const { data: suggestions, isLoading: suggestionsLoading } =
+    useSuggestions(10);
+  const { data: exploreFeed, isLoading: exploreLoading } = useExploreFeed({
+    page: 1,
+    limit: 18,
+  });
 
-  // Handle search
-  useEffect(() => {
-    if (debouncedSearch.trim()) {
-      dispatch(searchUsers({ query: debouncedSearch, page: 1, limit: 20 }));
-      dispatch(searchPosts({ query: debouncedSearch, page: 1, limit: 20 }));
+  const isSearching = !!debouncedSearch.trim();
+  const { data: userSearchResults, isLoading: userSearchLoading } =
+    useSearchUsers({
+      query: debouncedSearch,
+      page: 1,
+      limit: 20,
+    });
+  const { data: postSearchResults, isLoading: postSearchLoading } =
+    useSearchPosts({
+      query: debouncedSearch,
+      page: 1,
+      limit: 20,
+    });
+
+  // Mutations
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
+
+  const handleFollow = async user => {
+    const isFollowed = user.isFollowing;
+    try {
+      if (isFollowed) {
+        await unfollowMutation.mutateAsync(user._id);
+        toast.success('Đã bỏ theo dõi');
+      } else {
+        await followMutation.mutateAsync(user._id);
+        toast.success('Đã theo dõi');
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
-  }, [debouncedSearch, dispatch]);
+  };
 
   // Get people list - search results or suggestions (ensure array)
-  const peopleList = Array.isArray(
-    debouncedSearch.trim() ? searchResults : suggestions
-  )
-    ? debouncedSearch.trim()
-      ? searchResults
-      : suggestions
-    : [];
-
-  const handleFollow = useCallback(
-    async userId => {
-      if (loadingIds.has(userId)) return;
-
-      setLoadingIds(prev => new Set([...prev, userId]));
-      const isCurrentlyFollowing = followingIds.has(userId);
-
-      try {
-        if (isCurrentlyFollowing) {
-          await dispatch(unfollowUser(userId)).unwrap();
-          setFollowingIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(userId);
-            return newSet;
-          });
-          toast.success('Đã bỏ theo dõi');
-        } else {
-          await dispatch(followUser(userId)).unwrap();
-          setFollowingIds(prev => new Set([...prev, userId]));
-          toast.success('Đã theo dõi');
-        }
-      } catch (error) {
-        toast.error(error || 'Thao tác thất bại');
-      } finally {
-        setLoadingIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userId);
-          return newSet;
-        });
-      }
-    },
-    [dispatch, followingIds, loadingIds]
-  );
+  const peopleList = isSearching
+    ? userSearchResults?.users || userSearchResults || []
+    : suggestions?.users || suggestions || [];
 
   const tabs = [
     { id: 'trending', label: 'Trending', icon: TrendingUp },
@@ -119,10 +91,16 @@ const Explore = () => {
     { id: 'photos', label: 'Photos', icon: Image },
   ];
 
-  // Get hashtags array - handle both array and object with data property
   const hashtagsArray = Array.isArray(trendingHashtags)
     ? trendingHashtags
     : trendingHashtags?.data || [];
+
+  const explorePosts = isSearching
+    ? postSearchResults?.posts || postSearchResults || []
+    : exploreFeed?.posts || exploreFeed || [];
+
+  const postsLoading = trendingLoading || exploreLoading || postSearchLoading;
+  const usersLoading = suggestionsLoading || userSearchLoading;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -238,9 +216,12 @@ const Explore = () => {
               </div>
             ) : (
               peopleList.map(user => {
-                const isFollowed =
-                  followingIds.has(user._id) || user.isFollowing;
-                const isLoading = loadingIds.has(user._id);
+                const isFollowed = user.isFollowing;
+                const isMutationLoading =
+                  (followMutation.isPending &&
+                    followMutation.variables === user._id) ||
+                  (unfollowMutation.isPending &&
+                    unfollowMutation.variables === user._id);
                 const isSelf = user._id === currentUser?._id;
                 return (
                   <div
@@ -285,17 +266,19 @@ const Explore = () => {
                     </div>
                     {!isSelf && (
                       <button
-                        onClick={() => handleFollow(user._id)}
-                        disabled={isLoading}
+                        onClick={() => handleFollow(user)}
+                        disabled={isMutationLoading}
                         className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium transition-colors ${
-                          isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                          isMutationLoading
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
                         } ${
                           isFollowed
                             ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
                             : 'bg-black dark:bg-white text-white dark:text-black'
                         }`}
                       >
-                        {isLoading ? (
+                        {isMutationLoading ? (
                           <Loader2 size={14} className="animate-spin" />
                         ) : isFollowed ? (
                           <>

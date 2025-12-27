@@ -1,5 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useEffect, useState } from 'react';
 import {
   Bell,
   Heart,
@@ -12,14 +11,15 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  deleteAllNotifications,
-  getUnreadCount,
-} from '../../../../redux/actions/notificationActions';
+  useNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  useDeleteNotification,
+  useDeleteAllNotifications,
+} from '../../../../hooks/useNotificationQuery';
 import toast from 'react-hot-toast';
+import { useInView } from 'react-intersection-observer';
 
 const formatTime = dateStr => {
   const date = new Date(dateStr);
@@ -53,82 +53,74 @@ const getNotificationIcon = type => {
 };
 
 const NotificationPanel = () => {
-  const dispatch = useDispatch();
-  const { notifications, loading, error, unreadCount, pagination } =
-    useSelector(state => state.notification);
   const [filter, setFilter] = useState('all');
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
-  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
-  const loadingRef = useRef(false);
-  const observerRef = useRef(null);
 
-  // Fetch notifications on mount
-  useEffect(() => {
-    dispatch(getNotifications({ page: 1, limit: 20 }));
-    dispatch(getUnreadCount());
-  }, [dispatch]);
+  // Queries
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error,
+    refetch,
+  } = useNotifications(filter);
 
-  // Infinite scroll
-  const loadMore = useCallback(() => {
-    if (loadingRef.current || !pagination?.hasMore) return;
-    loadingRef.current = true;
-    dispatch(
-      getNotifications({
-        page: pagination.currentPage + 1,
-        limit: 20,
-        type: filter !== 'all' ? undefined : undefined,
-      })
-    ).finally(() => {
-      loadingRef.current = false;
-    });
-  }, [dispatch, pagination, filter]);
+  const { data: unreadCount = 0 } = useUnreadCount();
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && !loading && pagination?.hasMore) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
+  // Mutations
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
+  const { mutateAsync: deleteAllNotifications, isPending: isDeletingAll } =
+    useDeleteAllNotifications();
 
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
-    }
+  // Flatten pages to get all notifications
+  const notifications =
+    data?.pages?.flatMap(page => page.notifications || page) || [];
 
-    return () => observer.disconnect();
-  }, [loadMore, loading, pagination?.hasMore]);
-
-  const filteredNotifications = (notifications || []).filter(n => {
+  // Filter client-side
+  const filteredNotifications = notifications.filter(n => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !n.isRead;
     return true;
   });
 
+  // Infinite Scroll Hook
+  const { ref, inView } = useInView({ threshold: 0 });
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Handlers
   const handleMarkAllAsRead = () => {
-    dispatch(markAllAsRead());
+    markAllAsRead(undefined, {
+      onError: () => toast.error('Failed to mark all as read'),
+    });
   };
 
   const handleMarkAsRead = id => {
-    dispatch(markAsRead(id));
+    markAsRead(id);
   };
 
   const handleDelete = (e, id) => {
     e.stopPropagation();
-    dispatch(deleteNotification(id));
+    deleteNotification(id, {
+      onError: () => toast.error('Failed to delete notification'),
+    });
   };
 
   const handleDeleteAll = async () => {
-    setDeleteAllLoading(true);
     try {
-      await dispatch(deleteAllNotifications()).unwrap();
+      await deleteAllNotifications();
       toast.success('Đã xóa tất cả thông báo');
       setShowDeleteAllConfirm(false);
     } catch (error) {
-      toast.error(error || 'Xóa thông báo thất bại');
-    } finally {
-      setDeleteAllLoading(false);
+      toast.error('Xóa thông báo thất bại', error.message);
     }
   };
 
@@ -145,15 +137,17 @@ const NotificationPanel = () => {
               <button
                 onClick={handleMarkAllAsRead}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+                title="Mark all as read"
               >
                 <Check size={14} />
                 Mark all read
               </button>
             )}
-            {notifications && notifications.length > 0 && (
+            {notifications.length > 0 && (
               <button
                 onClick={() => setShowDeleteAllConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors"
+                title="Clear all notifications"
               >
                 <Trash2 size={14} />
                 Clear all
@@ -197,7 +191,7 @@ const NotificationPanel = () => {
       </div>
 
       {/* Loading State */}
-      {loading && (!notifications || notifications.length === 0) && (
+      {isLoading && notifications.length === 0 && (
         <div className="flex justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
         </div>
@@ -207,9 +201,11 @@ const NotificationPanel = () => {
       {error && (
         <div className="p-8 text-center">
           <Bell size={32} className="mx-auto text-red-400 mb-2" />
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-500 text-sm">
+            {error.message || 'Error loading notifications'}
+          </p>
           <button
-            onClick={() => dispatch(getNotifications({ page: 1, limit: 20 }))}
+            onClick={() => refetch()}
             className="mt-2 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-full"
           >
             Thử lại
@@ -218,7 +214,7 @@ const NotificationPanel = () => {
       )}
 
       {/* Notifications List */}
-      {!loading && !error && (
+      {!isLoading && !error && (
         <div>
           {filteredNotifications.length === 0 ? (
             <div className="p-8 text-center">
@@ -268,11 +264,9 @@ const NotificationPanel = () => {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  {/* Unread Indicator */}
                   {!notification.isRead && (
                     <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                   )}
-                  {/* Delete Button */}
                   <button
                     onClick={e => handleDelete(e, notification._id)}
                     className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all"
@@ -285,8 +279,8 @@ const NotificationPanel = () => {
           )}
 
           {/* Load more trigger */}
-          <div ref={observerRef} className="h-10">
-            {loading && notifications?.length > 0 && (
+          <div ref={ref} className="h-10">
+            {isFetchingNextPage && (
               <div className="flex justify-center py-4">
                 <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
               </div>
@@ -321,10 +315,10 @@ const NotificationPanel = () => {
               </button>
               <button
                 onClick={handleDeleteAll}
-                disabled={deleteAllLoading}
+                disabled={isDeletingAll}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
               >
-                {deleteAllLoading ? (
+                {isDeletingAll ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <>

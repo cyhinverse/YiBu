@@ -1,5 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, lazy, Suspense } from 'react';
 import {
   Users,
   FileText,
@@ -16,10 +15,10 @@ import {
 } from 'lucide-react';
 
 import {
-  getDashboardStats,
-  getUserGrowth,
-  getTopUsers,
-} from '../../../redux/actions/adminActions';
+  useDashboardStats,
+  useUserGrowth,
+  useTopUsers,
+} from '../../../hooks/useAdminQuery';
 
 const UserGrowthChart = lazy(() => import('./UserGrowthChart'));
 
@@ -69,28 +68,36 @@ const StatCard = ({ stat, isLoading }) => (
 );
 
 const Dashboard = () => {
-  const dispatch = useDispatch();
-  const { stats, topUsers, userGrowth, loading } = useSelector(
-    state => state.admin
-  );
   const [period, setPeriod] = useState(30);
 
-  useEffect(() => {
-    const fetchData = () => {
-      dispatch(getDashboardStats());
-      dispatch(getTopUsers({ limit: 5 }));
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(endDate.getDate() - period);
-      dispatch(
-        getUserGrowth({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        })
-      );
-    };
-    fetchData();
-  }, [dispatch, period]);
+  // Calculate dates for user growth
+  const endDate = new Date().toISOString();
+  const startDateObj = new Date();
+  startDateObj.setDate(new Date().getDate() - period);
+  const startDate = startDateObj.toISOString();
+
+  // Queries
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useDashboardStats();
+
+  const {
+    data: topUsersData,
+    isLoading: usersLoading,
+    refetch: refetchTopUsers,
+  } = useTopUsers(1, 5);
+
+  const topUsers = topUsersData?.users || [];
+
+  const {
+    data: userGrowth,
+    isLoading: growthLoading,
+    refetch: refetchGrowth,
+  } = useUserGrowth(startDate, endDate);
+
+  const loading = statsLoading || usersLoading || growthLoading;
 
   const buildStats = () => {
     const userStats = stats?.users || {};
@@ -155,17 +162,9 @@ const Dashboard = () => {
   const topPosts = stats?.topPosts || [];
 
   const handleRefresh = () => {
-    dispatch(getDashboardStats());
-    dispatch(getTopUsers({ limit: 5 }));
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - period);
-    dispatch(
-      getUserGrowth({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      })
-    );
+    refetchStats();
+    refetchTopUsers();
+    refetchGrowth();
   };
 
   return (

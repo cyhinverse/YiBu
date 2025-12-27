@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
   Calendar,
@@ -14,7 +14,7 @@ import {
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
-import { getInteractions } from '../../../redux/actions/adminActions';
+import { useAdminInteractions } from '../../../hooks/useAdminQuery';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -80,55 +80,38 @@ const formatTime = date => {
 };
 
 export default function Interactions() {
-  const dispatch = useDispatch();
-  const { interactions, interactionStats, pagination, loading } = useSelector(
-    state => state.admin
-  );
-
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch interactions on mount and when filters change
+  // Reset page on search
   useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 20,
-    };
-    if (filterType !== 'all') params.type = filterType;
-    if (searchTerm) params.search = searchTerm;
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-    dispatch(getInteractions(params));
-  }, [dispatch, currentPage, filterType]);
-
-  // Handle search with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const params = {
-        page: 1,
-        limit: 20,
-        search: searchTerm || undefined,
-      };
-      if (filterType !== 'all') params.type = filterType;
-      dispatch(getInteractions(params));
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  const {
+    data: interactionsData,
+    isLoading: loading,
+    refetch: refetchInteractions,
+  } = useAdminInteractions({
+    page: currentPage,
+    limit: 20,
+    type: filterType !== 'all' ? filterType : undefined,
+    search: debouncedSearch || undefined,
+  });
 
   const handleRefresh = () => {
-    const params = {
-      page: currentPage,
-      limit: 20,
-    };
-    if (filterType !== 'all') params.type = filterType;
-    if (searchTerm) params.search = searchTerm;
-    dispatch(getInteractions(params));
+    refetchInteractions();
   };
 
   const handlePageChange = newPage => {
     setCurrentPage(newPage);
   };
+
+  const interactions = interactionsData?.interactions || [];
+  const interactionStats = interactionsData?.interactionStats || {};
+  const pagination = interactionsData?.pagination || {};
 
   const interactionsList = Array.isArray(interactions) ? interactions : [];
   const stats = interactionStats || {

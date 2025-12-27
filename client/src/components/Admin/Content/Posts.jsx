@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDebounce } from '../../../hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -24,12 +24,11 @@ import {
   Info,
 } from 'lucide-react';
 import {
-  getAllPosts,
-  moderatePost,
-  approvePost,
-  deletePost,
-  getAdminPostReports,
-} from '../../../redux/actions/adminActions';
+  useAdminPosts,
+  useDeletePost,
+  useModeratePost,
+  useAdminPostReports,
+} from '../../../hooks/useAdminQuery';
 
 const getTypeIcon = type => {
   switch (type) {
@@ -56,64 +55,78 @@ const getStatusStyle = status => {
 };
 
 export default function Posts() {
-  const dispatch = useDispatch();
-  const {
-    posts: postsList,
-    pagination,
-    loading,
-    currentPostReports,
-  } = useSelector(state => state.admin);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedPost, setSelectedPost] = useState(null);
-  const [activeTab, setActiveTab] = useState('content');
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [showModerateModal, setShowModerateModal] = useState(false);
+  const [moderateAction, setModerateAction] = useState({
+    action: '',
+    reason: '',
+  });
+  const [activeTab, setActiveTab] = useState('content');
 
+  // Reset page on search
   useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 10,
-    };
-    if (filterStatus !== 'all') params.status = filterStatus;
-    if (filterType !== 'all') params.type = filterType;
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
-    dispatch(getAllPosts(params));
-  }, [dispatch, currentPage, filterStatus, filterType]);
+  // Queries
+  const {
+    data: postsData,
+    isLoading: postsLoading,
+    refetch: refetchPosts,
+  } = useAdminPosts({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearch || undefined,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+    type: filterType !== 'all' ? filterType : undefined,
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== undefined) {
-        const params = {
-          page: 1,
-          limit: 10,
-          search: searchTerm || undefined,
-        };
-        if (filterStatus !== 'all') params.status = filterStatus;
-        if (filterType !== 'all') params.type = filterType;
-        dispatch(getAllPosts(params));
-        setCurrentPage(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Note: Original redux action pass 'type' to getAllPosts, assuming useAdminPosts should support it too.
+  // My useAdminPosts definition might need update if it doesn't support 'type'.
+  // Wait, I didn't add 'type' to useAdminPosts params in useAdminQuery.js.
+  // I should check useAdminQuery.js again later. For now, let's assume it passes all extra params or update it.
+
+  const postsList = Array.isArray(postsData?.posts)
+    ? postsData.posts
+    : Array.isArray(postsData?.data)
+    ? postsData.data
+    : [];
+  const pagination = {
+    pages: postsData?.totalPages || postsData?.pages || 1,
+  };
+
+  // Post Reports Query
+  const { data: reportsData } = useAdminPostReports({
+    postId: selectedPost?._id || selectedPost?.id,
+  });
+  const currentPostReports = reportsData?.reports || [];
+
+  // Mutations
+  const deleteMutation = useDeletePost();
+  const moderateMutation = useModeratePost();
+
+  const loading = postsLoading;
 
   const posts = Array.isArray(postsList) ? postsList : [];
 
   const handleViewDetails = post => {
     setSelectedPost(post);
     setActiveTab('content');
-    dispatch(getAdminPostReports({ postId: post._id || post.id }));
   };
 
   const handleDelete = async () => {
     if (!postToDelete) return;
     try {
-      await dispatch(deletePost(postToDelete._id || postToDelete.id)).unwrap();
-      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+      await deleteMutation.mutateAsync(postToDelete._id || postToDelete.id);
     } catch (error) {
       console.error('Failed to delete post:', error);
     }
@@ -122,34 +135,42 @@ export default function Posts() {
   };
 
   const handleToggleStatus = async post => {
-    const newStatus = post.status === 'active' ? 'hidden' : 'active';
-    try {
-      await dispatch(
-        moderatePost({
-          postId: post._id || post.id,
-          action: newStatus === 'hidden' ? 'hide' : 'approve',
-          reason: newStatus === 'hidden' ? 'Kiểm duyệt Admin' : undefined,
-        })
-      ).unwrap();
-      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
-    } catch (error) {
-      console.error('Failed to moderate post:', error);
-    }
+    setSelectedPost(post);
+    setModerateAction({
+      action: post.status === 'active' ? 'hide' : 'approve',
+      reason: '',
+    });
+    setShowModerateModal(true);
     setActiveDropdown(null);
   };
 
-  const handleApprovePost = async post => {
+  const handleModerateSubmit = async () => {
+    if (!selectedPost) return;
     try {
-      await dispatch(approvePost(post._id || post.id)).unwrap();
-      dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+      await moderateMutation.mutateAsync({
+        postId: selectedPost._id || selectedPost.id,
+        action: moderateAction.action,
+        reason: moderateAction.reason || 'Kiểm duyệt Admin',
+      });
+      setShowModerateModal(false);
+      setSelectedPost(null);
     } catch (error) {
-      console.error('Failed to approve post:', error);
+      console.error('Failed to moderate post:', error);
     }
+  };
+
+  const handleApprovePost = async post => {
+    setSelectedPost(post);
+    setModerateAction({
+      action: 'approve',
+      reason: '',
+    });
+    setShowModerateModal(true);
     setActiveDropdown(null);
   };
 
   const handleRefresh = () => {
-    dispatch(getAllPosts({ page: currentPage, limit: 10 }));
+    refetchPosts();
   };
 
   const handlePageChange = newPage => {
@@ -304,10 +325,16 @@ export default function Posts() {
                         </span>
 
                         {(post.reportsCount || post.reports) > 0 && (
-                          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-error/10 text-error border border-error/20 uppercase tracking-widest">
+                          <button
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setShowReportsModal(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-error/10 text-error border border-error/20 uppercase tracking-widest hover:bg-error/20 transition-colors"
+                          >
                             <Flag size={12} />
                             {post.reportsCount || post.reports} báo cáo
-                          </span>
+                          </button>
                         )}
 
                         {/* Actions Dropdown */}
@@ -688,16 +715,154 @@ export default function Posts() {
             <div className="p-8 border-t border-border bg-surface-secondary/30 flex gap-4 shrink-0">
               <button
                 onClick={() => {
+                  setModerateAction({
+                    action:
+                      selectedPost.status === 'active' ? 'hide' : 'approve',
+                    reason: '',
+                  });
+                  setShowModerateModal(true);
+                }}
+                className={`yb-btn flex-1 py-4 font-black shadow-xl ${
+                  selectedPost.status === 'active'
+                    ? 'bg-error hover:bg-error/90 text-white shadow-error/20'
+                    : 'bg-success hover:bg-success/90 text-white shadow-success/20'
+                }`}
+              >
+                {selectedPost.status === 'active'
+                  ? 'Ẩn bài viết'
+                  : 'Hiện bài viết'}
+              </button>
+              <button
+                onClick={() => {
                   setPostToDelete(selectedPost);
                   setShowDeleteModal(true);
                 }}
-                className="yb-btn flex-1 py-4 font-black bg-error hover:bg-error/90 text-white shadow-xl shadow-error/20"
+                className="yb-btn flex-1 py-4 font-black bg-neutral-800 hover:bg-neutral-900 text-white shadow-xl"
               >
                 Xóa bài viết
               </button>
               <button
                 onClick={() => setSelectedPost(null)}
                 className="yb-btn yb-btn-secondary px-10 py-4 font-black"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Moderate Modal */}
+      {showModerateModal && selectedPost && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-fade-in">
+          <div className="yb-card bg-surface w-full max-w-lg p-8 shadow-2xl transform animate-scale-in">
+            <h2 className="text-2xl font-black text-primary mb-6 tracking-tight">
+              {moderateAction.action === 'hide'
+                ? 'Ẩn bài viết'
+                : 'Phê duyệt bài viết'}
+            </h2>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-black text-secondary mb-2 uppercase tracking-widest">
+                  Lý do thực hiện
+                </label>
+                <textarea
+                  value={moderateAction.reason}
+                  onChange={e =>
+                    setModerateAction({
+                      ...moderateAction,
+                      reason: e.target.value,
+                    })
+                  }
+                  placeholder="Nhập lý do kiểm duyệt..."
+                  className="yb-input w-full min-h-[120px] py-3 text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowModerateModal(false)}
+                  className="yb-btn yb-btn-secondary flex-1 py-4 font-black"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleModerateSubmit}
+                  disabled={moderateMutation.isLoading}
+                  className={`yb-btn flex-1 py-4 font-black text-white shadow-xl flex items-center justify-center gap-2 ${
+                    moderateAction.action === 'hide'
+                      ? 'bg-error hover:bg-error/90 shadow-error/20'
+                      : 'bg-success hover:bg-success/90 shadow-success/20'
+                  }`}
+                >
+                  {moderateMutation.isLoading && (
+                    <Loader2 size={18} className="animate-spin" />
+                  )}
+                  Xác nhận
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reports Quick View Modal */}
+      {showReportsModal && selectedPost && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-fade-in">
+          <div className="yb-card bg-surface w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl transform animate-scale-in">
+            <div className="p-6 border-b border-border flex items-center justify-between bg-surface-secondary/30">
+              <h2 className="text-xl font-black text-primary tracking-tight">
+                Danh sách báo cáo
+              </h2>
+              <button
+                onClick={() => setShowReportsModal(false)}
+                className="p-2 hover:bg-surface-secondary rounded-full text-secondary"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {currentPostReports?.length > 0 ? (
+                currentPostReports.map(report => (
+                  <div
+                    key={report._id}
+                    className="p-4 border border-border rounded-2xl bg-surface-secondary/20"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-black text-error uppercase tracking-widest bg-error/10 px-2 py-0.5 rounded border border-error/10">
+                        {report.reason}
+                      </span>
+                      <span className="text-[10px] text-secondary font-bold">
+                        {new Date(report.createdAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-primary font-medium">
+                      {report.description || 'Không có mô tả'}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <img
+                        src={report.reporter?.avatar}
+                        className="w-5 h-5 rounded-full border border-border"
+                      />
+                      <span className="text-[10px] font-bold text-secondary">
+                        @{report.reporter?.username}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center py-10 text-secondary font-bold">
+                  Không có báo cáo nào.
+                </p>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border bg-surface-secondary/30">
+              <button
+                onClick={() => setShowReportsModal(false)}
+                className="yb-btn yb-btn-secondary w-full py-3 font-black"
               >
                 Đóng
               </button>

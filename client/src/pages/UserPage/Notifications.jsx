@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from 'react';
+import { Link } from 'react-router-dom'; // Link works fine
 import {
   Bell,
   Heart,
@@ -8,99 +7,94 @@ import {
   UserPlus,
   Repeat,
   AtSign,
-  Check,
   Settings,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react';
 import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  getUnreadCount,
-} from "../../redux/actions/notificationActions";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
+  useNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+} from '../../hooks/useNotificationQuery';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 
-const getNotificationIcon = (type) => {
+const getNotificationIcon = type => {
   switch (type) {
-    case "like":
+    case 'like':
       return <Heart size={16} className="text-red-500" fill="currentColor" />;
-    case "comment":
+    case 'comment':
       return <MessageCircle size={16} className="text-blue-500" />;
-    case "follow":
+    case 'follow':
       return <UserPlus size={16} className="text-green-500" />;
-    case "repost":
+    case 'repost':
       return <Repeat size={16} className="text-purple-500" />;
-    case "mention":
+    case 'mention':
       return <AtSign size={16} className="text-orange-500" />;
     default:
       return <Bell size={16} className="text-neutral-500" />;
   }
 };
 
-const getNotificationContent = (notification) => {
+const getNotificationContent = notification => {
   switch (notification.type) {
-    case "like":
-      return "đã thích bài viết của bạn";
-    case "comment":
-      return "đã bình luận về bài viết của bạn";
-    case "follow":
-      return "đã bắt đầu theo dõi bạn";
-    case "repost":
-      return "đã chia sẻ bài viết của bạn";
-    case "mention":
-      return "đã nhắc đến bạn trong một bài viết";
+    case 'like':
+      return 'đã thích bài viết của bạn';
+    case 'comment':
+      return 'đã bình luận về bài viết của bạn';
+    case 'follow':
+      return 'đã bắt đầu theo dõi bạn';
+    case 'repost':
+      return 'đã chia sẻ bài viết của bạn';
+    case 'mention':
+      return 'đã nhắc đến bạn trong một bài viết';
     default:
-      return "có thông báo mới";
+      return 'có thông báo mới';
   }
 };
 
 const Notifications = () => {
-  const dispatch = useDispatch();
-  const { notifications, unreadCount, loading } = useSelector(
-    (state) => state.notification
-  );
-  
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState('all');
 
-  useEffect(() => {
-    // Fetch notifications and unread count on mount
-    dispatch(getNotifications({ page: 1, limit: 20 }));
-    dispatch(getUnreadCount());
-  }, [dispatch]);
+  // React Query Hooks
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useNotifications(activeFilter);
+
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+
+  // Combine pages
+  const notifications =
+    data?.pages?.flatMap(page => page.notifications || page) || [];
 
   const filters = [
-    { id: "all", label: "Tất cả" },
-    { id: "unread", label: "Chưa đọc" },
-    { id: "like", label: "Lượt thích" }, // Changed 'likes' to 'like' to match backend type matches
-    { id: "comment", label: "Bình luận" }, // Changed 'comments' to 'comment'
-    { id: "follow", label: "Theo dõi" }, // Changed 'follows' to 'follow'
+    { id: 'all', label: 'Tất cả' },
+    { id: 'unread', label: 'Chưa đọc' },
+    { id: 'like', label: 'Lượt thích' },
+    { id: 'comment', label: 'Bình luận' },
+    { id: 'follow', label: 'Theo dõi' },
   ];
 
-  const handleFilterChange = (filterId) => {
+  const handleFilterChange = filterId => {
     setActiveFilter(filterId);
-    if (filterId === "all" || filterId === "unread") {
-      dispatch(getNotifications({ page: 1, limit: 20 }));
-    } else {
-      dispatch(getNotifications({ page: 1, limit: 20, type: filterId }));
-    }
   };
 
-  const safeNotifications = Array.isArray(notifications) ? notifications : [];
-
-  const filteredNotifications = safeNotifications.filter((notif) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "unread") return !notif.isRead;
-    // For specific types, we rely on API fetching, but client filter adds immediate responsiveness if list is loaded
+  const filteredNotifications = notifications.filter(notif => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'unread') return !notif.isRead;
     return notif.type === activeFilter;
   });
 
   const handleMarkAllRead = () => {
-    dispatch(markAllAsRead());
+    markAllAsRead(undefined, {
+      onError: () => toast.error('Không thể đánh dấu tất cả là đã đọc'),
+    });
   };
 
-  const handleMarkRead = (id) => {
-    dispatch(markAsRead(id));
+  const handleMarkRead = id => {
+    markAsRead(id);
   };
 
   return (
@@ -134,6 +128,7 @@ const Notifications = () => {
               <Link
                 to="/settings/notification"
                 className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                title="Cài đặt thông báo"
               >
                 <Settings size={18} className="text-neutral-500" />
               </Link>
@@ -142,14 +137,14 @@ const Notifications = () => {
 
           {/* Filters */}
           <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-            {filters.map((filter) => (
+            {filters.map(filter => (
               <button
                 key={filter.id}
                 onClick={() => handleFilterChange(filter.id)}
                 className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
                   activeFilter === filter.id
-                    ? "bg-black dark:bg-white text-white dark:text-black"
-                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
                 {filter.label}
@@ -160,7 +155,7 @@ const Notifications = () => {
       </div>
 
       {/* Notifications List */}
-      {loading && (!notifications || notifications.length === 0) ? (
+      {isLoading && notifications.length === 0 ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
         </div>
@@ -174,8 +169,8 @@ const Notifications = () => {
         </div>
       ) : (
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-          {filteredNotifications.map((notif) => {
-            const sender = notif.sender || notif.user; // Adapt based on backend response structure (usually 'sender' or 'user')
+          {filteredNotifications.map(notif => {
+            const sender = notif.sender || notif.user;
             if (!sender) return null;
 
             return (
@@ -183,14 +178,17 @@ const Notifications = () => {
                 key={notif._id}
                 onClick={() => !notif.isRead && handleMarkRead(notif._id)}
                 className={`flex items-start gap-3 px-4 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer ${
-                  !notif.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+                  !notif.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
                 }`}
               >
                 {/* Avatar with Icon */}
                 <div className="relative flex-shrink-0">
-                  <Link to={`/profile/${sender.username}`}>
+                  <Link
+                    to={`/profile/${sender.username}`}
+                    onClick={e => e.stopPropagation()}
+                  >
                     <img
-                      src={sender.avatar || "https://via.placeholder.com/40"}
+                      src={sender.avatar || 'https://via.placeholder.com/40'}
                       alt={sender.name}
                       className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                     />
@@ -206,28 +204,38 @@ const Notifications = () => {
                     <Link
                       to={`/profile/${sender.username}`}
                       className="font-bold hover:underline"
+                      onClick={e => e.stopPropagation()}
                     >
                       {sender.name}
-                    </Link>{" "}
+                    </Link>{' '}
                     {getNotificationContent(notif)}
                   </p>
-                  
+
                   {/* Additional Content depending on type */}
-                  {(notif.post || notif.postId) && (
-                     <Link to={`/post/${notif.post?._id || notif.postId || notif.post}`} className="block mt-1">
-                        <p className="text-sm text-neutral-500 truncate">
-                          "{notif.post?.caption || notif.preview || 'Bài viết'}"
-                        </p>
-                     </Link>
+                  {(notif.postId || notif.post) && (
+                    <Link
+                      to={`/post/${
+                        notif.postId || notif.post?._id || notif.post
+                      }`}
+                      className="block mt-1"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <p className="text-sm text-neutral-500 truncate hover:underline">
+                        "{notif.post?.caption || notif.preview || 'Bài viết'}"
+                      </p>
+                    </Link>
                   )}
-                   {notif.comment && (
+                  {notif.comment && (
                     <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 py-2">
                       {notif.comment.content || notif.comment}
                     </p>
                   )}
-                  
+
                   <p className="text-xs text-neutral-400 mt-1">
-                    {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: vi })}
+                    {formatDistanceToNow(new Date(notif.createdAt), {
+                      addSuffix: true,
+                      locale: vi,
+                    })}
                   </p>
                 </div>
 
@@ -238,6 +246,23 @@ const Notifications = () => {
               </div>
             );
           })}
+
+          {/* Load More Trigger */}
+          {hasNextPage && (
+            <div className="flex justify-center p-4">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="text-sm text-blue-500 hover:underline"
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Xem thêm'
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

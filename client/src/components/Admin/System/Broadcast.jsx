@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Send,
   Bell,
@@ -12,7 +11,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { broadcastNotification } from '../../../redux/actions/adminActions';
+import { useBroadcastNotification } from '../../../hooks/useAdminQuery';
 
 const NOTIFICATION_TYPES = [
   { id: 'info', label: 'Information', icon: Info, color: 'blue' },
@@ -47,8 +46,8 @@ const TARGET_AUDIENCES = [
 ];
 
 const Broadcast = () => {
-  const dispatch = useDispatch();
-  const { loading } = useSelector(state => state.admin);
+  const broadcastMutation = useBroadcastNotification();
+  const loading = broadcastMutation.isLoading;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -88,16 +87,14 @@ const Broadcast = () => {
 
   const confirmSend = async () => {
     try {
-      await dispatch(
-        broadcastNotification({
-          title: formData.title,
-          message: formData.message,
-          type: formData.type,
-          targetAudience: formData.targetAudience,
-          priority: formData.priority,
-          link: formData.link || undefined,
-        })
-      ).unwrap();
+      await broadcastMutation.mutateAsync({
+        title: formData.title,
+        message: formData.message,
+        type: formData.type,
+        targetAudience: formData.targetAudience,
+        priority: formData.priority,
+        link: formData.link || undefined,
+      });
 
       setSendStatus('success');
       setStatusMessage('Notification sent successfully!');
@@ -111,7 +108,11 @@ const Broadcast = () => {
       });
     } catch (error) {
       setSendStatus('error');
-      setStatusMessage(error?.message || 'Failed to send notification');
+      setStatusMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to send notification'
+      );
     }
     setShowConfirmModal(false);
 
