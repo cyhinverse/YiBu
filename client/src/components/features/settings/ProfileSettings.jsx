@@ -9,57 +9,61 @@ import {
   Map as MapIcon,
 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { updateProfile, getProfile } from '../../../redux/actions/userActions';
+import { updateProfile, getProfile } from '@/redux/actions/userActions';
 import toast from 'react-hot-toast';
-import LocationPickerModal from '../../common/LocationPickerModal';
+import LocationPickerModal from '@/components/common/LocationPickerModal';
 
 const InputField = ({
-  icon: Icon,
+  icon,
   label,
   value,
   onChange,
   placeholder,
   multiline = false,
   rightElement = null,
-}) => (
-  <div className="space-y-2">
-    <label className="text-sm font-medium text-black dark:text-white">
-      {label}
-    </label>
-    <div className="relative">
-      {!multiline && (
-        <Icon
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-        />
-      )}
-      {multiline ? (
-        <textarea
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          rows={3}
-          className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-        />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className={`w-full pl-10 ${
-            rightElement ? 'pr-12' : 'pr-4'
-          } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
-        />
-      )}
-      {rightElement && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-          {rightElement}
-        </div>
-      )}
+}) => {
+  const Icon = icon;
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-black dark:text-white">
+        {label}
+      </label>
+      <div className="relative">
+        {!multiline && Icon && (
+          <Icon
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+          />
+        )}
+        {multiline ? (
+          <textarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            rows={3}
+            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className={`w-full pl-10 ${
+              rightElement ? 'pr-12' : 'pr-4'
+            } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
+          />
+        )}
+        {rightElement && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            {rightElement}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ProfileSettings = () => {
   const dispatch = useDispatch();

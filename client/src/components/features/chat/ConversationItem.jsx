@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useSocketContext } from '../../../contexts/SocketContext';
+import { useSocketContext } from '@/contexts/SocketContext';
 
 const ConversationItem = ({
   conversation,
