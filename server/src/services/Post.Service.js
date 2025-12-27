@@ -847,29 +847,20 @@ class PostService {
     });
 
     // Update counters using atomic operations with retry
-    // These are independent and can be retried individually
-    try {
-      await retryOperation(() =>
-        Post.updateOne({ _id: postId }, { $inc: { commentsCount: 1 } })
-      );
-    } catch (err) {
-      logger.warn(`Failed to increment post comments count: ${err.message}`);
-    }
-
-    if (parentCommentId) {
-      try {
-        await retryOperation(() =>
-          Comment.updateOne(
-            { _id: parentCommentId },
-            { $inc: { repliesCount: 1 } }
-          )
-        );
-      } catch (err) {
-        logger.warn(
-          `Failed to increment parent comment replies count: ${err.message}`
-        );
-      }
-    }
+    // Note: Post commentsCount is updated via Comment model post-save hook
+    // We only need to update parent reply count if this hook doesn't handle it well for parents
+    // But wait, the hook DOES handle parent repliesCount too.
+    // However, keeping the retry logic for parent might be safer if we want to ensure it?
+    // Actually, the hook does: if (doc.parentComment) { increment repliesCount }
+    // So both are doubled if we don't be careful. 
+    
+    // Let's remove BOTH manual updates as the Hook handles both.
+    
+    /* 
+    The Hook in Comment.js:
+    if (doc.parentComment) { updateOne(parent, $inc repliesCount) }
+    updateOne(post, $inc commentsCount)
+    */
 
     // Record interaction (non-critical, fire and forget with retry)
     retryOperation(() =>
@@ -914,26 +905,27 @@ class PostService {
   static async getComments(postId, options = {}) {
     const { page = 1, limit = 20, sort = 'best' } = options;
 
-    const sortOptions = {
-      best: { likesCount: -1, createdAt: -1 },
-      newest: { createdAt: -1 },
-      oldest: { createdAt: 1 },
-    };
+    // Use Comment Model's specialized method for fetching nested comments
+    // This supports fetching top-level comments and their replies
+    const comments = await Comment.getCommentsForPost(postId, {
+      page,
+      limit,
+      sortBy: sort === 'best' ? 'likesCount' : 'createdAt',
+      includeReplies: true,
+      replyLimit: 3
+    });
 
-    const comments = await Comment.find({
+    // Count top-level comments for pagination check
+    const totalTopLevel = await Comment.countDocuments({
       post: postId,
-      isDeleted: false,
       parentComment: null,
-    })
-      .populate('user', 'username name avatar verified')
-      .sort(sortOptions[sort] || sortOptions.best)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
+      isDeleted: false,
+      "moderation.status": "approved"
+    });
 
     return {
       comments,
-      hasMore: comments.length === limit,
+      hasMore: (page * limit) < totalTopLevel,
     };
   }
 

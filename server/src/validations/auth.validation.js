@@ -163,7 +163,7 @@ export const updatePasswordBody = Joi.object({
 // Body: { code }
 // ======================================
 export const verifyTwoFactorBody = Joi.object({
-  code: Joi.string().length(6).pattern(/^\d+$/).required().messages({
+  token: Joi.string().length(6).pattern(/^\d+$/).required().messages({
     'string.empty': 'Mã xác thực không được để trống',
     'string.length': 'Mã xác thực phải có 6 chữ số',
     'string.pattern.base': 'Mã xác thực chỉ được chứa số',

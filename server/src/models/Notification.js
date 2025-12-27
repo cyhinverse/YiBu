@@ -1,4 +1,4 @@
-import { Schema, Types, model } from "mongoose";
+import { Schema, Types, model } from 'mongoose';
 
 /**
  * Notification Model - Optimized for real-time delivery and batch operations
@@ -12,14 +12,14 @@ const NotificationSchema = new Schema(
   {
     recipient: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
 
     sender: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
 
@@ -27,22 +27,23 @@ const NotificationSchema = new Schema(
     additionalSenders: [
       {
         type: Types.ObjectId,
-        ref: "User",
+        ref: 'User',
       },
     ],
 
     type: {
       type: String,
       enum: [
-        "like",
-        "comment",
-        "follow",
-        "save",
-        "mention",
-        "reply",
-        "tag",
-        "system",
-        "announcement",
+        'like',
+        'comment',
+        'follow',
+        'save',
+        'mention',
+        'reply',
+        'tag',
+        'system',
+        'announcement',
+        'share',
       ],
       required: true,
       index: true,
@@ -58,30 +59,30 @@ const NotificationSchema = new Schema(
     // Reference to related content
     post: {
       type: Types.ObjectId,
-      ref: "Post",
+      ref: 'Post',
       index: true,
     },
 
     comment: {
       type: Types.ObjectId,
-      ref: "Comment",
+      ref: 'Comment',
     },
 
     relatedPost: {
       type: Types.ObjectId,
-      ref: "Post",
+      ref: 'Post',
       index: true,
     },
 
     relatedComment: {
       type: Types.ObjectId,
-      ref: "Comment",
+      ref: 'Comment',
     },
 
     // Grouped senders for better performance
     groupedSenders: [
       {
-        user: { type: Types.ObjectId, ref: "User" },
+        user: { type: Types.ObjectId, ref: 'User' },
         username: String,
         avatar: String,
       },
@@ -90,7 +91,6 @@ const NotificationSchema = new Schema(
     metadata: {
       type: Schema.Types.Mixed,
     },
-
 
     // Preview data (denormalized for fast rendering)
     preview: {
@@ -107,7 +107,6 @@ const NotificationSchema = new Schema(
     readAt: {
       type: Date,
     },
-
 
     // For grouping similar notifications
     groupKey: {
@@ -130,11 +129,11 @@ const NotificationSchema = new Schema(
     expiresAt: {
       type: Date,
       default: () => new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      index: true,
+      // index: true, // Defined in explicit index below with expireAfterSeconds
     },
   },
   {
-    collection: "Notifications",
+    collection: 'Notifications',
     timestamps: true,
   }
 );
@@ -161,24 +160,23 @@ NotificationSchema.statics.createNotification = async function (data) {
   const post = data.post || data.relatedPost;
   const comment = data.comment || data.relatedComment;
 
-
   // Don't notify yourself
   if (recipient.toString() === sender.toString()) {
     return null;
   }
 
   // Check user settings
-  const UserSettings = model("UserSettings");
+  const UserSettings = model('UserSettings');
   const settings = await UserSettings.findOne({ user: recipient }).lean();
 
   // Check if this notification type is enabled
   const notifSettings = settings?.notifications?.push || {};
   const typeMapping = {
-    like: "likes",
-    comment: "comments",
-    follow: "follows",
-    mention: "mentions",
-    reply: "comments",
+    like: 'likes',
+    comment: 'comments',
+    follow: 'follows',
+    mention: 'mentions',
+    reply: 'comments',
   };
 
   if (notifSettings[typeMapping[type]] === false) {
@@ -202,6 +200,10 @@ NotificationSchema.statics.createNotification = async function (data) {
         existing.sender.toString() !== sender.toString()
       ) {
         existing.additionalSenders.push(sender);
+        // Cap the array to the last 10 senders to prevent unbounded growth
+        if (existing.additionalSenders.length > 10) {
+          existing.additionalSenders = existing.additionalSenders.slice(-10);
+        }
       }
       existing.groupCount = 1 + existing.additionalSenders.length;
       existing.content = content; // Update content with new count
@@ -241,9 +243,9 @@ NotificationSchema.statics.getNotifications = async function (
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate("sender", "username name avatar verified")
-    .populate("additionalSenders", "username name avatar")
-    .populate("post", "_id media")
+    .populate('sender', 'username name avatar verified')
+    .populate('additionalSenders', 'username name avatar')
+    .populate('post', '_id media')
     .lean();
 };
 
@@ -273,5 +275,5 @@ NotificationSchema.statics.deleteOld = async function (userId, daysOld = 30) {
   });
 };
 
-const Notification = model("Notification", NotificationSchema);
+const Notification = model('Notification', NotificationSchema);
 export default Notification;

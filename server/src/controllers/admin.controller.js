@@ -112,6 +112,42 @@ export const AdminController = {
     );
   }),
 
+  getUserPosts: CatchError(async (req, res) => {
+    const { userId } = req.params;
+    const { page, limit } = getPaginationParams(req.query);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return formatResponse(res, 400, 0, 'Invalid user ID format');
+    }
+
+    const result = await AdminService.getUserPosts(userId, { page, limit });
+    return formatResponse(
+      res,
+      200,
+      1,
+      'User posts retrieved successfully',
+      result
+    );
+  }),
+
+  getUserReports: CatchError(async (req, res) => {
+    const { userId } = req.params;
+    const { page, limit } = getPaginationParams(req.query);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return formatResponse(res, 400, 0, 'Invalid user ID format');
+    }
+
+    const result = await AdminService.getUserReports(userId, { page, limit });
+    return formatResponse(
+      res,
+      200,
+      1,
+      'User reports retrieved successfully',
+      result
+    );
+  }),
+
   updateUser: CatchError(async (req, res) => {
     const { userId } = req.params;
     const adminId = req.user.id;
@@ -250,6 +286,24 @@ export const AdminController = {
         hasMore: result.hasMore,
       },
     });
+  }),
+
+  getPostReports: CatchError(async (req, res) => {
+    const { postId } = req.params;
+    const { page, limit } = getPaginationParams(req.query);
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return formatResponse(res, 400, 0, 'Invalid post ID format');
+    }
+
+    const result = await AdminService.getPostReports(postId, { page, limit });
+    return formatResponse(
+      res,
+      200,
+      1,
+      'Post reports retrieved successfully',
+      result
+    );
   }),
 
   moderatePost: CatchError(async (req, res) => {

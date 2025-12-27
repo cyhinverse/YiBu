@@ -278,7 +278,8 @@ const AuthController = {
   GetActiveSessions: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    const sessions = await AuthService.getActiveSessions(userId);
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const sessions = await AuthService.getActiveSessions(userId, refreshToken);
 
     return formatResponse(res, 200, 1, "Success", sessions);
   }),

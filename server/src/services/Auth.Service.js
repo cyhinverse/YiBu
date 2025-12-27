@@ -9,6 +9,7 @@ import {
 } from '../helpers/GenerateTokens.js';
 import crypto from 'crypto';
 import logger from '../configs/logger.js';
+import EmailService from './Email.Service.js';
 
 /**
  * Auth Service - Refactored for new model structure
@@ -400,7 +401,9 @@ class AuthService {
       'security.passwordResetExpires': new Date(Date.now() + 60 * 60 * 1000),
     });
 
-    // TODO: Send email with resetToken
+    // Send email with resetToken
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    await EmailService.sendPasswordReset(email, resetLink);
     logger.info(`Password reset requested for ${email}`);
 
     return { success: true, resetToken };
@@ -462,7 +465,9 @@ class AuthService {
       ),
     });
 
-    // TODO: Send verification email
+    // Send verification email
+    const verificationLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+    await EmailService.sendVerificationEmail(user.email, verificationLink);
     logger.info(`Email verification requested for user ${userId}`);
 
     return { success: true, verificationToken };
@@ -504,10 +509,14 @@ class AuthService {
       length: 20,
     });
 
-    await User.findByIdAndUpdate(userId, {
-      'security.twoFactorSecret': secret.base32,
-      'security.twoFactorEnabled': false,
-    });
+    await UserSettings.findOneAndUpdate(
+      { user: userId },
+      {
+        'security.twoFactorSecret': secret.base32,
+        'security.twoFactorEnabled': false,
+      },
+      { upsert: true }
+    );
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
 
@@ -517,16 +526,16 @@ class AuthService {
   static async verifyAndEnableTwoFactor(userId, token) {
     const speakeasy = (await import('speakeasy')).default;
 
-    const user = await User.findById(userId).select(
+    const userSettings = await UserSettings.findOne({ user: userId }).select(
       '+security.twoFactorSecret'
     );
 
-    if (!user || !user.security?.twoFactorSecret) {
+    if (!userSettings || !userSettings.security?.twoFactorSecret) {
       throw new Error('Two-factor setup not initiated');
     }
 
     const verified = speakeasy.totp.verify({
-      secret: user.security.twoFactorSecret,
+      secret: userSettings.security.twoFactorSecret,
       encoding: 'base32',
       token,
       window: 1,
@@ -544,14 +553,12 @@ class AuthService {
       backupCodes.map(code => hashPassword(code))
     );
 
-    await User.findByIdAndUpdate(userId, {
-      'security.twoFactorEnabled': true,
-      'security.twoFactorBackupCodes': hashedBackupCodes,
-    });
-
     await UserSettings.findOneAndUpdate(
       { user: userId },
-      { 'security.twoFactorEnabled': true },
+      {
+        'security.twoFactorEnabled': true,
+        'security.twoFactorBackupCodes': hashedBackupCodes, // UserSettings schema needs this field? Yes, create it if missing or rely on flexible schema? Ideally schema has it.
+      },
       { upsert: true }
     );
 
@@ -570,15 +577,13 @@ class AuthService {
       throw new Error('Mật khẩu không đúng');
     }
 
-    await User.findByIdAndUpdate(userId, {
-      'security.twoFactorEnabled': false,
-      'security.twoFactorSecret': null,
-      'security.twoFactorBackupCodes': [],
-    });
-
     await UserSettings.findOneAndUpdate(
       { user: userId },
-      { 'security.twoFactorEnabled': false }
+      {
+        'security.twoFactorEnabled': false,
+        'security.twoFactorSecret': null,
+        'security.twoFactorBackupCodes': [],
+      }
     );
 
     return { success: true };
@@ -587,16 +592,16 @@ class AuthService {
   static async verifyTwoFactorToken(userId, token) {
     const speakeasy = (await import('speakeasy')).default;
 
-    const user = await User.findById(userId).select(
+    const userSettings = await UserSettings.findOne({ user: userId }).select(
       '+security.twoFactorSecret'
     );
 
-    if (!user || !user.security?.twoFactorSecret) {
+    if (!userSettings || !userSettings.security?.twoFactorSecret) {
       throw new Error('Two-factor not enabled');
     }
 
     const verified = speakeasy.totp.verify({
-      secret: user.security.twoFactorSecret,
+      secret: userSettings.security.twoFactorSecret,
       encoding: 'base32',
       token,
       window: 1,
@@ -609,22 +614,31 @@ class AuthService {
   // Session Management
   // ======================================
 
-  static async getActiveSessions(userId) {
+  static async getActiveSessions(userId, currentRefreshToken = null) {
     const sessions = await RefreshToken.find({
       user: userId,
       isRevoked: false,
       expiresAt: { $gt: new Date() },
     })
-      .select('device createdAt lastUsedAt')
+      .select('device createdAt lastUsedAt token')
       .sort({ lastUsedAt: -1 })
       .lean();
 
-    return sessions.map(session => ({
-      id: session._id,
-      device: session.device,
-      createdAt: session.createdAt,
-      lastUsedAt: session.lastUsedAt,
-    }));
+    return sessions.map(session => {
+      const isCurrent = currentRefreshToken === session.token;
+      return {
+        id: session._id,
+        deviceType: session.device?.type || 'unknown',
+        browser: session.device?.browser || 'Unknown Browser',
+        os: session.device?.os || 'Unknown OS',
+        ip: session.device?.ip || 'Unknown IP',
+        isCurrent,
+        lastActive: isCurrent
+          ? 'Vừa xong'
+          : new Date(session.lastUsedAt).toLocaleString('vi-VN'), // Simple formatting for now
+        lastUsedAt: session.lastUsedAt,
+      };
+    });
   }
 
   static async revokeSession(userId, sessionId) {

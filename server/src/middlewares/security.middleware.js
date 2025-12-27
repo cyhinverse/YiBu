@@ -2,6 +2,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Security Middleware Configuration
@@ -30,8 +31,8 @@ export const helmetMiddleware = helmet({
 // Rate Limiter - Chống DDoS và spam request
 // Global rate limit cho tất cả requests
 export const globalRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 1000, // Relaxed for dev: 1000 requests per 15 min
+  windowMs: 100 * 60 * 1000, // 100 phút
+  max: 5000, // Increased for dev/testing: 5000 requests per 15 min
   message: {
     code: 0,
     message: 'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
@@ -46,7 +47,7 @@ export const globalRateLimiter = rateLimit({
 // Strict rate limit cho auth routes (login, register, password reset)
 export const authRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 giờ
-  max: 5, // Giới hạn 5 requests mỗi IP
+  max: 20, // Increased from 5 to 20 for easier testing
   message: {
     code: 0,
     message: 'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 1 giờ.',
@@ -59,7 +60,7 @@ export const authRateLimiter = rateLimit({
 // Rate limit cho API cần protect (upload, create post, etc.)
 export const apiRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 phút
-  max: 30, // Giới hạn 30 requests mỗi IP mỗi phút
+  max: 100, // Increased from 30 to 100 requests per minute
   message: {
     code: 0,
     message: 'Quá nhiều request, vui lòng chậm lại.',
@@ -70,7 +71,7 @@ export const apiRateLimiter = rateLimit({
 
 // Data Sanitization - Chống NoSQL Injection
 export const mongoSanitizeMiddleware = mongoSanitize({
-  replaceWith: '_', // Thay thế ký tự $ và . bằng _
+  replaceWith: '_',
   onSanitize: ({ req, key }) => {
     console.warn(`NoSQL Injection attempt detected: ${key}`);
   },
@@ -78,14 +79,7 @@ export const mongoSanitizeMiddleware = mongoSanitize({
 
 // HPP - Chống HTTP Parameter Pollution
 export const hppMiddleware = hpp({
-  whitelist: [
-    // Cho phép các params có thể trùng lặp
-    'sort',
-    'fields',
-    'page',
-    'limit',
-    'tags',
-  ],
+  whitelist: ['sort', 'fields', 'page', 'limit', 'tags'],
 });
 
 /**
@@ -125,21 +119,22 @@ const sanitizeObject = obj => {
       }
     }
   }
-
   return sanitized;
 };
 
 // Sanitize string - escape HTML entities
+// Sanitize string - use sanitize-html
 const sanitizeString = str => {
   if (typeof str !== 'string') return str;
 
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+  return sanitizeHtml(str, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ['src', 'alt'],
+    },
+    allowedIframeHostnames: ['www.youtube.com'],
+  });
 };
 
 export default {

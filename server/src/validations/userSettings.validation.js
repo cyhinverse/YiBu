@@ -11,6 +11,12 @@ import { objectId } from './common.validation.js';
 // Body: { isPrivate?, showEmail?, showPhone?, allowTagging?, etc. }
 // ======================================
 export const privacySettingsBody = Joi.object({
+  profileVisibility: Joi.string().valid('public', 'followers', 'private'),
+  postVisibility: Joi.string().valid('public', 'followers', 'private'),
+  messagePermission: Joi.string().valid('everyone', 'followers', 'nobody', 'none'),
+  searchVisibility: Joi.boolean(),
+  activityStatus: Joi.boolean(),
+  // Legacy support
   isPrivate: Joi.boolean(),
   showEmail: Joi.boolean(),
   showPhone: Joi.boolean(),
@@ -26,7 +32,6 @@ export const privacySettingsBody = Joi.object({
   whoCanSeeFollowers: Joi.string().valid('everyone', 'followers', 'only_me'),
   whoCanSeeFollowing: Joi.string().valid('everyone', 'followers', 'only_me'),
   whoCanSeeLikes: Joi.string().valid('everyone', 'followers', 'only_me'),
-  activityStatus: Joi.boolean(),
 })
   .min(1)
   .messages({
@@ -41,7 +46,9 @@ export const notificationSettingsBody = Joi.object({
   likes: Joi.boolean(),
   comments: Joi.boolean(),
   follows: Joi.boolean(),
+  newFollower: Joi.boolean(),
   messages: Joi.boolean(),
+  directMessages: Joi.boolean(),
   mentions: Joi.boolean(),
   replies: Joi.boolean(),
   shares: Joi.boolean(),
@@ -49,6 +56,7 @@ export const notificationSettingsBody = Joi.object({
   push: Joi.boolean(),
   sound: Joi.boolean(),
   vibration: Joi.boolean(),
+  systemUpdates: Joi.boolean(),
 })
   .min(1)
   .messages({

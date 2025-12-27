@@ -58,6 +58,16 @@ router.get('/analytics/interactions', AdminController.getInteractions);
 router.get('/users', validateQuery(getUsersQuery), AdminController.getAllUsers);
 router.get('/users/banned', AdminController.getBannedUsers);
 router.get(
+  '/users/:userId/posts',
+  validateParams(userIdParam),
+  AdminController.getUserPosts
+);
+router.get(
+  '/users/:userId/reports',
+  validateParams(userIdParam),
+  AdminController.getUserReports
+);
+router.get(
   '/users/:userId',
   validateParams(userIdParam),
   AdminController.getUserDetails
@@ -96,6 +106,11 @@ router.post(
 // Content Moderation
 // ======================================
 router.get('/posts', validateQuery(getPostsQuery), AdminController.getAllPosts);
+router.get(
+  '/posts/:postId/reports',
+  validateParams(postIdParam),
+  AdminController.getPostReports
+);
 router.post(
   '/posts/:postId/moderate',
   validateParams(postIdParam),

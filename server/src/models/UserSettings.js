@@ -1,14 +1,5 @@
 import { Schema, model, Types } from "mongoose";
 
-/**
- * UserSettings Model - Separated from User for better performance
- *
- * Why separate?
- * 1. Settings are rarely queried with user data
- * 2. Reduces User document size for faster queries
- * 3. Settings can be cached separately
- * 4. Easier to manage and extend
- */
 const UserSettingsSchema = new Schema(
   {
     user: {
@@ -58,6 +49,7 @@ const UserSettingsSchema = new Schema(
     security: {
       twoFactorEnabled: { type: Boolean, default: false },
       twoFactorSecret: { type: String, select: false },
+      twoFactorBackupCodes: [{ type: String, select: false }],
       loginAlerts: { type: Boolean, default: true },
       trustedDevices: [
         {
@@ -121,7 +113,7 @@ const UserSettingsSchema = new Schema(
 );
 
 // ============ INDEXES ============
-UserSettingsSchema.index({ user: 1 }, { unique: true });
+// UserSettingsSchema.index({ user: 1 }, { unique: true }); // Removed: duplicate with schema 'unique: true'
 UserSettingsSchema.index({ blockedUsers: 1 });
 UserSettingsSchema.index({ mutedUsers: 1 });
 

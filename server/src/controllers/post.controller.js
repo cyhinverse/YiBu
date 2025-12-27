@@ -62,7 +62,6 @@ const PostController = {
     const requesterId = req.user?.id;
     const { page = 1, limit = 20 } = getPaginationParams(req.query);
 
-    // Resolve id to actual user ID if it's a username
     const resolvedUserId = await UserService.resolveUserIdOrUsername(id);
     if (!resolvedUserId) {
       return formatResponse(res, 404, 0, 'Người dùng không tồn tại');
@@ -348,7 +347,7 @@ const PostController = {
   // ======================================
 
   createComment: CatchError(async (req, res) => {
-    const { content, postId, parentComment } = req.body;
+    const { content, postId, parentId } = req.body;
     const userId = req.user.id;
 
     if (!content || !content.trim()) {
@@ -368,12 +367,19 @@ const PostController = {
       postId,
       userId,
       content,
-      parentComment
+      parentId
     );
 
     // Emit socket event
     const post = await PostService.getPostById(postId);
-    if (post.user._id.toString() !== userId) {
+    
+    socketService.emitToRoom(`post:${postId}`, "new_comment", {
+        postId,
+        comment, 
+        timestamp: new Date()
+    });
+
+    if (post.user && post.user._id.toString() !== userId) {
       socketService.emitPostComment(post.user._id.toString(), {
         postId,
         commentId: comment._id,

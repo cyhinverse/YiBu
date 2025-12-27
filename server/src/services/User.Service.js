@@ -470,7 +470,47 @@ class UserService {
   // ======================================
 
   static async getUserSettings(userId) {
-    return UserSettings.getOrCreate(userId);
+    const [userSettings, user] = await Promise.all([
+      UserSettings.getOrCreate(userId),
+      User.findById(userId).select('privacy'),
+    ]);
+
+    const settings = userSettings.toObject();
+
+    // Serialize privacy settings from both sources
+    settings.privacy = {
+      ...settings.privacy,
+      profileVisibility: user.privacy?.profileVisibility || 'public',
+      allowMessages: user.privacy?.allowMessages || 'everyone',
+      // Map for frontend compatibility
+      messagePermission: user.privacy?.allowMessages || 'everyone',
+      showActivity: user.privacy?.showActivity ?? true,
+      activityStatus: user.privacy?.showActivity ?? true,
+    };
+
+    // Flatten notification settings for frontend compatibility
+    if (settings.notifications) {
+      const push = settings.notifications.push || {};
+      const email = settings.notifications.email || {};
+
+      settings.notifications = {
+        // Flat structure expected by FE
+        likes: push.likes ?? true,
+        comments: push.comments ?? true,
+        follows: push.follows ?? true,
+        messages: push.messages ?? true,
+        mentions: push.mentions ?? true,
+        
+        // Delivery methods
+        push: push.enabled ?? true,
+        email: email.enabled ?? true,
+        
+        // Preserve other legacy/nested fields if needed
+        ...settings.notifications,
+      };
+    }
+
+    return settings;
   }
 
   static async updatePrivacySettings(userId, privacySettings) {
@@ -503,17 +543,80 @@ class UserService {
       );
     }
 
-    return user?.privacy;
+    // Get latest settings to return merged result
+    const latestUserSettings = await UserSettings.findOne({ user: userId });
+    
+    return {
+      profileVisibility: user.privacy?.profileVisibility || 'public',
+      allowMessages: user.privacy?.allowMessages || 'everyone',
+      // Map for frontend compatibility
+      messagePermission: user.privacy?.allowMessages || 'everyone',
+      showActivity: user.privacy?.showActivity ?? true,
+      activityStatus: user.privacy?.showActivity ?? true,
+      
+      postVisibility: latestUserSettings?.privacy?.postVisibility || 'public',
+      searchable: latestUserSettings?.privacy?.searchable ?? true,
+    };
   }
 
   static async updateNotificationSettings(userId, notificationSettings) {
+    const updateOps = {};
+    
+    // Map of flat keys to schema paths
+    const keyMapping = {
+      likes: 'notifications.push.likes',
+      comments: 'notifications.push.comments',
+      follows: 'notifications.push.follows',
+      messages: 'notifications.push.messages',
+      mentions: 'notifications.push.mentions',
+      // 'replies' field in FE doesn't exist in Schema, mapping to comments or ignoring? Ignoring for now.
+    };
+
+    for (const [key, value] of Object.entries(notificationSettings)) {
+      if (key === 'email') {
+        if (typeof value === 'boolean') {
+          updateOps['notifications.email.enabled'] = value;
+        } else if (typeof value === 'object') {
+          for (const [subKey, subValue] of Object.entries(value)) {
+            updateOps[`notifications.email.${subKey}`] = subValue;
+          }
+        }
+      } else if (key === 'push') {
+        if (typeof value === 'boolean') {
+          updateOps['notifications.push.enabled'] = value;
+        } else if (typeof value === 'object') {
+          for (const [subKey, subValue] of Object.entries(value)) {
+            updateOps[`notifications.push.${subKey}`] = subValue;
+          }
+        }
+      } else if (keyMapping[key]) {
+        updateOps[keyMapping[key]] = value;
+      } else {
+        // Fallback for other fields or legacy structure
+        updateOps[`notifications.${key}`] = value;
+      }
+    }
+
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
-      { $set: { notifications: notificationSettings } },
+      { $set: updateOps },
       { new: true, upsert: true }
     );
 
-    return settings.notifications;
+    // Return flattened structure for checking immediately in FE without reload
+    const push = settings.notifications?.push || {};
+    const email = settings.notifications?.email || {};
+    
+    return {
+      ...settings.notifications?.toObject?.() || settings.notifications,
+      likes: push.likes,
+      comments: push.comments,
+      follows: push.follows,
+      messages: push.messages,
+      mentions: push.mentions,
+      push: push.enabled,
+      email: email.enabled,
+    };
   }
 
   static async updateSecuritySettings(userId, securitySettings) {

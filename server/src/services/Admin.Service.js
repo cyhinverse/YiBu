@@ -98,6 +98,73 @@ class AdminService {
     };
   }
 
+  static async getUserPosts(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const [posts, total] = await Promise.all([
+      Post.find({ user: userId })
+        .populate('user', 'username name avatar verified')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments({ user: userId }),
+    ]);
+
+    return {
+      posts,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  static async getUserReports(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const [reports, total] = await Promise.all([
+      Report.find({ targetUser: userId })
+        .populate('reporter', 'username name avatar')
+        .populate('targetUser', 'username name avatar') // Populate targetUser details
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Report.countDocuments({ targetUser: userId }),
+    ]);
+
+    return {
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  static async getPostReports(postId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const [reports, total] = await Promise.all([
+      Report.find({ targetId: postId, targetType: 'post' })
+        .populate('reporter', 'username name avatar')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Report.countDocuments({ targetId: postId, targetType: 'post' }),
+    ]);
+
+    return {
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
   static async updateUser(userId, updateData, adminId) {
     const { password, email, ...safeData } = updateData;
 
@@ -871,21 +938,83 @@ class AdminService {
     targetId,
     metadata = {}
   ) {
-    // TODO: Create AdminLog model for persistent logging
-    logger.info({
-      type: 'admin_action',
-      adminId,
-      action,
-      targetType,
-      targetId,
-      metadata,
-      timestamp: new Date(),
-    });
+    try {
+      const AdminLog = (await import('../models/AdminLog.js')).default;
+      
+      let level = 'info';
+      if (action.includes('ban') || action.includes('delete') || action.includes('remove')) {
+        level = 'warning';
+      } else if (action.includes('unban') || action.includes('approve') || action.includes('resolve')) {
+        level = 'success';
+      }
+
+      await AdminLog.create({
+        admin: adminId,
+        action,
+        targetType,
+        targetId,
+        level,
+        details: metadata.reason || metadata.content || `Performed ${action}`,
+        metadata,
+      });
+      
+    } catch (error) {
+      // Don't crash if logging fails, just log to console
+      logger.error('Failed to create admin log:', error);
+    }
   }
 
   static async getAdminLogs(options = {}) {
-    // TODO: Implement when AdminLog model is created
-    return { logs: [], total: 0 };
+    const {
+      page = 1,
+      limit = 20,
+      level,
+      startDate,
+      endDate
+    } = options;
+
+    const AdminLog = (await import('../models/AdminLog.js')).default;
+    const query = {};
+
+    if (level && level !== 'all') {
+      query.level = level;
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    const [logs, total] = await Promise.all([
+      AdminLog.find(query)
+        .populate('admin', 'username name email avatar')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      AdminLog.countDocuments(query),
+    ]);
+    
+    // Transform logs to match frontend expectations
+    const formattedLogs = logs.map(log => ({
+      _id: log._id,
+      createdAt: log.createdAt,
+      level: log.level,
+      action: log.action,
+      message: log.details,
+      user: log.admin, // Key 'user' for table column 'Người dùng'
+      ip: log.ip,
+      metadata: log.metadata
+    }));
+
+    return {
+      logs: formattedLogs,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
   }
 
   // ======================================
