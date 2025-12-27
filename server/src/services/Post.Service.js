@@ -133,6 +133,49 @@ class PostService {
     };
   }
 
+  static async getSharedPosts(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const shares = await UserInteraction.find({
+      user: userId,
+      targetType: 'post',
+      interactionType: 'share',
+    })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const postIds = shares.map(share => share.targetId);
+
+    const posts = await Post.find({
+      _id: { $in: postIds },
+      isDeleted: false,
+    })
+      .populate('user', 'username name avatar verified')
+      .lean();
+
+    // Preserve order of shares
+    const postsMap = new Map(posts.map(p => [p._id.toString(), p]));
+    const orderedPosts = postIds
+      .map(id => postsMap.get(id.toString()))
+      .filter(Boolean);
+
+    const postsWithStatus = await this._addUserStatus(orderedPosts, userId);
+
+    const total = await UserInteraction.countDocuments({
+      user: userId,
+      targetType: 'post',
+      interactionType: 'share',
+    });
+
+    return {
+      posts: postsWithStatus,
+      total,
+      hasMore: page * limit < total,
+    };
+  }
+
   static async updatePost(postId, userId, updateData) {
     const post = await Post.findOne({
       _id: postId,

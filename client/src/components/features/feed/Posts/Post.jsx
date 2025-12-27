@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   MoreHorizontal,
@@ -17,15 +17,21 @@ import {
   Share2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { CommentModal } from '../Comment';
 import { createLike, deleteLike } from '../../../../redux/actions/likeActions';
 import {
   savePost,
   unsavePost,
 } from '../../../../redux/actions/savePostActions';
 import { deletePost, sharePost } from '../../../../redux/actions/postActions';
-import { ReportModal } from '../../report';
-import ModelPost from './ModelPost';
+
+// Lazy load modals
+const CommentModal = lazy(() =>
+  import('../Comment').then(module => ({ default: module.CommentModal }))
+);
+const ReportModal = lazy(() =>
+  import('../../report').then(module => ({ default: module.ReportModal }))
+);
+const ModelPost = lazy(() => import('./ModelPost'));
 
 // Fake post data for component testing
 const formatCount = count => {
@@ -535,24 +541,35 @@ const Post = ({ data, onDelete }) => {
       )}
 
       {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        targetId={data?._id}
-        targetType="post"
-      />
+      {showReportModal && (
+        <Suspense fallback={null}>
+          <ReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            targetId={data?._id}
+            targetType="post"
+          />
+        </Suspense>
+      )}
 
       {/* Edit Post Modal */}
       {showEditModal && (
-        <ModelPost closeModal={() => setShowEditModal(false)} editPost={data} />
+        <Suspense fallback={null}>
+          <ModelPost
+            closeModal={() => setShowEditModal(false)}
+            editPost={data}
+          />
+        </Suspense>
       )}
 
       {/* Comments Modal Placeholder */}
       {showComments && (
-        <CommentModal
-          onClose={() => setShowComments(false)}
-          postId={data?._id}
-        />
+        <Suspense fallback={null}>
+          <CommentModal
+            onClose={() => setShowComments(false)}
+            postId={data?._id}
+          />
+        </Suspense>
       )}
     </article>
   );

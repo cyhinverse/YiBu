@@ -85,8 +85,17 @@ router.get(
   '/user/:id',
   validateParams(userPostsParam),
   validateQuery(userPostsQuery),
+  validateQuery(userPostsQuery),
   PostController.GetPostUserById
 );
+
+router.get(
+  '/user/:id/shared',
+  validateParams(userPostsParam), // Re-using userPostsParam validation as it validates :id
+  validateQuery(userPostsQuery), // Re-using pagination validation
+  PostController.GetSharedPosts
+);
+
 router.get('/:id', validateParams(postIdParam), PostController.GetPostById);
 router.put(
   '/:id',

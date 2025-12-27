@@ -1,6 +1,6 @@
-import { useEffect, Fragment } from "react";
-import { createPortal } from "react-dom";
-import { IoClose } from "react-icons/io5";
+import { useEffect, Fragment } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 export default function Modal({
   isOpen,
@@ -8,28 +8,28 @@ export default function Modal({
   title,
   children,
   footer,
-  size = "md", // sm, md, lg, xl, full
+  size = 'md', // sm, md, lg, xl, full
   closeOnOverlayClick = true,
 }) {
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     }
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: "max-w-md",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
-    full: "max-w-full m-4",
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    full: 'max-w-full m-4',
   };
 
   const modalContent = (
@@ -62,7 +62,7 @@ export default function Modal({
             onClick={onClose}
             className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded-full hover:bg-surface-highlight"
           >
-            <IoClose size={24} />
+            <X size={24} />
           </button>
         </div>
 
@@ -82,5 +82,4 @@ export default function Modal({
   );
 
   return createPortal(modalContent, document.body);
-};
-
+}

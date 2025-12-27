@@ -258,6 +258,20 @@ const PostController = {
     return formatResponse(res, 200, 1, 'Success', result);
   }),
 
+  GetSharedPosts: CatchError(async (req, res) => {
+    const { id } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    // Use id from params if available (viewing other user's profile), otherwise current user
+    const targetUserId = id || req.user.id;
+
+    const result = await PostService.getSharedPosts(targetUserId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    return formatResponse(res, 200, 1, 'Success', result);
+  }),
+
   GetAllLikeFromPosts: CatchError(async (req, res) => {
     const { postIds } = req.body;
     const userId = req.user.id;

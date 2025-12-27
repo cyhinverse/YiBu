@@ -11,7 +11,11 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { updateProfile, getProfile } from '@/redux/actions/userActions';
 import toast from 'react-hot-toast';
-import LocationPickerModal from '@/components/common/LocationPickerModal';
+import { Suspense, lazy } from 'react';
+
+const LocationPickerModal = lazy(() =>
+  import('@/components/common/LocationPickerModal')
+);
 
 const InputField = ({
   icon,
@@ -310,12 +314,16 @@ const ProfileSettings = () => {
       </div>
 
       {/* Modals */}
-      <LocationPickerModal
-        isOpen={isLocationPickerOpen}
-        onClose={() => setIsLocationPickerOpen(false)}
-        onSelect={handleLocationSelect}
-        initialLocation={formData.location}
-      />
+      <Suspense fallback={null}>
+        {isLocationPickerOpen && (
+          <LocationPickerModal
+            isOpen={isLocationPickerOpen}
+            onClose={() => setIsLocationPickerOpen(false)}
+            onSelect={handleLocationSelect}
+            initialLocation={formData.location}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

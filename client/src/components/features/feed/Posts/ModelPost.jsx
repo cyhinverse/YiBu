@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import EmojiPicker from 'emoji-picker-react';
+import { useState, useRef, lazy, Suspense } from 'react';
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Image,
@@ -49,10 +49,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
 
-  const onEmojiClick = (emojiObject) => {
-    setCaption((prev) => prev + emojiObject.emoji);
+  const onEmojiClick = emojiObject => {
+    setCaption(prev => prev + emojiObject.emoji);
   };
-
 
   const avatarUrl =
     currentProfile?.avatar ||
@@ -107,7 +106,8 @@ const ModelPost = ({ closeModal, editPost = null }) => {
     }
   };
 
-  const canPost = caption.trim() || mediaFiles.length > 0 || existingMedia.length > 0;
+  const canPost =
+    caption.trim() || mediaFiles.length > 0 || existingMedia.length > 0;
 
   // Combine media for preview
   const allMedia = [
@@ -116,8 +116,8 @@ const ModelPost = ({ closeModal, editPost = null }) => {
       url: URL.createObjectURL(f),
       type: f.type.startsWith('video/') ? 'video' : 'image',
       isExisting: false,
-      file: f
-    }))
+      file: f,
+    })),
   ];
 
   return (
@@ -150,7 +150,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
             {/* Avatar */}
             <img
               src={avatarUrl}
-              alt={currentProfile?.fullName || currentProfile?.username || 'User'}
+              alt={
+                currentProfile?.fullName || currentProfile?.username || 'User'
+              }
               className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
             />
 
@@ -159,7 +161,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
               {/* User info */}
               <div className="mb-2">
                 <p className="font-semibold text-black dark:text-white text-sm">
-                  {currentProfile?.fullName || currentProfile?.username || 'User'}
+                  {currentProfile?.fullName ||
+                    currentProfile?.username ||
+                    'User'}
                 </p>
                 {/* Privacy selector */}
                 <div className="relative">
@@ -232,16 +236,18 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                           ? 'max-h-[350px]'
                           : 'aspect-square'
                       } ${
-                        allMedia.length === 3 && index === 0
-                          ? 'row-span-2'
-                          : ''
+                        allMedia.length === 3 && index === 0 ? 'row-span-2' : ''
                       }`}
                     >
                       <button
-                        onClick={() => removeMedia(
-                          preview.isExisting ? index : index - existingMedia.length, 
-                          preview.isExisting
-                        )}
+                        onClick={() =>
+                          removeMedia(
+                            preview.isExisting
+                              ? index
+                              : index - existingMedia.length,
+                            preview.isExisting
+                          )
+                        }
                         className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-black/80 transition-colors"
                       >
                         <X size={14} />
@@ -322,15 +328,28 @@ const ModelPost = ({ closeModal, editPost = null }) => {
               </button>
               {showEmojiPicker && (
                 <div className="absolute bottom-full left-0 mb-2 z-20">
-                  <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowEmojiPicker(false)}
+                  />
                   <div className="relative z-20 shadow-2xl rounded-xl">
-                    <EmojiPicker 
-                      onEmojiClick={onEmojiClick}
-                      theme={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'}
-                      lazyLoadEmojis={true}
-                      width={300}
-                      height={400}
-                    />
+                    <Suspense
+                      fallback={
+                        <div className="w-[300px] h-[400px] bg-white dark:bg-neutral-800 animate-pulse rounded-xl" />
+                      }
+                    >
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        theme={
+                          localStorage.getItem('theme') === 'dark'
+                            ? 'dark'
+                            : 'light'
+                        }
+                        lazyLoadEmojis={true}
+                        width={300}
+                        height={400}
+                      />
+                    </Suspense>
                   </div>
                 </div>
               )}

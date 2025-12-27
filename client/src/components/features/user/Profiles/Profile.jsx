@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -12,11 +12,14 @@ import {
   Grid3X3,
   Heart,
   Bookmark,
+  Share2,
   Loader2,
 } from 'lucide-react';
 import Post from '../../feed/Posts/Post';
-import FollowList from '../FollowList/FollowList';
+// import FollowList from '../FollowList/FollowList'; // Changed to lazy import
 import { useDispatch, useSelector } from 'react-redux';
+
+const FollowList = lazy(() => import('../FollowList/FollowList'));
 import {
   getProfile,
   followUser,
@@ -24,7 +27,10 @@ import {
   checkFollowStatus,
 } from '../../../../redux/actions/userActions';
 import { createConversation } from '../../../../redux/actions/messageActions';
-import { getPostsByUser } from '../../../../redux/actions/postActions';
+import {
+  getPostsByUser,
+  getSharedPosts,
+} from '../../../../redux/actions/postActions';
 import { getMyLikedPosts } from '../../../../redux/actions/likeActions';
 import { getSavedPosts } from '../../../../redux/actions/savePostActions';
 import toast from 'react-hot-toast';
@@ -44,6 +50,7 @@ const Profile = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [likedPosts, setLikedPosts] = useState([]);
   const [savedPosts, setSavedPosts] = useState([]);
+  const [sharedPosts, setSharedPosts] = useState([]);
   const [tabLoading, setTabLoading] = useState(false);
   const [showFollowList, setShowFollowList] = useState(null); // 'followers' | 'following' | null
   const dispatch = useDispatch();
@@ -71,16 +78,26 @@ const Profile = () => {
   // Fetch tab data when switching tabs
   useEffect(() => {
     const fetchTabData = async () => {
-      if (!isOwnProfile) return; // Only owner can see likes/saved
+      // Shared posts should be visible to everyone (depending on privacy settings handled by backend)
+      // modifying condition if needed. Assuming shared tab is for everyone for now or just own?
+      // User request: "trong này thiếu cái tab bài viết chia sẽ nữa giúp tôi thêm vào 1 tab nữa , khi tôi bấm nút mũi tên trong bài post thì trong cái tab chia sẽ này sẽ hiện những bài viết mình chia sẽ"
+      // User refers to "bài viết mình chia sẽ" -> their own shared posts. Likely public profile feature too.
+
+      if (activeTab === 'posts') return;
 
       setTabLoading(true);
       try {
-        if (activeTab === 'likes') {
+        if (activeTab === 'likes' && isOwnProfile) {
           const result = await dispatch(getMyLikedPosts()).unwrap();
           setLikedPosts(result.posts || result || []);
-        } else if (activeTab === 'saved') {
+        } else if (activeTab === 'saved' && isOwnProfile) {
           const result = await dispatch(getSavedPosts()).unwrap();
           setSavedPosts(result.posts || result || []);
+        } else if (activeTab === 'shared') {
+          const result = await dispatch(
+            getSharedPosts({ userId: profileId })
+          ).unwrap();
+          setSharedPosts(result.posts || result || []);
         }
       } catch (error) {
         console.error('Failed to fetch tab data:', error);
@@ -89,10 +106,8 @@ const Profile = () => {
       }
     };
 
-    if (activeTab !== 'posts') {
-      fetchTabData();
-    }
-  }, [activeTab, dispatch, isOwnProfile]);
+    fetchTabData();
+  }, [activeTab, dispatch, isOwnProfile, profileId]);
 
   // Update following state from Redux
   useEffect(() => {
@@ -167,6 +182,7 @@ const Profile = () => {
 
   const tabs = [
     { id: 'posts', label: 'Posts', icon: Grid3X3 },
+    { id: 'shared', label: 'Shared', icon: Share2 },
     ...(isOwnProfile
       ? [
           { id: 'likes', label: 'Likes', icon: Heart },
@@ -201,6 +217,21 @@ const Profile = () => {
         }
         return userPosts.map(post => <Post key={post._id} data={post} />);
 
+      case 'shared':
+        if (!sharedPosts || sharedPosts.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-500 min-h-[300px]">
+              <Share2
+                size={48}
+                className="mb-4 text-neutral-300 dark:text-neutral-600"
+              />
+              <p className="text-lg font-medium">No shared posts</p>
+              <p className="text-sm mt-1">Posts you share will appear here</p>
+            </div>
+          );
+        }
+        return sharedPosts.map(post => <Post key={post._id} data={post} />);
+
       case 'likes':
         if (!likedPosts || likedPosts.length === 0) {
           return (
@@ -214,7 +245,9 @@ const Profile = () => {
             </div>
           );
         }
-        return Array.isArray(likedPosts) ? likedPosts.map(post => <Post key={post._id} data={post} />) : null;
+        return Array.isArray(likedPosts)
+          ? likedPosts.map(post => <Post key={post._id} data={post} />)
+          : null;
 
       case 'saved':
         if (!savedPosts || savedPosts.length === 0) {
@@ -416,12 +449,16 @@ const Profile = () => {
       <div className="p-4 space-y-4 min-h-[400px]">{getTabContent()}</div>
 
       {/* Follow List Modal */}
-      <FollowList
-        userId={profileId}
-        type={showFollowList}
-        isOpen={!!showFollowList}
-        onClose={() => setShowFollowList(null)}
-      />
+      <Suspense fallback={null}>
+        {showFollowList && (
+          <FollowList
+            userId={profileId}
+            type={showFollowList}
+            isOpen={!!showFollowList}
+            onClose={() => setShowFollowList(null)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

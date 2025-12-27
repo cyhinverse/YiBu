@@ -38,9 +38,14 @@ import {
   removeGroupMember,
   leaveGroup,
 } from '../../../redux/actions/messageActions';
-import { ReportModal } from '../report';
 import { useSocketContext } from '../../../contexts/SocketContext';
-import GroupInfoModal from './GroupInfoModal';
+import { lazy, Suspense } from 'react';
+
+// Lazy load modals
+const ReportModal = lazy(() =>
+  import('../report').then(module => ({ default: module.ReportModal }))
+);
+const GroupInfoModal = lazy(() => import('./GroupInfoModal'));
 
 // --- Sub-components ---
 
@@ -736,23 +741,29 @@ const MessageDetail = () => {
       </div>
 
       {/* Modals */}
-      <GroupInfoModal
-        isOpen={showGroupInfo}
-        onClose={() => setShowGroupInfo(false)}
-        conversation={conversation}
-        currentUserId={currentUser?._id}
-        onRename={handleRename => handleGroupRename(handleRename)}
-        onAddMember={uid => handleAddMember(uid)}
-        onRemoveMember={uid => handleRemoveMember(uid)}
-        onLeaveGroup={handleLeave}
-        isUpdating={isUpdatingGroup}
-      />
-      <ReportModal
-        isOpen={!!reportMessageId}
-        onClose={() => setReportMessageId(null)}
-        targetId={reportMessageId}
-        targetType="message"
-      />
+      <Suspense fallback={null}>
+        {showGroupInfo && (
+          <GroupInfoModal
+            isOpen={showGroupInfo}
+            onClose={() => setShowGroupInfo(false)}
+            conversation={conversation}
+            currentUserId={currentUser?._id}
+            onRename={handleRename => handleGroupRename(handleRename)}
+            onAddMember={uid => handleAddMember(uid)}
+            onRemoveMember={uid => handleRemoveMember(uid)}
+            onLeaveGroup={handleLeave}
+            isUpdating={isUpdatingGroup}
+          />
+        )}
+        {reportMessageId && (
+          <ReportModal
+            isOpen={!!reportMessageId}
+            onClose={() => setReportMessageId(null)}
+            targetId={reportMessageId}
+            targetType="message"
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

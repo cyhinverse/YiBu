@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useSelector } from 'react-redux';
 import { Image, Smile, PenSquare } from 'lucide-react';
-import ModelPost from './ModelPost';
+
+const ModelPost = lazy(() => import('./ModelPost'));
 
 const CreatePost = () => {
   const [showModal, setShowModal] = useState(false);
@@ -67,7 +68,11 @@ const CreatePost = () => {
         </div>
       </div>
 
-      {showModal && <ModelPost closeModal={() => setShowModal(false)} />}
+      {showModal && (
+        <Suspense fallback={null}>
+          <ModelPost closeModal={() => setShowModal(false)} />
+        </Suspense>
+      )}
     </>
   );
 };

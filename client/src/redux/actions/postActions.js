@@ -186,6 +186,24 @@ export const getPostsByUser = createAsyncThunk(
   }
 );
 
+// Get Shared Posts
+export const getSharedPosts = createAsyncThunk(
+  'post/getSharedPosts',
+  async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
+    try {
+      const response = await api.get(POST_API.GET_BY_USER(userId) + '/shared', {
+        params: { page, limit },
+      });
+      const data = extractData(response);
+      return { ...data, userId, isLoadMore: page > 1 };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Lấy bài viết đã chia sẻ thất bại'
+      );
+    }
+  }
+);
+
 // Update Post
 export const updatePost = createAsyncThunk(
   'post/updatePost',

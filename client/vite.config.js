@@ -15,5 +15,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // manualChunks: {
+        //   'react-vendor': [
+        //     'react',
+        //     'react-dom',
+        //     'react-router-dom',
+        //     'react-redux',
+        //     '@reduxjs/toolkit',
+        //   ],
+        //   'leaflet-vendor': ['leaflet', 'react-leaflet'],
+        //   'utils-vendor': ['lodash', 'date-fns', 'axios'],
+        // },
+      },
+    },
+  },
   server: { port: 9258 },
 });
