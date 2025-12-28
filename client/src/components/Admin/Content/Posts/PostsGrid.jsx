@@ -19,24 +19,24 @@ import {
 const getTypeIcon = type => {
   switch (type) {
     case 'image':
-      return <Image size={18} />;
+      return <Image size={16} strokeWidth={1.5} />;
     case 'video':
-      return <Video size={18} />;
+      return <Video size={16} strokeWidth={1.5} />;
     default:
-      return <FileText size={18} />;
+      return <FileText size={16} strokeWidth={1.5} />;
   }
 };
 
 const getStatusStyle = status => {
   switch (status) {
     case 'active':
-      return 'bg-success/10 text-success border-success/20';
+      return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800';
     case 'hidden':
-      return 'bg-error/10 text-error border-error/20';
+      return 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800';
     case 'pending':
-      return 'bg-warning/10 text-warning border-warning/20';
+      return 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
     default:
-      return 'bg-secondary/10 text-secondary border-secondary/20';
+      return 'bg-neutral-50 text-neutral-600 border-neutral-100 dark:bg-neutral-800/50 dark:text-neutral-400 dark:border-neutral-700';
   }
 };
 
@@ -54,23 +54,23 @@ export default function PostsGrid({
   if (loading && posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 size={48} className="animate-spin text-primary mb-4" />
-        <p className="text-secondary font-bold">Đang tải bài viết...</p>
+        <Loader2 size={40} className="animate-spin text-neutral-500 mb-4" />
+        <p className="text-neutral-500 font-medium">Đang tải bài viết...</p>
       </div>
     );
   }
 
   if (posts.length === 0) {
     return (
-      <div className="yb-card flex flex-col items-center justify-center py-32 text-secondary">
+      <div className="flex flex-col items-center justify-center py-32 text-neutral-400">
         <FileText size={64} className="mb-4 opacity-10" />
-        <p className="font-bold text-lg">Không tìm thấy bài viết nào</p>
+        <p className="font-medium text-lg">Không tìm thấy bài viết nào</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       {posts.map(post => {
         const author = post.author || post.user || {};
         const mediaItems = post.media || post.images || [];
@@ -86,36 +86,36 @@ export default function PostsGrid({
         return (
           <div
             key={post._id || post.id}
-            className="yb-card p-6 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+            className="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-neutral-200 dark:border-neutral-800 hover:shadow-lg transition-all duration-300"
           >
-            <div className="flex items-start gap-6">
+            <div className="flex items-start gap-5">
               {/* Author Avatar */}
               <img
                 src={author.avatar || '/images/default-avatar.png'}
                 alt={author.name || author.username || 'User'}
-                className="yb-avatar w-16 h-16 border-2 border-surface shadow-md"
+                className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
               />
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-black text-primary text-lg tracking-tight">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-neutral-900 dark:text-white text-base">
                         {author.name || author.username || 'Nặc danh'}
                       </h3>
-                      <span className="text-secondary text-sm font-bold">
+                      <span className="text-neutral-500 text-sm">
                         @{author.username || 'user'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-1.5 text-xs font-black text-secondary/60">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={14} />
+                    <div className="flex items-center gap-3 mt-1 text-xs font-medium text-neutral-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={12} strokeWidth={1.5} />
                         {post.createdAt
-                          ? new Date(post.createdAt).toLocaleString('vi-VN')
+                          ? new Date(post.createdAt).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </span>
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-secondary text-secondary">
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
                         {getTypeIcon(postType)}
                         <span className="capitalize">
                           {postType === 'image'
@@ -128,9 +128,9 @@ export default function PostsGrid({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`yb-badge border font-black uppercase text-[10px] tracking-widest ${getStatusStyle(
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(
                         post.status || 'active'
                       )}`}
                     >
@@ -144,10 +144,10 @@ export default function PostsGrid({
                     {(post.reportsCount || post.reports) > 0 && (
                       <button
                         onClick={() => onViewReports(post)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-error/10 text-error border border-error/20 uppercase tracking-widest hover:bg-error/20 transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
                       >
                         <Flag size={12} />
-                        {post.reportsCount || post.reports} báo cáo
+                        {post.reportsCount || post.reports}
                       </button>
                     )}
 
@@ -161,21 +161,21 @@ export default function PostsGrid({
                               : post._id || post.id
                           )
                         }
-                        className="p-2.5 hover:bg-surface-secondary rounded-xl transition-colors text-secondary"
+                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500"
                       >
                         <MoreHorizontal size={20} />
                       </button>
 
                       {activeDropdown === (post._id || post.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-56 bg-surface rounded-2xl shadow-2xl border border-border py-2 z-10 overflow-hidden animate-scale-in">
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 overflow-hidden animate-scale-in">
                           <button
                             onClick={() => {
                               onViewDetails(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-5 py-3 text-left text-sm font-black hover:bg-surface-secondary flex items-center gap-3 text-primary transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
                           >
-                            <Eye size={18} />
+                            <Eye size={16} />
                             Chi tiết bài viết
                           </button>
                           {post.status === 'pending' && (
@@ -184,9 +184,9 @@ export default function PostsGrid({
                                 onApprove(post);
                                 setActiveDropdown(null);
                               }}
-                              className="w-full px-5 py-3 text-left text-sm font-black hover:bg-success/10 flex items-center gap-3 text-success transition-colors"
+                              className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 transition-colors"
                             >
-                              <CheckCircle size={18} />
+                              <CheckCircle size={16} />
                               Phê duyệt
                             </button>
                           )}
@@ -195,34 +195,36 @@ export default function PostsGrid({
                               onToggleStatus(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-5 py-3 text-left text-sm font-black hover:bg-surface-secondary flex items-center gap-3 text-primary transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
                           >
                             {post.status === 'active' ? (
                               <>
-                                <XCircle size={18} className="text-error" />
-                                <span className="text-error">Ẩn bài viết</span>
+                                <XCircle size={16} className="text-rose-500" />
+                                <span className="text-rose-500">
+                                  Ẩn bài viết
+                                </span>
                               </>
                             ) : (
                               <>
                                 <CheckCircle
-                                  size={18}
-                                  className="text-success"
+                                  size={16}
+                                  className="text-emerald-500"
                                 />
-                                <span className="text-success">
+                                <span className="text-emerald-500">
                                   Hiện bài viết
                                 </span>
                               </>
                             )}
                           </button>
-                          <div className="h-px bg-border my-2 mx-2" />
+                          <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1 mx-2" />
                           <button
                             onClick={() => {
                               onDelete(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-5 py-3 text-left text-sm font-black hover:bg-error/10 flex items-center gap-3 text-error transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 text-rose-500 transition-colors"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                             Xóa bài viết
                           </button>
                         </div>
@@ -232,13 +234,13 @@ export default function PostsGrid({
                 </div>
 
                 {/* Post Content */}
-                <p className="text-primary font-bold text-base leading-relaxed line-clamp-3 mb-5">
+                <p className="text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-4">
                   {post.content || post.caption || 'Không có nội dung'}
                 </p>
 
                 {/* Media Preview */}
                 {mediaItems.length > 0 && (
-                  <div className="flex gap-4 overflow-x-auto pb-4 mb-2 hide-scrollbar">
+                  <div className="flex gap-3 overflow-x-auto pb-2 mb-2 hide-scrollbar">
                     {mediaItems.slice(0, 4).map((media, idx) => {
                       const mediaUrl =
                         typeof media === 'string' ? media : media.url;
@@ -249,7 +251,7 @@ export default function PostsGrid({
                       return (
                         <div
                           key={idx}
-                          className="relative flex-shrink-0 w-36 h-36 rounded-2xl overflow-hidden bg-surface-secondary shadow-inner"
+                          className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
                         >
                           <img
                             src={mediaUrl}
@@ -257,10 +259,10 @@ export default function PostsGrid({
                             className="w-full h-full object-cover"
                           />
                           {isVideo && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                               <Video
-                                size={36}
-                                className="text-white drop-shadow-xl"
+                                size={24}
+                                className="text-white drop-shadow-md"
                               />
                             </div>
                           )}
@@ -268,34 +270,26 @@ export default function PostsGrid({
                       );
                     })}
                     {mediaItems.length > 4 && (
-                      <div className="flex-shrink-0 w-36 h-36 rounded-2xl bg-surface-secondary flex items-center justify-center border-2 border-dashed border-border group cursor-pointer hover:border-primary transition-colors">
-                        <span className="text-secondary font-black text-xl group-hover:text-primary transition-colors">
-                          +{mediaItems.length - 4}
-                        </span>
+                      <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-medium">
+                        +{mediaItems.length - 4}
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* Stats */}
-                <div className="flex items-center gap-8 pt-5 border-t border-border mt-2">
-                  <div className="flex items-center gap-2.5 text-xs font-black text-secondary">
-                    <div className="p-2 bg-success/10 rounded-xl text-success border border-success/10">
-                      <Heart size={16} />
-                    </div>
-                    {post.likesCount || post.likes || 0} lượt thích
+                <div className="flex items-center gap-6 pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+                    <Heart size={14} className="text-neutral-400" />
+                    {post.likesCount || post.likes || 0}
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs font-black text-secondary">
-                    <div className="p-2 bg-primary/10 rounded-xl text-primary border border-primary/10">
-                      <MessageCircle size={16} />
-                    </div>
-                    {post.commentsCount || post.comments || 0} bình luận
+                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+                    <MessageCircle size={14} className="text-neutral-400" />
+                    {post.commentsCount || post.comments || 0}
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs font-black text-secondary">
-                    <div className="p-2 bg-warning/10 rounded-xl text-warning border border-warning/10">
-                      <Share2 size={16} />
-                    </div>
-                    {post.sharesCount || post.shares || 0} chia sẻ
+                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+                    <Share2 size={14} className="text-neutral-400" />
+                    {post.sharesCount || post.shares || 0}
                   </div>
                 </div>
               </div>

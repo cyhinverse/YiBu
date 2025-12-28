@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  RefreshCcw,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+} from 'lucide-react';
 import {
   useAdminReports,
   usePendingReports,
@@ -130,21 +136,25 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* Header */}
-      <div className="yb-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Trung tâm Báo cáo
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Có {pendingCount} báo cáo đang chờ xử lý
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            Có{' '}
+            <span className="font-bold text-neutral-900 dark:text-white">
+              {pendingCount}
+            </span>{' '}
+            báo cáo đang chờ xử lý
           </p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="yb-btn yb-btn-primary h-11 w-11 !p-0 flex items-center justify-center"
+          className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
           title="Làm mới"
         >
           <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -155,8 +165,8 @@ export default function Reports() {
       <ReportStats reports={reports} />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full md:w-auto">
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
@@ -166,37 +176,49 @@ export default function Reports() {
             placeholder="Tìm kiếm báo cáo..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="yb-input pl-11"
+            className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
         </div>
 
-        <div className="flex gap-3">
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            className="yb-input min-w-[140px] cursor-pointer"
-          >
-            <option value="all">Tất cả loại</option>
-            <option value="post">Bài viết</option>
-            <option value="comment">Bình luận</option>
-            <option value="user">Người dùng</option>
-          </select>
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <div className="relative min-w-[140px]">
+            <Filter
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+            />
+            <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <option value="all">Tất cả loại</option>
+              <option value="post">Bài viết</option>
+              <option value="comment">Bình luận</option>
+              <option value="user">Người dùng</option>
+            </select>
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="yb-input min-w-[140px] cursor-pointer"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="pending">Chờ xử lý</option>
-            <option value="resolved">Đã giải quyết</option>
-            <option value="rejected">Đã từ chối</option>
-          </select>
+          <div className="relative min-w-[150px]">
+            <Filter
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+            />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Chờ xử lý</option>
+              <option value="resolved">Đã giải quyết</option>
+              <option value="rejected">Đã từ chối</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Reports List */}
-      <div className="yb-card overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
         <ReportsList
           loading={loading}
           reports={reports}
@@ -209,27 +231,27 @@ export default function Reports() {
       </div>
 
       {/* Pagination */}
-      <div className="yb-card flex items-center justify-between px-6 py-4">
-        <span className="text-sm font-bold text-neutral-500">
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="text-sm text-neutral-500">
           Trang {currentPage} / {pagination?.pages || 1}
         </span>
         <div className="flex items-center gap-2">
           <button
             disabled={currentPage <= 1}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-neutral-600 dark:text-neutral-400"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={20} />
           </button>
-          <div className="h-10 px-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-xl text-sm font-black flex items-center justify-center shadow-lg shadow-neutral-900/10">
+          <div className="px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black rounded-full text-sm font-bold shadow-sm">
             {currentPage}
           </div>
           <button
             disabled={currentPage >= (pagination?.pages || 1)}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-neutral-600 dark:text-neutral-400"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>

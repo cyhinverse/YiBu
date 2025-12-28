@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { getStatusText } from './ReportsUtils.jsx';
 
 export default function ReportStatusModal({
@@ -22,46 +22,62 @@ export default function ReportStatusModal({
   if (!isOpen || !report) return null;
 
   return (
-    <div className="fixed inset-0 bg-neutral-900/70 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-fade-in">
-      <div className="yb-card bg-white dark:bg-neutral-900 w-full max-w-md p-8 shadow-2xl transform animate-scale-in">
-        <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-6 tracking-tight">
-          Cập nhật trạng thái
-        </h2>
+    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl transform animate-scale-in border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+            Cập nhật trạng thái
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500 dark:text-neutral-400"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-        <div className="space-y-6">
-          <div>
-            <p className="text-sm font-bold text-neutral-500 mb-4">
-              Chuyển trạng thái báo cáo sang:{' '}
-              <span className="text-primary uppercase font-black">
-                {getStatusText(newStatus)}
-              </span>
-            </p>
-            <label className="block text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
-              Ghi chú cập nhật
-            </label>
-            <textarea
-              value={resolutionNote}
-              onChange={e => setResolutionNote(e.target.value)}
-              placeholder="Nhập lý do thay đổi trạng thái..."
-              className="yb-input w-full min-h-[120px] py-3 text-sm resize-none"
-            />
-          </div>
+        <div className="p-6">
+          <div className="space-y-5">
+            <div>
+              <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-4">
+                Bạn đang thay đổi trạng thái của báo cáo này thành:{' '}
+                <span className="font-bold text-neutral-900 dark:text-white inline-block px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 ml-1">
+                  {getStatusText(newStatus)}
+                </span>
+              </p>
 
-          <div className="flex gap-4">
-            <button
-              onClick={onClose}
-              className="yb-btn !bg-neutral-100 dark:!bg-neutral-800 !text-neutral-700 dark:!text-neutral-300 flex-1 py-4 font-black"
-            >
-              Hủy bỏ
-            </button>
-            <button
-              onClick={() => onUpdateStatus(report, newStatus, resolutionNote)}
-              disabled={loading}
-              className="yb-btn yb-btn-primary flex-1 py-4 font-black flex items-center justify-center gap-2"
-            >
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              Cập nhật
-            </button>
+              <div className="mb-2">
+                <label className="block text-xs font-bold text-neutral-900 dark:text-white mb-2">
+                  Ghi chú cập nhật
+                </label>
+                <textarea
+                  value={resolutionNote}
+                  onChange={e => setResolutionNote(e.target.value)}
+                  placeholder="Nhập lý do thay đổi trạng thái..."
+                  className="w-full min-h-[120px] p-4 text-sm bg-neutral-50 dark:bg-neutral-800 border-none rounded-2xl placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none resize-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-1"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={() =>
+                  onUpdateStatus(report, newStatus, resolutionNote)
+                }
+                disabled={loading}
+                className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2 shadow-lg shadow-neutral-500/10"
+              >
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                Cập nhật
+              </button>
+            </div>
           </div>
         </div>
       </div>

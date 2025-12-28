@@ -15,32 +15,40 @@ const SecuritySettings = ({ settings, onChange, onToggle }) => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <h2 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
-        <Shield size={20} />
-        Cài đặt bảo mật
-      </h2>
-
-      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl flex items-start gap-3">
-        <AlertTriangle
-          size={20}
-          className="text-yellow-600 flex-shrink-0 mt-0.5"
-        />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center gap-3 pb-4 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl">
+          <Shield size={24} className="text-neutral-900 dark:text-white" />
+        </div>
         <div>
-          <p className="font-medium text-yellow-800 dark:text-yellow-300">
-            Cảnh báo
-          </p>
-          <p className="text-sm text-yellow-700 dark:text-yellow-400">
-            Thay đổi cài đặt bảo mật có thể ảnh hưởng đến trải nghiệm người
-            dùng.
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+            Cài đặt bảo mật
+          </h2>
+          <p className="text-sm text-neutral-500 font-medium">
+            Tăng cường bảo mật cho hệ thống và người dùng
           </p>
         </div>
       </div>
 
-      <div className="grid gap-5">
-        <div className="grid sm:grid-cols-2 gap-4">
+      <div className="p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-3xl flex items-start gap-4">
+        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-500 flex-shrink-0">
+          <AlertTriangle size={20} strokeWidth={2.5} />
+        </div>
+        <div>
+          <p className="font-bold text-amber-900 dark:text-amber-400">
+            Lưu ý quan trọng
+          </p>
+          <p className="text-sm text-amber-800 dark:text-amber-500/90 mt-1 font-medium">
+            Thay đổi cài đặt bảo mật có thể ảnh hưởng đến trải nghiệm đăng nhập
+            của người dùng. Hãy cân nhắc kỹ trước khi thay đổi.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6">
+        <div className="grid sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-black dark:text-white mb-2">
+            <label className="block text-sm font-bold text-neutral-900 dark:text-white mb-2 ml-1">
               Thời gian hết phiên (phút)
             </label>
             <input
@@ -49,11 +57,11 @@ const SecuritySettings = ({ settings, onChange, onToggle }) => {
               onChange={e =>
                 onChange('security', 'sessionTimeout', parseInt(e.target.value))
               }
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+              className="w-full px-5 py-3 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent transition-all font-medium"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black dark:text-white mb-2">
+            <label className="block text-sm font-bold text-neutral-900 dark:text-white mb-2 ml-1">
               Số lần đăng nhập sai tối đa
             </label>
             <input
@@ -66,13 +74,13 @@ const SecuritySettings = ({ settings, onChange, onToggle }) => {
                   parseInt(e.target.value)
                 )
               }
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+              className="w-full px-5 py-3 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent transition-all font-medium"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black dark:text-white mb-2">
+          <label className="block text-sm font-bold text-neutral-900 dark:text-white mb-2 ml-1">
             Độ dài mật khẩu tối thiểu
           </label>
           <input
@@ -85,39 +93,36 @@ const SecuritySettings = ({ settings, onChange, onToggle }) => {
                 parseInt(e.target.value)
               )
             }
-            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="w-full px-5 py-3 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent transition-all font-medium"
           />
         </div>
 
         {securityItems.map(item => (
           <div
             key={item.key}
-            className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl"
+            className={`flex items-center justify-between p-5 rounded-3xl border transition-all ${
+              settings.security[item.key]
+                ? 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-700'
+                : 'bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 opacity-75'
+            }`}
           >
             <div>
-              <p className="font-medium text-black dark:text-white">
+              <p className="font-bold text-neutral-900 dark:text-white">
                 {item.label}
               </p>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-sm text-neutral-500 font-medium mt-0.5">
                 {item.desc}
               </p>
             </div>
-            <button
-              onClick={() => onToggle('security', item.key)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                settings.security[item.key]
-                  ? 'bg-black dark:bg-white'
-                  : 'bg-neutral-300 dark:bg-neutral-600'
-              }`}
-            >
-              <div
-                className={`absolute top-1 w-4 h-4 rounded-full transition-all ${
-                  settings.security[item.key]
-                    ? 'right-1 bg-white dark:bg-black'
-                    : 'left-1 bg-white'
-                }`}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={settings.security[item.key]}
+                onChange={() => onToggle('security', item.key)}
               />
-            </button>
+              <div className="w-12 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-neutral-900 dark:peer-checked:bg-white"></div>
+            </label>
           </div>
         ))}
       </div>

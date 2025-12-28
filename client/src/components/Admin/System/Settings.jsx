@@ -8,13 +8,12 @@ import {
   Users,
   Check,
   Loader2,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import {
   useSystemSettings,
   useUpdateSystemSettings,
 } from '@/hooks/useAdminQuery';
-
-// Import sub-components
 import GeneralSettings from './Settings/GeneralSettings';
 import FeaturesSettings from './Settings/FeaturesSettings';
 import ContentSettings from './Settings/ContentSettings';
@@ -87,39 +86,43 @@ export default function Settings() {
 
   if (!settings) {
     return (
-      <div className="text-center py-10 text-neutral-500">
+      <div className="text-center py-20 text-neutral-500 font-medium">
         Không thể tải cài đặt hệ thống.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
+            <SettingsIcon
+              className="text-neutral-900 dark:text-white"
+              size={24}
+            />
             Cài đặt hệ thống
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
-            Quản lý cấu hình và tùy chỉnh hệ thống
+          <p className="text-neutral-500 font-medium mt-2">
+            Quản lý cấu hình và tùy chỉnh toàn bộ hệ thống
           </p>
         </div>
 
         <button
           onClick={handleSave}
           disabled={isSavingData}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold hover:opacity-90 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:shadow-none"
         >
           {isSavingData ? (
             <>
               <Loader2 size={18} className="animate-spin" />
-              Đang lưu...
+              <span>Đang lưu...</span>
             </>
           ) : (
             <>
               <Save size={18} />
-              Lưu thay đổi
+              <span>Lưu thay đổi</span>
             </>
           )}
         </button>
@@ -127,38 +130,49 @@ export default function Settings() {
 
       {/* Success Message */}
       {showSuccess && (
-        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl animate-fade-in">
-          <Check size={20} className="text-green-600" />
-          <span className="text-green-700 dark:text-green-400">
+        <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-3xl animate-in fade-in slide-in-from-top-2">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-full">
+            <Check
+              size={16}
+              className="text-emerald-600 dark:text-emerald-400"
+              strokeWidth={3}
+            />
+          </div>
+          <span className="text-emerald-700 dark:text-emerald-400 font-bold">
             Cài đặt đã được lưu thành công!
           </span>
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Tabs */}
-        <div className="lg:w-64 flex-shrink-0">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-2 sticky top-4">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-black dark:bg-white text-white dark:text-black'
-                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white'
-                }`}
-              >
-                <tab.icon size={18} />
-                <span className="font-medium">{tab.label}</span>
-              </button>
-            ))}
+        <div className="lg:w-72 flex-shrink-0">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-3 sticky top-6 shadow-sm">
+            <div className="space-y-1">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-left transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-neutral-900 dark:bg-white text-white dark:text-black shadow-md font-bold transform scale-[1.02]'
+                      : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium hover:pl-6'
+                  }`}
+                >
+                  <tab.icon
+                    size={20}
+                    strokeWidth={activeTab === tab.id ? 2.5 : 2}
+                  />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6">
+        <div className="flex-1 min-w-0">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm">
             {activeTab === 'general' && (
               <GeneralSettings settings={settings} onChange={handleChange} />
             )}

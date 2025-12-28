@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { X, Info, Flag, Video, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  X,
+  Info,
+  Flag,
+  Video,
+  AlertTriangle,
+  CheckCircle,
+  Heart,
+  MessageCircle,
+  Share2,
+  Shield,
+} from 'lucide-react';
 
 export default function PostDetailModal({
   post,
@@ -14,23 +25,26 @@ export default function PostDetailModal({
   if (!isOpen || !post) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="yb-card bg-surface w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl transform animate-scale-in overflow-hidden">
+    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div
+        className="bg-white dark:bg-neutral-900 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="p-8 border-b border-border flex items-center justify-between shrink-0 bg-surface-secondary/30">
-          <h2 className="text-2xl font-black text-primary tracking-tight">
+        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between shrink-0">
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Chi tiết bài viết
           </h2>
           <button
             onClick={onClose}
-            className="p-2.5 hover:bg-surface-secondary rounded-full transition-colors text-secondary"
+            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex px-8 border-b border-border shrink-0 bg-surface">
+        <div className="flex px-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
           {[
             { id: 'content', label: 'Nội dung', icon: Info },
             { id: 'reports', label: 'Báo cáo', icon: Flag },
@@ -38,38 +52,38 @@ export default function PostDetailModal({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-8 py-4 text-sm font-black transition-all border-b-2 ${
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-secondary hover:text-primary'
+                  ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
               }`}
             >
-              <tab.icon size={18} />
+              <tab.icon size={16} />
               {tab.label}
             </button>
           ))}
         </div>
 
         {/* Modal Content */}
-        <div className="p-8 overflow-y-auto bg-surface flex-1">
+        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
           {activeTab === 'content' && (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {(() => {
                 const author = post.author || post.user || {};
                 const mediaItems = post.media || post.images || [];
                 return (
                   <>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                       <img
                         src={author.avatar || '/images/default-avatar.png'}
                         alt={author.name}
-                        className="yb-avatar w-16 h-16 border-2 border-surface shadow-md"
+                        className="w-14 h-14 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
                       />
                       <div>
-                        <h3 className="font-black text-xl text-primary tracking-tight">
+                        <h3 className="font-bold text-lg text-neutral-900 dark:text-white tracking-tight">
                           {author.name || author.username}
                         </h3>
-                        <p className="text-secondary font-bold">
+                        <p className="text-sm text-neutral-500 font-medium">
                           @{author.username} •{' '}
                           <span className="opacity-60">
                             {new Date(post.createdAt).toLocaleString('vi-VN')}
@@ -78,53 +92,60 @@ export default function PostDetailModal({
                       </div>
                     </div>
 
-                    <div className="p-8 bg-surface-secondary/50 rounded-3xl border border-border shadow-inner">
-                      <p className="text-primary font-bold text-lg leading-relaxed whitespace-pre-wrap">
+                    <div className="p-6 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl border border-neutral-100 dark:border-neutral-800">
+                      <p className="text-neutral-800 dark:text-neutral-200 font-medium text-base leading-relaxed whitespace-pre-wrap">
                         {post.content || post.caption || 'Không có nội dung'}
                       </p>
                     </div>
 
                     {mediaItems.length > 0 && (
                       <div
-                        className={`grid gap-4 ${
+                        className={`grid gap-3 ${
                           mediaItems.length > 1 ? 'grid-cols-2' : 'grid-cols-1'
                         }`}
                       >
                         {mediaItems.map((media, idx) => (
-                          <img
+                          <div
                             key={idx}
-                            src={typeof media === 'string' ? media : media.url}
-                            alt=""
-                            className="w-full h-80 object-cover rounded-3xl shadow-lg border-2 border-surface"
-                          />
+                            className="relative group rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm"
+                          >
+                            <img
+                              src={
+                                typeof media === 'string' ? media : media.url
+                              }
+                              alt=""
+                              className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            {/* Overlay if needed? */}
+                          </div>
                         ))}
                       </div>
                     )}
 
-                    <div className="grid grid-cols-3 gap-6">
-                      <div className="text-center p-6 bg-surface-secondary/50 rounded-2xl border border-border/50">
-                        <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
-                          Thích
-                        </p>
-                        <p className="text-3xl font-black text-primary">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Heart size={12} /> Thích
+                        </span>
+                        <span className="text-2xl font-black text-neutral-900 dark:text-white">
                           {post.likesCount || 0}
-                        </p>
+                        </span>
                       </div>
-                      <div className="text-center p-6 bg-surface-secondary/50 rounded-2xl border border-border/50">
-                        <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
-                          Bình luận
-                        </p>
-                        <p className="text-3xl font-black text-primary">
+                      <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <MessageCircle size={12} /> Bình luận
+                        </span>
+                        <span className="text-2xl font-black text-neutral-900 dark:text-white">
                           {post.commentsCount || 0}
-                        </p>
+                        </span>
                       </div>
-                      <div className="text-center p-6 bg-surface-secondary/50 rounded-2xl border border-border/50">
-                        <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
-                          Chia sẻ
-                        </p>
-                        <p className="text-3xl font-black text-primary">
+                      <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Share2 size={12} /> Chia sẻ
+                        </span>
+                        <span className="text-2xl font-black text-neutral-900 dark:text-white">
                           {post.sharesCount || 0}
-                        </p>
+                        </span>
                       </div>
                     </div>
                   </>
@@ -134,58 +155,53 @@ export default function PostDetailModal({
           )}
 
           {activeTab === 'reports' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {reports?.length > 0 ? (
                 reports.map(report => (
                   <div
                     key={report._id}
-                    className="p-6 border border-error/20 bg-error/5 rounded-3xl shadow-sm"
+                    className="p-5 border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-neutral-50/50 dark:bg-neutral-800/20"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-error/20 text-error rounded-xl">
-                          <AlertTriangle size={20} />
-                        </div>
-                        <span className="text-sm font-black text-error uppercase tracking-widest bg-error/10 px-3 py-1 rounded-lg border border-error/20">
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                          <AlertTriangle size={12} className="mr-1.5" />
                           {report.reason}
                         </span>
                       </div>
-                      <span className="text-[10px] font-black text-secondary/60 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                         {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
-                    <p className="text-primary font-bold text-sm leading-relaxed mb-6 italic">
-                      &quot;
-                      {report.description || 'Không có chi tiết bổ sung.'}
-                      &quot;
+                    <p className="text-neutral-700 dark:text-neutral-300 font-medium text-sm leading-relaxed mb-4 italic p-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                      "{report.description || 'Không có chi tiết bổ sung.'}"
                     </p>
-                    <div className="flex items-center gap-3 text-xs font-black text-secondary border-t border-error/10 pt-4">
-                      <span className="uppercase tracking-widest opacity-60">
-                        Người báo cáo:
-                      </span>
-                      <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-full border border-border shadow-sm">
-                        <img
-                          src={
-                            report.reporter?.avatar ||
-                            '/images/default-avatar.png'
-                          }
-                          className="w-6 h-6 rounded-full object-cover border border-border shadow-sm"
-                        />
-                        <span className="text-primary truncate max-w-[150px]">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={
+                          report.reporter?.avatar ||
+                          '/images/default-avatar.png'
+                        }
+                        className="w-5 h-5 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                      />
+                      <span className="text-xs font-bold text-neutral-500">
+                        Báo cáo bởi{' '}
+                        <span className="text-neutral-900 dark:text-white">
                           @{report.reporter?.username || 'unknown'}
                         </span>
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 bg-surface-secondary/20 rounded-3xl border-2 border-dashed border-border/50">
-                  <CheckCircle
-                    size={64}
-                    className="text-success mb-4 opacity-20"
-                  />
-                  <p className="font-black text-primary mb-1">Nội dung sạch</p>
-                  <p className="text-sm font-bold text-secondary">
+                <div className="flex flex-col items-center justify-center py-16 bg-neutral-50/50 dark:bg-neutral-800/20 rounded-3xl border border-neutral-200 dark:border-neutral-800 border-dashed">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center mb-4 text-emerald-500">
+                    <CheckCircle size={32} />
+                  </div>
+                  <p className="font-bold text-neutral-900 dark:text-white mb-1">
+                    Nội dung sạch
+                  </p>
+                  <p className="text-sm font-medium text-neutral-500">
                     Không có báo cáo nào cho bài viết này.
                   </p>
                 </div>
@@ -195,15 +211,15 @@ export default function PostDetailModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-8 border-t border-border bg-surface-secondary/30 flex gap-4 shrink-0">
+        <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20 flex gap-3 shrink-0">
           <button
             onClick={() => {
               onToggleStatus(post);
             }}
-            className={`yb-btn flex-1 py-4 font-black shadow-xl ${
+            className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg transition-all text-sm ${
               post.status === 'active'
-                ? 'bg-error hover:bg-error/90 text-white shadow-error/20'
-                : 'bg-success hover:bg-success/90 text-white shadow-success/20'
+                ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
+                : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
             }`}
           >
             {post.status === 'active' ? 'Ẩn bài viết' : 'Hiện bài viết'}
@@ -212,13 +228,13 @@ export default function PostDetailModal({
             onClick={() => {
               onDelete(post);
             }}
-            className="yb-btn flex-1 py-4 font-black bg-neutral-800 hover:bg-neutral-900 text-white shadow-xl"
+            className="flex-1 py-3 rounded-xl font-bold bg-neutral-900 dark:bg-neutral-800 hover:bg-neutral-800 dark:hover:bg-neutral-700 text-white shadow-lg shadow-neutral-900/10 transition-all text-sm"
           >
             Xóa bài viết
           </button>
           <button
             onClick={onClose}
-            className="yb-btn yb-btn-secondary px-10 py-4 font-black"
+            className="px-8 py-3 rounded-xl font-bold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-sm"
           >
             Đóng
           </button>

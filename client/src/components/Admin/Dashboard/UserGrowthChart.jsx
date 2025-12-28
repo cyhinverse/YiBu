@@ -17,22 +17,14 @@ const UserGrowthChart = ({ data }) => {
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-primary)"
-                  stopOpacity={0.2}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-primary)"
-                  stopOpacity={0}
-                />
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="var(--color-border)"
+              stroke="#e5e5e5"
               opacity={0.5}
             />
             <XAxis
@@ -41,7 +33,7 @@ const UserGrowthChart = ({ data }) => {
               tickLine={false}
               tick={{
                 fontSize: 11,
-                fill: 'var(--color-text-secondary)',
+                fill: '#737373',
                 fontWeight: 600,
               }}
               dy={10}
@@ -51,25 +43,25 @@ const UserGrowthChart = ({ data }) => {
               tickLine={false}
               tick={{
                 fontSize: 11,
-                fill: 'var(--color-text-secondary)',
+                fill: '#737373',
                 fontWeight: 600,
               }}
               dx={-10}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'var(--color-surface)',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid var(--color-border)',
-                boxShadow: 'var(--shadow-xl)',
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                border: '1px solid #e5e5e5',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                 padding: '12px 16px',
               }}
               itemStyle={{
-                color: 'var(--color-text-primary)',
+                color: '#10b981',
                 fontWeight: 700,
               }}
               cursor={{
-                stroke: 'var(--color-primary)',
+                stroke: '#10b981',
                 strokeWidth: 2,
                 strokeDasharray: '5 5',
               }}
@@ -77,8 +69,8 @@ const UserGrowthChart = ({ data }) => {
             <Area
               type="monotone"
               dataKey="users"
-              stroke="var(--color-primary)"
-              strokeWidth={4}
+              stroke="#10b981"
+              strokeWidth={3}
               fillOpacity={1}
               fill="url(#colorUsers)"
               animationDuration={1500}
@@ -86,9 +78,11 @@ const UserGrowthChart = ({ data }) => {
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-full flex flex-col items-center justify-center text-secondary/40">
-          <Activity size={48} className="mb-4 opacity-20" />
-          <p className="font-bold">Không có dữ liệu cho giai đoạn này</p>
+        <div className="h-full flex flex-col items-center justify-center text-neutral-400">
+          <Activity size={40} className="mb-4 opacity-20" />
+          <p className="font-bold text-sm">
+            Không có dữ liệu cho giai đoạn này
+          </p>
         </div>
       )}
     </div>

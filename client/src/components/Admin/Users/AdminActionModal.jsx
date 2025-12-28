@@ -12,37 +12,68 @@ const AdminActionModal = ({
 }) => {
   if (!isOpen) return null;
 
+  const getConfig = () => {
+    switch (actionType) {
+      case 'ban':
+      case 'delete': // Assuming delete shares red styling
+        return {
+          icon: actionType === 'delete' ? Ban : Ban, // Or specific icon for delete if available
+          bg: 'bg-rose-50 dark:bg-rose-900/20',
+          text: 'text-rose-600 dark:text-rose-400',
+          btn: 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none',
+          title: actionType === 'ban' ? 'Chặn tài khoản' : 'Xóa tài khoản',
+        };
+      case 'unban':
+        return {
+          icon: Check,
+          bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+          text: 'text-emerald-600 dark:text-emerald-400',
+          btn: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 dark:shadow-none',
+          title: 'Gỡ chặn',
+        };
+      case 'warn':
+        return {
+          icon: AlertTriangle,
+          bg: 'bg-amber-50 dark:bg-amber-900/20',
+          text: 'text-amber-600 dark:text-amber-400',
+          btn: 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 dark:shadow-none',
+          title: 'Cảnh báo',
+        };
+      case 'suspend':
+        return {
+          icon: AlertTriangle,
+          bg: 'bg-orange-50 dark:bg-orange-900/20',
+          text: 'text-orange-600 dark:text-orange-400',
+          btn: 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 dark:shadow-none',
+          title: 'Tạm ngưng',
+        };
+      default:
+        return {
+          icon: AlertTriangle,
+          bg: 'bg-neutral-50',
+          text: 'text-neutral-600',
+          btn: 'bg-neutral-900 text-white',
+          title: 'Xác nhận',
+        };
+    }
+  };
+
+  const config = getConfig();
+  const Icon = config.icon;
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="yb-card bg-surface w-full max-w-md shadow-2xl p-10 overflow-hidden transform animate-scale-in">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-xl rounded-3xl p-8 transform animate-in scale-95 duration-200 border border-neutral-100 dark:border-neutral-800 overflow-hidden">
         <div className="flex flex-col items-center text-center mb-8">
           <div
-            className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-lg ${
-              actionType === 'unban'
-                ? 'bg-success/20 text-success'
-                : actionType === 'warn'
-                ? 'bg-warning/20 text-warning'
-                : 'bg-error/20 text-error'
-            }`}
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm ${config.bg} ${config.text}`}
           >
-            {actionType === 'unban' ? (
-              <Check size={36} strokeWidth={3} />
-            ) : actionType === 'warn' ? (
-              <AlertTriangle size={36} strokeWidth={3} />
-            ) : (
-              <Ban size={36} strokeWidth={3} />
-            )}
+            <Icon size={32} strokeWidth={2.5} />
           </div>
-          <h3 className="text-2xl font-black text-primary capitalize mb-3 tracking-tight">
-            {actionType === 'ban'
-              ? 'Chặn tài khoản'
-              : actionType === 'unban'
-              ? 'Gỡ chặn'
-              : actionType === 'warn'
-              ? 'Cảnh báo'
-              : 'Xóa tài khoản'}
+          <h3 className="text-xl font-bold text-neutral-900 dark:text-white capitalize mb-2 tracking-tight">
+            {config.title}
           </h3>
-          <p className="text-sm font-bold text-secondary leading-relaxed px-4">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">
             {actionType === 'ban' &&
               `Bạn có chắc chắn muốn chặn ${targetName}? Quyền truy cập sẽ bị thu hồi ngay lập tức.`}
             {actionType === 'unban' &&
@@ -51,40 +82,36 @@ const AdminActionModal = ({
               `Gửi cảnh báo chính thức cho ${targetName}?`}
             {actionType === 'delete' &&
               `Xóa vĩnh viễn ${targetName}? Hành động này không thể hoàn tác.`}
+            {actionType === 'suspend' &&
+              `Tạm ngưng tài khoản ${targetName} trong 7 ngày?`}
           </p>
         </div>
 
         {['ban', 'suspend', 'warn'].includes(actionType) && (
           <div className="mb-8">
-            <label className="text-[10px] font-black text-secondary uppercase tracking-widest block mb-2.5 ml-1">
+            <label className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wide block mb-2.5 ml-1">
               {actionType === 'warn' ? 'Nội dung cảnh báo' : 'Lý do thực hiện'}
             </label>
             <textarea
               value={reason}
               onChange={e => onReasonChange(e.target.value)}
               placeholder="Nhập chi tiết tại đây..."
-              className="yb-input w-full p-4 h-32 resize-none text-sm font-bold"
+              className="w-full p-4 h-32 resize-none text-sm font-medium bg-neutral-50 dark:bg-neutral-800 border-none rounded-2xl focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all outline-none"
             />
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="yb-btn yb-btn-secondary flex-1 py-4 font-black"
+            className="flex-1 px-4 py-3 rounded-xl font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
           >
             Hủy bỏ
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`yb-btn flex-1 py-4 font-black flex items-center justify-center gap-2 shadow-xl ${
-              actionType === 'unban'
-                ? 'bg-success hover:bg-success/90 text-white shadow-success/20'
-                : actionType === 'warn'
-                ? 'bg-warning hover:bg-warning/90 text-white shadow-warning/20'
-                : 'bg-error hover:bg-error/90 text-white shadow-error/20'
-            } disabled:opacity-50`}
+            className={`flex-1 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${config.btn}`}
           >
             {loading && <Loader2 size={18} className="animate-spin" />}
             Xác nhận

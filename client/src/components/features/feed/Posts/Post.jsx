@@ -23,6 +23,7 @@ import {
   useDeletePost,
   useSharePost,
 } from '@/hooks/usePostsQuery';
+import UserProfilePreview from '../../../Common/UserProfilePreview';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -197,41 +198,43 @@ const Post = ({ data, onDelete }) => {
     <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <img
-              className="w-11 h-11 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
-              src={user.avatar}
-              alt={user.name}
-            />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-content dark:text-white hover:underline cursor-pointer">
-                {user.name}
-              </span>
-              {user.verified && (
-                <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                  <svg
-                    width="10"
-                    height="10"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="text-primary-foreground"
-                  >
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                  </svg>
-                </div>
-              )}
+        <UserProfilePreview userId={user._id || user.id}>
+          <div className="flex items-center gap-3">
+            <div className="relative group cursor-pointer">
+              <img
+                className="w-11 h-11 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                src={user.avatar}
+                alt={user.name}
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="flex items-center gap-1.5 text-sm text-secondary">
-              <span>@{user.username}</span>
-              <span>•</span>
-              <span>{formatTime(data.createdAt)}</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-content dark:text-white hover:underline cursor-pointer">
+                  {user.name}
+                </span>
+                {user.verified && (
+                  <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="text-primary-foreground"
+                    >
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 text-sm text-secondary">
+                <span>@{user.username}</span>
+                <span>•</span>
+                <span>{formatTime(data.createdAt)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </UserProfilePreview>
 
         <button
           onClick={() => setShowOptions(!showOptions)}

@@ -92,26 +92,24 @@ export default function Comments() {
   };
 
   return (
-    <div className="space-y-8 font-sans">
+    <div className="space-y-6 font-sans">
       {/* Header */}
-      <div className="yb-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-secondary/30">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-primary tracking-tight">
+          <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
             Quản lý bình luận
           </h2>
-          <p className="text-sm text-secondary font-medium mt-1">
+          <p className="text-sm text-neutral-500 font-medium mt-1">
             Kiểm duyệt và quản lý tương tác người dùng
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="yb-btn yb-btn-primary p-2.5 shadow-lg shadow-primary/10"
-          >
-            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="bg-white dark:bg-neutral-900 p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all shadow-sm"
+        >
+          <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* Filters */}
@@ -119,14 +117,14 @@ export default function Comments() {
         <div className="relative flex-1 group">
           <Search
             size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-neutral-600 dark:group-focus-within:text-neutral-300 transition-colors"
           />
           <input
             type="text"
             placeholder="Tìm kiếm nội dung, tác giả..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="yb-input pl-12 w-full text-sm"
+            className="w-full pl-12 pr-4 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-medium transition-all"
           />
         </div>
 
@@ -134,7 +132,7 @@ export default function Comments() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="yb-input px-4 min-w-[140px] text-sm font-bold cursor-pointer"
+            className="px-6 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-bold cursor-pointer transition-all min-w-[160px]"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
@@ -145,39 +143,41 @@ export default function Comments() {
       </div>
 
       {/* Comments Table */}
-      <CommentsTable
-        comments={comments}
-        loading={loading}
-        activeDropdown={activeDropdown}
-        setActiveDropdown={setActiveDropdown}
-        onViewDetails={handleViewDetails}
-        onModerate={handleModerate}
-        onDelete={comment => {
-          setCommentToDelete(comment);
-          setShowDeleteModal(true);
-        }}
-      />
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+        <CommentsTable
+          comments={comments}
+          loading={loading}
+          activeDropdown={activeDropdown}
+          setActiveDropdown={setActiveDropdown}
+          onViewDetails={handleViewDetails}
+          onModerate={handleModerate}
+          onDelete={comment => {
+            setCommentToDelete(comment);
+            setShowDeleteModal(true);
+          }}
+        />
+      </div>
 
       {/* Pagination */}
-      <div className="yb-card flex items-center justify-between px-8 py-6 bg-surface-secondary/20 border-border">
-        <span className="text-sm font-bold text-secondary">
+      <div className="flex items-center justify-between px-2">
+        <span className="text-sm font-medium text-neutral-500">
           Trang {currentPage} / {totalPages}
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             disabled={currentPage <= 1 || loading}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="yb-btn yb-btn-secondary p-2.5 disabled:opacity-30 shadow-sm"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
-          <div className="px-5 py-2.5 bg-surface rounded-xl border border-border text-sm font-black text-primary shadow-sm min-w-[3rem] text-center">
+          <div className="w-8 h-8 flex items-center justify-center bg-black text-white dark:bg-white dark:text-black rounded-full text-sm font-bold">
             {currentPage}
           </div>
           <button
             disabled={currentPage >= totalPages || loading}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="yb-btn yb-btn-secondary p-2.5 disabled:opacity-30 shadow-sm"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronRight size={20} />
           </button>

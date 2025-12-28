@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  RefreshCcw,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+} from 'lucide-react';
 import {
   useAdminPosts,
   useDeletePost,
@@ -132,22 +138,21 @@ export default function Posts() {
   };
 
   return (
-    <div className="space-y-8 font-sans">
+    <div className="space-y-6 font-sans">
       {/* Header */}
-      <div className="yb-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-secondary/30">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-primary tracking-tight">
+          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Quản lý bài viết
           </h2>
-          <p className="text-sm text-secondary font-medium mt-1">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Kiểm duyệt và quản lý nội dung người dùng
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleRefresh}
-            disabled={loading}
-            className="yb-btn yb-btn-primary p-2.5 shadow-lg shadow-primary/10"
+            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -155,43 +160,55 @@ export default function Posts() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="relative flex-1 group">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full md:w-auto">
           <Search
-            size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors"
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
           />
           <input
             type="text"
             placeholder="Tìm kiếm bài viết..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="yb-input pl-12 w-full text-sm"
+            className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
         </div>
 
-        <div className="flex gap-3">
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            className="yb-input px-4 min-w-[140px] text-sm font-bold cursor-pointer"
-          >
-            <option value="all">Tất cả loại</option>
-            <option value="text">Văn bản</option>
-            <option value="image">Hình ảnh</option>
-            <option value="video">Video</option>
-          </select>
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <div className="relative min-w-[140px]">
+            <Filter
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+            />
+            <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <option value="all">Tất cả loại</option>
+              <option value="text">Văn bản</option>
+              <option value="image">Hình ảnh</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="yb-input px-4 min-w-[140px] text-sm font-bold cursor-pointer"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Hoạt động</option>
-            <option value="hidden">Đã ẩn</option>
-            <option value="pending">Chờ duyệt</option>
-          </select>
+          <div className="relative min-w-[150px]">
+            <Filter
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+            />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="hidden">Đã ẩn</option>
+              <option value="pending">Chờ duyệt</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -215,25 +232,25 @@ export default function Posts() {
       />
 
       {/* Pagination */}
-      <div className="yb-card flex items-center justify-between px-8 py-6 bg-surface-secondary/20 border-border">
-        <span className="text-sm font-bold text-secondary">
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="text-sm text-neutral-500">
           Trang {currentPage} / {pagination?.pages || 1}
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             disabled={currentPage <= 1 || loading}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="yb-btn yb-btn-secondary p-2.5 disabled:opacity-30 shadow-sm"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
-          <div className="px-5 py-2.5 bg-surface rounded-xl border border-border text-sm font-black text-primary shadow-sm min-w-[3rem] text-center">
+          <div className="px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black rounded-full text-sm font-bold shadow-sm">
             {currentPage}
           </div>
           <button
             disabled={currentPage >= (pagination?.pages || 1) || loading}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="yb-btn yb-btn-secondary p-2.5 disabled:opacity-30 shadow-sm"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronRight size={20} />
           </button>

@@ -694,11 +694,16 @@ class AdminService {
   }
 
   static async getUserGrowthStats(days = 30) {
+    const endDate = new Date();
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const previousStartDate = new Date(
+      startDate.getTime() - days * 24 * 60 * 60 * 1000
+    );
 
+    // Get current period stats
     const stats = await User.aggregate([
       {
-        $match: { createdAt: { $gte: startDate } },
+        $match: { createdAt: { $gte: startDate, $lte: endDate } },
       },
       {
         $group: {
@@ -711,7 +716,42 @@ class AdminService {
       { $sort: { _id: 1 } },
     ]);
 
-    return stats.map(s => ({ date: s._id, count: s.count }));
+    // Fill in missing dates with 0
+    const filledStats = [];
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = d.toISOString().split('T')[0];
+      const found = stats.find(s => s._id === dateStr);
+      filledStats.push({
+        name: dateStr,
+        users: found ? found.count : 0,
+      });
+    }
+
+    // Calculate total growth for current period
+    const totalGrowth = filledStats.reduce((acc, curr) => acc + curr.users, 0);
+
+    // Get previous period total for percentage
+    const previousPeriodCount = await User.countDocuments({
+      createdAt: { $gte: previousStartDate, $lt: startDate },
+    });
+
+    let percentage = 0;
+    if (previousPeriodCount > 0) {
+      percentage =
+        ((totalGrowth - previousPeriodCount) / previousPeriodCount) * 100;
+    } else if (totalGrowth > 0) {
+      percentage = 100;
+    }
+
+    return {
+      totalGrowth,
+      percentage: parseFloat(percentage.toFixed(1)),
+      chartData: filledStats,
+    };
   }
 
   static async getPostStats(days = 30) {
@@ -940,11 +980,19 @@ class AdminService {
   ) {
     try {
       const AdminLog = (await import('../models/AdminLog.js')).default;
-      
+
       let level = 'info';
-      if (action.includes('ban') || action.includes('delete') || action.includes('remove')) {
+      if (
+        action.includes('ban') ||
+        action.includes('delete') ||
+        action.includes('remove')
+      ) {
         level = 'warning';
-      } else if (action.includes('unban') || action.includes('approve') || action.includes('resolve')) {
+      } else if (
+        action.includes('unban') ||
+        action.includes('approve') ||
+        action.includes('resolve')
+      ) {
         level = 'success';
       }
 
@@ -957,7 +1005,6 @@ class AdminService {
         details: metadata.reason || metadata.content || `Performed ${action}`,
         metadata,
       });
-      
     } catch (error) {
       // Don't crash if logging fails, just log to console
       logger.error('Failed to create admin log:', error);
@@ -965,13 +1012,7 @@ class AdminService {
   }
 
   static async getAdminLogs(options = {}) {
-    const {
-      page = 1,
-      limit = 20,
-      level,
-      startDate,
-      endDate
-    } = options;
+    const { page = 1, limit = 20, level, startDate, endDate } = options;
 
     const AdminLog = (await import('../models/AdminLog.js')).default;
     const query = {};
@@ -995,7 +1036,7 @@ class AdminService {
         .lean(),
       AdminLog.countDocuments(query),
     ]);
-    
+
     // Transform logs to match frontend expectations
     const formattedLogs = logs.map(log => ({
       _id: log._id,
@@ -1005,7 +1046,7 @@ class AdminService {
       message: log.details,
       user: log.admin, // Key 'user' for table column 'Người dùng'
       ip: log.ip,
-      metadata: log.metadata
+      metadata: log.metadata,
     }));
 
     return {

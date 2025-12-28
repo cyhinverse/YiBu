@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const getStatusStyle = status => {
   switch (status) {
     case 'active':

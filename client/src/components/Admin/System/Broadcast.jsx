@@ -9,39 +9,73 @@ import {
   Info,
   AlertTriangle,
   Sparkles,
-  X,
+  Megaphone,
 } from 'lucide-react';
 import { useBroadcastNotification } from '@/hooks/useAdminQuery';
 
 const NOTIFICATION_TYPES = [
-  { id: 'info', label: 'Information', icon: Info, color: 'blue' },
-  { id: 'success', label: 'Success', icon: CheckCircle2, color: 'green' },
-  { id: 'warning', label: 'Warning', icon: AlertTriangle, color: 'yellow' },
-  { id: 'alert', label: 'Alert', icon: AlertCircle, color: 'red' },
+  {
+    id: 'info',
+    label: 'Thông tin',
+    icon: Info,
+    color: 'blue',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    text: 'text-blue-600 dark:text-blue-400',
+  },
+  {
+    id: 'success',
+    label: 'Thành công',
+    icon: CheckCircle2,
+    color: 'green',
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    text: 'text-green-600 dark:text-green-400',
+  },
+  {
+    id: 'warning',
+    label: 'Cảnh báo',
+    icon: AlertTriangle,
+    color: 'yellow',
+    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+    text: 'text-yellow-600 dark:text-yellow-400',
+  },
+  {
+    id: 'alert',
+    label: 'Khẩn cấp',
+    icon: AlertCircle,
+    color: 'red',
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    text: 'text-red-600 dark:text-red-400',
+  },
   {
     id: 'announcement',
-    label: 'Announcement',
+    label: 'Thông báo',
     icon: Sparkles,
     color: 'purple',
+    bg: 'bg-purple-50 dark:bg-purple-900/20',
+    text: 'text-purple-600 dark:text-purple-400',
   },
 ];
 
 const TARGET_AUDIENCES = [
-  { id: 'all', label: 'All Users', description: 'Send to everyone' },
+  {
+    id: 'all',
+    label: 'Tất cả người dùng',
+    description: 'Gửi cho toàn bộ người dùng',
+  },
   {
     id: 'active',
-    label: 'Active Users',
-    description: 'Users active in last 30 days',
+    label: 'Người dùng hoạt động',
+    description: 'Hoạt động trong 30 ngày qua',
   },
   {
     id: 'new',
-    label: 'New Users',
-    description: 'Users registered in last 7 days',
+    label: 'Người dùng mới',
+    description: 'Đăng ký trong 7 ngày qua',
   },
   {
     id: 'verified',
-    label: 'Verified Users',
-    description: 'Only verified accounts',
+    label: 'Đã xác thực',
+    description: 'Chỉ tài khoản đã xác minh',
   },
 ];
 
@@ -59,9 +93,6 @@ const Broadcast = () => {
   });
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [sendStatus, setSendStatus] = useState(null); // 'success' | 'error' | null
-  const [statusMessage, setStatusMessage] = useState('');
-
   const handleInputChange = e => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -78,8 +109,7 @@ const Broadcast = () => {
   const handleSubmit = e => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.message.trim()) {
-      setSendStatus('error');
-      setStatusMessage('Please fill in both title and message');
+      // Show toast error here if implemented, otherwise just return
       return;
     }
     setShowConfirmModal(true);
@@ -96,8 +126,6 @@ const Broadcast = () => {
         link: formData.link || undefined,
       });
 
-      setSendStatus('success');
-      setStatusMessage('Notification sent successfully!');
       setFormData({
         title: '',
         message: '',
@@ -107,328 +135,219 @@ const Broadcast = () => {
         link: '',
       });
     } catch (error) {
-      setSendStatus('error');
-      setStatusMessage(
-        error?.response?.data?.message ||
-          error?.message ||
-          'Failed to send notification'
-      );
+      console.error('Broadcast error:', error);
+    } finally {
+      setShowConfirmModal(false);
     }
-    setShowConfirmModal(false);
-
-    // Clear status after 5 seconds
-    setTimeout(() => {
-      setSendStatus(null);
-      setStatusMessage('');
-    }, 5000);
-  };
-
-  const getTypeColor = (type, variant = 'bg') => {
-    const colors = {
-      info: {
-        bg: 'bg-blue-100 dark:bg-blue-900/30',
-        text: 'text-blue-600 dark:text-blue-400',
-        border: 'border-blue-500',
-      },
-      success: {
-        bg: 'bg-green-100 dark:bg-green-900/30',
-        text: 'text-green-600 dark:text-green-400',
-        border: 'border-green-500',
-      },
-      warning: {
-        bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-        text: 'text-yellow-600 dark:text-yellow-400',
-        border: 'border-yellow-500',
-      },
-      alert: {
-        bg: 'bg-red-100 dark:bg-red-900/30',
-        text: 'text-red-600 dark:text-red-400',
-        border: 'border-red-500',
-      },
-      announcement: {
-        bg: 'bg-purple-100 dark:bg-purple-900/30',
-        text: 'text-purple-600 dark:text-purple-400',
-        border: 'border-purple-500',
-      },
-    };
-    return colors[type]?.[variant] || colors.info[variant];
   };
 
   const selectedType = NOTIFICATION_TYPES.find(t => t.id === formData.type);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-black dark:text-white">
-          Broadcast Notification
-        </h2>
-        <p className="text-sm text-neutral-500 mt-1">
-          Send notifications to all or specific groups of users
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
+            <Megaphone className="text-neutral-900 dark:text-white" size={24} />
+            Phát sóng thông báo
+          </h2>
+          <p className="text-neutral-500 font-medium mt-2">
+            Gửi thông báo đến người dùng hệ thống
+          </p>
+        </div>
       </div>
 
-      {/* Status Message */}
-      {sendStatus && (
-        <div
-          className={`flex items-center gap-3 p-4 rounded-lg ${
-            sendStatus === 'success'
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-          }`}
-        >
-          {sendStatus === 'success' ? (
-            <CheckCircle2 size={20} />
-          ) : (
-            <AlertCircle size={20} />
-          )}
-          <span>{statusMessage}</span>
-          <button
-            onClick={() => setSendStatus(null)}
-            className="ml-auto hover:opacity-70"
-          >
-            <X size={18} />
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Notification Type */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Notification Type
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {NOTIFICATION_TYPES.map(type => (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() => handleTypeSelect(type.id)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  formData.type === type.id
-                    ? `${getTypeColor(type.id, 'bg')} ${getTypeColor(
-                        type.id,
-                        'border'
-                      )}`
-                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
-                }`}
-              >
-                <type.icon
-                  size={24}
-                  className={
-                    formData.type === type.id
-                      ? getTypeColor(type.id, 'text')
-                      : 'text-neutral-400'
-                  }
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    formData.type === type.id
-                      ? getTypeColor(type.id, 'text')
-                      : 'text-neutral-600 dark:text-neutral-400'
-                  }`}
-                >
-                  {type.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Notification Content
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Title *
+      {/* Main Content */}
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left Column: Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-8 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-8">
+            {/* Notification Type Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                Loại thông báo
               </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                placeholder="Enter notification title"
-                maxLength={100}
-                className="w-full px-4 py-3 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-600"
-              />
-              <p className="text-xs text-neutral-500 mt-1">
-                {formData.title.length}/100 characters
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Message *
-              </label>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleInputChange}
-                placeholder="Enter notification message"
-                rows={4}
-                maxLength={500}
-                className="w-full px-4 py-3 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-600 resize-none"
-              />
-              <p className="text-xs text-neutral-500 mt-1">
-                {formData.message.length}/500 characters
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Link (Optional)
-              </label>
-              <input
-                type="url"
-                name="link"
-                value={formData.link}
-                onChange={handleInputChange}
-                placeholder="https://example.com/page"
-                className="w-full px-4 py-3 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-600"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Target Audience */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Target Audience
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {TARGET_AUDIENCES.map(audience => (
-              <button
-                key={audience.id}
-                type="button"
-                onClick={() => handleAudienceSelect(audience.id)}
-                className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left ${
-                  formData.targetAudience === audience.id
-                    ? 'border-black dark:border-white bg-neutral-100 dark:bg-neutral-800'
-                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
-                }`}
-              >
-                <Users
-                  size={20}
-                  className={
-                    formData.targetAudience === audience.id
-                      ? 'text-black dark:text-white'
-                      : 'text-neutral-400'
-                  }
-                />
-                <div>
-                  <span
-                    className={`font-medium ${
-                      formData.targetAudience === audience.id
-                        ? 'text-black dark:text-white'
-                        : 'text-neutral-600 dark:text-neutral-400'
+              <div className="flex flex-wrap gap-2">
+                {NOTIFICATION_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => handleTypeSelect(type.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 ${
+                      formData.type === type.id
+                        ? `${type.bg} ${type.text} border-${type.color}-200 dark:border-${type.color}-800 ring-1 ring-${type.color}-500 dark:ring-${type.color}-400`
+                        : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 text-neutral-500'
                     }`}
                   >
-                    {audience.label}
-                  </span>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {audience.description}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+                    <type.icon
+                      size={16}
+                      className={
+                        formData.type === type.id
+                          ? 'current-color'
+                          : 'text-neutral-400'
+                      }
+                      strokeWidth={2.5}
+                    />
+                    <span className="text-sm font-bold">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Priority */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Priority
-          </h3>
-          <div className="flex gap-3">
-            {['low', 'normal', 'high', 'urgent'].map(priority => (
-              <button
-                key={priority}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, priority }))}
-                className={`px-4 py-2 rounded-lg border-2 font-medium text-sm capitalize transition-all ${
-                  formData.priority === priority
-                    ? priority === 'urgent'
-                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                      : priority === 'high'
-                      ? 'border-orange-500 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                      : 'border-black dark:border-white bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white'
-                    : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300'
-                }`}
-              >
-                {priority}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Preview */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Preview
-          </h3>
-          <div
-            className={`p-4 rounded-lg border ${getTypeColor(
-              formData.type,
-              'bg'
-            )} ${getTypeColor(formData.type, 'border').replace(
-              'border-',
-              'border-l-4 border-'
-            )}`}
-          >
-            <div className="flex items-start gap-3">
-              {selectedType && (
-                <selectedType.icon
-                  size={20}
-                  className={getTypeColor(formData.type, 'text')}
+            {/* Target Audience */}
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                Đối tượng nhận
+              </label>
+              <div className="relative">
+                <Users
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
                 />
-              )}
-              <div className="flex-1">
-                <h4
-                  className={`font-semibold ${getTypeColor(
-                    formData.type,
-                    'text'
-                  )}`}
+                <select
+                  value={formData.targetAudience}
+                  onChange={e => handleAudienceSelect(e.target.value)}
+                  className="w-full pl-11 pr-10 py-3 appearance-none rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                 >
-                  {formData.title || 'Notification Title'}
-                </h4>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                  {formData.message ||
-                    'Notification message will appear here...'}
-                </p>
-                {formData.link && (
-                  <a
-                    href={formData.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-500 hover:underline mt-2 inline-block"
+                  {TARGET_AUDIENCES.map(audience => (
+                    <option key={audience.id} value={audience.id}>
+                      {audience.label} - {audience.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    {formData.link}
-                  </a>
-                )}
+                    <path
+                      d="M2.5 4.5L6 8L9.5 4.5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Inputs */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                  Tiêu đề thông báo
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Nhập tiêu đề..."
+                  className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                  Nội dung chi tiết
+                </label>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  placeholder="Nhập nội dung thông báo..."
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-3xl bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                  Đường dẫn đính kèm (Tùy chọn)
+                </label>
+                <input
+                  type="url"
+                  name="link"
+                  value={formData.link}
+                  onChange={handleInputChange}
+                  placeholder="https://example.com/..."
+                  className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium text-blue-600"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={
-              loading || !formData.title.trim() || !formData.message.trim()
-            }
-            className="flex items-center gap-2 px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Send size={18} />
-            )}
-            Send Notification
-          </button>
+        {/* Right Column: Preview */}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 border border-neutral-200 dark:border-neutral-800 shadow-sm sticky top-6">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+              <Sparkles size={20} className="text-amber-500" />
+              Xem trước
+            </h3>
+
+            <div
+              className={`p-4 rounded-2xl border transition-all ${selectedType?.bg} border-${selectedType?.color}-200 dark:border-${selectedType?.color}-800`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`p-2 rounded-xl bg-white dark:bg-neutral-900 shadow-sm ${selectedType?.text}`}
+                >
+                  {selectedType && <selectedType.icon size={20} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4
+                    className={`font-bold text-base mb-1 ${selectedType?.text}`}
+                  >
+                    {formData.title || 'Tiêu đề thông báo'}
+                  </h4>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-2">
+                    {formData.message ||
+                      'Nội dung thông báo sẽ hiển thị ở đây...'}
+                  </p>
+                  <span className="text-xs font-medium text-neutral-400 flex items-center gap-1">
+                    <Users size={12} />
+                    Gửi đến:{' '}
+                    {
+                      TARGET_AUDIENCES.find(
+                        a => a.id === formData.targetAudience
+                      )?.label
+                    }
+                  </span>
+                  {formData.link && (
+                    <div className="mt-3 pt-3 border-t border-neutral-200/50 dark:border-neutral-700/50">
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full block w-fit truncate max-w-full">
+                        🔗 {formData.link}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  loading || !formData.title.trim() || !formData.message.trim()
+                }
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+              >
+                {loading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Send size={20} />
+                )}
+                Gửi thông báo ngay
+              </button>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
@@ -443,16 +362,16 @@ const Broadcast = () => {
                   />
                 </div>
                 <h3 className="text-lg font-bold text-black dark:text-white">
-                  Confirm Broadcast
+                  Xác nhận gửi thông báo
                 </h3>
               </div>
               <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-                You are about to send a notification to{' '}
+                Bạn sắp gửi thông báo đến{' '}
                 <span className="font-medium text-black dark:text-white">
                   {TARGET_AUDIENCES.find(a => a.id === formData.targetAudience)
-                    ?.label || 'all users'}
+                    ?.label || 'tất cả người dùng'}
                 </span>
-                . This action cannot be undone.
+                . Hành động này không thể hoàn tác.
               </p>
               <div className="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-4 mb-6">
                 <p className="font-medium text-black dark:text-white">
@@ -467,7 +386,7 @@ const Broadcast = () => {
                   onClick={() => setShowConfirmModal(false)}
                   className="px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   onClick={confirmSend}
@@ -475,7 +394,7 @@ const Broadcast = () => {
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black hover:opacity-90 disabled:opacity-50"
                 >
                   {loading && <Loader2 size={16} className="animate-spin" />}
-                  Confirm Send
+                  Tiến hành gửi
                 </button>
               </div>
             </div>

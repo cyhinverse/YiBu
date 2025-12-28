@@ -16,26 +16,26 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
   if (!user) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
-      <div className="yb-card bg-surface w-full max-w-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden transform animate-scale-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-3xl shadow-2xl max-h-[85vh] flex flex-col rounded-3xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
         {/* Modal Header */}
-        <div className="p-8 border-b border-border shrink-0 bg-surface-secondary/30">
+        <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0 bg-neutral-50/50 dark:bg-neutral-800/20">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-5">
               <img
                 src={user.avatar || '/images/default-avatar.png'}
                 alt={user.name}
-                className="yb-avatar w-24 h-24 border-4 border-surface shadow-xl"
+                className="w-20 h-20 rounded-full border-4 border-white dark:border-neutral-800 shadow-md object-cover"
               />
               <div>
-                <h3 className="text-2xl font-black text-primary flex items-center gap-3 tracking-tight">
+                <h3 className="text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-3 tracking-tight">
                   {user.name}
                   <StatusBadge status={user.status || 'active'} />
                 </h3>
-                <p className="text-secondary font-bold mt-1">
+                <p className="text-neutral-500 font-medium mt-1">
                   @{user.username}
                 </p>
-                <div className="flex items-center gap-4 mt-4 text-xs font-bold text-secondary">
+                <div className="flex items-center gap-4 mt-3 text-xs font-bold text-neutral-400 uppercase tracking-wide">
                   <span className="flex items-center gap-1.5">
                     <Mail size={14} /> {user.email}
                   </span>
@@ -48,7 +48,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             </div>
             <button
               onClick={onClose}
-              className="p-2.5 rounded-full hover:bg-surface-secondary transition-colors text-secondary"
+              className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500"
             >
               <X size={24} />
             </button>
@@ -56,7 +56,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex px-8 border-b border-border shrink-0 bg-surface">
+        <div className="flex px-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
           {[
             { id: 'overview', label: 'Tổng quan', icon: Info },
             { id: 'posts', label: 'Bài viết', icon: FileText },
@@ -65,10 +65,10 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-black transition-all border-b-2 ${
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-secondary hover:text-primary'
+                  ? 'border-neutral-900 text-neutral-900 dark:border-white dark:text-white'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
               }`}
             >
               <tab.icon size={18} />
@@ -78,41 +78,41 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
         </div>
 
         {/* Modal Content */}
-        <div className="p-8 overflow-y-auto bg-surface flex-1">
+        <div className="p-8 overflow-y-auto flex-1">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="p-6 bg-surface-secondary/50 rounded-2xl border border-border/50 shadow-inner">
-                  <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
+                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Vai trò
                   </p>
-                  <p className="text-lg font-black text-primary capitalize">
+                  <p className="text-lg font-bold text-neutral-900 dark:text-white capitalize">
                     {user.role || 'Thành viên'}
                   </p>
                 </div>
-                <div className="p-6 bg-surface-secondary/50 rounded-2xl border border-border/50 shadow-inner">
-                  <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
+                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Bài viết
                   </p>
-                  <p className="text-lg font-black text-primary">
+                  <p className="text-lg font-bold text-neutral-900 dark:text-white">
                     {user.postsCount || 0}
                   </p>
                 </div>
-                <div className="p-6 bg-surface-secondary/50 rounded-2xl border border-border/50 shadow-inner">
-                  <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-2">
+                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Theo dõi
                   </p>
-                  <p className="text-lg font-black text-primary">
+                  <p className="text-lg font-bold text-neutral-900 dark:text-white">
                     {(user.followersCount || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              <div className="p-6 bg-surface-secondary/50 rounded-2xl border border-border/50 shadow-inner">
-                <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-3">
+              <div className="p-6 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">
                   Giới thiệu
                 </p>
-                <p className="text-sm font-bold text-primary leading-relaxed">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 leading-relaxed">
                   {user.bio || 'Chưa có thông tin giới thiệu.'}
                 </p>
               </div>
@@ -125,21 +125,21 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                 posts.map(post => (
                   <div
                     key={post._id}
-                    className="flex gap-5 p-5 border border-border/50 rounded-2xl hover:bg-surface-secondary/50 transition-all group"
+                    className="flex gap-5 p-4 border border-neutral-100 dark:border-neutral-800 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-all"
                   >
                     {post.media?.[0] && (
                       <img
                         src={post.media[0].url}
                         alt="Post"
-                        className="w-24 h-24 rounded-2xl object-cover shadow-md border-2 border-surface"
+                        className="w-20 h-20 rounded-xl object-cover shadow-sm bg-neutral-100 dark:bg-neutral-800"
                       />
                     )}
                     <div className="flex-1">
-                      <p className="text-primary font-bold line-clamp-2 mb-3">
+                      <p className="text-neutral-900 dark:text-white font-medium line-clamp-2 mb-3">
                         {post.content || post.caption || 'Không có nội dung'}
                       </p>
-                      <div className="flex items-center gap-4 text-xs font-black text-secondary">
-                        <span className="bg-surface-secondary px-2.5 py-1 rounded-lg">
+                      <div className="flex items-center gap-4 text-xs font-bold text-neutral-400">
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-lg text-neutral-600 dark:text-neutral-300">
                           {new Date(post.createdAt).toLocaleDateString('vi-VN')}
                         </span>
                         <span>{post.likesCount} Thích</span>
@@ -149,12 +149,12 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-16 bg-surface-secondary/20 rounded-2xl border-2 border-dashed border-border/50">
+                <div className="text-center py-16 bg-neutral-50 dark:bg-neutral-800/20 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-700">
                   <FileText
-                    size={48}
-                    className="mx-auto text-secondary/20 mb-3"
+                    size={40}
+                    className="mx-auto text-neutral-400 mb-3"
                   />
-                  <p className="text-secondary font-bold">
+                  <p className="text-neutral-500 font-medium">
                     Không có bài viết nào.
                   </p>
                 </div>
@@ -168,42 +168,42 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                 reports.map(report => (
                   <div
                     key={report._id}
-                    className="p-6 border border-error/20 bg-error/5 rounded-2xl shadow-sm"
+                    className="p-5 border border-rose-100 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-900/10 rounded-2xl"
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-error/10 text-error text-[10px] font-black uppercase tracking-widest border border-error/20">
+                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider">
                         <Flag size={12} />
                         {report.reason}
                       </span>
-                      <span className="text-[10px] font-black text-secondary/60 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                         {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-black text-secondary">
+                      <span className="font-bold text-neutral-500">
                         Người báo cáo:
                       </span>
-                      <span className="font-black text-primary">
+                      <span className="font-bold text-neutral-900 dark:text-white">
                         {report.reporter?.username || 'Ẩn danh'}
                       </span>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-error/10 flex items-center justify-between">
-                      <span className="text-[10px] font-black text-secondary uppercase tracking-widest">
+                    <div className="mt-4 pt-4 border-t border-rose-100 dark:border-rose-900/20 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                         Trạng thái
                       </span>
-                      <span className="yb-badge bg-error/20 text-error font-black uppercase">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase">
                         {report.status}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-16 bg-success/5 rounded-2xl border-2 border-dashed border-success/20">
+                <div className="text-center py-16 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl border border-dashed border-emerald-200 dark:border-emerald-900/30">
                   <ShieldOff
-                    size={48}
-                    className="mx-auto text-success/20 mb-3"
+                    size={40}
+                    className="mx-auto text-emerald-400 mb-3"
                   />
-                  <p className="text-success font-black">
+                  <p className="text-emerald-600 dark:text-emerald-400 font-bold">
                     Hồ sơ sạch. Không có báo cáo nào.
                   </p>
                 </div>
@@ -212,10 +212,10 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
           )}
         </div>
 
-        <div className="p-6 border-t border-border bg-surface-secondary/30 flex justify-end shrink-0">
+        <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="yb-btn yb-btn-secondary px-8 py-3"
+            className="px-6 py-2.5 rounded-xl font-bold text-neutral-600 bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
           >
             Đóng
           </button>
