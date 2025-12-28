@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import {
   Users,
   FileText,
@@ -71,10 +71,15 @@ const Dashboard = () => {
   const [period, setPeriod] = useState(30);
 
   // Calculate dates for user growth
-  const endDate = new Date().toISOString();
-  const startDateObj = new Date();
-  startDateObj.setDate(new Date().getDate() - period);
-  const startDate = startDateObj.toISOString();
+  const { startDate, endDate } = useMemo(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - period);
+    return {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    };
+  }, [period]);
 
   // Queries
   const {
@@ -90,6 +95,7 @@ const Dashboard = () => {
   } = useTopUsers(1, 5);
 
   const topUsers = topUsersData?.users || [];
+  console.log(topUsers);
 
   const {
     data: userGrowth,

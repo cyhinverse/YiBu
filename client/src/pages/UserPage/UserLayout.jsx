@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import Navigate from '@/components/layout/Navigate/Navigate';
+import Navigate from '@/components/Common/Navigate';
 const UserLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user } = useSelector(state => state.auth);

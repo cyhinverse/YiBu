@@ -7,16 +7,20 @@ const Dashboard = lazy(() =>
   import('../../components/Admin/Dashboard/Dashboard')
 );
 const Users = lazy(() => import('../../components/Admin/Users/Users'));
-const Posts = lazy(() => import('../../components/Admin/Content/Posts'));
-const Comments = lazy(() => import('../../components/Admin/Content/Comments'));
-const Reports = lazy(() => import('../../components/Admin/Content/Reports'));
+const Posts = lazy(() => import('../../components/Admin/Content/Posts/Posts'));
+const Comments = lazy(() =>
+  import('../../components/Admin/Content/Comments/Comments')
+);
+const Reports = lazy(() =>
+  import('../../components/Admin/Content/Reports/Reports')
+);
 const Interactions = lazy(() =>
-  import('../../components/Admin/Content/Interactions')
+  import('../../components/Admin/Content/Interactions/Interactions')
 );
 const BannedAccounts = lazy(() =>
   import('../../components/Admin/Users/BannedAccounts')
 );
-const Logs = lazy(() => import('../../components/Admin/System/Logs'));
+const Logs = lazy(() => import('../../components/Admin/System/Logs/Logs'));
 const Settings = lazy(() => import('../../components/Admin/System/Settings'));
 const Revenue = lazy(() => import('../../components/Admin/System/Revenue'));
 const SystemHealth = lazy(() =>

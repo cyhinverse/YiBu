@@ -16,7 +16,6 @@ injectStore(store);
 
 const initializeDarkMode = () => {
   try {
-    // Check simple localStorage first (from ThemeSettings/Navigate)
     const savedTheme = localStorage.getItem('theme');
 
     if (savedTheme) {
