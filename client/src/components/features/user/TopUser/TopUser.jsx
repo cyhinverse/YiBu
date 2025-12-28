@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { UserPlus, Check, Loader2 } from 'lucide-react';
-import {
-  followUser,
-  unfollowUser,
-} from '../../../../redux/actions/userActions';
+import { useFollowUser, useUnfollowUser } from '../../../../hooks/useUserQuery';
 import toast from 'react-hot-toast';
 
 const TopUser = ({ users = [], loading = false }) => {
-  const dispatch = useDispatch();
   const { user: currentUser } = useSelector(state => state.auth);
   const [followingIds, setFollowingIds] = useState(new Set());
   const [loadingIds, setLoadingIds] = useState(new Set());
+
+  const { mutateAsync: followUser } = useFollowUser();
+  const { mutateAsync: unfollowUser } = useUnfollowUser();
 
   const handleFollow = async (e, userId, isFollowed) => {
     e.preventDefault();
@@ -24,23 +23,19 @@ const TopUser = ({ users = [], loading = false }) => {
 
     try {
       if (isFollowed) {
-        const result = await dispatch(unfollowUser(userId));
-        if (unfollowUser.fulfilled.match(result)) {
-          setFollowingIds(prev => {
-            const next = new Set(prev);
-            next.delete(userId);
-            return next;
-          });
-          toast.success('Đã bỏ theo dõi');
-        }
+        await unfollowUser(userId);
+        setFollowingIds(prev => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+        toast.success('Đã bỏ theo dõi');
       } else {
-        const result = await dispatch(followUser(userId));
-        if (followUser.fulfilled.match(result)) {
-          setFollowingIds(prev => new Set(prev).add(userId));
-          toast.success('Đã theo dõi');
-        }
+        await followUser(userId);
+        setFollowingIds(prev => new Set(prev).add(userId));
+        toast.success('Đã theo dõi');
       }
-    } catch {
+    } catch (error) {
       toast.error('Có lỗi xảy ra');
     } finally {
       setLoadingIds(prev => {

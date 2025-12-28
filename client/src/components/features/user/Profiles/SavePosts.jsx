@@ -1,69 +1,48 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useMemo } from 'react';
 import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
 import Post from '../../feed/Posts/Post';
-import {
-  getSavedPosts,
-  unsavePost,
-} from '../../../../redux/actions/savePostActions';
+import { useSavedPosts, useToggleSave } from '../../../../hooks/usePostsQuery';
+import toast from 'react-hot-toast';
 
 const SavePosts = () => {
-  const dispatch = useDispatch();
-  const { savedPosts, loading: reduxLoading } = useSelector(
-    state => state.savePost || {}
-  );
-
-  const [posts, setPosts] = useState([]);
   const [viewMode, setViewMode] = useState('list');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [unsaveLoading, setUnsaveLoading] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
 
-  // Fetch saved posts on mount
-  useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const result = await dispatch(
-          getSavedPosts({ page: 1, limit: 50 })
-        ).unwrap();
-        const postList = result.data?.posts || result.posts || [];
-        setPosts(postList);
-      } catch (error) {
-        console.error('Failed to fetch saved posts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPosts();
-  }, [dispatch]);
+  const { data: savedPostsData, isLoading, error } = useSavedPosts();
+  const toggleSaveMutation = useToggleSave();
 
-  // Sync with redux state
-  useEffect(() => {
-    if (savedPosts && Array.isArray(savedPosts)) {
-      setPosts(savedPosts);
-    }
-  }, [savedPosts]);
+  const posts = useMemo(() => {
+    return Array.isArray(savedPostsData)
+      ? savedPostsData
+      : savedPostsData?.posts || savedPostsData?.data || [];
+  }, [savedPostsData]);
 
   const handleUnsave = postId => {
-    setSelectedPost(postId);
+    setSelectedPostId(postId);
     setShowDeleteModal(true);
   };
 
   const confirmUnsave = async () => {
-    setUnsaveLoading(true);
+    if (!selectedPostId) return;
     try {
-      await dispatch(unsavePost(selectedPost)).unwrap();
-      setPosts(prev => prev.filter(post => post._id !== selectedPost));
+      await toggleSaveMutation.mutateAsync(selectedPostId);
+      toast.success('Đã bỏ lưu bài viết');
       setShowDeleteModal(false);
-      setSelectedPost(null);
+      setSelectedPostId(null);
     } catch (error) {
       console.error('Failed to unsave post:', error);
-    } finally {
-      setUnsaveLoading(false);
+      toast.error('Không thể bỏ lưu bài viết');
     }
   };
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
+        <p>Đã có lỗi xảy ra khi tải bài viết đã lưu.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -107,7 +86,7 @@ const SavePosts = () => {
       </div>
 
       {/* Content */}
-      {loading || reduxLoading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-neutral-400" />
         </div>
@@ -121,48 +100,54 @@ const SavePosts = () => {
         </div>
       ) : viewMode === 'list' ? (
         <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
-          {posts.map(post => (
-            <div key={post._id} className="relative group">
-              <Post data={post} />
-              <button
-                onClick={() => handleUnsave(post._id)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-white dark:bg-neutral-800 shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <Trash2 size={16} className="text-red-500" />
-              </button>
-            </div>
-          ))}
+          {posts.map(post => {
+            const actualPost = post.postId || post;
+            return (
+              <div key={actualPost._id} className="relative group">
+                <Post data={actualPost} />
+                <button
+                  onClick={() => handleUnsave(actualPost._id)}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-white dark:bg-neutral-800 shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 size={16} className="text-red-500" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-1 p-1">
-          {posts.map(post => (
-            <div
-              key={post._id}
-              className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 group cursor-pointer overflow-hidden"
-            >
-              {post.media?.[0]?.url ? (
-                <img
-                  src={post.media[0].url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center p-2">
-                  <p className="text-xs text-neutral-500 line-clamp-3 text-center">
-                    {post.caption}
-                  </p>
+          {posts.map(post => {
+            const actualPost = post.postId || post;
+            return (
+              <div
+                key={actualPost._id}
+                className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 group cursor-pointer overflow-hidden"
+              >
+                {actualPost.media?.[0]?.url ? (
+                  <img
+                    src={actualPost.media[0].url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center p-2">
+                    <p className="text-xs text-neutral-500 line-clamp-3 text-center">
+                      {actualPost.caption}
+                    </p>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    onClick={() => handleUnsave(actualPost._id)}
+                    className="p-2 rounded-full bg-white/20 hover:bg-red-500 transition-colors"
+                  >
+                    <Trash2 size={20} className="text-white" />
+                  </button>
                 </div>
-              )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <button
-                  onClick={() => handleUnsave(post._id)}
-                  className="p-2 rounded-full bg-white/20 hover:bg-red-500 transition-colors"
-                >
-                  <Trash2 size={20} className="text-white" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -193,10 +178,17 @@ const SavePosts = () => {
               </button>
               <button
                 onClick={confirmUnsave}
-                disabled={unsaveLoading}
-                className="flex-1 px-4 py-2.5 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                disabled={toggleSaveMutation.isPending}
+                className="flex-1 px-4 py-2.5 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {unsaveLoading ? 'Removing...' : 'Remove'}
+                {toggleSaveMutation.isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  'Remove'
+                )}
               </button>
             </div>
           </div>

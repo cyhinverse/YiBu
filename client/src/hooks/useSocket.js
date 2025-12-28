@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
 import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
 import { toast } from 'react-hot-toast';
-import { setLikeStatusOptimistic } from '../redux/slices/LikeSlice';
 
 const SOCKET_URL = 'http://localhost:5000';
 const MAX_RECONNECT_ATTEMPTS = 3;
 
 const useSocket = userId => {
   const socketRef = useRef(null);
-  const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const reconnectAttempts = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
@@ -69,10 +66,10 @@ const useSocket = userId => {
       }
     });
 
-    registerMessageHandlers(socket, dispatch, userId, queryClient);
+    registerMessageHandlers(socket, userId, queryClient);
     registerNotificationHandlers(socket, queryClient);
-    registerLikeHandlers(socket, dispatch, userId);
-    registerCommentHandlers(socket, dispatch, userId);
+    registerLikeHandlers(socket, userId, queryClient);
+    registerCommentHandlers(socket, userId, queryClient);
     registerUserStatusHandlers(socket, setOnlineUsers);
 
     return () => {
@@ -83,7 +80,7 @@ const useSocket = userId => {
         activeRooms.current.clear();
       }
     };
-  }, [userId, dispatch, queryClient]);
+  }, [userId, queryClient]);
 
   const joinRoom = useCallback(roomId => {
     if (!roomId) return;
@@ -173,15 +170,13 @@ const useSocket = userId => {
 
 /* --- Event Handlers Helpers --- */
 
-const registerMessageHandlers = (socket, dispatch, userId, queryClient) => {
+const registerMessageHandlers = (socket, userId, queryClient) => {
   socket.on('new_message', message => {
     if (!message?._id) return;
 
     const senderId = message.sender?._id || message.sender;
     const isMine =
       senderId && userId && senderId.toString() === userId.toString();
-
-    const enrichedMessage = { ...message, isMine };
 
     // Support React Query invalidation
     queryClient.invalidateQueries(['messages', 'list', message.conversationId]);
@@ -234,12 +229,15 @@ const registerNotificationHandlers = (socket, queryClient) => {
   socket.on('new_notification', handleNotification);
 };
 
-const registerLikeHandlers = (socket, dispatch, currentUserId) => {
-  socket.on('post:like:update', ({ postId, count, userId }) => {
+const registerLikeHandlers = (socket, currentUserId, queryClient) => {
+  socket.on('post:like:update', ({ postId, userId }) => {
     if (userId === currentUserId) return;
-    dispatch(
-      setLikeStatusOptimistic({ postId, likesCount: count, isLiked: undefined })
-    );
+
+    // Invalidate relevant queries to fetch fresh data
+    queryClient.invalidateQueries(['feed']);
+    queryClient.invalidateQueries(['posts']);
+    queryClient.invalidateQueries(['post', postId]);
+    queryClient.invalidateQueries(['likeStatus', postId]);
   });
 };
 
@@ -256,35 +254,27 @@ const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   });
 };
 
-const registerCommentHandlers = (socket, dispatch, currentUserId) => {
+const registerCommentHandlers = (socket, currentUserId, queryClient) => {
   socket.on('new_comment', data => {
     // data: { postId, comment, userId }
-    const { postId, comment, userId } = data;
-    if (userId === currentUserId) return; // Already handled by thunk
+    const { postId, userId } = data;
+    if (userId === currentUserId) return; // Already handled by mutation optimistic update or invalidation
 
-    // Only increment if it's a top-level comment
-    if (comment && !comment.parentComment) {
-      // We can use the same logic as in postSlice or dispatch a specific action
-      // Since we don't have a specific action for just updating count,
-      // we can reuse the updatePostInList if we want or just add it to postSlice
-      dispatch({
-        type: 'post/updateCommentCount',
-        payload: { postId, action: 'increment' },
-      });
-    }
+    queryClient.invalidateQueries(['post', postId]);
+    queryClient.invalidateQueries(['comments', postId]);
+    queryClient.invalidateQueries(['posts']);
+    queryClient.invalidateQueries(['feed']);
   });
 
   socket.on('delete_comment', data => {
     // data: { postId, commentId, isReply }
-    const { postId, isReply, userId } = data;
+    const { postId, userId } = data;
     if (userId === currentUserId) return;
 
-    if (!isReply) {
-      dispatch({
-        type: 'post/updateCommentCount',
-        payload: { postId, action: 'decrement' },
-      });
-    }
+    queryClient.invalidateQueries(['post', postId]);
+    queryClient.invalidateQueries(['comments', postId]);
+    queryClient.invalidateQueries(['posts']);
+    queryClient.invalidateQueries(['feed']);
   });
 };
 

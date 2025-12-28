@@ -20,11 +20,10 @@ import toast from 'react-hot-toast';
 const AccountSettings = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { currentProfile } = useSelector(state => state.user);
   const { user: authUser } = useSelector(state => state.auth);
 
-  // Use currentProfile or authUser as fallback
-  const profile = currentProfile || authUser || {};
+  // Use authUser or empty object
+  const profile = authUser || {};
 
   const [account, setAccount] = useState({
     email: 'johndoe@example.com',

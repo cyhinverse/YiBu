@@ -79,7 +79,7 @@ export const useSendMessage = () => {
       });
       return extractData(response);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries([
         'messages',
         'list',
@@ -102,7 +102,7 @@ export const useMarkAsRead = () => {
       await api.post(MESSAGE_API.MARK_CONVERSATION_READ(conversationId));
       return conversationId;
     },
-    onSuccess: conversationId => {
+    onSuccess: _ => {
       queryClient.invalidateQueries(['messages', 'conversations']);
       queryClient.invalidateQueries(['messages', 'unreadCount']);
     },
@@ -200,7 +200,7 @@ export const useUpdateGroup = () => {
       const response = await api.put(MESSAGE_API.UPDATE_GROUP(groupId), data);
       return extractData(response);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries(['messages', 'conversations']);
       queryClient.invalidateQueries([
         'messages',
@@ -220,7 +220,7 @@ export const useAddGroupMember = () => {
       });
       return extractData(response);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries([
         'messages',
         'conversation',

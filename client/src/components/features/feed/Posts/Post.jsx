@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useCallback, lazy, Suspense, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   MoreHorizontal,
   Heart,
@@ -17,12 +17,12 @@ import {
   Share2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createLike, deleteLike } from '../../../../redux/actions/likeActions';
 import {
-  savePost,
-  unsavePost,
-} from '../../../../redux/actions/savePostActions';
-import { deletePost, sharePost } from '../../../../redux/actions/postActions';
+  useToggleLike,
+  useToggleSave,
+  useDeletePost,
+  useSharePost,
+} from '../../../../hooks/usePostsQuery';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -60,15 +60,6 @@ const formatTime = date => {
 };
 
 const Post = ({ data, onDelete }) => {
-  const dispatch = useDispatch();
-  // Select specific data for this post only to prevent unnecessary re-renders
-  const postLikeStatus = useSelector(
-    state => state.like?.likeStatus?.[data?._id]
-  );
-  const isPostSaved = useSelector(
-    state => state.savePost?.saveStatus?.[data?._id]
-  );
-
   const authUser = useSelector(state => state.auth?.user);
 
   const [isLiked, setIsLiked] = useState(data?.isLiked || false);
@@ -76,34 +67,37 @@ const Post = ({ data, onDelete }) => {
   const [likeCount, setLikeCount] = useState(
     data?.likeCount || data?.likesCount || 0
   );
-  const [likeLoading, setLikeLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
+
+  // React Query Mutations
+  const { mutate: toggleLike, isPending: likeLoading } = useToggleLike();
+  const { mutate: toggleSave, isPending: saveLoading } = useToggleSave();
+  const { mutateAsync: deletePostMutation, isPending: deletePending } =
+    useDeletePost();
+  const { mutateAsync: sharePostMutation, isPending: sharePending } =
+    useSharePost();
+  // Removed dispatch
+
+  useEffect(() => {
+    setIsLiked(data?.isLiked || false);
+    setIsSaved(data?.isSaved || false);
+    setLikeCount(data?.likeCount || data?.likesCount || 0);
+  }, [
+    data?._id,
+    data?.isLiked,
+    data?.isSaved,
+    data?.likeCount,
+    data?.likesCount,
+  ]);
+
   const [showOptions, setShowOptions] = useState(false);
   const [showImage, setShowImage] = useState(null);
   const [showComments, setShowComments] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [shareLoading, setShareLoading] = useState(false);
+  // Removed manual loading states
 
   const isOwner = authUser?._id === data?.user?._id;
-
-  // Sync with Redux state
-  useEffect(() => {
-    if (postLikeStatus) {
-      setIsLiked(postLikeStatus.isLiked);
-      if (postLikeStatus.likesCount !== undefined) {
-        setLikeCount(postLikeStatus.likesCount);
-      }
-    }
-  }, [postLikeStatus]);
-
-  useEffect(() => {
-    if (isPostSaved !== undefined) {
-      setIsSaved(isPostSaved);
-    }
-  }, [isPostSaved]);
 
   const user = data?.user || {
     name: 'Unknown User',
@@ -111,9 +105,8 @@ const Post = ({ data, onDelete }) => {
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
   };
 
-  const handleLike = useCallback(async () => {
+  const handleLike = useCallback(() => {
     if (likeLoading || !data?._id) return;
-    setLikeLoading(true);
 
     const prevLiked = isLiked;
     const prevCount = likeCount;
@@ -122,80 +115,65 @@ const Post = ({ data, onDelete }) => {
     setIsLiked(!isLiked);
     setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
 
-    try {
-      if (prevLiked) {
-        await dispatch(deleteLike(data._id)).unwrap();
-      } else {
-        await dispatch(createLike(data._id)).unwrap();
-      }
-    } catch (error) {
-      // Revert on failure
-      setIsLiked(prevLiked);
-      setLikeCount(prevCount);
-      toast.error(error || 'Thao tác thất bại');
-    } finally {
-      setLikeLoading(false);
-    }
-  }, [dispatch, data?._id, isLiked, likeCount, likeLoading]);
+    toggleLike(data._id, {
+      onError: error => {
+        // Revert on failure
+        setIsLiked(prevLiked);
+        setLikeCount(prevCount);
+        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+      },
+    });
+  }, [data?._id, isLiked, likeCount, likeLoading, toggleLike]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (saveLoading || !data?._id) return;
-    setSaveLoading(true);
 
     const prevSaved = isSaved;
 
     // Optimistic update
     setIsSaved(!isSaved);
 
-    try {
-      if (prevSaved) {
-        await dispatch(unsavePost(data._id)).unwrap();
-        toast.success('Đã bỏ lưu bài viết');
-      } else {
-        await dispatch(savePost({ postId: data._id })).unwrap();
-        toast.success('Đã lưu bài viết');
+    toggleSave(
+      { postId: data._id, isSaved: prevSaved },
+      {
+        onSuccess: response => {
+          toast.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
+        },
+        onError: error => {
+          // Revert on failure
+          setIsSaved(prevSaved);
+          toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        },
       }
-    } catch (error) {
-      // Revert on failure
-      setIsSaved(prevSaved);
-      toast.error(error || 'Thao tác thất bại');
-    } finally {
-      setSaveLoading(false);
-    }
-  }, [dispatch, data?._id, isSaved, saveLoading]);
+    );
+  }, [data?._id, isSaved, saveLoading, toggleSave]);
 
   const handleDelete = useCallback(async () => {
-    if (deleteLoading || !data?._id) return;
-    setDeleteLoading(true);
+    if (deletePending || !data?._id) return;
 
     try {
-      await dispatch(deletePost(data._id)).unwrap();
+      await deletePostMutation(data._id);
       toast.success('Đã xóa bài viết');
       setShowDeleteConfirm(false);
       setShowOptions(false);
       // Notify parent to remove from list
       onDelete?.(data._id);
     } catch (error) {
-      toast.error(error || 'Xóa bài viết thất bại');
-    } finally {
-      setDeleteLoading(false);
+      toast.error(error?.response?.data?.message || 'Xóa bài viết thất bại');
     }
-  }, [dispatch, data?._id, deleteLoading, onDelete]);
+  }, [deletePending, data?._id, onDelete, deletePostMutation]);
 
   const handleShare = useCallback(async () => {
-    if (shareLoading || !data?._id) return;
-    setShareLoading(true);
+    if (sharePending || !data?._id) return;
 
     try {
-      await dispatch(sharePost({ postId: data._id })).unwrap();
+      await sharePostMutation({ postId: data._id });
       toast.success('Đã chia sẻ bài viết');
       setShowOptions(false);
     } catch (error) {
-      toast.error(error || 'Chia sẻ thất bại');
-    } finally {
-      setShareLoading(false);
+      toast.error(error?.response?.data?.message || 'Chia sẻ thất bại');
     }
-  }, [dispatch, data?._id, shareLoading]);
+  }, [sharePending, data?._id, sharePostMutation]);
 
   const handleCopyLink = useCallback(() => {
     const url = `${window.location.origin}/post/${data?._id}`;
@@ -369,12 +347,12 @@ const Post = ({ data, onDelete }) => {
           {/* Share */}
           <button
             onClick={handleShare}
-            disabled={shareLoading}
+            disabled={sharePending}
             className={`flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all ${
-              shareLoading ? 'opacity-50 cursor-not-allowed' : ''
+              sharePending ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            {shareLoading ? (
+            {sharePending ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <Send size={18} />
@@ -474,11 +452,11 @@ const Post = ({ data, onDelete }) => {
 
             <button
               onClick={handleShare}
-              disabled={shareLoading}
+              disabled={sharePending}
               className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
             >
               <Share2 size={18} />
-              {shareLoading ? 'Sharing...' : 'Share post'}
+              {sharePending ? 'Sharing...' : 'Share post'}
             </button>
 
             <button
@@ -532,10 +510,10 @@ const Post = ({ data, onDelete }) => {
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deleteLoading}
+                disabled={deletePending}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
               >
-                {deleteLoading ? (
+                {deletePending ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <>

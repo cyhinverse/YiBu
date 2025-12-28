@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
   UserPlus,
   UserCheck,
@@ -10,30 +9,28 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getFollowRequests,
-  acceptFollowRequest,
-  rejectFollowRequest,
-} from '../../../redux/actions/userActions';
+  useFollowRequests,
+  useAcceptFollowRequest,
+  useRejectFollowRequest,
+} from '../../../hooks/useUserQuery';
 
 const FollowRequestsSettings = () => {
-  const dispatch = useDispatch();
-  const { followRequests, loading } = useSelector(state => state.user);
+  const { data: followRequests, isLoading: loading } = useFollowRequests();
+  const acceptMutation = useAcceptFollowRequest();
+  const rejectMutation = useRejectFollowRequest();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [processingId, setProcessingId] = useState(null);
 
-  // Load follow requests on mount
-  useEffect(() => {
-    dispatch(getFollowRequests({ page: 1, limit: 50 }));
-  }, [dispatch]);
-
   const handleAccept = async requestId => {
     setProcessingId(requestId);
     try {
-      await dispatch(acceptFollowRequest(requestId)).unwrap();
+      await acceptMutation.mutateAsync(requestId);
       toast.success('Đã chấp nhận yêu cầu theo dõi');
     } catch (error) {
-      toast.error(error || 'Không thể chấp nhận yêu cầu');
+      toast.error(
+        error?.response?.data?.message || 'Không thể chấp nhận yêu cầu'
+      );
     } finally {
       setProcessingId(null);
     }
@@ -42,17 +39,19 @@ const FollowRequestsSettings = () => {
   const handleReject = async requestId => {
     setProcessingId(requestId);
     try {
-      await dispatch(rejectFollowRequest(requestId)).unwrap();
+      await rejectMutation.mutateAsync(requestId);
       toast.success('Đã từ chối yêu cầu theo dõi');
     } catch (error) {
-      toast.error(error || 'Không thể từ chối yêu cầu');
+      toast.error(
+        error?.response?.data?.message || 'Không thể từ chối yêu cầu'
+      );
     } finally {
       setProcessingId(null);
     }
   };
 
   const filteredRequests =
-    followRequests?.filter(request => {
+    (Array.isArray(followRequests) ? followRequests : [])?.filter(request => {
       const user = request.follower || request;
       return (
         user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||

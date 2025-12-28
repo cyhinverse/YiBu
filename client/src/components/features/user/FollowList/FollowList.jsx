@@ -1,78 +1,52 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useCallback, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { X, UserPlus, Check, Loader2, Users } from 'lucide-react';
 import {
-  getFollowers,
-  getFollowing,
-  followUser,
-  unfollowUser,
-} from '../../../../redux/actions/userActions';
+  useFollowers,
+  useFollowing,
+  useFollowUser,
+  useUnfollowUser,
+} from '../../../../hooks/useUserQuery';
+import toast from 'react-hot-toast';
 
 const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [followingStates, setFollowingStates] = useState({});
-  const [loadingStates, setLoadingStates] = useState({});
-
   const authUser = useSelector(state => state.auth?.user);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!isOpen || !userId) return;
+  // React Query hooks
+  const { data: followersData, isLoading: followersLoading } = useFollowers(
+    type === 'followers' && isOpen ? userId : null
+  );
+  const { data: followingData, isLoading: followingLoading } = useFollowing(
+    type === 'following' && isOpen ? userId : null
+  );
 
-      setLoading(true);
-      try {
-        const action = type === 'followers' ? getFollowers : getFollowing;
-        const result = await dispatch(action({ userId })).unwrap();
-        const userList =
-          result.users || result.followers || result.following || result || [];
-        setUsers(userList);
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
-        // Initialize following states
-        const states = {};
-        userList.forEach(user => {
-          states[user._id] = user.isFollowing || false;
-        });
-        setFollowingStates(states);
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const users = useMemo(() => {
+    if (type === 'followers') return followersData || [];
+    return followingData || [];
+  }, [type, followersData, followingData]);
 
-    fetchUsers();
-  }, [dispatch, userId, type, isOpen]);
+  const loading = type === 'followers' ? followersLoading : followingLoading;
 
   const handleFollow = useCallback(
-    async targetUserId => {
-      if (loadingStates[targetUserId]) return;
-
-      setLoadingStates(prev => ({ ...prev, [targetUserId]: true }));
-
+    async (targetUserId, isFollowing) => {
       try {
-        const isCurrentlyFollowing = followingStates[targetUserId];
-
-        if (isCurrentlyFollowing) {
-          await dispatch(unfollowUser(targetUserId)).unwrap();
+        if (isFollowing) {
+          await unfollowMutation.mutateAsync(targetUserId);
+          toast.success('Đã bỏ theo dõi');
         } else {
-          await dispatch(followUser(targetUserId)).unwrap();
+          await followMutation.mutateAsync(targetUserId);
+          toast.success('Đã theo dõi');
         }
-
-        setFollowingStates(prev => ({
-          ...prev,
-          [targetUserId]: !isCurrentlyFollowing,
-        }));
       } catch (error) {
-        console.error('Follow action failed:', error);
-      } finally {
-        setLoadingStates(prev => ({ ...prev, [targetUserId]: false }));
+        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
-    [dispatch, followingStates, loadingStates]
+    [followMutation, unfollowMutation]
   );
 
   const handleUserClick = user => {
@@ -124,51 +98,57 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
             </div>
           ) : (
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {users.map(user => (
-                <div
-                  key={user._id}
-                  className="flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-                >
-                  <div
-                    className="flex items-center gap-3 flex-1 cursor-pointer"
-                    onClick={() => handleUserClick(user)}
-                  >
-                    <img
-                      src={
-                        user.avatar ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
-                      }
-                      alt={user.username}
-                      className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-black dark:text-white truncate">
-                        {user.fullName || user.name || user.username}
-                      </p>
-                      <p className="text-sm text-neutral-500 truncate">
-                        @{user.username}
-                      </p>
-                    </div>
-                  </div>
+              {users.map(user => {
+                const isFollowingUser =
+                  user.isFollowing ||
+                  (type === 'following' && userId === authUser?._id);
+                const mutationLoading =
+                  (followMutation.isPending || unfollowMutation.isPending) &&
+                  (followMutation.variables === user._id ||
+                    unfollowMutation.variables === user._id);
 
-                  {user._id !== authUser?._id &&
-                    !(type === 'following' && followingStates[user._id]) && (
+                return (
+                  <div
+                    key={user._id}
+                    className="flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                  >
+                    <div
+                      className="flex items-center gap-3 flex-1 cursor-pointer"
+                      onClick={() => handleUserClick(user)}
+                    >
+                      <img
+                        src={
+                          user.avatar ||
+                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                        }
+                        alt={user.username}
+                        className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-black dark:text-white truncate">
+                          {user.fullName || user.name || user.username}
+                        </p>
+                        <p className="text-sm text-neutral-500 truncate">
+                          @{user.username}
+                        </p>
+                      </div>
+                    </div>
+
+                    {user._id !== authUser?._id && (
                       <button
-                        onClick={() => handleFollow(user._id)}
-                        disabled={loadingStates[user._id]}
+                        onClick={() => handleFollow(user._id, isFollowingUser)}
+                        disabled={mutationLoading}
                         className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                          loadingStates[user._id]
-                            ? 'opacity-50 cursor-not-allowed'
-                            : ''
+                          mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                         } ${
-                          followingStates[user._id]
+                          isFollowingUser
                             ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
-                            : 'bg-primary text-primary-foreground hover:opacity-90'
+                            : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                         }`}
                       >
-                        {loadingStates[user._id] ? (
+                        {mutationLoading ? (
                           <Loader2 size={14} className="animate-spin" />
-                        ) : followingStates[user._id] ? (
+                        ) : isFollowingUser ? (
                           <>
                             <Check size={14} />
                             Following
@@ -181,8 +161,9 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
                         )}
                       </button>
                     )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

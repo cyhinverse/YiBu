@@ -580,7 +580,7 @@ export const useModerateComment = () => {
 export const useDeleteCommentAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ commentId, reason }) => {
+    mutationFn: async ({ commentId }) => {
       // API might just take commentId usually, but admin action might log reason?
       // Check adminActions.js: deleteComment thunk only calls DELETE endpoint. Reason is unused in API call ??
       // adminActions.js: await api.delete(ADMIN_API.DELETE_COMMENT(commentId));

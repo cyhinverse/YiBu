@@ -16,7 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Post from '../../feed/Posts/Post';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   useSharedPosts,
   useUserPosts,
@@ -46,15 +46,10 @@ const Profile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
-  const [followLoading, setFollowLoading] = useState(false);
   const [showFollowList, setShowFollowList] = useState(null); // 'followers' | 'following' | null
-  const dispatch = useDispatch();
   const authUser = useSelector(state => state.auth?.user);
-  const { currentUser } = useSelector(state => state.auth);
-
-  const profileId = userId || authUser?._id || currentUser?._id;
-  const isOwnProfile =
-    !userId || userId === authUser?._id || userId === currentUser?._id;
+  const profileId = userId || authUser?._id;
+  const isOwnProfile = !userId || userId === authUser?._id;
 
   // React Query Hooks
   const { data: profileData, isLoading: profileLoading } =
@@ -299,7 +294,10 @@ const Profile = () => {
         <div className="flex justify-end mb-4">
           <div className="flex items-center gap-2">
             {isOwnProfile ? (
-              <button className="px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <button
+                onClick={() => navigate('/settings/profile')}
+                className="px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
                 Edit Profile
               </button>
             ) : (

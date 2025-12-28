@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
   UserX,
   VolumeX,
@@ -11,35 +10,31 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getBlockedUsers,
-  unblockUser,
-  getMutedUsers,
-  unmuteUser,
-} from '../../../redux/actions/userActions';
+  useBlockedUsers,
+  useMutedUsers,
+  useUnblockUser,
+  useUnmuteUser,
+} from '../../../hooks/useUserQuery';
 
 const BlockedMutedSettings = () => {
-  const dispatch = useDispatch();
-  const { blockedUsers, mutedUsers, loading } = useSelector(
-    state => state.user
-  );
+  const { data: blockedUsers, isLoading: blockedLoading } = useBlockedUsers();
+  const { data: mutedUsers, isLoading: mutedLoading } = useMutedUsers();
+  const unblockMutation = useUnblockUser();
+  const unmuteMutation = useUnmuteUser();
+
+  const loading = blockedLoading || mutedLoading;
 
   const [activeTab, setActiveTab] = useState('blocked');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Load data on mount
-  useEffect(() => {
-    dispatch(getBlockedUsers());
-    dispatch(getMutedUsers());
-  }, [dispatch]);
 
   const handleUnblock = async userId => {
     if (!window.confirm('Bạn có chắc muốn bỏ chặn người dùng này?')) return;
 
     try {
-      await dispatch(unblockUser(userId)).unwrap();
+      await unblockMutation.mutateAsync(userId);
       toast.success('Đã bỏ chặn người dùng');
     } catch (error) {
-      toast.error(error || 'Không thể bỏ chặn');
+      toast.error(error?.response?.data?.message || 'Không thể bỏ chặn');
     }
   };
 
@@ -47,22 +42,22 @@ const BlockedMutedSettings = () => {
     if (!window.confirm('Bạn có chắc muốn bỏ ẩn người dùng này?')) return;
 
     try {
-      await dispatch(unmuteUser(userId)).unwrap();
+      await unmuteMutation.mutateAsync(userId);
       toast.success('Đã bỏ ẩn người dùng');
     } catch (error) {
-      toast.error(error || 'Không thể bỏ ẩn');
+      toast.error(error?.response?.data?.message || 'Không thể bỏ ẩn');
     }
   };
 
   const filteredBlockedUsers =
-    blockedUsers?.filter(
+    (Array.isArray(blockedUsers) ? blockedUsers : [])?.filter(
       user =>
         user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
   const filteredMutedUsers =
-    mutedUsers?.filter(
+    (Array.isArray(mutedUsers) ? mutedUsers : [])?.filter(
       user =>
         user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.fullName?.toLowerCase().includes(searchQuery.toLowerCase())

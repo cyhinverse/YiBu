@@ -36,7 +36,7 @@ export const useCreateComment = () => {
       });
       return extractData(response);
     },
-    onSuccess: (newComment, variables) => {
+    onSuccess: (_, variables) => {
       // Invalidate comments for this post to trigger refetch
       // OR optimistically update (complex due to tree structure)
       // For now, invalidation or socket handling (in useComments) covers it.

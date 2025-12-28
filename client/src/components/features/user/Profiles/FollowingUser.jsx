@@ -1,93 +1,69 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Users, UserPlus, Check, Search, X, Loader2 } from 'lucide-react';
 import {
-  getFollowers,
-  getFollowing,
-  followUser,
-  unfollowUser,
-} from '../../../../redux/actions/userActions';
+  useFollowers,
+  useFollowing,
+  useFollowUser,
+  useUnfollowUser,
+} from '../../../../hooks/useUserQuery';
+import toast from 'react-hot-toast';
 
 const FollowingUser = () => {
-  const dispatch = useDispatch();
   const authUser = useSelector(state => state.auth?.user);
 
-  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('following');
-  const [loading, setLoading] = useState(false);
-  const [followingStates, setFollowingStates] = useState({});
-  const [loadingStates, setLoadingStates] = useState({});
 
-  // Fetch users based on active tab
-  const fetchUsers = useCallback(async () => {
-    if (!authUser?._id) return;
+  // React Query hooks
+  const { data: followersData, isLoading: followersLoading } = useFollowers(
+    authUser?._id
+  );
+  const { data: followingData, isLoading: followingLoading } = useFollowing(
+    authUser?._id
+  );
 
-    setLoading(true);
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
-    try {
-      const action = activeTab === 'followers' ? getFollowers : getFollowing;
-      const result = await dispatch(action({ userId: authUser._id })).unwrap();
-      const userList =
-        result.users || result.followers || result.following || result || [];
-
-      setUsers(userList);
-
-      // Initialize following states
-      const states = {};
-      userList.forEach(user => {
-        states[user._id] = user.isFollowing || activeTab === 'following';
-      });
-      setFollowingStates(states);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    } finally {
-      setLoading(false);
+  const users = useMemo(() => {
+    if (activeTab === 'followers') {
+      return followersData || [];
     }
-  }, [dispatch, authUser?._id, activeTab]);
+    return followingData || [];
+  }, [activeTab, followersData, followingData]);
 
-  // Fetch on mount and tab change
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const loading =
+    activeTab === 'followers' ? followersLoading : followingLoading;
 
   // Handle follow/unfollow
   const handleToggleFollow = useCallback(
-    async targetUserId => {
-      if (loadingStates[targetUserId]) return;
-
-      setLoadingStates(prev => ({ ...prev, [targetUserId]: true }));
-
+    async (targetUserId, isFollowing) => {
       try {
-        const isCurrentlyFollowing = followingStates[targetUserId];
-
-        if (isCurrentlyFollowing) {
-          await dispatch(unfollowUser(targetUserId)).unwrap();
+        if (isFollowing) {
+          await unfollowMutation.mutateAsync(targetUserId);
+          toast.success('Đã bỏ theo dõi');
         } else {
-          await dispatch(followUser(targetUserId)).unwrap();
+          await followMutation.mutateAsync(targetUserId);
+          toast.success('Đã theo dõi');
         }
-
-        setFollowingStates(prev => ({
-          ...prev,
-          [targetUserId]: !isCurrentlyFollowing,
-        }));
       } catch (error) {
-        console.error('Follow action failed:', error);
-      } finally {
-        setLoadingStates(prev => ({ ...prev, [targetUserId]: false }));
+        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
-    [dispatch, followingStates, loadingStates]
+    [followMutation, unfollowMutation]
   );
 
   // Filter users by search
-  const filteredUsers = users.filter(
-    user =>
-      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    return users.filter(
+      user =>
+        user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [users, searchQuery]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -173,83 +149,95 @@ const FollowingUser = () => {
         </div>
       ) : (
         <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
-          {filteredUsers.map(user => (
-            <div
-              key={user._id}
-              className="px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <Link
-                  to={`/profile/${user._id}`}
-                  className="relative flex-shrink-0"
-                >
-                  <img
-                    src={
-                      user.avatar ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
-                    }
-                    alt={user.name || user.username}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
-                  />
-                  {user.isVerified && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
-                      <Check size={8} className="text-white dark:text-black" />
-                    </div>
-                  )}
-                </Link>
+          {filteredUsers.map(user => {
+            const isFollowingUser =
+              activeTab === 'following' ? true : user.isFollowing;
+            const mutationLoading =
+              (followMutation.isPending || unfollowMutation.isPending) &&
+              (followMutation.variables === user._id ||
+                unfollowMutation.variables === user._id);
 
-                {/* User Info */}
-                <div className="flex-1 min-w-0">
+            return (
+              <div
+                key={user._id}
+                className="px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
                   <Link
                     to={`/profile/${user._id}`}
-                    className="font-medium text-black dark:text-white hover:underline truncate block"
+                    className="relative flex-shrink-0"
                   >
-                    {user.fullName || user.name || user.username}
+                    <img
+                      src={
+                        user.avatar ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                      }
+                      alt={user.name || user.username}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                    />
+                    {user.isVerified && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                        <Check
+                          size={8}
+                          className="text-white dark:text-black"
+                        />
+                      </div>
+                    )}
                   </Link>
-                  <p className="text-sm text-neutral-500 truncate">
-                    @{user.username}
-                  </p>
-                  {user.bio && (
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                      {user.bio}
+
+                  {/* User Info */}
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      to={`/profile/${user._id}`}
+                      className="font-medium text-black dark:text-white hover:underline truncate block"
+                    >
+                      {user.fullName || user.name || user.username}
+                    </Link>
+                    <p className="text-sm text-neutral-500 truncate">
+                      @{user.username}
                     </p>
+                    {user.bio && (
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">
+                        {user.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Follow Button - Don't show for self */}
+                  {user._id !== authUser?._id && (
+                    <button
+                      onClick={() =>
+                        handleToggleFollow(user._id, isFollowingUser)
+                      }
+                      disabled={mutationLoading}
+                      className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium flex-shrink-0 transition-colors ${
+                        mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      } ${
+                        isFollowingUser
+                          ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:text-red-500'
+                          : 'bg-black dark:bg-white text-white dark:text-black'
+                      }`}
+                    >
+                      {mutationLoading ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : isFollowingUser ? (
+                        <>
+                          <Check size={14} />
+                          Following
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={14} />
+                          Follow
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
-
-                {/* Follow Button - Don't show for self */}
-                {user._id !== authUser?._id && (
-                  <button
-                    onClick={() => handleToggleFollow(user._id)}
-                    disabled={loadingStates[user._id]}
-                    className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium flex-shrink-0 transition-colors ${
-                      loadingStates[user._id]
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    } ${
-                      followingStates[user._id]
-                        ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:text-red-500'
-                        : 'bg-black dark:bg-white text-white dark:text-black'
-                    }`}
-                  >
-                    {loadingStates[user._id] ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : followingStates[user._id] ? (
-                      <>
-                        <Check size={14} />
-                        Following
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus size={14} />
-                        Follow
-                      </>
-                    )}
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

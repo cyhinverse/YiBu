@@ -1,74 +1,48 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { UserPlus, Check, Users, Loader2 } from 'lucide-react';
 import {
-  getSuggestions,
-  followUser,
-  unfollowUser,
-} from '../../../../redux/actions/userActions';
+  useSuggestions,
+  useFollowUser,
+  useUnfollowUser,
+} from '../../../../hooks/useUserQuery';
+import toast from 'react-hot-toast';
 
 const SuggestFriends = () => {
-  const dispatch = useDispatch();
-  const { suggestions: reduxSuggestions } = useSelector(
-    state => state.user || {}
-  );
+  // React Query hooks
+  const { data: suggestionsData, isLoading: suggestionsLoading } =
+    useSuggestions(5);
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
-  const [suggestions, setSuggestions] = useState([]);
   const [followedUsers, setFollowedUsers] = useState([]);
-  const [loadingStates, setLoadingStates] = useState({});
-  const [loading, setLoading] = useState(false);
 
-  // Fetch suggestions on mount
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      setLoading(true);
-      try {
-        const result = await dispatch(getSuggestions({ limit: 5 })).unwrap();
-        const userList = result.users || result.suggestions || result || [];
-        setSuggestions(userList);
-      } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSuggestions();
-  }, [dispatch]);
-
-  // Sync with redux state
-  useEffect(() => {
-    if (reduxSuggestions && Array.isArray(reduxSuggestions)) {
-      setSuggestions(reduxSuggestions);
-    }
-  }, [reduxSuggestions]);
+  const suggestions = useMemo(() => {
+    return suggestionsData || [];
+  }, [suggestionsData]);
 
   const handleFollow = useCallback(
     async userId => {
-      if (loadingStates[userId]) return;
-
-      setLoadingStates(prev => ({ ...prev, [userId]: true }));
+      const isFollowed = followedUsers.includes(userId);
 
       try {
-        const isFollowed = followedUsers.includes(userId);
-
         if (isFollowed) {
-          await dispatch(unfollowUser(userId)).unwrap();
+          await unfollowMutation.mutateAsync(userId);
           setFollowedUsers(prev => prev.filter(id => id !== userId));
+          toast.success('Đã bỏ theo dõi');
         } else {
-          await dispatch(followUser(userId)).unwrap();
+          await followMutation.mutateAsync(userId);
           setFollowedUsers(prev => [...prev, userId]);
+          toast.success('Đã theo dõi');
         }
       } catch (error) {
-        console.error('Follow action failed:', error);
-      } finally {
-        setLoadingStates(prev => ({ ...prev, [userId]: false }));
+        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
-    [dispatch, followedUsers, loadingStates]
+    [followedUsers, followMutation, unfollowMutation]
   );
 
-  if (loading) {
+  if (suggestionsLoading) {
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
         <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
@@ -84,7 +58,7 @@ const SuggestFriends = () => {
     );
   }
 
-  if (suggestions.length === 0) {
+  if (!suggestions || suggestions.length === 0) {
     return null;
   }
 
@@ -102,7 +76,11 @@ const SuggestFriends = () => {
       <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
         {suggestions.map(user => {
           const isFollowed = followedUsers.includes(user._id);
-          const isLoading = loadingStates[user._id];
+          const mutationLoading =
+            (followMutation.isPending || unfollowMutation.isPending) &&
+            (followMutation.variables === user._id ||
+              unfollowMutation.variables === user._id);
+
           return (
             <div
               key={user._id}
@@ -147,8 +125,10 @@ const SuggestFriends = () => {
                   )}
                   {user.mutualFriends > 0 && (
                     <p className="flex items-center gap-1 text-xs text-neutral-500 mt-1">
-                      <Users size={12} />
-                      {user.mutualFriends} mutual friends
+                      <span className="flex items-center gap-1">
+                        <Users size={12} />
+                        {user.mutualFriends} mutual friends
+                      </span>
                     </p>
                   )}
                 </div>
@@ -156,16 +136,16 @@ const SuggestFriends = () => {
                 {/* Follow Button */}
                 <button
                   onClick={() => handleFollow(user._id)}
-                  disabled={isLoading}
+                  disabled={mutationLoading}
                   className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium flex-shrink-0 transition-colors ${
-                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                   } ${
                     isFollowed
                       ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
                       : 'bg-black dark:bg-white text-white dark:text-black'
                   }`}
                 >
-                  {isLoading ? (
+                  {mutationLoading ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : isFollowed ? (
                     <>

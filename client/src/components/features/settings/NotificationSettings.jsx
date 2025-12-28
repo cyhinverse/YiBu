@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
   Heart,
@@ -10,14 +9,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import {
-  getSettings,
-  updateNotificationSettings,
-} from '../../../redux/actions/userActions';
+import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
 
 const NotificationSettings = () => {
-  const dispatch = useDispatch();
-  const { settings, loading } = useSelector(state => state.user);
+  const { data: settingsData, isLoading: settingsLoading } = useSettings();
+  const updateSettingsMutation = useUpdateSettings();
 
   const [notifications, setNotifications] = useState({
     likes: true,
@@ -28,18 +24,12 @@ const NotificationSettings = () => {
     email: false,
     push: true,
   });
-  const [saving, setSaving] = useState(false);
 
-  // Load settings on mount
+  // Sync local state with server settings
   useEffect(() => {
-    dispatch(getSettings());
-  }, [dispatch]);
+    if (settingsData?.notifications) {
+      const apiSettings = { ...settingsData.notifications };
 
-  // Sync local state with Redux state
-  useEffect(() => {
-    if (settings?.notifications) {
-      const apiSettings = { ...settings.notifications };
-      
       // Handle legacy/nested structure where email/push might be objects
       if (typeof apiSettings.email === 'object' && apiSettings.email !== null) {
         apiSettings.email = apiSettings.email.enabled;
@@ -47,13 +37,13 @@ const NotificationSettings = () => {
       if (typeof apiSettings.push === 'object' && apiSettings.push !== null) {
         apiSettings.push = apiSettings.push.enabled;
       }
-      
+
       setNotifications(prev => ({
         ...prev,
         ...apiSettings,
       }));
     }
-  }, [settings]);
+  }, [settingsData]);
 
   const handleToggle = async settingKey => {
     const newNotifications = {
@@ -62,17 +52,17 @@ const NotificationSettings = () => {
     };
 
     setNotifications(newNotifications);
-    setSaving(true);
 
     try {
-      await dispatch(updateNotificationSettings(newNotifications)).unwrap();
+      await updateSettingsMutation.mutateAsync({
+        type: 'notifications',
+        settings: newNotifications,
+      });
       toast.success('Đã lưu cài đặt thông báo');
     } catch (error) {
       // Revert on failure
       setNotifications(notifications);
-      toast.error(error || 'Lưu cài đặt thất bại');
-    } finally {
-      setSaving(false);
+      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -114,12 +104,12 @@ const NotificationSettings = () => {
       <ToggleSwitch
         enabled={notifications[settingKey]}
         onChange={() => handleToggle(settingKey)}
-        disabled={saving}
+        disabled={updateSettingsMutation.isPending}
       />
     </div>
   );
 
-  if (loading && !settings) {
+  if (settingsLoading && !settingsData) {
     return (
       <div className="flex justify-center items-center py-16">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -205,7 +195,7 @@ const NotificationSettings = () => {
             <ToggleSwitch
               enabled={notifications.push}
               onChange={() => handleToggle('push')}
-              disabled={saving}
+              disabled={updateSettingsMutation.isPending}
             />
           </div>
           <div className="flex items-center justify-between py-4">
@@ -220,14 +210,14 @@ const NotificationSettings = () => {
             <ToggleSwitch
               enabled={notifications.email}
               onChange={() => handleToggle('email')}
-              disabled={saving}
+              disabled={updateSettingsMutation.isPending}
             />
           </div>
         </div>
       </div>
 
       {/* Saving indicator */}
-      {saving && (
+      {updateSettingsMutation.isPending && (
         <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Đang lưu...</span>

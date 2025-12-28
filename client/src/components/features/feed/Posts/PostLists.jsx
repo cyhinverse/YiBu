@@ -1,15 +1,10 @@
 import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { FileText, PenSquare, Loader2 } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import Post from './Post';
 import { useHomeFeed } from '../../../../hooks/useFeedQuery';
-import { getBatchLikeStatus } from '../../../../redux/actions/likeActions';
 
 const PostLists = ({ activeTab = 'forYou' }) => {
-  const dispatch = useDispatch();
-  const { likeStatuses } = useSelector(state => state.like);
-
   // React Query Hook
   const {
     data,
@@ -35,16 +30,6 @@ const PostLists = ({ activeTab = 'forYou' }) => {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Fetch like statuses when displayPosts change
-  const postIdsString = displayPosts?.map(p => p._id).join(',');
-
-  useEffect(() => {
-    if (displayPosts?.length > 0) {
-      const postIds = displayPosts.map(post => String(post._id));
-      dispatch(getBatchLikeStatus(postIds));
-    }
-  }, [postIdsString, dispatch]);
 
   if (isLoading) {
     return (
@@ -100,11 +85,7 @@ const PostLists = ({ activeTab = 'forYou' }) => {
   return (
     <div className="space-y-4">
       {displayPosts.map(post => (
-        <Post
-          key={post._id}
-          data={post}
-          isLiked={likeStatuses?.[post._id]?.isLiked}
-        />
+        <Post key={post._id} data={post} />
       ))}
 
       {/* Load more trigger */}

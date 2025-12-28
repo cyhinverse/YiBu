@@ -1,24 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  Shield,
-  Eye,
-  MessageCircle,
-  Search,
-  Activity,
-  Lock,
-  Globe,
-  Loader2,
-} from 'lucide-react';
+import { Eye, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import {
-  getSettings,
-  updatePrivacySettings,
-} from '../../../redux/actions/userActions';
+import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
 
 const PrivacySettings = () => {
-  const dispatch = useDispatch();
-  const { settings, loading } = useSelector(state => state.user);
+  const { data: settingsData, isLoading: settingsLoading } = useSettings();
+  const updateSettingsMutation = useUpdateSettings();
 
   const [privacy, setPrivacy] = useState({
     profileVisibility: 'public',
@@ -27,33 +14,27 @@ const PrivacySettings = () => {
     searchVisibility: true,
     activityStatus: true,
   });
-  const [saving, setSaving] = useState(false);
 
-  // Load settings on mount
+  // Sync local state with server settings
   useEffect(() => {
-    dispatch(getSettings());
-  }, [dispatch]);
-
-  // Sync local state with Redux state
-  useEffect(() => {
-    if (settings?.privacy) {
-      setPrivacy(settings.privacy);
+    if (settingsData?.privacy) {
+      setPrivacy(settingsData.privacy);
     }
-  }, [settings]);
+  }, [settingsData]);
 
   const handlePrivacyChange = async (key, value) => {
     const newPrivacy = { ...privacy, [key]: value };
     setPrivacy(newPrivacy);
-    setSaving(true);
 
     try {
-      await dispatch(updatePrivacySettings(newPrivacy)).unwrap();
+      await updateSettingsMutation.mutateAsync({
+        type: 'privacy',
+        settings: newPrivacy,
+      });
       toast.success('Đã lưu cài đặt quyền riêng tư');
     } catch (error) {
       setPrivacy(privacy); // Revert on failure
-      toast.error(error || 'Lưu cài đặt thất bại');
-    } finally {
-      setSaving(false);
+      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -131,7 +112,7 @@ const PrivacySettings = () => {
     </div>
   );
 
-  if (loading && !settings) {
+  if (settingsLoading && !settingsData) {
     return (
       <div className="flex justify-center items-center py-16">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -166,7 +147,7 @@ const PrivacySettings = () => {
             description="Who can view your profile"
             value={privacy.profileVisibility}
             onChange={value => handlePrivacyChange('profileVisibility', value)}
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
             options={[
               { value: 'public', label: 'Public' },
               { value: 'followers', label: 'Followers' },
@@ -178,7 +159,7 @@ const PrivacySettings = () => {
             description="Default visibility for new posts"
             value={privacy.postVisibility}
             onChange={value => handlePrivacyChange('postVisibility', value)}
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
             options={[
               { value: 'public', label: 'Public' },
               { value: 'followers', label: 'Followers' },
@@ -204,7 +185,7 @@ const PrivacySettings = () => {
             description="Who can send you messages"
             value={privacy.messagePermission}
             onChange={value => handlePrivacyChange('messagePermission', value)}
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
             options={[
               { value: 'everyone', label: 'Everyone' },
               { value: 'followers', label: 'Followers' },
@@ -218,7 +199,7 @@ const PrivacySettings = () => {
             onChange={() =>
               handlePrivacyChange('searchVisibility', !privacy.searchVisibility)
             }
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
           />
           <ToggleSwitch
             label="Show activity status"
@@ -227,13 +208,13 @@ const PrivacySettings = () => {
             onChange={() =>
               handlePrivacyChange('activityStatus', !privacy.activityStatus)
             }
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
           />
         </div>
       </div>
 
       {/* Saving indicator */}
-      {saving && (
+      {updateSettingsMutation.isPending && (
         <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Đang lưu...</span>

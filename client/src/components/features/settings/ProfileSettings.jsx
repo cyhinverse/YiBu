@@ -8,8 +8,8 @@ import {
   Loader2,
   Map as MapIcon,
 } from 'lucide-react';
-import { useSelector, useDispatch } from 'react-redux';
-import { updateProfile, getProfile } from '@/redux/actions/userActions';
+import { useSelector } from 'react-redux';
+import { useProfile, useUpdateProfile } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
 import { Suspense, lazy } from 'react';
 
@@ -70,11 +70,16 @@ const InputField = ({
 };
 
 const ProfileSettings = () => {
-  const dispatch = useDispatch();
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
-  const { currentProfile, loading } = useSelector(state => state.user);
   const { user } = useSelector(state => state.auth);
+
+  // React Query hooks
+  const { data: currentProfile, isLoading: profileLoading } = useProfile(
+    user?._id
+  );
+  const { mutate: updateProfileMutation } = useUpdateProfile();
+
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
@@ -91,13 +96,6 @@ const ProfileSettings = () => {
     website: '',
     location: '',
   });
-
-  // Load profile data
-  useEffect(() => {
-    if (user?._id) {
-      dispatch(getProfile(user._id));
-    }
-  }, [dispatch, user?._id]);
 
   // Update form when profile loads
   useEffect(() => {
@@ -145,22 +143,23 @@ const ProfileSettings = () => {
         data.append('cover', coverFile);
       }
 
-      const result = await dispatch(updateProfile(data));
-      if (updateProfile.fulfilled.match(result)) {
-        toast.success('Cập nhật thành công!');
-        setAvatarFile(null);
-        setCoverFile(null);
-        setAvatarPreview(null);
-        setCoverPreview(null);
-        // Dispatch getProfile again to ensure latest data
-        dispatch(getProfile(user._id));
-      } else {
-        toast.error(result.payload || 'Cập nhật thất bại');
-      }
+      updateProfileMutation(data, {
+        onSuccess: () => {
+          toast.success('Cập nhật thành công!');
+          setAvatarFile(null);
+          setCoverFile(null);
+          setAvatarPreview(null);
+          setCoverPreview(null);
+          setIsSaving(false);
+        },
+        onError: err => {
+          toast.error(err?.message || 'Cập nhật thất bại');
+          setIsSaving(false);
+        },
+      });
     } catch (error) {
       console.error(error);
       toast.error('Có lỗi xảy ra');
-    } finally {
       setIsSaving(false);
     }
   };
@@ -173,7 +172,7 @@ const ProfileSettings = () => {
     setFormData(prev => ({ ...prev, location: address }));
   };
 
-  if (loading && !currentProfile) {
+  if (profileLoading && !currentProfile) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />

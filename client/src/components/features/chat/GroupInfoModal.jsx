@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { X, Edit, Search, UserPlus, UserMinus, Check, LogOut, Loader2 } from 'lucide-react';
-import { searchUsers } from '../../../redux/actions/userActions';
+import {
+  X,
+  Edit,
+  Search,
+  UserPlus,
+  UserMinus,
+  Check,
+  LogOut,
+  Loader2,
+} from 'lucide-react';
+import { useSearchUsers } from '../../../hooks/useSearchQuery';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 const GroupInfoModal = ({
   isOpen,
@@ -17,9 +26,17 @@ const GroupInfoModal = ({
   const [newName, setNewName] = useState(conversation?.name || '');
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const dispatch = useDispatch();
+
+  // Debounce search query
+  const debouncedQuery = useDebounce(searchQuery, 500);
+
+  // React Query Hook
+  const { data: searchData, isFetching: isSearching } = useSearchUsers({
+    query: debouncedQuery,
+    limit: 5,
+  });
+
+  const searchResults = searchData?.users || [];
 
   useEffect(() => {
     if (conversation) {
@@ -37,25 +54,6 @@ const GroupInfoModal = ({
     if (newName.trim() && newName !== conversation.name) {
       onRename(newName);
       setIsEditingName(false);
-    }
-  };
-
-  const handleSearchUsers = async query => {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const result = await dispatch(
-        searchUsers({ query, page: 1, limit: 5 })
-      ).unwrap();
-      setSearchResults(result.users || []);
-    } catch (error) {
-      console.error('Search failed', error);
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -77,51 +75,53 @@ const GroupInfoModal = ({
         <div className="p-6 overflow-y-auto custom-scrollbar space-y-8">
           {/* Group Branding */}
           <div className="flex flex-col items-center gap-4">
-             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                {conversation.name ? conversation.name.charAt(0).toUpperCase() : 'G'}
-             </div>
-             <div className="w-full flex items-center justify-center gap-2">
-                {isEditingName ? (
-                  <div className="flex-1 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={e => setNewName(e.target.value)}
-                      className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      autoFocus
-                    />
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+              {conversation.name
+                ? conversation.name.charAt(0).toUpperCase()
+                : 'G'}
+            </div>
+            <div className="w-full flex items-center justify-center gap-2">
+              {isEditingName ? (
+                <div className="flex-1 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleRename}
+                    className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                  >
+                    <Check size={18} />
+                  </button>
+                  <button
+                    onClick={() => setIsEditingName(false)}
+                    className="p-2 bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white rounded-xl hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-bold text-black dark:text-white truncate">
+                    {conversation.name || 'Nhóm chưa đặt tên'}
+                  </h3>
+                  {isAdmin && (
                     <button
-                      onClick={handleRename}
-                      className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                      onClick={() => {
+                        setIsEditingName(true);
+                        setNewName(conversation.name || '');
+                      }}
+                      className="p-2 text-neutral-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-full transition-all"
                     >
-                      <Check size={18} />
+                      <Edit size={18} />
                     </button>
-                    <button
-                      onClick={() => setIsEditingName(false)}
-                      className="p-2 bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white rounded-xl hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="text-2xl font-bold text-black dark:text-white truncate">
-                      {conversation.name || 'Nhóm chưa đặt tên'}
-                    </h3>
-                    {isAdmin && (
-                      <button
-                        onClick={() => {
-                          setIsEditingName(true);
-                          setNewName(conversation.name || '');
-                        }}
-                        className="p-2 text-neutral-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-full transition-all"
-                      >
-                        <Edit size={18} />
-                      </button>
-                    )}
-                  </>
-                )}
-             </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Members Listing */}
@@ -151,15 +151,15 @@ const GroupInfoModal = ({
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={e => handleSearchUsers(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Tìm tên bạn bè..."
                     className="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-black dark:text-white"
                   />
                 </div>
                 {isSearching ? (
-                   <div className="flex justify-center p-4">
-                      <Loader2 size={20} className="animate-spin text-blue-500" />
-                   </div>
+                  <div className="flex justify-center p-4">
+                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                  </div>
                 ) : searchResults.length > 0 ? (
                   <div className="max-h-52 overflow-y-auto space-y-2 custom-scrollbar">
                     {searchResults.map(user => {
@@ -173,7 +173,9 @@ const GroupInfoModal = ({
                         >
                           <div className="flex items-center gap-3">
                             <img
-                              src={user.avatar || 'https://via.placeholder.com/150'}
+                              src={
+                                user.avatar || 'https://via.placeholder.com/150'
+                              }
                               className="w-9 h-9 rounded-full object-cover border border-neutral-100"
                               alt=""
                             />
@@ -181,7 +183,9 @@ const GroupInfoModal = ({
                               <p className="text-sm font-semibold text-black dark:text-white truncate">
                                 {user.name}
                               </p>
-                              <p className="text-[10px] text-neutral-500">@{user.username}</p>
+                              <p className="text-[10px] text-neutral-500">
+                                @{user.username}
+                              </p>
                             </div>
                           </div>
                           {isMember ? (
@@ -193,7 +197,6 @@ const GroupInfoModal = ({
                               onClick={() => {
                                 onAddMember(user._id);
                                 setSearchQuery('');
-                                setSearchResults([]);
                                 setShowAddMember(false);
                               }}
                               className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-xl font-bold hover:bg-blue-700 transition-colors"
@@ -206,7 +209,11 @@ const GroupInfoModal = ({
                     })}
                   </div>
                 ) : (
-                  searchQuery && <p className="text-center text-xs text-neutral-500 py-4">Không tìm thấy ai</p>
+                  searchQuery && (
+                    <p className="text-center text-xs text-neutral-500 py-4">
+                      Không tìm thấy ai
+                    </p>
+                  )
                 )}
               </div>
             )}
@@ -228,9 +235,11 @@ const GroupInfoModal = ({
                         {member.name}
                       </p>
                       <p className="text-xs text-neutral-500 truncate">
-                        @{member.username} 
+                        @{member.username}
                         {conversation.admin === member._id && (
-                          <span className="ml-2 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase font-bold">Trưởng nhóm</span>
+                          <span className="ml-2 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase font-bold">
+                            Trưởng nhóm
+                          </span>
                         )}
                       </p>
                     </div>

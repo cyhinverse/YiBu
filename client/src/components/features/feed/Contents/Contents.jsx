@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
-import { useDispatch, useSelector, shallowEqual } from 'react-redux';
+import { useState, useRef } from 'react';
 import CreatePost from '../Posts/CreatePost';
 import PostLists from '../Posts/PostLists';
 import TrendingTopics from '../TrendingTopics/TrendingTopics';
@@ -13,47 +12,33 @@ import {
   Flame,
   Zap,
 } from 'lucide-react';
-import { getTrendingHashtags } from '../../../../redux/actions/postActions';
-import {
-  getSuggestions,
-  searchUsers,
-} from '../../../../redux/actions/userActions';
-import { useDebounce } from '../../../../hooks/useDebounce';
+import { useTrendingHashtags } from '../../../../hooks/usePostsQuery';
+import { useSuggestions } from '../../../../hooks/useUserQuery';
+import { useSearchUsers } from '../../../../hooks/useSearchQuery';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const Contents = () => {
-  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('forYou');
   const [searchQuery, setSearchQuery] = useState('');
   const contentRef = useRef(null);
 
-  // Redux state
-  const trendingHashtags = useSelector(
-    state => state.post.trendingHashtags
-  );
-  const { suggestions, searchResults, loading: userLoading } = useSelector(
-    state => ({
-      suggestions: state.user.suggestions,
-      searchResults: state.user.searchResults,
-      loading: state.user.loading
-    }),
-    shallowEqual
-  );
-
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Fetch trending hashtags and suggestions on mount
-  useEffect(() => {
-    dispatch(getTrendingHashtags(10));
-    dispatch(getSuggestions(5));
-  }, [dispatch]);
+  // React Query hooks
+  const { data: trendingHashtags = [] } = useTrendingHashtags(10);
+  const { data: suggestionsData, isLoading: suggestionsLoading } =
+    useSuggestions(5);
+  const suggestions = suggestionsData?.data || suggestionsData || [];
 
-  // Search when query changes
-  useEffect(() => {
-    if (debouncedSearch.trim()) {
-      dispatch(searchUsers({ query: debouncedSearch, page: 1, limit: 5 }));
-    }
-  }, [debouncedSearch, dispatch]);
+  const { data: searchResultsData, isLoading: searchLoading } = useSearchUsers({
+    query: debouncedSearch,
+    page: 1,
+    limit: 5,
+  });
+  const searchResults = searchResultsData?.data || searchResultsData || [];
+
+  const loading = debouncedSearch.trim() ? searchLoading : suggestionsLoading;
 
   const tabs = [
     { id: 'forYou', label: 'For You', icon: Flame },
@@ -74,9 +59,7 @@ const Contents = () => {
   }));
 
   // Use suggestions or search results
-  const displayUsers = debouncedSearch.trim()
-    ? searchResults?.data || []
-    : suggestions?.data || suggestions || [];
+  const displayUsers = debouncedSearch.trim() ? searchResults : suggestions;
 
   return (
     <div className="w-full flex gap-6 min-h-screen max-w-7xl mx-auto px-4 lg:px-6">
@@ -219,7 +202,7 @@ const Contents = () => {
                 See all
               </button>
             </div>
-            <TopUser users={displayUsers} loading={userLoading} />
+            <TopUser users={displayUsers} loading={loading} />
           </div>
 
           {/* Footer */}

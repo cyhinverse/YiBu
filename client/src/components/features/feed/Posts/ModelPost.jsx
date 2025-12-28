@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react';
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   Image,
   X,
@@ -12,7 +12,7 @@ import {
   Send,
   Video,
 } from 'lucide-react';
-import { createPost, updatePost } from '../../../../redux/actions/postActions';
+import { useCreatePost, useUpdatePost } from '../../../../hooks/usePostsQuery';
 
 const PRIVACY_OPTIONS = [
   {
@@ -36,9 +36,14 @@ const PRIVACY_OPTIONS = [
 ];
 
 const ModelPost = ({ closeModal, editPost = null }) => {
-  const dispatch = useDispatch();
-  const { currentProfile } = useSelector(state => state.user);
-  const { createLoading } = useSelector(state => state.post);
+  const { user: authUser } = useSelector(state => state.auth);
+  const currentUser = authUser?.user || authUser;
+
+  const createPostMutation = useCreatePost();
+  const updatePostMutation = useUpdatePost();
+
+  const createLoading =
+    createPostMutation.isPending || updatePostMutation.isPending;
 
   const [caption, setCaption] = useState(editPost?.caption || '');
   const [mediaFiles, setMediaFiles] = useState([]);
@@ -54,9 +59,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
   };
 
   const avatarUrl =
-    currentProfile?.avatar ||
+    currentUser?.avatar ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-      currentProfile?.username || 'default'
+      currentUser?.username || 'default'
     }`;
   const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === privacy);
 
@@ -94,11 +99,12 @@ const ModelPost = ({ closeModal, editPost = null }) => {
 
     try {
       if (editPost) {
-        await dispatch(
-          updatePost({ postId: editPost._id, data: formData })
-        ).unwrap();
+        await updatePostMutation.mutateAsync({
+          postId: editPost._id,
+          data: formData,
+        });
       } else {
-        await dispatch(createPost(formData)).unwrap();
+        await createPostMutation.mutateAsync(formData);
       }
       closeModal();
     } catch (error) {
@@ -150,9 +156,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
             {/* Avatar */}
             <img
               src={avatarUrl}
-              alt={
-                currentProfile?.fullName || currentProfile?.username || 'User'
-              }
+              alt={currentUser?.fullName || currentUser?.username || 'User'}
               className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
             />
 
@@ -161,9 +165,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
               {/* User info */}
               <div className="mb-2">
                 <p className="font-semibold text-black dark:text-white text-sm">
-                  {currentProfile?.fullName ||
-                    currentProfile?.username ||
-                    'User'}
+                  {currentUser?.fullName || currentUser?.username || 'User'}
                 </p>
                 {/* Privacy selector */}
                 <div className="relative">

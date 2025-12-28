@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { X, AlertTriangle, Flag, Loader2, Check } from 'lucide-react';
-import {
-  reportPost,
-  reportComment,
-  reportUser,
-  reportMessage,
-} from '../../../redux/actions/reportActions';
+import { useSubmitReport } from '../../../hooks/useReportQuery';
 import toast from 'react-hot-toast';
 
 const REPORT_REASONS = [
@@ -59,10 +53,9 @@ const ReportModal = ({
   targetId,
   targetType = 'post', // 'post' | 'comment' | 'user' | 'message'
 }) => {
-  const dispatch = useDispatch();
+  const { mutateAsync: submitReport, isPending: loading } = useSubmitReport();
   const [selectedReason, setSelectedReason] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async () => {
@@ -71,33 +64,14 @@ const ReportModal = ({
       return;
     }
 
-    setLoading(true);
-
     try {
-      const reportData = {
+      await submitReport({
+        targetId,
+        targetType,
         reason: selectedReason,
         description: description.trim(),
-      };
+      });
 
-      let action;
-      switch (targetType) {
-        case 'post':
-          action = reportPost({ postId: targetId, ...reportData });
-          break;
-        case 'comment':
-          action = reportComment({ commentId: targetId, ...reportData });
-          break;
-        case 'user':
-          action = reportUser({ userId: targetId, ...reportData });
-          break;
-        case 'message':
-          action = reportMessage({ messageId: targetId, ...reportData });
-          break;
-        default:
-          throw new Error('Invalid target type');
-      }
-
-      await dispatch(action).unwrap();
       setSubmitted(true);
       toast.success('Report submitted successfully');
 
@@ -106,9 +80,7 @@ const ReportModal = ({
         handleClose();
       }, 2000);
     } catch (error) {
-      toast.error(error || 'Failed to submit report');
-    } finally {
-      setLoading(false);
+      toast.error(error?.response?.data?.message || 'Failed to submit report');
     }
   };
 

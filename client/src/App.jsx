@@ -1,7 +1,8 @@
 import { Outlet, Route, Routes } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useSelector } from 'react-redux';
+import { useSettings } from './hooks/useUserQuery';
 import { useTheme } from './hooks/useTheme';
 import { SocketProvider } from './contexts/SocketContext';
 import { ROUTES } from './constants/routes';
@@ -74,9 +75,22 @@ const AdminPage = lazy(() => import('./pages/AdminPage/AdminPage'));
 const AccessDenied = lazy(() => import('./pages/ErrorPages/AccessDenied'));
 
 const App = () => {
-  const userSettings = useSelector(state => state.user?.settings);
+  const authUser = useSelector(state => state.auth?.user);
+  const { data: settingsData } = useSettings({ enabled: !!authUser });
+
   // Apply theme settings
-  useTheme(userSettings?.theme);
+  const themeSettings = useMemo(() => {
+    if (settingsData?.theme) return settingsData.theme;
+    return {
+      appearance: localStorage.getItem('theme') || 'system',
+      fontSize: localStorage.getItem('fontSize') || 'medium',
+      primaryColor: localStorage.getItem('primaryColor') || '',
+      secondaryColor: localStorage.getItem('secondaryColor') || '',
+      textColor: localStorage.getItem('textColor') || '',
+    };
+  }, [settingsData]);
+
+  useTheme(themeSettings);
 
   return (
     <>

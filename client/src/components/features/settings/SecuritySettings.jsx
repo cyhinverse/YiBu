@@ -12,20 +12,18 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getSettings,
-  updateSecuritySettings,
-} from '../../../redux/actions/userActions';
-import {
   enable2FA,
   verify2FA,
   disable2FA,
   getSessions,
   revokeSession,
 } from '../../../redux/actions/authActions';
+import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
 
 const SecuritySettings = () => {
   const dispatch = useDispatch();
-  const { settings, loading } = useSelector(state => state.user);
+  const { data: settingsData, isLoading: settingsLoading } = useSettings();
+  const updateSettingsMutation = useUpdateSettings();
   const { sessions } = useSelector(state => state.auth);
 
   const [security, setSecurity] = useState({
@@ -33,41 +31,40 @@ const SecuritySettings = () => {
     loginAlerts: true,
     trustedDevicesOnly: false,
   });
-  const [saving, setSaving] = useState(false);
+
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [qrCode, setQrCode] = useState('');
   const [verifyCode, setVerifyCode] = useState('');
   const [verifying, setVerifying] = useState(false);
 
-  // Load settings on mount
+  // Load sessions on mount
   useEffect(() => {
-    dispatch(getSettings());
     dispatch(getSessions());
   }, [dispatch]);
 
-  // Sync local state with Redux state
+  // Sync local state with server settings
   useEffect(() => {
-    if (settings?.security) {
+    if (settingsData?.security) {
       setSecurity(prev => ({
         ...prev,
-        ...settings.security,
+        ...settingsData.security,
       }));
     }
-  }, [settings]);
+  }, [settingsData]);
 
   const handleSecurityChange = async (key, value) => {
     const newSecurity = { ...security, [key]: value };
     setSecurity(newSecurity);
-    setSaving(true);
 
     try {
-      await dispatch(updateSecuritySettings(newSecurity)).unwrap();
+      await updateSettingsMutation.mutateAsync({
+        type: 'security',
+        settings: newSecurity,
+      });
       toast.success('Đã lưu cài đặt bảo mật');
     } catch (error) {
       setSecurity(security); // Revert on failure
-      toast.error(error || 'Lưu cài đặt thất bại');
-    } finally {
-      setSaving(false);
+      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -162,7 +159,7 @@ const SecuritySettings = () => {
     </div>
   );
 
-  if (loading) {
+  if (settingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -252,7 +249,7 @@ const SecuritySettings = () => {
             }
             label="Cảnh báo đăng nhập"
             description="Nhận thông báo khi có đăng nhập từ thiết bị mới"
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
           />
           <ToggleSwitch
             enabled={security.trustedDevicesOnly}
@@ -264,7 +261,7 @@ const SecuritySettings = () => {
             }
             label="Chỉ thiết bị tin cậy"
             description="Chỉ cho phép đăng nhập từ thiết bị đã xác minh"
-            disabled={saving}
+            disabled={updateSettingsMutation.isPending}
           />
         </div>
       </div>
