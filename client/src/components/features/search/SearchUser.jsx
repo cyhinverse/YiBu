@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Search, X, UserPlus, Check, Loader2 } from 'lucide-react';
-import { useSearchUsers } from '../../../hooks/useSearchQuery';
-import { useFollowUser, useUnfollowUser } from '../../../hooks/useUserQuery';
+import { useSearchUsers } from '@/hooks/useSearchQuery';
+import { useFollowUser, useUnfollowUser } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
 
 const SearchUser = ({ isOpen, onClose }) => {

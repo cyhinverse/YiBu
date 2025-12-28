@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../axios/axiosConfig";
-import { AUTH_API } from "../../axios/apiEndpoint";
+import api from "@/axios/axiosConfig";
+import { AUTH_API } from "@/axios/apiEndpoint";
 
 // Login
 export const login = createAsyncThunk(

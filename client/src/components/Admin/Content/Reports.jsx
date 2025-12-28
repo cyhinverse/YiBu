@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -25,7 +25,7 @@ import {
   useResolveReport,
   useStartReportReview,
   useUpdateReportStatus,
-} from '../../../hooks/useAdminQuery';
+} from '@/hooks/useAdminQuery';
 
 const getTargetIcon = type => {
   switch (type) {

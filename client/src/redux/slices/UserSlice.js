@@ -25,7 +25,7 @@ import {
   updateSecuritySettings,
   updateContentSettings,
   updateThemeSettings,
-} from '../actions/userActions';
+} from '@/redux/actions/userActions';
 
 const initialState = {
   currentProfile: null,

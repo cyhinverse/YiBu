@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import api from '../axios/axiosConfig';
-import { POST_API } from '../axios/apiEndpoint';
+import api from '@/axios/axiosConfig';
+import { POST_API } from '@/axios/apiEndpoint';
 
 const extractData = response => {
   const responseData = response.data;

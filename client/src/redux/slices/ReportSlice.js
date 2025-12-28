@@ -7,7 +7,7 @@ import {
   reportMessage,
   getMyReports,
   getReportById,
-} from "../actions/reportActions";
+} from "@/redux/actions/reportActions";
 
 const initialState = {
   myReports: [],

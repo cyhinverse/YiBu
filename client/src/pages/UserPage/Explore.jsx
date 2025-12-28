@@ -14,14 +14,14 @@ import {
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useTrendingHashtags, useExploreFeed } from '../../hooks/usePostsQuery';
+import { useTrendingHashtags, useExploreFeed } from '@/hooks/usePostsQuery';
 import {
   useSuggestions,
   useFollowUser,
   useUnfollowUser,
-} from '../../hooks/useUserQuery';
-import { useSearchUsers, useSearchPosts } from '../../hooks/useSearchQuery';
-import { useDebounce } from '../../hooks/useDebounce';
+} from '@/hooks/useUserQuery';
+import { useSearchUsers, useSearchPosts } from '@/hooks/useSearchQuery';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const formatNumber = num => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';

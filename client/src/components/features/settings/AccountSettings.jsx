@@ -14,7 +14,7 @@ import {
   logout,
   logoutAll,
   updatePassword,
-} from '../../../redux/actions/authActions';
+} from '@/redux/actions/authActions';
 import toast from 'react-hot-toast';
 
 const AccountSettings = () => {

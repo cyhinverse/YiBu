@@ -9,7 +9,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
+import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 
 const NotificationSettings = () => {
   const { data: settingsData, isLoading: settingsLoading } = useSettings();

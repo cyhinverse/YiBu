@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   Calendar,
@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { useAdminLogs } from '../../../hooks/useAdminQuery';
+import { useAdminLogs } from '@/hooks/useAdminQuery';
 
 const getLevelIcon = level => {
   switch (level) {

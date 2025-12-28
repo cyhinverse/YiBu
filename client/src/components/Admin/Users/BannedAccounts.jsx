@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 // import { useDispatch, useSelector } from 'react-redux';
 import {
   Search,
@@ -11,7 +11,7 @@ import {
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
-import { useBannedUsers, useUnbanUser } from '../../../hooks/useAdminQuery';
+import { useBannedUsers, useUnbanUser } from '@/hooks/useAdminQuery';
 
 const BannedAccounts = () => {
   /* State */

@@ -15,21 +15,21 @@ import {
   Share2,
   Loader2,
 } from 'lucide-react';
-import Post from '../../feed/Posts/Post';
+import Post from '@/components/features/feed/Posts/Post';
 import { useSelector } from 'react-redux';
 import {
   useSharedPosts,
   useUserPosts,
   useLikedPosts,
   useSavedPosts,
-} from '../../../../hooks/usePostsQuery';
+} from '@/hooks/usePostsQuery';
 import {
   useProfile,
   useCheckFollow,
   useFollowUser,
   useUnfollowUser,
-} from '../../../../hooks/useUserQuery';
-import { useCreateConversation } from '../../../../hooks/useMessageQuery';
+} from '@/hooks/useUserQuery';
+import { useCreateConversation } from '@/hooks/useMessageQuery';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 

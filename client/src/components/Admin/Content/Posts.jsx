@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -28,7 +28,7 @@ import {
   useDeletePost,
   useModeratePost,
   useAdminPostReports,
-} from '../../../hooks/useAdminQuery';
+} from '@/hooks/useAdminQuery';
 
 const getTypeIcon = type => {
   switch (type) {

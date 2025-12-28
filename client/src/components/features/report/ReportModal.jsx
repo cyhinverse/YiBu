@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, AlertTriangle, Flag, Loader2, Check } from 'lucide-react';
-import { useSubmitReport } from '../../../hooks/useReportQuery';
+import { useSubmitReport } from '@/hooks/useReportQuery';
 import toast from 'react-hot-toast';
 
 const REPORT_REASONS = [

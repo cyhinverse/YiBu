@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor, Check, Loader2, X } from 'lucide-react';
-import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
+import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 
 const PRESETS = {
   primary: [

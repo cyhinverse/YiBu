@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
-import Post from '../../feed/Posts/Post';
-import { useSavedPosts, useToggleSave } from '../../../../hooks/usePostsQuery';
+import Post from '@/components/features/feed/Posts/Post';
+import { useSavedPosts, useToggleSave } from '@/hooks/usePostsQuery';
 import toast from 'react-hot-toast';
 
 const SavePosts = () => {

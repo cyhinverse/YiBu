@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   Eye,
@@ -29,7 +29,7 @@ import {
   useWarnUser,
   useAdminUserPosts,
   useAdminUserReports,
-} from '../../../hooks/useAdminQuery'; // useAdminQuery hooks
+} from '@/hooks/useAdminQuery'; // useAdminQuery hooks
 
 const StatusBadge = ({ status }) => {
   const styles = {

@@ -19,7 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useRevenueStats, useTransactions } from '../../../hooks/useAdminQuery';
+import { useRevenueStats, useTransactions } from '@/hooks/useAdminQuery';
 
 export default function Revenue() {
   const [dateRange, setDateRange] = useState('thisMonth');

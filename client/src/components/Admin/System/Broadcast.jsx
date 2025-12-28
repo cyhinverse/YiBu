@@ -11,7 +11,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { useBroadcastNotification } from '../../../hooks/useAdminQuery';
+import { useBroadcastNotification } from '@/hooks/useAdminQuery';
 
 const NOTIFICATION_TYPES = [
   { id: 'info', label: 'Information', icon: Info, color: 'blue' },

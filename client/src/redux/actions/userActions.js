@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../axios/axiosConfig';
-import { USER_API } from '../../axios/apiEndpoint';
+import api from '@/axios/axiosConfig';
+import { USER_API } from '@/axios/apiEndpoint';
 
 // Helper to extract data from response
 // Server returns { code, message, data } format, we need to extract the actual data

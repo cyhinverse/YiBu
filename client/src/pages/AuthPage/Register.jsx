@@ -11,8 +11,8 @@ import {
   EyeOff,
   AlertCircle,
 } from "lucide-react";
-import { register } from "../../redux/actions/authActions";
-import { clearError } from "../../redux/slices/AuthSlice";
+import { register } from "@/redux/actions/authActions";
+import { clearError } from "@/redux/slices/AuthSlice";
 import toast from "react-hot-toast";
 
 const Register = () => {

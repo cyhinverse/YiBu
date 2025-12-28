@@ -8,7 +8,7 @@ import {
   Send,
   X,
 } from 'lucide-react';
-import { formatDistanceToNow } from '../../../../utils/dateUtils';
+import { formatDistanceToNow } from '@/utils/dateUtils';
 
 /**
  * CommentInput - Input để thêm comment/reply

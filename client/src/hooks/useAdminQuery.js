@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../axios/axiosConfig';
-import { ADMIN_API, REPORT_API } from '../axios/apiEndpoint';
+import api from '@/axios/axiosConfig';
+import { ADMIN_API, REPORT_API } from '@/axios/apiEndpoint';
 import { toast } from 'react-hot-toast';
 
 // Helper to extract data

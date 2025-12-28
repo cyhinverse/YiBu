@@ -9,8 +9,8 @@ import {
   LogOut,
   Loader2,
 } from 'lucide-react';
-import { useSearchUsers } from '../../../hooks/useSearchQuery';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useSearchUsers } from '@/hooks/useSearchQuery';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const GroupInfoModal = ({
   isOpen,

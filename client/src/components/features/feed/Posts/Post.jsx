@@ -22,14 +22,18 @@ import {
   useToggleSave,
   useDeletePost,
   useSharePost,
-} from '../../../../hooks/usePostsQuery';
+} from '@/hooks/usePostsQuery';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
-  import('../Comment').then(module => ({ default: module.CommentModal }))
+  import('../Comment/CommentModal').then(module => ({
+    default: module.default,
+  }))
 );
 const ReportModal = lazy(() =>
-  import('../../report').then(module => ({ default: module.ReportModal }))
+  import('../../report/ReportModal').then(module => ({
+    default: module.default,
+  }))
 );
 const ModelPost = lazy(() => import('./ModelPost'));
 

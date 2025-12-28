@@ -12,7 +12,7 @@ import {
   useFollowRequests,
   useAcceptFollowRequest,
   useRejectFollowRequest,
-} from '../../../hooks/useUserQuery';
+} from '@/hooks/useUserQuery';
 
 const FollowRequestsSettings = () => {
   const { data: followRequests, isLoading: loading } = useFollowRequests();

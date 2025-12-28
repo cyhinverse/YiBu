@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { X, MessageCircle, Loader2 } from 'lucide-react';
-import useComments from '../../../../hooks/useComments';
+import useComments from '@/hooks/useComments';
 import { CommentItem, CommentInput } from './CommentItem';
 
 /**

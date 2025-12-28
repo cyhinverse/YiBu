@@ -18,7 +18,7 @@ import {
   useMessages,
   useSendMessage,
   useMarkAsRead,
-} from '../../../hooks/useMessageQuery';
+} from '@/hooks/useMessageQuery';
 import toast from 'react-hot-toast';
 
 const Messages = () => {

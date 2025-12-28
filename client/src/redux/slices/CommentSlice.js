@@ -7,7 +7,7 @@ import {
   deleteComment,
   likeComment,
   unlikeComment,
-} from '../actions/commentActions';
+} from '@/redux/actions/commentActions';
 
 const initialState = {
   comments: {},

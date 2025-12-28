@@ -47,7 +47,7 @@ import {
   getTransactions,
   // Interactions
   getInteractions,
-} from '../actions/adminActions';
+} from '@/redux/actions/adminActions';
 
 const initialState = {
   // Dashboard

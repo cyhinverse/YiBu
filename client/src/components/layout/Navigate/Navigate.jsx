@@ -17,10 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { logout } from '../../../redux/actions/authActions';
+import { logout } from '@/redux/actions/authActions';
 import toast from 'react-hot-toast';
-import { useUnreadCount } from '../../../hooks/useNotificationQuery';
-import { useUnreadMessagesCount } from '../../../hooks/useMessageQuery';
+import { useUnreadCount } from '@/hooks/useNotificationQuery';
+import { useUnreadMessagesCount } from '@/hooks/useMessageQuery';
 
 // Custom Nav Item
 const NavItem = ({

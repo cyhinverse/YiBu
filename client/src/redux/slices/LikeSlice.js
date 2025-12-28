@@ -7,7 +7,7 @@ import {
   getBatchLikeStatus,
   getPostLikes,
   getMyLikedPosts,
-} from '../actions/likeActions';
+} from '@/redux/actions/likeActions';
 
 const initialState = {
   likeStatus: {},

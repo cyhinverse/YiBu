@@ -12,7 +12,7 @@ import {
   Send,
   Video,
 } from 'lucide-react';
-import { useCreatePost, useUpdatePost } from '../../../../hooks/usePostsQuery';
+import { useCreatePost, useUpdatePost } from '@/hooks/usePostsQuery';
 
 const PRIVACY_OPTIONS = [
   {

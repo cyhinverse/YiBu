@@ -15,7 +15,7 @@ import {
   useUnreadCount,
   useMarkAsRead,
   useMarkAllAsRead,
-} from '../../hooks/useNotificationQuery';
+} from '@/hooks/useNotificationQuery';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import toast from 'react-hot-toast';

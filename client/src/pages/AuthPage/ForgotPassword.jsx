@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Sparkles, Mail, ArrowLeft, AlertCircle } from "lucide-react";
-import { requestPasswordReset } from "../../redux/actions/authActions";
-import { clearError } from "../../redux/slices/AuthSlice";
+import { requestPasswordReset } from "@/redux/actions/authActions";
+import { clearError } from "@/redux/slices/AuthSlice";
 import toast from "react-hot-toast";
 
 const ForgotPassword = () => {

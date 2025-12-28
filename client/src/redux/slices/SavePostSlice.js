@@ -5,7 +5,7 @@ import {
   checkSaveStatus,
   savePost,
   unsavePost,
-} from '../actions/savePostActions';
+} from '@/redux/actions/savePostActions';
 
 const initialState = {
   savedPosts: [],

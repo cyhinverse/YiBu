@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { FileText, PenSquare, Loader2 } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import Post from './Post';
-import { useHomeFeed } from '../../../../hooks/useFeedQuery';
+import { useHomeFeed } from '@/hooks/useFeedQuery';
 
 const PostLists = ({ activeTab = 'forYou' }) => {
   // React Query Hook

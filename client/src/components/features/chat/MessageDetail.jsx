@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   MessageCircle,
   X,
@@ -30,13 +30,13 @@ import {
   useAddGroupMember,
   useRemoveGroupMember,
   useLeaveGroup,
-} from '../../../hooks/useMessageQuery';
-import { useSocketContext } from '../../../contexts/SocketContext';
+} from '@/hooks/useMessageQuery';
+import { useSocketContext } from '@/contexts/SocketContext';
 import { lazy, Suspense } from 'react';
 
 // Lazy load modals
 const ReportModal = lazy(() =>
-  import('../report').then(module => ({ default: module.ReportModal }))
+  import('../report/ReportModal').then(module => ({ default: module.default }))
 );
 const GroupInfoModal = lazy(() => import('./GroupInfoModal'));
 

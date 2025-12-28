@@ -18,7 +18,7 @@ import {
   searchMessages,
   getUsersForChat,
   getConversationForList,
-} from '../actions/messageActions';
+} from '@/redux/actions/messageActions';
 
 const initialState = {
   conversations: [],

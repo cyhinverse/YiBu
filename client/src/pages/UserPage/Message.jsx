@@ -6,10 +6,10 @@ import {
   useConversations,
   useCreateConversation,
   useCreateGroup,
-} from '../../hooks/useMessageQuery';
-import { useSearchUsers } from '../../hooks/useSearchQuery';
-import ConversationItem from '../../components/features/chat/ConversationItem';
-import CreateGroupModal from '../../components/features/chat/CreateGroupModal';
+} from '@/hooks/useMessageQuery';
+import { useSearchUsers } from '@/hooks/useSearchQuery';
+import ConversationItem from '@/components/features/chat/ConversationItem';
+import CreateGroupModal from '@/components/features/chat/CreateGroupModal';
 import { useDebounce } from '@/hooks/useDebounce';
 
 function Message() {

@@ -13,7 +13,7 @@ import {
   disable2FA,
   getSessions,
   revokeSession,
-} from '../actions/authActions';
+} from '@/redux/actions/authActions';
 
 const initialState = {
   user: null,

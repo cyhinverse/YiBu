@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useSocketContext } from '../contexts/SocketContext';
+import { useSocketContext } from '@/contexts/SocketContext';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   usePostComments,

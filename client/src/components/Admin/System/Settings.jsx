@@ -14,7 +14,7 @@ import {
 import {
   useSystemSettings,
   useUpdateSystemSettings,
-} from '../../../hooks/useAdminQuery';
+} from '@/hooks/useAdminQuery';
 
 export default function Settings() {
   // const dispatch = useDispatch();

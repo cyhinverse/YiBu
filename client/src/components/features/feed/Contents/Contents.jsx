@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
-import CreatePost from '../Posts/CreatePost';
-import PostLists from '../Posts/PostLists';
-import TrendingTopics from '../TrendingTopics/TrendingTopics';
-import TopUser from '../../user/TopUser/TopUser';
+import CreatePost from '@/components/features/feed/Posts/CreatePost';
+import PostLists from '@/components/features/feed/Posts/PostLists';
+import TrendingTopics from '@/components/features/feed/TrendingTopics/TrendingTopics';
+import TopUser from '@/components/features/user/TopUser/TopUser';
 import {
   Search,
   Sparkles,
@@ -12,9 +12,9 @@ import {
   Flame,
   Zap,
 } from 'lucide-react';
-import { useTrendingHashtags } from '../../../../hooks/usePostsQuery';
-import { useSuggestions } from '../../../../hooks/useUserQuery';
-import { useSearchUsers } from '../../../../hooks/useSearchQuery';
+import { useTrendingHashtags } from '@/hooks/usePostsQuery';
+import { useSuggestions } from '@/hooks/useUserQuery';
+import { useSearchUsers } from '@/hooks/useSearchQuery';
 import { useDebounce } from '@/hooks/useDebounce';
 
 const Contents = () => {

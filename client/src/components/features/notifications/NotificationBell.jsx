@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Bell } from 'lucide-react';
-import { useUnreadCount } from '../../../hooks/useNotificationQuery';
+import { useUnreadCount } from '@/hooks/useNotificationQuery';
 import { useQueryClient } from '@tanstack/react-query';
 
 const NotificationBell = ({ onClick }) => {

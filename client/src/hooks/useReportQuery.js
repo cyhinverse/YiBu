@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import api from '../axios/axiosConfig';
-import { REPORT_API } from '../axios/apiEndpoint';
+import api from '@/axios/axiosConfig';
+import { REPORT_API } from '@/axios/apiEndpoint';
 
 // Submit a report
 export const useSubmitReport = () => {

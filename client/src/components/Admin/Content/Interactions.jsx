@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   Calendar,
@@ -14,7 +14,7 @@ import {
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
-import { useAdminInteractions } from '../../../hooks/useAdminQuery';
+import { useAdminInteractions } from '@/hooks/useAdminQuery';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 

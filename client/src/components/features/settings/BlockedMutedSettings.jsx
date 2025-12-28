@@ -14,7 +14,7 @@ import {
   useMutedUsers,
   useUnblockUser,
   useUnmuteUser,
-} from '../../../hooks/useUserQuery';
+} from '@/hooks/useUserQuery';
 
 const BlockedMutedSettings = () => {
   const { data: blockedUsers, isLoading: blockedLoading } = useBlockedUsers();

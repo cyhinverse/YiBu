@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Eye, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
+import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 
 const PrivacySettings = () => {
   const { data: settingsData, isLoading: settingsLoading } = useSettings();

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   MoreHorizontal,
@@ -23,7 +23,7 @@ import {
   useAdminComments,
   useModerateComment,
   useDeleteCommentAdmin,
-} from '../../../hooks/useAdminQuery';
+} from '@/hooks/useAdminQuery';
 import { toast } from 'react-hot-toast';
 
 const getStatusStyle = status => {

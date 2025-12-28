@@ -7,7 +7,7 @@ import {
   useFollowing,
   useFollowUser,
   useUnfollowUser,
-} from '../../../../hooks/useUserQuery';
+} from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
 
 const FollowingUser = () => {

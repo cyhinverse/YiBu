@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { UserPlus, Check, Loader2 } from 'lucide-react';
-import { useFollowUser, useUnfollowUser } from '../../../../hooks/useUserQuery';
+import { useFollowUser, useUnfollowUser } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
 
 const TopUser = ({ users = [], loading = false }) => {

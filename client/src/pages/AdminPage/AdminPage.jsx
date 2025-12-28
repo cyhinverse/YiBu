@@ -1,6 +1,6 @@
 import React, { useState, Suspense, lazy } from 'react';
-import AdminLayout from '../../components/Admin/Layout/AdminLayout';
-import LoadingSpinner from '../../components/Common/LoadingSpinner';
+import AdminLayout from '@/components/Admin/Layout/AdminLayout';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 // Lazy Load Admin Tabs
 const Dashboard = lazy(() =>

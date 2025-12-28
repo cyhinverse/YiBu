@@ -18,7 +18,7 @@ import {
   useDashboardStats,
   useUserGrowth,
   useTopUsers,
-} from '../../../hooks/useAdminQuery';
+} from '@/hooks/useAdminQuery';
 
 const UserGrowthChart = lazy(() => import('./UserGrowthChart'));
 

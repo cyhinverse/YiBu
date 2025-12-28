@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { useSelector } from 'react-redux';
-import useSocket from '../hooks/useSocket';
+import useSocket from '@/hooks/useSocket';
 
 const SocketContext = createContext(null);
 

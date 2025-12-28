@@ -13,7 +13,7 @@ import {
   Loader2,
   Wifi,
 } from 'lucide-react';
-import { useSystemHealth } from '../../../hooks/useAdminQuery';
+import { useSystemHealth } from '@/hooks/useAdminQuery';
 
 const SystemHealth = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());

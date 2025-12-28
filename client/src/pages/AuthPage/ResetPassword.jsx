@@ -10,8 +10,8 @@ import {
   CheckCircle,
   ArrowLeft,
 } from "lucide-react";
-import { resetPassword } from "../../redux/actions/authActions";
-import { clearError } from "../../redux/slices/AuthSlice";
+import { resetPassword } from "@/redux/actions/authActions";
+import { clearError } from "@/redux/slices/AuthSlice";
 import toast from "react-hot-toast";
 
 const ResetPassword = () => {

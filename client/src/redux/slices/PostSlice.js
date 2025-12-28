@@ -14,7 +14,7 @@ import {
   deletePost,
   sharePost,
   reportPost,
-} from '../actions/postActions';
+} from '@/redux/actions/postActions';
 
 const initialState = {
   posts: [],

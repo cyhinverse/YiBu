@@ -17,8 +17,8 @@ import {
   disable2FA,
   getSessions,
   revokeSession,
-} from '../../../redux/actions/authActions';
-import { useSettings, useUpdateSettings } from '../../../hooks/useUserQuery';
+} from '@/redux/actions/authActions';
+import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 
 const SecuritySettings = () => {
   const dispatch = useDispatch();

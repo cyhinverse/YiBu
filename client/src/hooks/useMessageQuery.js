@@ -4,8 +4,8 @@ import {
   useQueryClient,
   useInfiniteQuery,
 } from '@tanstack/react-query';
-import api from '../axios/axiosConfig';
-import { MESSAGE_API } from '../axios/apiEndpoint';
+import api from '@/axios/axiosConfig';
+import { MESSAGE_API } from '@/axios/apiEndpoint';
 
 const extractData = response =>
   response?.data?.data || response?.data || response;
