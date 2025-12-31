@@ -107,7 +107,7 @@ const Explore = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-black dark:text-white mb-4">
+          <h1 className="text-xl font-bold text-content dark:text-white mb-4">
             Explore
           </h1>
 
@@ -122,7 +122,7 @@ const Explore = () => {
               placeholder="Search topics, people, posts..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-600"
+              className="w-full pl-10 pr-10 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-600"
             />
             {searchQuery && (
               <button
@@ -142,7 +142,7 @@ const Explore = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
               >
@@ -181,7 +181,7 @@ const Explore = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Hash size={16} className="text-neutral-400" />
-                      <span className="font-semibold text-black dark:text-white">
+                      <span className="font-semibold text-content dark:text-white">
                         {item.tag?.replace('#', '')}
                       </span>
                       {index < 3 && (
@@ -241,10 +241,10 @@ const Explore = () => {
                         className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                       />
                       {user.isVerified && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center border-2 border-white dark:border-neutral-900">
                           <Check
                             size={8}
-                            className="text-white dark:text-black"
+                            className="text-primary-foreground"
                           />
                         </div>
                       )}
@@ -252,7 +252,7 @@ const Explore = () => {
                     <div className="flex-1 min-w-0">
                       <Link
                         to={`/profile/${user.username}`}
-                        className="font-medium text-black dark:text-white hover:underline truncate block"
+                        className="font-medium text-content dark:text-white hover:underline truncate block"
                       >
                         {user.name || user.username}
                       </Link>
@@ -274,8 +274,8 @@ const Explore = () => {
                             : ''
                         } ${
                           isFollowed
-                            ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
-                            : 'bg-black dark:bg-white text-white dark:text-black'
+                            ? 'bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white border border-neutral-200 dark:border-neutral-700'
+                            : 'bg-primary text-primary-foreground'
                         }`}
                       >
                         {isMutationLoading ? (

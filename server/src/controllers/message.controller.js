@@ -5,6 +5,17 @@ import { formatResponse } from '../helpers/formatResponse.js';
 import { getPaginationParams } from '../helpers/pagination.js';
 import socketService from '../services/Socket.Service.js';
 
+/**
+ * Message Controller
+ * Xử lý tất cả các request liên quan đến tin nhắn và hội thoại
+ *
+ * Các chức năng chính:
+ * - Quản lý hội thoại (conversations)
+ * - Quản lý nhóm chat (groups)
+ * - Gửi/nhận tin nhắn (messages)
+ * - Trạng thái tin nhắn (read/unread)
+ * - Reactions và typing indicators
+ */
 const MessageController = {
   // ======================================
   // Conversations
@@ -327,6 +338,31 @@ const MessageController = {
     return formatResponse(res, 200, 1, 'Success', { unreadCount: count });
   }),
 
+
+  // ======================================
+  // Reactions
+  // ======================================
+
+  AddReaction: CatchError(async (req, res) => {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+    const { emoji } = req.body;
+
+    if (!emoji) {
+      return formatResponse(res, 400, 0, 'Emoji is required');
+    }
+
+    const result = await MessageService.addReaction(messageId, userId, emoji);
+    return formatResponse(res, 200, 1, 'Reaction added', result);
+  }),
+
+  RemoveReaction: CatchError(async (req, res) => {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const result = await MessageService.removeReaction(messageId, userId);
+    return formatResponse(res, 200, 1, 'Reaction removed', result);
+  }),
 
   // ======================================
   // Typing Indicators

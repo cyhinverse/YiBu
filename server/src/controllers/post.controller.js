@@ -6,6 +6,19 @@ import { getPaginationParams } from '../helpers/pagination.js';
 import socketService from '../services/Socket.Service.js';
 import logger from '../configs/logger.js';
 
+/**
+ * Post Controller
+ * Xử lý tất cả các request liên quan đến bài viết
+ *
+ * Các chức năng chính:
+ * - CRUD bài viết (create, read, update, delete)
+ * - Feed và khám phá (home feed, explore, trending)
+ * - Tìm kiếm bài viết và hashtag
+ * - Like/Unlike bài viết
+ * - Lưu bài viết (save/unsave)
+ * - Comment system
+ * - Chia sẻ và báo cáo bài viết
+ */
 const PostController = {
   // ======================================
   // Post CRUD
@@ -450,9 +463,8 @@ const PostController = {
       );
     }
 
-    // Note: updateComment not implemented in new PostService
-    // Would need to add this method
-    return formatResponse(res, 200, 1, 'Feature coming soon');
+    const comment = await PostService.updateComment(id, userId, content);
+    return formatResponse(res, 200, 1, 'Cập nhật comment thành công', comment);
   }),
 
   deleteComment: CatchError(async (req, res) => {

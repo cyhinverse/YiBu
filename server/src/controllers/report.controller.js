@@ -4,6 +4,15 @@ import { getPaginationParams } from "../helpers/pagination.js";
 import ReportService from "../services/Report.Service.js";
 import mongoose from "mongoose";
 
+/**
+ * Report Controller
+ * Xử lý tất cả các request liên quan đến báo cáo vi phạm
+ *
+ * Các chức năng chính:
+ * - Tạo báo cáo (post, comment, user, message)
+ * - Lấy danh sách báo cáo của người dùng
+ * - Admin: Quản lý và xử lý báo cáo
+ */
 const ReportController = {
   // ======================================
   // Create Reports

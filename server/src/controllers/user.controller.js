@@ -3,6 +3,17 @@ import UserService from '../services/User.Service.js';
 import { formatResponse } from '../helpers/formatResponse.js';
 import logger from '../configs/logger.js';
 
+/**
+ * User Controller
+ * Xử lý tất cả các request liên quan đến người dùng
+ *
+ * Các chức năng chính:
+ * - Quản lý thông tin người dùng (profile)
+ * - Tìm kiếm và gợi ý người dùng
+ * - Hệ thống follow/unfollow
+ * - Cài đặt người dùng (privacy, notifications, security)
+ * - Block và mute người dùng
+ */
 const UserController = {
   // ======================================
   // User Core

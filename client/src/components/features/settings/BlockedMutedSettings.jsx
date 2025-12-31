@@ -72,7 +72,7 @@ const BlockedMutedSettings = () => {
           className="w-10 h-10 rounded-full object-cover"
         />
         <div>
-          <p className="text-sm font-medium text-black dark:text-white">
+          <p className="text-sm font-medium text-content dark:text-white">
             {user.fullName || user.username}
           </p>
           <p className="text-xs text-neutral-500">@{user.username}</p>
@@ -106,7 +106,7 @@ const BlockedMutedSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Người dùng bị chặn & ẩn
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -120,8 +120,8 @@ const BlockedMutedSettings = () => {
           onClick={() => setActiveTab('blocked')}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'blocked'
-              ? 'border-black dark:border-white text-black dark:text-white'
-              : 'border-transparent text-neutral-500 hover:text-black dark:hover:text-white'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-neutral-500 hover:text-content dark:hover:text-white'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -133,8 +133,8 @@ const BlockedMutedSettings = () => {
           onClick={() => setActiveTab('muted')}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'muted'
-              ? 'border-black dark:border-white text-black dark:text-white'
-              : 'border-transparent text-neutral-500 hover:text-black dark:hover:text-white'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-neutral-500 hover:text-content dark:hover:text-white'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ const BlockedMutedSettings = () => {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm người dùng..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -194,14 +194,14 @@ const BlockedMutedSettings = () => {
 
       {/* Info Section */}
       <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700">
-        <h4 className="text-sm font-medium text-black dark:text-white mb-2">
+        <h4 className="text-sm font-medium text-content dark:text-white mb-2">
           Sự khác biệt giữa Chặn và Ẩn
         </h4>
         <div className="space-y-2 text-xs text-neutral-500">
           <div className="flex items-start gap-2">
             <Ban size={14} className="mt-0.5 text-red-500" />
             <p>
-              <span className="font-medium text-black dark:text-white">
+              <span className="font-medium text-content dark:text-white">
                 Chặn:
               </span>{' '}
               Người dùng không thể xem profile, gửi tin nhắn hoặc tương tác với
@@ -211,7 +211,7 @@ const BlockedMutedSettings = () => {
           <div className="flex items-start gap-2">
             <VolumeX size={14} className="mt-0.5 text-amber-500" />
             <p>
-              <span className="font-medium text-black dark:text-white">
+              <span className="font-medium text-content dark:text-white">
                 Ẩn:
               </span>{' '}
               Bài viết của người dùng sẽ không hiển thị trong feed của bạn,

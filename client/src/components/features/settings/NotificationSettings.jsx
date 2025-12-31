@@ -74,14 +74,14 @@ const NotificationSettings = () => {
         disabled ? 'opacity-50 cursor-not-allowed' : ''
       } ${
         enabled
-          ? 'bg-black dark:bg-white'
+          ? 'bg-primary'
           : 'bg-neutral-200 dark:bg-neutral-700'
       }`}
     >
       <div
         className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
           enabled
-            ? 'translate-x-5 bg-white dark:bg-black'
+            ? 'translate-x-5 bg-primary-foreground'
             : 'translate-x-0.5 bg-white dark:bg-neutral-400'
         }`}
       />
@@ -95,7 +95,7 @@ const NotificationSettings = () => {
           <Icon size={18} className="text-neutral-500" />
         </div>
         <div>
-          <p className="text-sm font-medium text-black dark:text-white">
+          <p className="text-sm font-medium text-content dark:text-white">
             {label}
           </p>
           <p className="text-xs text-neutral-500">{description}</p>
@@ -120,7 +120,7 @@ const NotificationSettings = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Notifications
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -133,7 +133,7 @@ const NotificationSettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Activity
             </h3>
           </div>
@@ -177,7 +177,7 @@ const NotificationSettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Mail size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Delivery Methods
             </h3>
           </div>
@@ -185,7 +185,7 @@ const NotificationSettings = () => {
         <div className="p-4">
           <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800">
             <div>
-              <p className="text-sm font-medium text-black dark:text-white">
+              <p className="text-sm font-medium text-content dark:text-white">
                 Push Notifications
               </p>
               <p className="text-xs text-neutral-500">
@@ -200,7 +200,7 @@ const NotificationSettings = () => {
           </div>
           <div className="flex items-center justify-between py-4">
             <div>
-              <p className="text-sm font-medium text-black dark:text-white">
+              <p className="text-sm font-medium text-content dark:text-white">
                 Email Notifications
               </p>
               <p className="text-xs text-neutral-500">

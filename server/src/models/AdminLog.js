@@ -10,7 +10,6 @@ const AdminLogSchema = new mongoose.Schema(
     action: {
       type: String,
       required: true,
-      // e.g., 'ban_user', 'delete_post', 'update_settings'
     },
     targetType: {
       type: String,

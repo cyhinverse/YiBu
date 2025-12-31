@@ -130,7 +130,17 @@ router.get('/unread-count', MessageController.GetUnreadCount);
 // ======================================
 // Reactions
 // ======================================
-
+router.post(
+  '/messages/:messageId/reactions',
+  validateParams(addReactionParam),
+  validateBody(addReactionBody),
+  MessageController.AddReaction
+);
+router.delete(
+  '/messages/:messageId/reactions',
+  validateParams(removeReactionParam),
+  MessageController.RemoveReaction
+);
 
 // ======================================
 // Typing & Search

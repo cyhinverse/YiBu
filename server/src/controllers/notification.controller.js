@@ -4,6 +4,17 @@ import { formatResponse } from "../helpers/formatResponse.js";
 import { getPaginationParams } from "../helpers/pagination.js";
 import socketService from "../services/Socket.Service.js";
 
+/**
+ * Notification Controller
+ * Xử lý tất cả các request liên quan đến thông báo
+ *
+ * Các chức năng chính:
+ * - Tạo và lấy thông báo
+ * - Đánh dấu đã đọc (mark as read)
+ * - Xóa thông báo
+ * - Thống kê thông báo chưa đọc
+ * - Cài đặt thông báo (preferences)
+ */
 const NotificationController = {
   // ======================================
   // Create Notification (Admin/System use)

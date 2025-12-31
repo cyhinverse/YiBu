@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Monitor, Check, Loader2, X } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 
@@ -179,68 +179,139 @@ const ThemeSettings = () => {
     }
   };
 
-  const ColorSection = ({ title, type, options, value }) => (
-    <div className="mb-6">
-      <h3 className="text-sm font-medium text-black dark:text-white mb-3 flex justify-between items-center">
-        {title}
-        {value && (
-          <span className="text-xs font-normal text-neutral-500 uppercase">
-            {value}
-          </span>
-        )}
-      </h3>
-      <div className="flex flex-wrap gap-2">
-        {options.map(option => (
-          <button
-            key={option.label}
-            onClick={() => handleUpdate(type, option.value)}
-            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-              value === option.value
-                ? 'border-black dark:border-white scale-110'
-                : 'border-transparent hover:scale-105'
-            }`}
-            title={option.label}
-            style={{ backgroundColor: option.value || 'transparent' }}
-          >
-            {!option.value && <X className="text-neutral-500" size={14} />}
-            {value === option.value && option.value && (
-              <Check size={12} className="text-white drop-shadow-md" />
-            )}
-          </button>
-        ))}
-        {/* Custom Color Picker */}
-        <div className="relative group">
-          <div
-            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center overflow-hidden transition-all ${
-              // If active value is NOT in presets, mark custom as active
-              !options.some(o => o.value === value) && value
-                ? 'border-black dark:border-white scale-110'
-                : 'border-neutral-200 dark:border-neutral-700'
-            }`}
-          >
-            <input
-              type="color"
-              value={value || '#000000'}
-              onChange={e => handleUpdate(type, e.target.value)}
-              className="w-[150%] h-[150%] p-0 m-0 -translate-x-[25%] -translate-y-[25%] cursor-pointer opacity-0 absolute inset-0 z-10"
-            />
-            <div
-              className="w-full h-full"
-              style={{ backgroundColor: value || 'transparent' }}
-            />
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover:opacity-0 transition-opacity">
-              +
+  const ColorSection = ({ title, type, options, value }) => {
+    const [showCustomPicker, setShowCustomPicker] = useState(false);
+    const [tempColor, setTempColor] = useState(value || '#000000');
+    const pickerRef = useRef(null);
+
+    const isCustomColor = value && !options.some(o => o.value === value);
+
+    // Close picker when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (pickerRef.current && !pickerRef.current.contains(event.target)) {
+          setShowCustomPicker(false);
+        }
+      };
+
+      if (showCustomPicker) {
+        document.addEventListener('mousedown', handleClickOutside);
+      }
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [showCustomPicker]);
+
+    const handleApplyColor = () => {
+      handleUpdate(type, tempColor);
+      setShowCustomPicker(false);
+    };
+
+    const handleOpenPicker = () => {
+      setTempColor(value || '#000000');
+      setShowCustomPicker(true);
+    };
+
+    return (
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-content dark:text-white mb-3 flex justify-between items-center">
+          {title}
+          {value && (
+            <span className="text-xs font-normal text-neutral-500 uppercase">
+              {value}
             </span>
+          )}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {options.map(option => (
+            <button
+              key={option.label}
+              onClick={() => handleUpdate(type, option.value)}
+              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                value === option.value
+                  ? 'border-primary scale-110'
+                  : 'border-transparent hover:scale-105'
+              }`}
+              title={option.label}
+              style={{ backgroundColor: option.value || 'transparent' }}
+            >
+              {!option.value && <X className="text-neutral-500" size={14} />}
+              {value === option.value && option.value && (
+                <Check size={12} className="text-white drop-shadow-md" />
+              )}
+            </button>
+          ))}
+          {/* Custom Color Picker */}
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={handleOpenPicker}
+              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${
+                isCustomColor
+                  ? 'border-primary scale-110'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:scale-105'
+              }`}
+              style={{ backgroundColor: isCustomColor ? value : '#e5e5e5' }}
+            >
+              {!isCustomColor && (
+                <span className="text-xs font-medium text-neutral-500">+</span>
+              )}
+              {isCustomColor && (
+                <Check size={12} className="text-white drop-shadow-md" />
+              )}
+            </button>
+
+            {/* Custom Color Picker Popup */}
+            {showCustomPicker && (
+              <div 
+                className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-700 z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="color"
+                    value={tempColor}
+                    onChange={(e) => setTempColor(e.target.value)}
+                    className="w-32 h-32 cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tempColor}
+                      onChange={(e) => setTempColor(e.target.value)}
+                      className="flex-1 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-600 rounded bg-transparent text-content dark:text-white"
+                      placeholder="#000000"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomPicker(false)}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApplyColor}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Appearance
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -250,7 +321,7 @@ const ThemeSettings = () => {
 
       {/* Theme Selection */}
       <div>
-        <h3 className="text-sm font-medium text-black dark:text-white mb-4">
+        <h3 className="text-sm font-medium text-content dark:text-white mb-4">
           Theme mode
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -265,14 +336,14 @@ const ThemeSettings = () => {
                   : ''
               } ${
                 theme.appearance === item.id
-                  ? 'border-black dark:border-white bg-neutral-50 dark:bg-neutral-800'
+                  ? 'border-primary bg-neutral-50 dark:bg-neutral-800'
                   : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center ${
                   theme.appearance === item.id
-                    ? 'bg-black dark:bg-white'
+                    ? 'bg-primary'
                     : 'bg-neutral-100 dark:bg-neutral-800'
                 }`}
               >
@@ -280,7 +351,7 @@ const ThemeSettings = () => {
                   size={20}
                   className={
                     theme.appearance === item.id
-                      ? 'text-white dark:text-black'
+                      ? 'text-primary-foreground'
                       : 'text-neutral-500'
                   }
                 />
@@ -289,7 +360,7 @@ const ThemeSettings = () => {
                 <p
                   className={`text-sm font-medium ${
                     theme.appearance === item.id
-                      ? 'text-black dark:text-white'
+                      ? 'text-content dark:text-white'
                       : 'text-neutral-600 dark:text-neutral-400'
                   }`}
                 >
@@ -300,8 +371,8 @@ const ThemeSettings = () => {
                 </p>
               </div>
               {theme.appearance === item.id && (
-                <div className="absolute top-2 right-2 w-5 h-5 bg-black dark:bg-white rounded-full flex items-center justify-center">
-                  <Check size={12} className="text-white dark:text-black" />
+                <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                  <Check size={12} className="text-primary-foreground" />
                 </div>
               )}
             </button>
@@ -311,7 +382,7 @@ const ThemeSettings = () => {
 
       {/* Font Size */}
       <div>
-        <h3 className="text-sm font-medium text-black dark:text-white mb-4">
+        <h3 className="text-sm font-medium text-content dark:text-white mb-4">
           Font Size
         </h3>
         <div className="flex gap-3">
@@ -326,14 +397,14 @@ const ThemeSettings = () => {
                   : ''
               } ${
                 theme.fontSize === item.id
-                  ? 'border-black dark:border-white bg-neutral-50 dark:bg-neutral-800'
+                  ? 'border-primary bg-neutral-50 dark:bg-neutral-800'
                   : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               <span
                 className={`${item.size} ${
                   theme.fontSize === item.id
-                    ? 'text-black dark:text-white font-medium'
+                    ? 'text-content dark:text-white font-medium'
                     : 'text-neutral-500'
                 }`}
               >
@@ -348,7 +419,7 @@ const ThemeSettings = () => {
 
       {/* Colors */}
       <div>
-        <h2 className="text-lg font-bold text-black dark:text-white mb-4">
+        <h2 className="text-lg font-bold text-content dark:text-white mb-4">
           Color Customization
         </h2>
 
@@ -383,7 +454,7 @@ const ThemeSettings = () => {
 
       {/* Preview */}
       <div>
-        <h3 className="text-sm font-medium text-black dark:text-white mb-4">
+        <h3 className="text-sm font-medium text-content dark:text-white mb-4">
           Preview
         </h3>
         <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">

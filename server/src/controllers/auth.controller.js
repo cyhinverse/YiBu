@@ -3,6 +3,19 @@ import AuthService from "../services/Auth.Service.js";
 import { formatResponse } from "../helpers/formatResponse.js";
 import logger from "../configs/logger.js";
 
+/**
+ * Auth Controller
+ * Xử lý tất cả các request liên quan đến xác thực
+ *
+ * Các chức năng chính:
+ * - Đăng ký và đăng nhập (register, login)
+ * - Quản lý token (refresh, logout)
+ * - Quản lý mật khẩu (change, reset)
+ * - Xác thực email
+ * - Two-Factor Authentication (2FA)
+ * - Quản lý phiên đăng nhập (sessions)
+ * - OAuth (Google)
+ */
 const AuthController = {
   // ======================================
   // Registration & Login

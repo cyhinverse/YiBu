@@ -8,14 +8,39 @@
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-      // Apply dark mode immediately to prevent flash
+      // Apply theme settings immediately to prevent flash of unstyled content
       (function () {
-        const theme = localStorage.getItem("theme");
-        if (
-          theme === "dark" ||
-          (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)
-        ) {
-          document.documentElement.classList.add("dark");
+        var root = document.documentElement;
+        
+        // Apply dark/light mode
+        var theme = localStorage.getItem("theme");
+        if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          root.classList.add("dark");
+        } else if (theme === "light") {
+          root.classList.add("light");
+        } else {
+          // System preference
+          root.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        }
+        
+        // Apply custom colors
+        var primaryColor = localStorage.getItem("primaryColor");
+        var secondaryColor = localStorage.getItem("secondaryColor");
+        var textColor = localStorage.getItem("textColor");
+        var fontSize = localStorage.getItem("fontSize");
+        
+        if (primaryColor) {
+          root.style.setProperty("--color-primary", primaryColor);
+        }
+        if (secondaryColor) {
+          root.style.setProperty("--color-secondary", secondaryColor);
+        }
+        if (textColor) {
+          root.style.setProperty("--color-content", textColor);
+        }
+        if (fontSize) {
+          var sizeMap = { small: "14px", medium: "16px", large: "18px" };
+          root.style.fontSize = sizeMap[fontSize] || "16px";
         }
       })();
     </script>

@@ -65,7 +65,7 @@ const Profile = () => {
   );
 
   const userPosts =
-    userPostsData?.pages?.flatMap(page => page.posts || page) || [];
+    userPostsData?.pages?.flatMap(page => page.posts || []) || [];
 
   // Liked Posts Query (Only for own profile)
   const { data: likedPostsData, isLoading: isLikesLoading } = useLikedPosts(
@@ -89,7 +89,7 @@ const Profile = () => {
   );
 
   const sharedPosts =
-    sharedPostsData?.pages?.flatMap(page => page.posts || page) || [];
+    sharedPostsData?.pages?.flatMap(page => page.posts || []) || [];
 
   // Mutations
   const followMutation = useFollowUser();
@@ -257,7 +257,7 @@ const Profile = () => {
           );
         }
         return savedPosts.map((post, index) => (
-          <Post key={post._id || index} data={post.post || post} />
+          <Post key={post._id || index} data={post} />
         ));
 
       default:

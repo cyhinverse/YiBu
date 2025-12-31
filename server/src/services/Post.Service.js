@@ -1060,6 +1060,29 @@ class PostService {
     }
   }
 
+  static async updateComment(commentId, userId, content) {
+    const comment = await Comment.findOne({
+      _id: commentId,
+      user: userId,
+      isDeleted: false,
+    });
+
+    if (!comment) {
+      throw new Error('Comment not found or unauthorized');
+    }
+
+    comment.content = content.trim();
+    comment.isEdited = true;
+    comment.editedAt = new Date();
+    await comment.save();
+
+    const populatedComment = await Comment.findById(comment._id)
+      .populate('user', 'username name avatar verified')
+      .lean();
+
+    return populatedComment;
+  }
+
   static async likeComment(commentId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
