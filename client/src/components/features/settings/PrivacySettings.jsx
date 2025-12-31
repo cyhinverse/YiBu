@@ -47,7 +47,7 @@ const PrivacySettings = () => {
   }) => (
     <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
       <div>
-        <p className="text-sm font-medium text-black dark:text-white">
+        <p className="text-sm font-medium text-content dark:text-white">
           {label}
         </p>
         <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
@@ -59,14 +59,14 @@ const PrivacySettings = () => {
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         } ${
           enabled
-            ? 'bg-black dark:bg-white'
+            ? 'bg-primary'
             : 'bg-neutral-200 dark:bg-neutral-700'
         }`}
       >
         <div
           className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
             enabled
-              ? 'translate-x-5 bg-white dark:bg-black'
+              ? 'translate-x-5 bg-primary-foreground'
               : 'translate-x-0.5 bg-white dark:bg-neutral-400'
           }`}
         />
@@ -85,7 +85,7 @@ const PrivacySettings = () => {
     <div className="py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="text-sm font-medium text-black dark:text-white">
+          <p className="text-sm font-medium text-content dark:text-white">
             {label}
           </p>
           <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
@@ -101,7 +101,7 @@ const PrivacySettings = () => {
               disabled ? 'opacity-50 cursor-not-allowed' : ''
             } ${
               value === option.value
-                ? 'bg-black dark:bg-white text-white dark:text-black'
+                ? 'bg-primary text-primary-foreground'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
             }`}
           >
@@ -123,7 +123,7 @@ const PrivacySettings = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Privacy
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -136,7 +136,7 @@ const PrivacySettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Eye size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Visibility
             </h3>
           </div>
@@ -174,7 +174,7 @@ const PrivacySettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <MessageCircle size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Interactions
             </h3>
           </div>

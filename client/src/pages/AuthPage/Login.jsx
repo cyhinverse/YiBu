@@ -143,7 +143,7 @@ const Login = () => {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-3xl font-bold text-black dark:text-white mb-2">
+            <h2 className="text-3xl font-bold text-content dark:text-white mb-2">
               Welcome back
             </h2>
             <p className="text-neutral-500">Sign in to continue to YiBu</p>
@@ -152,7 +152,7 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-black dark:text-white">
+              <label className="text-sm font-medium text-content dark:text-white">
                 Email
               </label>
               <div className="relative">
@@ -166,7 +166,7 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="name@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
+                  className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -174,7 +174,7 @@ const Login = () => {
             {/* Password */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Password
                 </label>
                 <Link
@@ -195,7 +195,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
+                  className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
                 />
                 <button
                   type="button"

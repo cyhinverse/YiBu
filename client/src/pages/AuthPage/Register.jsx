@@ -114,7 +114,7 @@ const Register = () => {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-3xl font-bold text-black dark:text-white mb-2">
+            <h2 className="text-3xl font-bold text-content dark:text-white mb-2">
               Create account
             </h2>
             <p className="text-neutral-500">
@@ -126,7 +126,7 @@ const Register = () => {
             {/* Name & Username row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Full Name
                 </label>
                 <div className="relative">
@@ -140,12 +140,12 @@ const Register = () => {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="John Doe"
-                    className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
+                    className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Username
                 </label>
                 <div className="relative">
@@ -159,7 +159,7 @@ const Register = () => {
                     value={formData.username}
                     onChange={handleChange}
                     placeholder="johndoe"
-                    className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
+                    className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
                   />
                 </div>
               </div>
@@ -167,7 +167,7 @@ const Register = () => {
 
             {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-black dark:text-white">
+              <label className="text-sm font-medium text-content dark:text-white">
                 Email
               </label>
               <div className="relative">
@@ -181,14 +181,14 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="name@example.com"
-                  className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
+                  className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-black dark:text-white">
+              <label className="text-sm font-medium text-content dark:text-white">
                 Password
               </label>
               <div className="relative">
@@ -202,7 +202,7 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Create a strong password"
-                  className="w-full pl-12 pr-12 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
+                  className="w-full pl-12 pr-12 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors text-sm"
                 />
                 <button
                   type="button"
@@ -219,14 +219,14 @@ const Register = () => {
               By creating an account, you agree to our{" "}
               <Link
                 to="#"
-                className="text-black dark:text-white hover:underline"
+                className="text-content dark:text-white hover:underline"
               >
                 Terms
               </Link>{" "}
               and{" "}
               <Link
                 to="#"
-                className="text-black dark:text-white hover:underline"
+                className="text-content dark:text-white hover:underline"
               >
                 Privacy Policy
               </Link>
@@ -263,7 +263,7 @@ const Register = () => {
             {/* Social Login */}
             <button
               type="button"
-              className="w-full py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-3"
+              className="w-full py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-content dark:text-white font-medium rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

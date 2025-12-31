@@ -138,7 +138,7 @@ export const getAdminUserPosts = createAsyncThunk(
   'admin/getAdminUserPosts',
   async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/api/admin/users/${userId}/posts`, {
+      const response = await api.get(ADMIN_API.GET_USER_POSTS(userId), {
         params: { page, limit },
       });
       return extractData(response);
@@ -155,7 +155,7 @@ export const getAdminUserReports = createAsyncThunk(
   'admin/getAdminUserReports',
   async ({ userId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/api/admin/users/${userId}/reports`, {
+      const response = await api.get(ADMIN_API.GET_USER_REPORTS(userId), {
         params: { page, limit },
       });
       return extractData(response);
@@ -304,7 +304,7 @@ export const getAdminPostReports = createAsyncThunk(
   'admin/getPostReports',
   async ({ postId, page = 1, limit = 20 }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/api/admin/posts/${postId}/reports`, {
+      const response = await api.get(ADMIN_API.GET_POST_REPORTS(postId), {
         params: { page, limit },
       });
       return extractData(response);

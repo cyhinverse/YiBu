@@ -96,6 +96,21 @@ const MessageSchema = new Schema(
     editedAt: {
       type: Date,
     },
+
+    // Reactions
+    reactions: [
+      {
+        user: { type: Types.ObjectId, ref: "User", required: true },
+        emoji: { type: String, required: true, maxlength: 10 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Global soft delete flag
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     collection: "Messages",

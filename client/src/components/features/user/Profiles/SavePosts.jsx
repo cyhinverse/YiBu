@@ -50,9 +50,9 @@ const SavePosts = () => {
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Bookmark size={24} className="text-black dark:text-white" />
+            <Bookmark size={24} className="text-content dark:text-white" />
             <div>
-              <h1 className="text-lg font-bold text-black dark:text-white">
+              <h1 className="text-lg font-bold text-content dark:text-white">
                 Saved Posts
               </h1>
               <p className="text-sm text-neutral-500">
@@ -65,7 +65,7 @@ const SavePosts = () => {
               onClick={() => setViewMode('list')}
               className={`p-2 rounded-lg transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-black dark:bg-white text-white dark:text-black'
+                  ? 'bg-primary text-primary-foreground'
                   : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }`}
             >
@@ -75,7 +75,7 @@ const SavePosts = () => {
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-lg transition-colors ${
                 viewMode === 'grid'
-                  ? 'bg-black dark:bg-white text-white dark:text-black'
+                  ? 'bg-primary text-primary-foreground'
                   : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }`}
             >
@@ -93,7 +93,7 @@ const SavePosts = () => {
       ) : posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
           <Bookmark size={48} className="mb-4 text-neutral-300" />
-          <h2 className="text-lg font-semibold text-black dark:text-white mb-2">
+          <h2 className="text-lg font-semibold text-content dark:text-white mb-2">
             No saved posts
           </h2>
           <p className="text-sm">Posts you save will appear here</p>
@@ -156,7 +156,7 @@ const SavePosts = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-black dark:text-white">
+              <h3 className="text-lg font-bold text-content dark:text-white">
                 Remove from saved?
               </h3>
               <button
@@ -172,7 +172,7 @@ const SavePosts = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 Cancel
               </button>

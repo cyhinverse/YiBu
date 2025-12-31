@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "@/axios/axiosConfig";
+import api, { updateAccessToken, clearTokenRefresh } from "@/axios/axiosConfig";
 import { AUTH_API } from "@/axios/apiEndpoint";
 
 // Login
@@ -8,9 +8,9 @@ export const login = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.LOGIN, credentials);
-      // Save token to localStorage
+      // Save token to localStorage and schedule refresh
       if (response.data.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
+        updateAccessToken(response.data.accessToken);
       }
       // Server returns { data: user, accessToken }, transform to { user, accessToken }
       return {
@@ -31,9 +31,9 @@ export const register = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.REGISTER, userData);
-      // Save token to localStorage
+      // Save token to localStorage and schedule refresh
       if (response.data.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
+        updateAccessToken(response.data.accessToken);
       }
       // Server returns { data: user, accessToken }, transform to { user, accessToken }
       return {
@@ -54,9 +54,9 @@ export const googleAuth = createAsyncThunk(
   async (tokenData, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.GOOGLE_AUTH, tokenData);
-      // Save token to localStorage
+      // Save token to localStorage and schedule refresh
       if (response.data.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
+        updateAccessToken(response.data.accessToken);
       }
       // Server returns { data: user, accessToken }, transform to { user, accessToken }
       return {
@@ -77,11 +77,13 @@ export const logout = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       await api.post(AUTH_API.LOGOUT);
-      // Clear token from localStorage
+      // Clear token and refresh timer
+      clearTokenRefresh();
       localStorage.removeItem("accessToken");
       return true;
     } catch (error) {
       // Still clear token even if API fails
+      clearTokenRefresh();
       localStorage.removeItem("accessToken");
       return rejectWithValue(
         error.response?.data?.message || "Đăng xuất thất bại"
@@ -96,11 +98,13 @@ export const logoutAll = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       await api.post(AUTH_API.LOGOUT_ALL);
-      // Clear token from localStorage
+      // Clear token and refresh timer
+      clearTokenRefresh();
       localStorage.removeItem("accessToken");
       return true;
     } catch (error) {
       // Still clear token even if API fails
+      clearTokenRefresh();
       localStorage.removeItem("accessToken");
       return rejectWithValue(
         error.response?.data?.message || "Đăng xuất tất cả thiết bị thất bại"
@@ -115,14 +119,13 @@ export const refreshToken = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.REFRESH_TOKEN);
-      // Save new token to localStorage
+      // Save new token to localStorage and schedule next refresh
       if (response.data.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
+        updateAccessToken(response.data.accessToken);
       }
       return response.data;
     } catch (error) {
-      // Clear token if refresh fails
-      localStorage.removeItem("accessToken");
+      // Don't clear token immediately - let axios interceptor handle retries
       return rejectWithValue(
         error.response?.data?.message || "Làm mới token thất bại"
       );

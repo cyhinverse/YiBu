@@ -66,7 +66,7 @@ const SideBarSettings = () => {
   return (
     <div className="h-full overflow-hidden rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col">
       <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
-        <h2 className="text-xl font-bold text-black dark:text-white">
+        <h2 className="text-xl font-bold text-content dark:text-white">
           Settings
         </h2>
       </div>

@@ -30,7 +30,7 @@ const InputField = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-black dark:text-white">
+      <label className="text-sm font-medium text-content dark:text-white">
         {label}
       </label>
       <div className="relative">
@@ -46,7 +46,7 @@ const InputField = ({
             onChange={onChange}
             placeholder={placeholder}
             rows={3}
-            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         ) : (
           <input
@@ -56,7 +56,7 @@ const InputField = ({
             placeholder={placeholder}
             className={`w-full pl-10 ${
               rightElement ? 'pr-12' : 'pr-4'
-            } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
+            } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
           />
         )}
         {rightElement && (
@@ -183,7 +183,7 @@ const ProfileSettings = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Edit Profile
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -243,7 +243,7 @@ const ProfileSettings = () => {
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
           >
             Change Photo
           </button>
@@ -305,7 +305,7 @@ const ProfileSettings = () => {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+          className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
         >
           {isSaving && <Loader2 size={16} className="animate-spin" />}
           {isSaving ? 'Saving...' : 'Save Changes'}

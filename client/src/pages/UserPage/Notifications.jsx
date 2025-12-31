@@ -98,15 +98,15 @@ const Notifications = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto min-h-screen bg-white dark:bg-black">
+    <div className="max-w-2xl mx-auto min-h-screen bg-white dark:bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Bell size={24} className="text-black dark:text-white" />
+              <Bell size={24} className="text-content dark:text-white" />
               <div>
-                <h1 className="text-xl font-bold text-black dark:text-white">
+                <h1 className="text-xl font-bold text-content dark:text-white">
                   Thông báo
                 </h1>
                 {unreadCount > 0 && (
@@ -120,7 +120,7 @@ const Notifications = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-sm text-black dark:text-white font-medium hover:underline"
+                  className="text-sm text-content dark:text-white font-medium hover:underline"
                 >
                   Đánh dấu tất cả đã đọc
                 </button>
@@ -143,7 +143,7 @@ const Notifications = () => {
                 onClick={() => handleFilterChange(filter.id)}
                 className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
                   activeFilter === filter.id
-                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -162,7 +162,7 @@ const Notifications = () => {
       ) : filteredNotifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
           <Bell size={48} className="mb-4 text-neutral-300" />
-          <h2 className="text-lg font-semibold text-black dark:text-white mb-2">
+          <h2 className="text-lg font-semibold text-content dark:text-white mb-2">
             Không có thông báo nào
           </h2>
           <p className="text-sm">Bạn đã cập nhật tất cả!</p>
@@ -200,7 +200,7 @@ const Notifications = () => {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-black dark:text-white">
+                  <p className="text-sm text-content dark:text-white">
                     <Link
                       to={`/profile/${sender.username}`}
                       className="font-bold hover:underline"

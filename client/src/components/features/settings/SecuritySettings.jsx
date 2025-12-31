@@ -132,7 +132,7 @@ const SecuritySettings = () => {
   }) => (
     <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
       <div>
-        <p className="text-sm font-medium text-black dark:text-white">
+        <p className="text-sm font-medium text-content dark:text-white">
           {label}
         </p>
         <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
@@ -144,14 +144,14 @@ const SecuritySettings = () => {
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         } ${
           enabled
-            ? 'bg-black dark:bg-white'
+            ? 'bg-primary'
             : 'bg-neutral-200 dark:bg-neutral-700'
         }`}
       >
         <div
           className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
             enabled
-              ? 'translate-x-5 bg-white dark:bg-black'
+              ? 'translate-x-5 bg-primary-foreground'
               : 'translate-x-0.5 bg-white dark:bg-neutral-400'
           }`}
         />
@@ -170,7 +170,7 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Bảo mật
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -183,7 +183,7 @@ const SecuritySettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Key size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Xác thực hai yếu tố (2FA)
             </h3>
           </div>
@@ -205,7 +205,7 @@ const SecuritySettings = () => {
                 )}
               </div>
               <div>
-                <p className="text-sm font-medium text-black dark:text-white">
+                <p className="text-sm font-medium text-content dark:text-white">
                   {security.twoFactorEnabled ? 'Đã bật 2FA' : 'Chưa bật 2FA'}
                 </p>
                 <p className="text-xs text-neutral-500">
@@ -222,7 +222,7 @@ const SecuritySettings = () => {
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 security.twoFactorEnabled
                   ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50'
-                  : 'bg-black text-white dark:bg-white dark:text-black hover:opacity-80'
+                  : 'bg-primary text-primary-foreground hover:opacity-80'
               }`}
             >
               {security.twoFactorEnabled ? 'Tắt 2FA' : 'Bật 2FA'}
@@ -236,7 +236,7 @@ const SecuritySettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Tùy chọn bảo mật
             </h3>
           </div>
@@ -271,7 +271,7 @@ const SecuritySettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Monitor size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Phiên đăng nhập
             </h3>
           </div>
@@ -292,7 +292,7 @@ const SecuritySettings = () => {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-black dark:text-white">
+                    <p className="text-sm font-medium text-content dark:text-white">
                       {session.browser} trên {session.os}
                     </p>
                     <p className="text-xs text-neutral-500">
@@ -325,7 +325,7 @@ const SecuritySettings = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
-              <h3 className="text-lg font-semibold text-black dark:text-white">
+              <h3 className="text-lg font-semibold text-content dark:text-white">
                 Thiết lập xác thực hai yếu tố
               </h3>
             </div>
@@ -340,7 +340,7 @@ const SecuritySettings = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                <label className="block text-sm font-medium text-content dark:text-white mb-2">
                   Mã xác nhận
                 </label>
                 <input
@@ -350,7 +350,7 @@ const SecuritySettings = () => {
                     setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))
                   }
                   placeholder="Nhập mã 6 số"
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white text-center text-lg tracking-widest"
+                  className="w-full px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white text-center text-lg tracking-widest"
                 />
               </div>
             </div>
@@ -367,7 +367,7 @@ const SecuritySettings = () => {
               <button
                 onClick={handleVerify2FA}
                 disabled={verifying || verifyCode.length !== 6}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-black dark:bg-white dark:text-black rounded-lg hover:opacity-80 disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:opacity-80 disabled:opacity-50"
               >
                 {verifying ? (
                   <Loader2 className="w-4 h-4 animate-spin mx-auto" />

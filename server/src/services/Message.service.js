@@ -707,6 +707,86 @@ class MessageService {
     };
   }
 
+  // ======================================
+  // Reactions
+  // ======================================
+
+  static async addReaction(messageId, userId, emoji) {
+    const message = await Message.findOne({
+      _id: messageId,
+      isDeleted: false,
+    });
+
+    if (!message) {
+      throw new Error('Tin nhắn không tồn tại');
+    }
+
+    // Initialize reactions array if not exists
+    if (!message.reactions) {
+      message.reactions = [];
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReactionIndex = message.reactions.findIndex(
+      r => r.user.toString() === userId.toString() && r.emoji === emoji
+    );
+
+    if (existingReactionIndex > -1) {
+      // Remove existing reaction (toggle off)
+      message.reactions.splice(existingReactionIndex, 1);
+    } else {
+      // Remove any existing reaction from this user first
+      message.reactions = message.reactions.filter(
+        r => r.user.toString() !== userId.toString()
+      );
+      // Add new reaction
+      message.reactions.push({
+        user: userId,
+        emoji,
+        createdAt: new Date(),
+      });
+    }
+
+    await message.save();
+
+    // Emit socket event for real-time update
+    socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
+      messageId,
+      reactions: message.reactions,
+    });
+
+    return { success: true, reactions: message.reactions };
+  }
+
+  static async removeReaction(messageId, userId) {
+    const message = await Message.findOne({
+      _id: messageId,
+      isDeleted: false,
+    });
+
+    if (!message) {
+      throw new Error('Tin nhắn không tồn tại');
+    }
+
+    if (!message.reactions) {
+      return { success: true, reactions: [] };
+    }
+
+    // Remove user's reaction
+    message.reactions = message.reactions.filter(
+      r => r.user.toString() !== userId.toString()
+    );
+
+    await message.save();
+
+    // Emit socket event for real-time update
+    socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
+      messageId,
+      reactions: message.reactions,
+    });
+
+    return { success: true, reactions: message.reactions };
+  }
 
 
   static async getUsersForChat(userId) {

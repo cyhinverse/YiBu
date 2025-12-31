@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense, useEffect } from 'react';
+import { useState, useCallback, lazy, Suspense, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import {
   MoreHorizontal,
@@ -37,6 +37,231 @@ const ReportModal = lazy(() =>
   }))
 );
 const ModelPost = lazy(() => import('./ModelPost'));
+const VideoModal = lazy(() => import('../../../Common/VideoModal'));
+
+// Inline Video Player with basic controls
+const VideoPlayer = ({ src, onExpand, isGrid }) => {
+  const videoRef = useRef(null);
+  const containerRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [volume, setVolume] = useState(1);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+
+  // Auto play/pause when scrolling in/out of view
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video || !container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInView(entry.isIntersecting);
+          if (entry.isIntersecting) {
+            // Video is in view - auto play
+            video.play().catch(() => {});
+          } else {
+            // Video is out of view - pause
+            video.pause();
+          }
+        });
+      },
+      {
+        threshold: 0.5, // 50% of video must be visible
+      }
+    );
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+      if (isMuted && volume === 0) {
+        setVolume(1);
+        videoRef.current.volume = 1;
+      }
+    }
+  };
+
+  const handleVolumeChange = (e) => {
+    e.stopPropagation();
+    const newVolume = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+      videoRef.current.muted = newVolume === 0;
+      setVolume(newVolume);
+      setIsMuted(newVolume === 0);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+    }
+  };
+
+  const handleSeek = (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    if (videoRef.current) {
+      videoRef.current.currentTime = percent * videoRef.current.duration;
+    }
+  };
+
+  const formatTime = (time) => {
+    if (isNaN(time)) return '0:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full h-full group">
+      <video
+        ref={videoRef}
+        src={src}
+        playsInline
+        muted={isMuted}
+        loop
+        className="w-full h-full object-cover"
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onClick={togglePlay}
+      />
+
+      {/* Play/Pause Overlay (shows when paused) */}
+      {!isPlaying && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
+          onClick={togglePlay}
+        >
+          <div className="w-14 h-14 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform">
+            <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Controls */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Progress Bar */}
+        <div 
+          className="h-1 bg-white/30 rounded-full cursor-pointer mb-2"
+          onClick={handleSeek}
+        >
+          <div 
+            className="h-full bg-white rounded-full"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Control Buttons */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            {/* Play/Pause */}
+            <button
+              onClick={togglePlay}
+              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
+            >
+              {isPlaying ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
+            </button>
+
+            {/* Mute/Unmute with Volume Slider */}
+            <div 
+              className="relative flex items-center"
+              onMouseEnter={() => setShowVolumeSlider(true)}
+              onMouseLeave={() => setShowVolumeSlider(false)}
+            >
+              <button
+                onClick={toggleMute}
+                className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
+              >
+                {isMuted || volume === 0 ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                )}
+              </button>
+              
+              {/* Volume Slider */}
+              <div className={`flex items-center overflow-hidden transition-all duration-200 ${showVolumeSlider ? 'w-16 ml-1' : 'w-0'}`}>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={isMuted ? 0 : volume}
+                  onChange={handleVolumeChange}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Time */}
+            <span className="text-white text-xs ml-1">
+              {formatTime(videoRef.current?.currentTime || 0)}
+            </span>
+          </div>
+
+          {/* Expand Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand();
+            }}
+            className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
+            title="Expand"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Fake post data for component testing
 const formatCount = count => {
@@ -96,6 +321,7 @@ const Post = ({ data, onDelete }) => {
 
   const [showOptions, setShowOptions] = useState(false);
   const [showImage, setShowImage] = useState(null);
+  const [showVideo, setShowVideo] = useState(null);
   const [showComments, setShowComments] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -268,15 +494,11 @@ const Post = ({ data, onDelete }) => {
               } ${data.media.length === 1 ? 'max-h-[450px]' : 'aspect-square'}`}
             >
               {item.type === 'video' ? (
-                <video
-                  autoPlay
-                  playsInline
-                  muted
-                  loop
-                  className="w-full h-full object-cover"
-                >
-                  <source src={item.url} type="video/mp4" />
-                </video>
+                <VideoPlayer 
+                  src={item.url} 
+                  onExpand={() => setShowVideo(item.url)}
+                  isGrid={data.media.length > 1}
+                />
               ) : (
                 <img
                   className={`w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300 ${
@@ -425,7 +647,7 @@ const Post = ({ data, onDelete }) => {
                     setShowEditModal(true);
                     setShowOptions(false);
                   }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
                 >
                   <Edit3 size={18} />
                   Edit post
@@ -460,7 +682,7 @@ const Post = ({ data, onDelete }) => {
             <button
               onClick={handleShare}
               disabled={sharePending}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
             >
               <Share2 size={18} />
               {sharePending ? 'Sharing...' : 'Share post'}
@@ -468,14 +690,14 @@ const Post = ({ data, onDelete }) => {
 
             <button
               onClick={handleCopyLink}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
             >
               <Link2 size={18} />
               Copy link
             </button>
 
             {!isOwner && (
-              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-black dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800">
                 <EyeOff size={18} />
                 Hide post
               </button>
@@ -501,7 +723,7 @@ const Post = ({ data, onDelete }) => {
             className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden p-6"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-content dark:text-white mb-2">
               Delete Post?
             </h3>
             <p className="text-sm text-neutral-500 mb-6">
@@ -511,7 +733,7 @@ const Post = ({ data, onDelete }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 Cancel
               </button>
@@ -562,6 +784,16 @@ const Post = ({ data, onDelete }) => {
           <CommentModal
             onClose={() => setShowComments(false)}
             postId={data?._id}
+          />
+        </Suspense>
+      )}
+
+      {/* Video Modal */}
+      {showVideo && (
+        <Suspense fallback={null}>
+          <VideoModal
+            videoUrl={showVideo}
+            onClose={() => setShowVideo(null)}
           />
         </Suspense>
       )}

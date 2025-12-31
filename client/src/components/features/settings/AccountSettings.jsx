@@ -100,7 +100,7 @@ const AccountSettings = () => {
     placeholder,
   }) => (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-black dark:text-white">
+      <label className="text-sm font-medium text-content dark:text-white">
         {label}
       </label>
       <div className="relative">
@@ -113,7 +113,7 @@ const AccountSettings = () => {
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
     </div>
@@ -122,7 +122,7 @@ const AccountSettings = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Account
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -135,7 +135,7 @@ const AccountSettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <User size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Account Information
             </h3>
           </div>
@@ -164,7 +164,7 @@ const AccountSettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Security
             </h3>
           </div>
@@ -177,7 +177,7 @@ const AccountSettings = () => {
             <div className="flex items-center gap-3">
               <Lock size={18} className="text-neutral-500" />
               <div className="text-left">
-                <p className="text-sm font-medium text-black dark:text-white">
+                <p className="text-sm font-medium text-content dark:text-white">
                   Change Password
                 </p>
                 <p className="text-xs text-neutral-500">
@@ -192,7 +192,7 @@ const AccountSettings = () => {
             <div className="flex items-center gap-3">
               <Shield size={18} className="text-neutral-500" />
               <div className="text-left">
-                <p className="text-sm font-medium text-black dark:text-white">
+                <p className="text-sm font-medium text-content dark:text-white">
                   Two-Factor Authentication
                 </p>
                 <p className="text-xs text-neutral-500">
@@ -212,7 +212,7 @@ const AccountSettings = () => {
         <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-2">
             <Monitor size={16} className="text-neutral-500" />
-            <h3 className="text-sm font-medium text-black dark:text-white">
+            <h3 className="text-sm font-medium text-content dark:text-white">
               Sessions
             </h3>
           </div>
@@ -225,7 +225,7 @@ const AccountSettings = () => {
             <div className="flex items-center gap-3">
               <LogOut size={18} className="text-neutral-500" />
               <div className="text-left">
-                <p className="text-sm font-medium text-black dark:text-white">
+                <p className="text-sm font-medium text-content dark:text-white">
                   Logout
                 </p>
                 <p className="text-xs text-neutral-500">
@@ -243,7 +243,7 @@ const AccountSettings = () => {
             <div className="flex items-center gap-3">
               <Monitor size={18} className="text-red-500" />
               <div className="text-left">
-                <p className="text-sm font-medium text-black dark:text-white">
+                <p className="text-sm font-medium text-content dark:text-white">
                   Logout from all devices
                 </p>
                 <p className="text-xs text-neutral-500">
@@ -290,7 +290,7 @@ const AccountSettings = () => {
             className="w-full max-w-sm mx-4 bg-white dark:bg-neutral-900 rounded-2xl p-6"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-black dark:text-white mb-2">
+            <h3 className="text-lg font-bold text-content dark:text-white mb-2">
               Delete Account?
             </h3>
             <p className="text-sm text-neutral-500 mb-6">
@@ -300,7 +300,7 @@ const AccountSettings = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 Cancel
               </button>
@@ -322,12 +322,12 @@ const AccountSettings = () => {
             className="w-full max-w-md mx-4 bg-white dark:bg-neutral-900 rounded-2xl p-6"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-black dark:text-white mb-4">
+            <h3 className="text-lg font-bold text-content dark:text-white mb-4">
               Đổi mật khẩu
             </h3>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Mật khẩu hiện tại
                 </label>
                 <input
@@ -340,11 +340,11 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập mật khẩu hiện tại"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Mật khẩu mới
                 </label>
                 <input
@@ -357,11 +357,11 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-black dark:text-white">
+                <label className="text-sm font-medium text-content dark:text-white">
                   Xác nhận mật khẩu mới
                 </label>
                 <input
@@ -374,7 +374,7 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập lại mật khẩu mới"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -388,7 +388,7 @@ const AccountSettings = () => {
                     confirmPassword: '',
                   });
                 }}
-                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 Hủy
               </button>

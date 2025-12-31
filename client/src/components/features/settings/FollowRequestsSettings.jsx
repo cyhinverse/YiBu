@@ -83,7 +83,7 @@ const FollowRequestsSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-black dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-content dark:text-white mb-2">
           Yêu cầu theo dõi
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -103,7 +103,7 @@ const FollowRequestsSettings = () => {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm yêu cầu..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
       )}
@@ -128,7 +128,7 @@ const FollowRequestsSettings = () => {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div>
-                    <p className="text-sm font-medium text-black dark:text-white">
+                    <p className="text-sm font-medium text-content dark:text-white">
                       {user.fullName || user.username}
                     </p>
                     <p className="text-xs text-neutral-500">@{user.username}</p>
@@ -145,7 +145,7 @@ const FollowRequestsSettings = () => {
                   <button
                     onClick={() => handleAccept(requestId)}
                     disabled={isProcessing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-black dark:bg-white dark:text-black rounded-lg hover:opacity-80 disabled:opacity-50 transition-opacity"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:opacity-80 disabled:opacity-50 transition-opacity"
                   >
                     {isProcessing ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -171,7 +171,7 @@ const FollowRequestsSettings = () => {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
               <UserPlus className="w-10 h-10 text-neutral-400" />
             </div>
-            <h3 className="text-lg font-medium text-black dark:text-white mb-1">
+            <h3 className="text-lg font-medium text-content dark:text-white mb-1">
               {searchQuery ? 'Không tìm thấy kết quả' : 'Không có yêu cầu nào'}
             </h3>
             <p className="text-neutral-500 text-sm">

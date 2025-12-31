@@ -25,6 +25,8 @@ export const useUserPosts = (userId, limit = 20) => {
       return lastPage.hasMore ? allPages.length + 1 : undefined;
     },
     enabled: !!userId,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 };
 

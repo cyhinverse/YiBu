@@ -216,6 +216,8 @@ export const ADMIN_API = {
   GET_ALL_USERS: '/api/admin/users',
   GET_BANNED_USERS: '/api/admin/users/banned',
   GET_USER_DETAILS: id => `/api/admin/users/${id}`,
+  GET_USER_POSTS: userId => `/api/admin/users/${userId}/posts`,
+  GET_USER_REPORTS: userId => `/api/admin/users/${userId}/reports`,
   UPDATE_USER: id => `/api/admin/users/${id}`,
   DELETE_USER: id => `/api/admin/users/${id}`,
   // User Moderation
@@ -225,6 +227,7 @@ export const ADMIN_API = {
   WARN_USER: '/api/admin/users/warn',
   // Content Moderation
   GET_ALL_POSTS: '/api/admin/posts',
+  GET_POST_REPORTS: postId => `/api/admin/posts/${postId}/reports`,
   MODERATE_POST: id => `/api/admin/posts/${id}/moderate`,
   APPROVE_POST: id => `/api/admin/posts/${id}/approve`,
   DELETE_POST: id => `/api/admin/posts/${id}`,
@@ -234,7 +237,7 @@ export const ADMIN_API = {
   // Reports
   GET_REPORTS: '/api/admin/reports',
   GET_PENDING_REPORTS: '/api/admin/reports/pending',
-  GET_USER_REPORTS: userId => `/api/admin/reports/user/${userId}`,
+  GET_REPORTS_AGAINST_USER: userId => `/api/admin/reports/user/${userId}`,
   REVIEW_REPORT: id => `/api/admin/reports/${id}/review`,
   START_REPORT_REVIEW: id => `/api/admin/reports/${id}/start-review`,
   RESOLVE_REPORT: id => `/api/admin/reports/${id}/resolve`,

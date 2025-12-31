@@ -31,8 +31,8 @@ export const helmetMiddleware = helmet({
 // Rate Limiter - Chống DDoS và spam request
 // Global rate limit cho tất cả requests
 export const globalRateLimiter = rateLimit({
-  windowMs: 100 * 60 * 1000, // 100 phút
-  max: 5000, // Increased for dev/testing: 5000 requests per 15 min
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 1000, // 1000 requests per 15 min (production-ready)
   message: {
     code: 0,
     message: 'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
@@ -42,15 +42,19 @@ export const globalRateLimiter = rateLimit({
   handler: (req, res, next, options) => {
     res.status(options.statusCode).json(options.message);
   },
+  skip: (req) => {
+    // Skip rate limiting for health check
+    return req.path === '/api/health';
+  },
 });
 
 // Strict rate limit cho auth routes (login, register, password reset)
 export const authRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 giờ
-  max: 20, // Increased from 5 to 20 for easier testing
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 10, // 10 attempts per 15 min
   message: {
     code: 0,
-    message: 'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 1 giờ.',
+    message: 'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút.',
   },
   standardHeaders: true,
   legacyHeaders: false,
