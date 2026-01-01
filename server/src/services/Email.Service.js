@@ -3,6 +3,9 @@ import config from '../configs/config.js';
 import logger from '../configs/logger.js';
 
 class EmailService {
+  /**
+   * Initialize Email Service with nodemailer configuration
+   */
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: config.email.host,
@@ -18,6 +21,13 @@ class EmailService {
     });
   }
 
+  /**
+   * Send email
+   * @param {string} to - Recipient email address
+   * @param {string} subject - Email subject
+   * @param {string} html - HTML content of the email
+   * @returns {Promise<Object|null>} Sent email info or null if error
+   */
   async sendEmail(to, subject, html) {
     try {
       const info = await this.transporter.sendMail({
@@ -35,6 +45,12 @@ class EmailService {
     }
   }
 
+  /**
+   * Send password reset email
+   * @param {string} to - Recipient email address
+   * @param {string} resetLink - Password reset link
+   * @returns {Promise<Object|null>} Sent email info or null if error
+   */
   async sendPasswordReset(to, resetLink) {
     const subject = 'Yêu cầu đặt lại mật khẩu - YiBu';
     const html = `
@@ -53,6 +69,12 @@ class EmailService {
     return this.sendEmail(to, subject, html);
   }
 
+  /**
+   * Send account verification email
+   * @param {string} to - Recipient email address
+   * @param {string} verificationLink - Email verification link
+   * @returns {Promise<Object|null>} Sent email info or null if error
+   */
   async sendVerificationEmail(to, verificationLink) {
     const subject = 'Xác thực tài khoản - YiBu';
     const html = `

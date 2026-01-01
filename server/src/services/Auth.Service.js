@@ -21,9 +21,6 @@ import EmailService from './Email.Service.js';
  * 4. Creates UserSettings on registration
  */
 class AuthService {
-  // ======================================
-  // Registration
-  // ======================================
 
   static async register(userData) {
     const { email, username, password, name } = userData;
@@ -76,10 +73,6 @@ class AuthService {
     return { user: userResponse, accessToken };
   }
 
-  // ======================================
-  // Login
-  // ======================================
-
   static async login(credentials, deviceInfo = {}) {
     const { email, password } = credentials;
 
@@ -107,7 +100,6 @@ class AuthService {
       user.moderation.suspendedUntil = null;
     }
 
-    // Check account lock (handle both legacy Number and new Object format)
     const lockUntil =
       typeof user.loginAttempts === 'object'
         ? user.loginAttempts?.lockUntil
@@ -168,14 +160,12 @@ class AuthService {
     const maxAttempts = 5;
     const lockDurationMinutes = 15;
 
-    // Handle legacy data where loginAttempts might be a Number instead of Object
     const currentCount =
       typeof user.loginAttempts === 'object'
         ? user.loginAttempts?.count || 0
         : 0;
     const attempts = currentCount + 1;
 
-    // If loginAttempts is a Number (legacy), first convert it to object
     if (typeof user.loginAttempts === 'number') {
       await User.findByIdAndUpdate(user._id, {
         $set: {
@@ -215,7 +205,6 @@ class AuthService {
   }
 
   static async _resetLoginAttempts(user) {
-    // Handle legacy data where loginAttempts might be a Number
     if (typeof user.loginAttempts === 'number' && user.loginAttempts > 0) {
       await User.findByIdAndUpdate(user._id, {
         $set: {
@@ -252,10 +241,6 @@ class AuthService {
 
     return { token, family, id: refreshToken._id };
   }
-
-  // ======================================
-  // Token Refresh
-  // ======================================
 
   static async refreshToken(token, deviceInfo = {}) {
     const refreshTokenDoc = await RefreshToken.findOne({
@@ -320,10 +305,6 @@ class AuthService {
     return { accessToken, refreshToken: newToken };
   }
 
-  // ======================================
-  // Logout
-  // ======================================
-
   static async logout(refreshToken) {
     if (!refreshToken) {
       return { success: true };
@@ -348,10 +329,6 @@ class AuthService {
 
     return { success: true };
   }
-
-  // ======================================
-  // Password Management
-  // ======================================
 
   static async changePassword(userId, currentPassword, newPassword) {
     const user = await User.findById(userId).select('+password');
@@ -401,7 +378,6 @@ class AuthService {
       'security.passwordResetExpires': new Date(Date.now() + 60 * 60 * 1000),
     });
 
-    // Send email with resetToken
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
     await EmailService.sendPasswordReset(email, resetLink);
     logger.info(`Password reset requested for ${email}`);
@@ -437,10 +413,6 @@ class AuthService {
     return { success: true };
   }
 
-  // ======================================
-  // Email Verification
-  // ======================================
-
   static async requestEmailVerification(userId) {
     const user = await User.findById(userId);
 
@@ -465,7 +437,6 @@ class AuthService {
       ),
     });
 
-    // Send verification email
     const verificationLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
     await EmailService.sendVerificationEmail(user.email, verificationLink);
     logger.info(`Email verification requested for user ${userId}`);
@@ -495,10 +466,6 @@ class AuthService {
 
     return { success: true };
   }
-
-  // ======================================
-  // Two-Factor Authentication
-  // ======================================
 
   static async enableTwoFactor(userId) {
     const speakeasy = (await import('speakeasy')).default;
@@ -557,7 +524,7 @@ class AuthService {
       { user: userId },
       {
         'security.twoFactorEnabled': true,
-        'security.twoFactorBackupCodes': hashedBackupCodes, // UserSettings schema needs this field? Yes, create it if missing or rely on flexible schema? Ideally schema has it.
+        'security.twoFactorBackupCodes': hashedBackupCodes,
       },
       { upsert: true }
     );
@@ -610,10 +577,6 @@ class AuthService {
     return verified;
   }
 
-  // ======================================
-  // Session Management
-  // ======================================
-
   static async getActiveSessions(userId, currentRefreshToken = null) {
     const sessions = await RefreshToken.find({
       user: userId,
@@ -635,7 +598,7 @@ class AuthService {
         isCurrent,
         lastActive: isCurrent
           ? 'Vừa xong'
-          : new Date(session.lastUsedAt).toLocaleString('vi-VN'), // Simple formatting for now
+          : new Date(session.lastUsedAt).toLocaleString('vi-VN'),
         lastUsedAt: session.lastUsedAt,
       };
     });
@@ -653,10 +616,6 @@ class AuthService {
 
     return { success: true };
   }
-
-  // ======================================
-  // OAuth (Placeholder)
-  // ======================================
 
   static async googleAuth(profile) {
     let user = await User.findOne({ email: profile.email.toLowerCase() });

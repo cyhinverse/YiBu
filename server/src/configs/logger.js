@@ -55,14 +55,14 @@ const logger = winston.createLogger({
 });
 
 /**
- * Morgan stream - Ghi HTTP request logs vào Winston
+ * Morgan stream - Write HTTP request logs to Winston
  */
 const morganStream = {
   write: message => {
-    // Loại bỏ newline cuối cùng
+    // Remove trailing newline
     const logMessage = message.trim();
 
-    // Phân loại log level dựa trên status code
+    // Classify log level based on status code
     const statusCode = parseInt(logMessage.split(' ')[2]) || 200;
 
     if (statusCode >= 500) {
@@ -76,19 +76,19 @@ const morganStream = {
 };
 
 /**
- * Morgan format tùy chỉnh
+ * Custom Morgan format
  * Format: :method :url :status :response-time ms - :res[content-length]
  */
 const morganFormat =
   ':method :url :status :response-time ms - :res[content-length]';
 
 /**
- * Morgan middleware cho development (có màu)
+ * Morgan middleware for development (with colors)
  */
 export const morganDev = morgan('dev');
 
 /**
- * Morgan middleware cho production (kết hợp với Winston)
+ * Morgan middleware for production (combined with Winston)
  */
 export const morganProd = morgan(morganFormat, { stream: morganStream });
 

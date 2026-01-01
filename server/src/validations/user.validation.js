@@ -3,7 +3,7 @@ import { objectId, paginationQuery } from './common.validation.js';
 
 /**
  * User Validation Schemas
- * Validation cho tất cả endpoints trong user.router.js
+ * Validation for all endpoints in user.router.js
  */
 
 // ======================================

@@ -23,42 +23,43 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Comment CRUD
-// ======================================
+/* POST / - Create a new comment */
 router.post('/', validateBody(createCommentBody), PostController.createComment);
+/* GET /post/:postId - Get comments for a post */
 router.get(
   '/post/:postId',
   validateParams(getCommentsParam),
   validateQuery(getCommentsQuery),
   PostController.getCommentsByPost
 );
+/* GET /:commentId/replies - Get replies for a comment */
 router.get(
   '/:commentId/replies',
   validateParams(getRepliesParam),
   validateQuery(getRepliesQuery),
   PostController.getCommentReplies
 );
+/* PUT /:id - Update a comment */
 router.put(
   '/:id',
   validateParams(updateCommentParam),
   validateBody(updateCommentBody),
   PostController.updateComment
 );
+/* DELETE /:id - Delete a comment */
 router.delete(
   '/:id',
   validateParams(deleteCommentParam),
   PostController.deleteComment
 );
 
-// ======================================
-// Comment Likes
-// ======================================
+/* POST /:commentId/like - Like a comment */
 router.post(
   '/:commentId/like',
   validateParams(likeCommentParam),
   PostController.likeComment
 );
+/* DELETE /:commentId/like - Unlike a comment */
 router.delete(
   '/:commentId/like',
   validateParams(unlikeCommentParam),

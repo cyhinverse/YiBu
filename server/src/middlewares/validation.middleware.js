@@ -1,18 +1,18 @@
 /**
  * Validation Middleware Factory
- * Tạo middleware để validate request body/params/query với Joi schema
+ * Create middleware to validate request body/params/query with Joi schema
  */
 
 /**
  * Validate request body
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateBody = schema => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.body, {
-      abortEarly: false, // Trả về tất cả lỗi, không dừng ở lỗi đầu tiên
-      stripUnknown: true, // Loại bỏ các field không có trong schema
+      abortEarly: false, // Return all errors, don't stop at first error
+      stripUnknown: true, // Remove fields not in schema
     });
 
     if (error) {
@@ -28,7 +28,7 @@ export const validateBody = schema => {
       });
     }
 
-    // Gán giá trị đã validate vào req.body
+    // Assign validated value to req.body
     req.body = value;
     next();
   };
@@ -36,7 +36,7 @@ export const validateBody = schema => {
 
 /**
  * Validate request params
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateParams = schema => {
@@ -65,7 +65,7 @@ export const validateParams = schema => {
 
 /**
  * Validate request query
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateQuery = schema => {
@@ -94,8 +94,8 @@ export const validateQuery = schema => {
 };
 
 /**
- * Validate nhiều phần của request cùng lúc
- * @param {Object} schemas - Object chứa các schema cho body, params, query
+ * Validate multiple parts of request at once
+ * @param {Object} schemas - Object containing schemas for body, params, query
  * @returns {Function} Express middleware
  */
 export const validate = ({ body, params, query }) => {

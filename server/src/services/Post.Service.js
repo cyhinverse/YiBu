@@ -22,10 +22,13 @@ import { retryOperation } from '../helpers/retryOperation.js';
  * 4. Uses Post model's ranking methods
  */
 class PostService {
-  // ======================================
-  // Post Creation & Update
-  // ======================================
-
+  /**
+   * Create new post
+   * @param {Object} postData - Post data {caption, media, visibility, location}
+   * @param {string} userId - User ID creating the post
+   * @returns {Promise<Object>} Created post object with user information
+   * @throws {Error} If error in transaction
+   */
   static async createPost(postData, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -74,6 +77,13 @@ class PostService {
     }
   }
 
+  /**
+   * Process hashtags from caption and update database
+   * @param {string} caption - Caption content
+   * @param {Object} session - MongoDB session
+   * @returns {Promise<Array>} List of processed hashtags
+   * @private
+   */
   static async _processHashtags(caption, session) {
     const hashtagRegex = /#(\w+)/g;
     const matches = caption.match(hashtagRegex);
@@ -101,6 +111,12 @@ class PostService {
     return processedTags;
   }
 
+  /**
+   * Get list of liked posts
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, hasMore: boolean}>} List of liked posts
+   */
   static async getLikedPosts(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -116,7 +132,7 @@ class PostService {
       .lean();
 
     const posts = likes
-      .filter(like => like.post) // Filter out null posts (deleted)
+      .filter(like => like.post)
       .map(like => like.post);
 
     const postsWithStatus = await this._addUserStatus(posts, userId);
@@ -133,6 +149,12 @@ class PostService {
     };
   }
 
+  /**
+   * Get list of shared posts
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, hasMore: boolean}>} List of shared posts
+   */
   static async getSharedPosts(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -155,7 +177,6 @@ class PostService {
       .populate('user', 'username name avatar verified')
       .lean();
 
-    // Preserve order of shares
     const postsMap = new Map(posts.map(p => [p._id.toString(), p]));
     const orderedPosts = postIds
       .map(id => postsMap.get(id.toString()))
@@ -176,6 +197,14 @@ class PostService {
     };
   }
 
+  /**
+   * Update post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID (must be post owner)
+   * @param {Object} updateData - Update data {caption, visibility, location, mentions, media, existingMedia}
+   * @returns {Promise<Object>} Updated post object
+   * @throws {Error} If post not found or unauthorized
+   */
   static async updatePost(postId, userId, updateData) {
     const post = await Post.findOne({
       _id: postId,
@@ -243,6 +272,14 @@ class PostService {
     return updatedPost;
   }
 
+  /**
+   * Delete post (soft delete)
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @param {boolean} isAdmin - Is admin or not
+   * @returns {Promise<Object>} Deleted post object
+   * @throws {Error} If post not found or unauthorized
+   */
   static async deletePost(postId, userId, isAdmin = false) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -280,10 +317,13 @@ class PostService {
     }
   }
 
-  // ======================================
-  // Post Retrieval
-  // ======================================
-
+  /**
+   * Get post by ID
+   * @param {string} postId - Post ID
+   * @param {string|null} userId - Viewing user ID (to record interaction)
+   * @returns {Promise<Object>} Post object with isLiked, isSaved status
+   * @throws {Error} If post not found
+   */
   static async getPostById(postId, userId = null) {
     const post = await Post.findOne({ _id: postId, isDeleted: false })
       .populate('user', 'username name avatar verified')
@@ -316,6 +356,13 @@ class PostService {
     return result;
   }
 
+  /**
+   * Get list of posts by a user
+   * @param {string} targetUserId - User ID to get posts from
+   * @param {string|null} requesterId - Requesting user ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, hasMore: boolean}>} List of posts
+   */
   static async getUserPosts(targetUserId, requesterId = null, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -360,6 +407,13 @@ class PostService {
     };
   }
 
+  /**
+   * Add isLiked and isSaved status to list of posts
+   * @param {Array} posts - List of posts
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} Posts with added status
+   * @private
+   */
   static async _addUserStatus(posts, userId) {
     const postIds = posts.map(p => p._id);
 
@@ -382,10 +436,12 @@ class PostService {
     }));
   }
 
-  // ======================================
-  // Feed & Discovery
-  // ======================================
-
+  /**
+   * Get home feed (posts from followed users)
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of posts in feed
+   */
   static async getHomeFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -431,6 +487,12 @@ class PostService {
     };
   }
 
+  /**
+   * Get explore feed (public posts from all users)
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of explore posts
+   */
   static async getExploreFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -466,6 +528,12 @@ class PostService {
     };
   }
 
+  /**
+   * Get personalized feed based on interests and interactions
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of personalized posts
+   */
   static async getPersonalizedFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -532,6 +600,11 @@ class PostService {
     };
   }
 
+  /**
+   * Get list of trending posts
+   * @param {Object} options - Options {page, limit, timeframe: 'day'|'week'|'month'}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of trending posts
+   */
   static async getTrendingPosts(options = {}) {
     const { page = 1, limit = 20, timeframe = 'day' } = options;
 
@@ -557,10 +630,13 @@ class PostService {
     };
   }
 
-  // ======================================
-  // Search
-  // ======================================
-
+  /**
+   * Search posts by query
+   * @param {string} query - Search keyword
+   * @param {string|null} userId - Searching user ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, hasMore: boolean}>} Search results
+   */
   static async searchPosts(query, userId = null, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -608,6 +684,13 @@ class PostService {
     return { posts: postsWithStatus, total, hasMore: page * limit < total };
   }
 
+  /**
+   * Get list of posts by hashtag
+   * @param {string} hashtag - Hashtag to search (with or without #)
+   * @param {string|null} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, hasMore: boolean}>} List of posts
+   */
   static async getPostsByHashtag(hashtag, userId = null, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -654,14 +737,22 @@ class PostService {
     return { posts: postsWithStatus, total, hasMore: page * limit < total };
   }
 
+  /**
+   * Get list of trending hashtags
+   * @param {number} limit - Maximum number of hashtags
+   * @returns {Promise<Array>} List of trending hashtags
+   */
   static async getTrendingHashtags(limit = 10) {
     return Hashtag.getTrending(limit);
   }
 
-  // ======================================
-  // Like System
-  // ======================================
-
+  /**
+   * Like a post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, alreadyLiked?: boolean}>} Like result
+   * @throws {Error} If post not found
+   */
   static async likePost(postId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -721,6 +812,12 @@ class PostService {
     }
   }
 
+  /**
+   * Unlike a post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, wasNotLiked?: boolean}>} Unlike result
+   */
   static async unlikePost(postId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -750,6 +847,12 @@ class PostService {
     }
   }
 
+  /**
+   * Get list of users who liked a post
+   * @param {string} postId - Post ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<Array>} List of users
+   */
   static async getPostLikes(postId, options = {}) {
     const { page = 1, limit = 50 } = options;
 
@@ -763,10 +866,14 @@ class PostService {
     return likes.map(l => l.user);
   }
 
-  // ======================================
-  // Save System
-  // ======================================
-
+  /**
+   * Save post to collection
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @param {string} collection - Collection name (default: 'default')
+   * @returns {Promise<{success: boolean, alreadySaved?: boolean}>} Save result
+   * @throws {Error} If post not found
+   */
   static async savePost(postId, userId, collection = 'default') {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -818,6 +925,12 @@ class PostService {
     }
   }
 
+  /**
+   * Unsave post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, wasNotSaved?: boolean}>} Unsave result
+   */
   static async unsavePost(postId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -847,6 +960,12 @@ class PostService {
     }
   }
 
+  /**
+   * Get list of saved posts
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, collection}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of saved posts
+   */
   static async getSavedPosts(userId, options = {}) {
     const { page = 1, limit = 20, collection } = options;
 
@@ -880,16 +999,25 @@ class PostService {
     };
   }
 
+  /**
+   * Get list of saved collections for user
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of collections
+   */
   static async getSavedCollections(userId) {
     return SavePost.getCollections(userId);
   }
 
-  // ======================================
-  // Comment System
-  // ======================================
-
+  /**
+   * Add comment to post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @param {string} content - Comment content
+   * @param {string|null} parentCommentId - Parent comment ID (if reply)
+   * @returns {Promise<Object>} Created comment object
+   * @throws {Error} If post or parent comment not found
+   */
   static async addComment(postId, userId, content, parentCommentId = null) {
-    // Verify post exists first
     const post = await Post.findOne({
       _id: postId,
       isDeleted: false,
@@ -911,7 +1039,6 @@ class PostService {
       rootComment = parentComment.rootComment || parentComment._id;
     }
 
-    // Create comment - atomic operation
     const comment = await Comment.create({
       post: postId,
       user: userId,
@@ -921,23 +1048,12 @@ class PostService {
       depth,
     });
 
-    // Update counters using atomic operations with retry
-    // Note: Post commentsCount is updated via Comment model post-save hook
-    // We only need to update parent reply count if this hook doesn't handle it well for parents
-    // But wait, the hook DOES handle parent repliesCount too.
-    // However, keeping the retry logic for parent might be safer if we want to ensure it?
-    // Actually, the hook does: if (doc.parentComment) { increment repliesCount }
-    // So both are doubled if we don't be careful.
-
-    // Let's remove BOTH manual updates as the Hook handles both.
-
     /* 
     The Hook in Comment.js:
     if (doc.parentComment) { updateOne(parent, $inc repliesCount) }
     updateOne(post, $inc commentsCount)
     */
 
-    // Record interaction (non-critical, fire and forget with retry)
     retryOperation(() =>
       UserInteraction.record({
         user: userId,
@@ -947,7 +1063,6 @@ class PostService {
       })
     ).catch(err => logger.warn(`Failed to record interaction: ${err.message}`));
 
-    // Send notification (non-critical)
     const notifyUserId = parentCommentId
       ? (await Comment.findById(parentCommentId).select('user').lean())?.user
       : post.user;
@@ -969,7 +1084,6 @@ class PostService {
       );
     }
 
-    // Return populated comment
     const populatedComment = await Comment.findById(comment._id)
       .populate('user', 'username name avatar verified')
       .lean();
@@ -977,11 +1091,15 @@ class PostService {
     return populatedComment;
   }
 
+  /**
+   * Get list of comments for post
+   * @param {string} postId - Post ID
+   * @param {Object} options - Options {page, limit, sort: 'best'|'newest'}
+   * @returns {Promise<{comments: Array, hasMore: boolean}>} List of comments
+   */
   static async getComments(postId, options = {}) {
     const { page = 1, limit = 20, sort = 'best' } = options;
 
-    // Use Comment Model's specialized method for fetching nested comments
-    // This supports fetching top-level comments and their replies
     const comments = await Comment.getCommentsForPost(postId, {
       page,
       limit,
@@ -990,7 +1108,6 @@ class PostService {
       replyLimit: 3,
     });
 
-    // Count top-level comments for pagination check
     const totalTopLevel = await Comment.countDocuments({
       post: postId,
       parentComment: null,
@@ -1004,6 +1121,12 @@ class PostService {
     };
   }
 
+  /**
+   * Get list of replies for a comment
+   * @param {string} commentId - Comment ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{replies: Array, hasMore: boolean}>} List of replies
+   */
   static async getCommentReplies(commentId, options = {}) {
     const { page = 1, limit = 10 } = options;
 
@@ -1023,6 +1146,14 @@ class PostService {
     };
   }
 
+  /**
+   * Delete comment (soft delete)
+   * @param {string} commentId - Comment ID
+   * @param {string} userId - User ID
+   * @param {boolean} isAdmin - Is admin or not
+   * @returns {Promise<Object>} Deleted comment object
+   * @throws {Error} If comment not found or unauthorized
+   */
   static async deleteComment(commentId, userId, isAdmin = false) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1060,6 +1191,14 @@ class PostService {
     }
   }
 
+  /**
+   * Update comment content
+   * @param {string} commentId - Comment ID
+   * @param {string} userId - User ID (must be comment owner)
+   * @param {string} content - New content
+   * @returns {Promise<Object>} Updated comment object
+   * @throws {Error} If comment not found or unauthorized
+   */
   static async updateComment(commentId, userId, content) {
     const comment = await Comment.findOne({
       _id: commentId,
@@ -1083,6 +1222,13 @@ class PostService {
     return populatedComment;
   }
 
+  /**
+   * Like a comment
+   * @param {string} commentId - Comment ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, alreadyLiked?: boolean}>} Like result
+   * @throws {Error} If comment not found
+   */
   static async likeComment(commentId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1132,6 +1278,12 @@ class PostService {
     }
   }
 
+  /**
+   * Unlike a comment
+   * @param {string} commentId - Comment ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, wasNotLiked?: boolean}>} Unlike result
+   */
   static async unlikeComment(commentId, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1162,10 +1314,14 @@ class PostService {
     }
   }
 
-  // ======================================
-  // Share System
-  // ======================================
-
+  /**
+   * Share post
+   * @param {string} postId - Post ID
+   * @param {string} userId - User ID
+   * @param {string} platform - Share platform (default: 'internal')
+   * @returns {Promise<{success: boolean}>} Share result
+   * @throws {Error} If post not found
+   */
   static async sharePost(postId, userId, platform = 'internal') {
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) {
@@ -1196,10 +1352,11 @@ class PostService {
     return { success: true };
   }
 
-  // ======================================
-  // Ranking & Scoring Methods
-  // ======================================
-
+  /**
+   * Update engagement and trending scores for post
+   * @param {string} postId - Post ID
+   * @returns {Promise<void>}
+   */
   static async updatePostScores(postId) {
     const post = await Post.findById(postId);
     if (post) {
@@ -1209,6 +1366,10 @@ class PostService {
     }
   }
 
+  /**
+   * Batch update scores for posts active in last 24 hours
+   * @returns {Promise<void>}
+   */
   static async batchUpdateScores() {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -1229,10 +1390,15 @@ class PostService {
     logger.info(`Updated scores for ${posts.length} posts`);
   }
 
-  // ======================================
-  // Report System (Basic)
-  // ======================================
-
+  /**
+   * Report post violation
+   * @param {string} postId - Post ID
+   * @param {string} userId - Reporting user ID
+   * @param {string} reason - Report reason
+   * @param {string} description - Detailed description
+   * @returns {Promise<Object>} Created report object
+   * @throws {Error} If post not found or already reported
+   */
   static async reportPost(postId, userId, reason, description = '') {
     const Report = (await import('../models/Report.js')).default;
 
@@ -1269,13 +1435,13 @@ class PostService {
     return report;
   }
 
-  // ======================================
-  // Media Upload
-  // ======================================
-
+  /**
+   * Upload media files (already processed by multer-storage-cloudinary)
+   * @param {Array|Object} files - Uploaded file(s)
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of media objects {url, type, publicId}
+   */
   static async uploadMedia(files, userId) {
-    // Files are already uploaded by multer-storage-cloudinary middleware
-    // We just need to map them to our schema structure
     const fileArray = Array.isArray(files) ? files : [files];
     const uploadedMedia = fileArray.map(file => {
       const resourceType = file.mimetype?.startsWith('video/')
@@ -1283,18 +1449,14 @@ class PostService {
         : 'image';
 
       return {
-        url: file.path, // Cloudinary URL from multer
+        url: file.path,
         type: resourceType,
-        publicId: file.filename, // Cloudinary Public ID from multer
+        publicId: file.filename,
       };
     });
 
     return uploadedMedia;
   }
-
-  // ======================================
-  // Backward Compatibility Aliases
-  // ======================================
 
   static async getFollowingPosts(userId, page = 1, limit = 10) {
     return this.getHomeFeed(userId, { page, limit });

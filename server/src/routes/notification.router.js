@@ -19,50 +19,52 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Get Notifications
-// ======================================
+/* GET / - Get notifications for current user */
 router.get(
   '/',
   validateQuery(getNotificationsQuery),
   NotificationController.getNotifications
 );
+/* GET /unread-count - Get total unread notification count */
 router.get('/unread-count', NotificationController.getUnreadCount);
+/* GET /unread-count-by-type - Get unread count by notification type */
 router.get(
   '/unread-count-by-type',
   NotificationController.getUnreadCountByType
 );
+/* GET /:notificationId - Get single notification by ID */
 router.get(
   '/:notificationId',
   validateParams(notificationIdParam),
   NotificationController.getNotificationById
 );
 
-// ======================================
-// Notification Actions
-// ======================================
+/* POST / - Create a new notification */
 router.post(
   '/',
   validateBody(createNotificationBody),
   NotificationController.createNotification
-); // Internal/admin use
+);
+/* PUT /:notificationId/read - Mark a notification as read */
 router.put(
   '/:notificationId/read',
   validateParams(markAsReadParam),
   NotificationController.markAsRead
 );
+/* POST /read-all - Mark all notifications as read */
 router.post('/read-all', NotificationController.markAllAsRead);
+/* DELETE /:notificationId - Delete a notification */
 router.delete(
   '/:notificationId',
   validateParams(deleteNotificationParam),
   NotificationController.deleteNotification
 );
+/* DELETE / - Delete all notifications */
 router.delete('/', NotificationController.deleteAllNotifications);
 
-// ======================================
-// Notification Preferences
-// ======================================
+/* GET /preferences - Get notification preferences */
 router.get('/preferences', NotificationController.getNotificationPreferences);
+/* PUT /preferences - Update notification preferences */
 router.put(
   '/preferences',
   validateBody(updatePreferencesBody),

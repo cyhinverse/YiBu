@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * UserSettings Validation Schemas
- * Validation cho tất cả endpoints trong userSettings.router.js
+ * Validation for all endpoints in userSettings.router.js
  */
 
 // ======================================

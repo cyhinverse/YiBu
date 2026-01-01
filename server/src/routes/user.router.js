@@ -33,28 +33,26 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Search & Discovery
-// ======================================
+/* GET /search - Search users */
 router.get(
   '/search',
   validateQuery(searchUsersQuery),
   UserController.searchUsers
 );
+/* GET /suggestions - Get recommended users */
 router.get(
   '/suggestions',
   validateQuery(suggestionsQuery),
   UserController.getRecommendedUsers
 );
 
-// ======================================
-// User Profile
-// ======================================
+/* GET /profile/:id - Get profile by user ID or username */
 router.get(
   '/profile/:id',
   validateParams(profileIdParam),
   UserController.GET_PROFILE_BY_ID
 );
+/* PUT /profile - Update user profile settings */
 router.put(
   '/profile',
   upload.fields([
@@ -65,26 +63,28 @@ router.put(
   UserController.updateProfileSettings
 );
 
-// ======================================
-// Follow System
-// ======================================
+/* GET /check-follow/:targetUserId - Check follow status */
 router.get(
   '/check-follow/:targetUserId',
   validateParams(targetUserIdParam),
   UserController.checkFollowStatus
 );
+/* POST /follow - Follow a user */
 router.post('/follow', validateBody(followBody), UserController.followUser);
+/* POST /unfollow - Unfollow a user */
 router.post(
   '/unfollow',
   validateBody(unfollowBody),
   UserController.unfollowUser
 );
+/* GET /followers/:userId - Get followers list */
 router.get(
   '/followers/:userId',
   validateParams(userIdParam),
   validateQuery(followListQuery),
   UserController.getFollowers
 );
+/* GET /following/:userId - Get following list */
 router.get(
   '/following/:userId',
   validateParams(userIdParam),
@@ -92,54 +92,52 @@ router.get(
   UserController.getFollowing
 );
 
-// Follow Requests (for private accounts)
+/* GET /follow-requests - Get pending follow requests */
 router.get('/follow-requests', UserController.getPendingFollowRequests);
+/* POST /follow-requests/:requestId/accept - Accept a follow request */
 router.post(
   '/follow-requests/:requestId/accept',
   validateParams(requestIdParam),
   UserController.acceptFollowRequest
 );
+/* POST /follow-requests/:requestId/reject - Reject a follow request */
 router.post(
   '/follow-requests/:requestId/reject',
   validateParams(requestIdParam),
   UserController.rejectFollowRequest
 );
 
-// ======================================
-// Block & Mute
-// ======================================
+/* GET /blocked - Get list of blocked users */
 router.get('/blocked', UserController.getBlockList);
+/* POST /block/:userId - Block a user */
 router.post(
   '/block/:userId',
   validateParams(blockMuteUserIdParam),
   UserController.blockUser
 );
+/* DELETE /block/:userId - Unblock a user */
 router.delete(
   '/block/:userId',
   validateParams(blockMuteUserIdParam),
   UserController.unblockUser
 );
 
+/* GET /muted - Get list of muted users */
 router.get('/muted', UserController.getMuteList);
+/* POST /mute/:userId - Mute a user */
 router.post(
   '/mute/:userId',
   validateParams(blockMuteUserIdParam),
   UserController.muteUser
 );
+/* DELETE /mute/:userId - Unmute a user */
 router.delete(
   '/mute/:userId',
   validateParams(blockMuteUserIdParam),
   UserController.unmuteUser
 );
 
-// ======================================
-// User Settings
-// ======================================
-// User Settings & Devices moved to separate router (/api/settings)
-
-// ======================================
-// User Detail (keep last)
-// ======================================
+/* GET /:id - Get user by ID */
 router.get(
   '/:id',
   validateParams(getUserByIdParam),

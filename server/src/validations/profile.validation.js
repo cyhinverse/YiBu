@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Profile Validation Schemas
- * Validation cho tất cả endpoints trong profile.router.js
+ * Validation for all endpoints in profile.router.js
  */
 
 // ======================================

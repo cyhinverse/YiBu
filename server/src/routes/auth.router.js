@@ -20,21 +20,21 @@ import {
 
 const router = express.Router();
 
-// ======================================
-// Public Routes (với rate limiting và validation)
-// ======================================
+/* POST /register - Register new user account */
 router.post(
   '/register',
   authRateLimiter,
   validateBody(registerBody),
   AuthController.Register
 );
+/* POST /login - User login */
 router.post(
   '/login',
   authRateLimiter,
   validateBody(loginBody),
   AuthController.Login
 );
+/* POST /google - Google OAuth authentication */
 router.post(
   '/google',
   authRateLimiter,
@@ -42,13 +42,14 @@ router.post(
   AuthController.GoogleAuth
 );
 
-// Password Reset (với rate limiting)
+/* POST /password/reset-request - Request password reset email */
 router.post(
   '/password/reset-request',
   authRateLimiter,
   validateBody(forgotPasswordBody),
   AuthController.RequestPasswordReset
 );
+/* POST /password/reset - Reset password using token */
 router.post(
   '/password/reset',
   authRateLimiter,
@@ -56,39 +57,41 @@ router.post(
   AuthController.ResetPassword
 );
 
-// Token Management (Public because access token might be expired)
+/* POST /refresh - Refresh access token */
 router.post(
   '/refresh',
   validateBody(refreshTokenBody),
   AuthController.RefreshToken
 );
 
-// ======================================
-// Protected Routes (require auth)
-// ======================================
 router.use(verifyToken);
 
+/* POST /logout - Logout user */
 router.post('/logout', AuthController.Logout);
+/* POST /logout-all - Logout from all devices */
 router.post('/logout-all', AuthController.LogoutAllDevices);
 
-// Password
+/* PUT /password - Update user password */
 router.put(
   '/password',
   validateBody(updatePasswordBody),
   AuthController.UpdatePassword
 );
 
-// Two-Factor Authentication
+/* POST /2fa/enable - Enable two-factor authentication */
 router.post('/2fa/enable', AuthController.EnableTwoFactor);
+/* POST /2fa/verify - Verify and complete 2FA setup */
 router.post(
   '/2fa/verify',
   validateBody(verifyTwoFactorBody),
   AuthController.VerifyTwoFactor
 );
+/* POST /2fa/disable - Disable two-factor authentication */
 router.post('/2fa/disable', AuthController.DisableTwoFactor);
 
-// Session Management
+/* GET /sessions - Get all active login sessions */
 router.get('/sessions', AuthController.GetActiveSessions);
+/* DELETE /sessions/:sessionId - Revoke a specific session */
 router.delete(
   '/sessions/:sessionId',
   validateParams(sessionIdParam),

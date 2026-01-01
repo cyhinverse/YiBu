@@ -15,14 +15,13 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Profile Routes
-// ======================================
+/* GET /:id - Get profile by user ID or username */
 router.get(
   '/:id',
   validateParams(profileIdParam),
   UserController.GET_PROFILE_BY_ID
 );
+/* PUT / - Update user profile settings */
 router.put(
   '/',
   upload.fields([{ name: 'avatar', maxCount: 1 }]),

@@ -16,10 +16,12 @@ import socketService from './Socket.Service.js';
  * 4. TTL support for automatic cleanup
  */
 class NotificationService {
-  // ======================================
-  // Notification Creation
-  // ======================================
 
+  /**
+   * Create new notification (with grouping support)
+   * @param {Object} data - Notification data {recipient, sender, type, content, relatedPost, relatedComment, groupKey, metadata}
+   * @returns {Promise<Object|null>} Notification object or null if blocked/disabled
+   */
   static async createNotification(data) {
     const {
       recipient,
@@ -134,11 +136,9 @@ class NotificationService {
       .populate('relatedPost', 'caption media')
       .lean();
 
-    // Ensure post field is available for client
     const postData =
       populatedNotification.post || populatedNotification.relatedPost;
 
-    // Emit realtime notification via socket
     try {
       await socketService.sendNotification(recipient.toString(), {
         ...populatedNotification,
@@ -148,16 +148,17 @@ class NotificationService {
       logger.debug(`Socket notification sent to user ${recipient}`);
     } catch (socketError) {
       logger.error('Failed to send socket notification:', socketError);
-      // Don't throw - notification is saved, socket is optional
     }
 
     return populatedNotification;
   }
 
-  // ======================================
-  // Notification Retrieval
-  // ======================================
-
+  /**
+   * Get list of notifications for user
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, type, unreadOnly}
+   * @returns {Promise<{notifications: Array, total: number, unreadCount: number, hasMore: boolean}>}
+   */
   static async getNotifications(userId, options = {}) {
     const { page = 1, limit = 20, type, unreadOnly = false } = options;
 
@@ -202,6 +203,12 @@ class NotificationService {
     };
   }
 
+  /**
+   * Format notification for display (handle grouped notifications)
+   * @param {Object} notification - Notification object
+   * @returns {Object} Formatted notification with displayContent
+   * @private
+   */
   static _formatNotification(notification) {
     let displayContent = notification.content;
 
@@ -222,7 +229,6 @@ class NotificationService {
       displayContent = typeMessages[notification.type] || displayContent;
     }
 
-    // Ensure post field is available (may be in 'post' or 'relatedPost')
     const postData = notification.post || notification.relatedPost;
 
     return {
@@ -233,6 +239,12 @@ class NotificationService {
     };
   }
 
+  /**
+   * Get notification by ID
+   * @param {string} notificationId - Notification ID
+   * @param {string} userId - User ID (to verify ownership)
+   * @returns {Promise<Object|null>} Formatted notification or null
+   */
   static async getNotificationById(notificationId, userId) {
     const notification = await Notification.findOne({
       _id: notificationId,
@@ -245,10 +257,12 @@ class NotificationService {
     return notification ? this._formatNotification(notification) : null;
   }
 
-  // ======================================
-  // Notification Actions
-  // ======================================
-
+  /**
+   * Mark notification as read
+   * @param {string} notificationId - Notification ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} Updated notification object
+   */
   static async markAsRead(notificationId, userId) {
     const notification = await retryOperation(() =>
       Notification.findOneAndUpdate(
@@ -261,6 +275,12 @@ class NotificationService {
     return notification;
   }
 
+  /**
+   * Mark all notifications as read
+   * @param {string} userId - User ID
+   * @param {string|null} type - Notification type (optional)
+   * @returns {Promise<{updatedCount: number}>} Number of notifications updated
+   */
   static async markAllAsRead(userId, type = null) {
     const query = { recipient: userId, isRead: false };
 
@@ -276,6 +296,12 @@ class NotificationService {
     return { updatedCount: result.modifiedCount };
   }
 
+  /**
+   * Delete notification
+   * @param {string} notificationId - Notification ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, error?: string}>} Delete result
+   */
   static async deleteNotification(notificationId, userId) {
     const result = await Notification.findOneAndDelete({
       _id: notificationId,
@@ -287,6 +313,12 @@ class NotificationService {
       : { success: false, error: 'Notification not found' };
   }
 
+  /**
+   * Delete all notifications for user
+   * @param {string} userId - User ID
+   * @param {string|null} type - Notification type (optional)
+   * @returns {Promise<{deletedCount: number}>} Number of notifications deleted
+   */
   static async deleteAllNotifications(userId, type = null) {
     const query = { recipient: userId };
 
@@ -299,10 +331,11 @@ class NotificationService {
     return { deletedCount: result.deletedCount };
   }
 
-  // ======================================
-  // Notification Stats
-  // ======================================
-
+  /**
+   * Get unread notification count
+   * @param {string} userId - User ID
+   * @returns {Promise<number>} Number of unread notifications
+   */
   static async getUnreadCount(userId) {
     const count = await Notification.countDocuments({
       recipient: userId,
@@ -316,6 +349,11 @@ class NotificationService {
     return count;
   }
 
+  /**
+   * Get unread notification count by type
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Object with type as key and count as value
+   */
   static async getUnreadCountByType(userId) {
     const counts = await Notification.aggregate([
       {
@@ -344,10 +382,14 @@ class NotificationService {
     return result;
   }
 
-  // ======================================
-  // Bulk Notifications
-  // ======================================
-
+  /**
+   * Send notification to all followers of user
+   * @param {string} userId - User ID
+   * @param {string} type - Notification type
+   * @param {string} content - Content (can contain {username} placeholder)
+   * @param {string|null} relatedPost - Related post ID
+   * @returns {Promise<{sentCount: number}>} Number of notifications sent
+   */
   static async notifyFollowers(userId, type, content, relatedPost = null) {
     const Follow = (await import('../models/Follow.js')).default;
 
@@ -383,10 +425,12 @@ class NotificationService {
     return { sentCount: notifications.length };
   }
 
-  // ======================================
-  // Notification Settings
-  // ======================================
-
+  /**
+   * Update notification preferences settings
+   * @param {string} userId - User ID
+   * @param {Object} preferences - New settings
+   * @returns {Promise<Object>} Updated notification settings
+   */
   static async updateNotificationPreferences(userId, preferences) {
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -397,6 +441,11 @@ class NotificationService {
     return settings.notifications;
   }
 
+  /**
+   * Get notification preferences settings
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Notification preferences
+   */
   static async getNotificationPreferences(userId) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('notifications')
@@ -414,10 +463,12 @@ class NotificationService {
     );
   }
 
-  // ======================================
-  // Push Notifications
-  // ======================================
-
+  /**
+   * Send push notification (TODO: integrate with FCM/APNs)
+   * @param {string} userId - User ID
+   * @param {Object} notification - Notification object
+   * @returns {Promise<{sent: boolean, reason?: string, notification?: Object}>}
+   */
   static async sendPushNotification(userId, notification) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('notifications')
@@ -427,7 +478,6 @@ class NotificationService {
       return { sent: false, reason: 'Push notifications disabled' };
     }
 
-    // TODO: Integrate with push notification service (FCM, APNs, etc.)
     logger.info(
       `Push notification queued for user ${userId}: ${notification.content}`
     );
@@ -435,10 +485,11 @@ class NotificationService {
     return { sent: true, notification };
   }
 
-  // ======================================
-  // Cleanup
-  // ======================================
-
+  /**
+   * Clean up old read notifications
+   * @param {number} days - Number of days to keep (default 30)
+   * @returns {Promise<{deletedCount: number}>} Number of notifications deleted
+   */
   static async cleanupOldNotifications(days = 30) {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 

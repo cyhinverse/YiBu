@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Message Validation Schemas
- * Validation cho tất cả endpoints trong message.router.js
+ * Validation for all endpoints in message.router.js
  */
 
 // ======================================

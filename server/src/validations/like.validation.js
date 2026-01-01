@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Like Validation Schemas
- * Validation cho tất cả endpoints trong like.router.js
+ * Validation for all endpoints in like.router.js
  */
 
 // ======================================

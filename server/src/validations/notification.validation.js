@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Notification Validation Schemas
- * Validation cho tất cả endpoints trong notification.router.js
+ * Validation for all endpoints in notification.router.js
  */
 
 // ======================================

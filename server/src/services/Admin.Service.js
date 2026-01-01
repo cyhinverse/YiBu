@@ -23,10 +23,11 @@ import SavePost from '../models/SavePost.js';
  * 4. Audit logging for admin actions
  */
 class AdminService {
-  // ======================================
-  // User Management
-  // ======================================
-
+  /**
+   * Get list of all users with pagination and filters
+   * @param {Object} options - Options {page, limit, search, status, sortBy, sortOrder}
+   * @returns {Promise<{users: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getAllUsers(options = {}) {
     const {
       page = 1,
@@ -73,6 +74,12 @@ class AdminService {
     };
   }
 
+  /**
+   * Get detailed user information by ID (including settings and reports)
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} User object with settings and recent reports
+   * @throws {Error} If user not found
+   */
   static async getUserById(userId) {
     const user = await User.findById(userId).select('-loginAttempts').lean();
 
@@ -98,6 +105,12 @@ class AdminService {
     };
   }
 
+  /**
+   * Get list of posts by user
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getUserPosts(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -120,13 +133,19 @@ class AdminService {
     };
   }
 
+  /**
+   * Get list of reports about user
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{reports: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getUserReports(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
     const [reports, total] = await Promise.all([
       Report.find({ targetUser: userId })
         .populate('reporter', 'username name avatar')
-        .populate('targetUser', 'username name avatar') // Populate targetUser details
+        .populate('targetUser', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -143,6 +162,12 @@ class AdminService {
     };
   }
 
+  /**
+   * Get list of reports about post
+   * @param {string} postId - Post ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{reports: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getPostReports(postId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -165,6 +190,14 @@ class AdminService {
     };
   }
 
+  /**
+   * Update user information (admin action)
+   * @param {string} userId - User ID
+   * @param {Object} updateData - Update data
+   * @param {string} adminId - Admin ID performing the action
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
+   */
   static async updateUser(userId, updateData, adminId) {
     const { password, email, ...safeData } = updateData;
 
@@ -185,10 +218,14 @@ class AdminService {
     return user;
   }
 
-  // ======================================
-  // User Moderation
-  // ======================================
-
+  /**
+   * Permanently ban user
+   * @param {string} userId - User ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} reason - Ban reason
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
+   */
   static async banUser(userId, adminId, reason = 'Violation of terms') {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -233,6 +270,13 @@ class AdminService {
     }
   }
 
+  /**
+   * Unban user
+   * @param {string} userId - User ID
+   * @param {string} adminId - Admin ID performing the action
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
+   */
   static async unbanUser(userId, adminId) {
     const user = await User.findByIdAndUpdate(
       userId,
@@ -258,6 +302,15 @@ class AdminService {
     return user;
   }
 
+  /**
+   * Temporarily suspend user for a period of time
+   * @param {string} userId - User ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {number} days - Number of days to suspend
+   * @param {string} reason - Suspension reason
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
+   */
   static async suspendUser(
     userId,
     adminId,
@@ -315,6 +368,14 @@ class AdminService {
     }
   }
 
+  /**
+   * Send warning to user
+   * @param {string} userId - User ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} reason - Warning reason
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
+   */
   static async warnUser(userId, adminId, reason) {
     const user = await User.findByIdAndUpdate(
       userId,
@@ -348,11 +409,11 @@ class AdminService {
 
     return user;
   }
-
-  // ======================================
-  // Content Moderation
-  // ======================================
-
+  /**
+   * Get list of all posts with pagination and filters
+   * @param {Object} options - Options {page, limit, status, sortBy, sortOrder}
+   * @returns {Promise<{posts: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getAllPosts(options = {}) {
     const {
       page = 1,
@@ -390,6 +451,15 @@ class AdminService {
     };
   }
 
+  /**
+   * Moderate post
+   * @param {string} postId - Post ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} action - Action (approve, reject, flag, remove, hide)
+   * @param {string} reason - Reason
+   * @returns {Promise<Object>} Updated post object
+   * @throws {Error} If action is invalid or post not found
+   */
   static async moderatePost(postId, adminId, action, reason = '') {
     const validActions = ['approve', 'reject', 'flag', 'remove', 'hide'];
 
@@ -462,16 +532,28 @@ class AdminService {
     }
   }
 
+  /**
+   * Delete post (admin action)
+   * @param {string} postId - Post ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} reason - Delete reason
+   * @returns {Promise<Object>} Deleted post object
+   */
   static async deletePost(postId, adminId, reason = 'Admin action') {
     return this.moderatePost(postId, adminId, 'remove', reason);
   }
 
+  /**
+   * Get list of all comments with pagination and filters
+   * @param {Object} options - Options {page, limit, search, status, sortBy, sortOrder}
+   * @returns {Promise<{comments: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getAllComments(options = {}) {
     const {
       page = 1,
       limit = 20,
       search,
-      status, // "active", "hidden", "flagged"
+      status,
       sortBy = 'createdAt',
       sortOrder = -1,
     } = options;
@@ -488,17 +570,15 @@ class AdminService {
       } else if (status === 'active') {
         query.isDeleted = false;
       }
-      // Note: "flagged" typically requires a separate report check or a specific flag on the comment
     }
 
-    // Sort options
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder;
 
     const [comments, total] = await Promise.all([
       Comment.find(query)
         .populate('user', 'username name avatar')
-        .populate('post', 'caption') // To show post preview
+        .populate('post', 'caption')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -506,8 +586,6 @@ class AdminService {
       Comment.countDocuments(query),
     ]);
 
-    // Enhance comments with additional data if needed (e.g. report count)
-    // For now, return basic info
     return {
       comments,
       total,
@@ -517,6 +595,15 @@ class AdminService {
     };
   }
 
+  /**
+   * Moderate comment
+   * @param {string} commentId - Comment ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} action - Action (approve, remove)
+   * @param {string} reason - Reason
+   * @returns {Promise<Object>} Updated comment object
+   * @throws {Error} If action is invalid or comment not found
+   */
   static async moderateComment(commentId, adminId, action, reason = '') {
     const validActions = ['approve', 'remove'];
 
@@ -566,10 +653,11 @@ class AdminService {
     return comment;
   }
 
-  // ======================================
-  // Reports Management
-  // ======================================
-
+  /**
+   * Get list of reports with pagination and filters
+   * @param {Object} options - Options {page, limit, status, category, priority}
+   * @returns {Promise<{reports: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getReports(options = {}) {
     const { page = 1, limit = 20, status, category, priority } = options;
 
@@ -600,6 +688,15 @@ class AdminService {
     };
   }
 
+  /**
+   * Review report
+   * @param {string} reportId - Report ID
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} decision - Decision (resolved, rejected, escalated)
+   * @param {string} actionTaken - Action taken
+   * @returns {Promise<Object>} Updated report object
+   * @throws {Error} If decision is invalid or report not found
+   */
   static async reviewReport(reportId, adminId, decision, actionTaken = '') {
     const validDecisions = ['resolved', 'rejected', 'escalated'];
 
@@ -638,10 +735,10 @@ class AdminService {
     return report;
   }
 
-  // ======================================
-  // Analytics & Statistics
-  // ======================================
-
+  /**
+   * Get dashboard overview statistics
+   * @returns {Promise<Object>} Stats object with users, posts, reports
+   */
   static async getDashboardStats() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -693,6 +790,11 @@ class AdminService {
     };
   }
 
+  /**
+   * Get user growth statistics by day
+   * @param {number} days - Number of days to get statistics
+   * @returns {Promise<{totalGrowth: number, percentage: number, chartData: Array}>}
+   */
   static async getUserGrowthStats(days = 30) {
     const endDate = new Date();
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -700,7 +802,6 @@ class AdminService {
       startDate.getTime() - days * 24 * 60 * 60 * 1000
     );
 
-    // Get current period stats
     const stats = await User.aggregate([
       {
         $match: { createdAt: { $gte: startDate, $lte: endDate } },
@@ -716,7 +817,6 @@ class AdminService {
       { $sort: { _id: 1 } },
     ]);
 
-    // Fill in missing dates with 0
     const filledStats = [];
     for (
       let d = new Date(startDate);
@@ -731,10 +831,8 @@ class AdminService {
       });
     }
 
-    // Calculate total growth for current period
     const totalGrowth = filledStats.reduce((acc, curr) => acc + curr.users, 0);
 
-    // Get previous period total for percentage
     const previousPeriodCount = await User.countDocuments({
       createdAt: { $gte: previousStartDate, $lt: startDate },
     });
@@ -754,6 +852,11 @@ class AdminService {
     };
   }
 
+  /**
+   * Get post statistics by day
+   * @param {number} days - Number of days to get statistics
+   * @returns {Promise<Array>} List of stats by day
+   */
   static async getPostStats(days = 30) {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -777,6 +880,11 @@ class AdminService {
     return stats;
   }
 
+  /**
+   * Get list of top users by engagement rate
+   * @param {number} limit - Maximum number of users
+   * @returns {Promise<Array>} List of top users
+   */
   static async getTopEngagedUsers(limit = 10) {
     return User.find({ isActive: true, 'moderation.status': 'active' })
       .sort({ 'metrics.engagementRate': -1 })
@@ -785,14 +893,14 @@ class AdminService {
       .lean();
   }
 
-  // ======================================
-  // Interactions Analytics
-  // ======================================
-
+  /**
+   * Get statistics and list of interactions (likes, comments, follows, saves)
+   * @param {Object} options - Options {page, limit, type, search}
+   * @returns {Promise<{interactions: Array, stats: Object, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getInteractions(options = {}) {
     const { page = 1, limit = 20, type, search } = options;
 
-    // Get interaction stats
     const [totalLikes, totalComments, totalFollows, totalSaves, totalShares] =
       await Promise.all([
         Like.countDocuments(),
@@ -812,12 +920,10 @@ class AdminService {
       shares: totalShares,
     };
 
-    // Build aggregation pipeline for recent interactions
     const interactions = [];
     const skip = (page - 1) * limit;
     const perType = Math.ceil(limit / 5);
 
-    // Get likes
     if (!type || type === 'like') {
       const likes = await Like.find()
         .sort({ createdAt: -1 })
@@ -848,7 +954,6 @@ class AdminService {
       });
     }
 
-    // Get comments
     if (!type || type === 'comment') {
       const comments = await Comment.find({ isDeleted: false })
         .sort({ createdAt: -1 })
@@ -880,7 +985,6 @@ class AdminService {
       });
     }
 
-    // Get follows
     if (!type || type === 'follow') {
       const follows = await Follow.find({ status: 'active' })
         .sort({ createdAt: -1 })
@@ -907,7 +1011,6 @@ class AdminService {
       });
     }
 
-    // Get saves
     if (!type || type === 'save') {
       const saves = await SavePost.find()
         .sort({ createdAt: -1 })
@@ -938,7 +1041,6 @@ class AdminService {
       });
     }
 
-    // Sort by date and apply search filter
     let filteredInteractions = interactions.sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
@@ -967,10 +1069,15 @@ class AdminService {
     };
   }
 
-  // ======================================
-  // Admin Action Logging
-  // ======================================
-
+  /**
+   * Log admin action (private method)
+   * @param {string} adminId - Admin ID
+   * @param {string} action - Action performed
+   * @param {string} targetType - Target type (user, post, comment, report, system)
+   * @param {string} targetId - Target ID
+   * @param {Object} metadata - Additional data
+   * @private
+   */
   static async _logAdminAction(
     adminId,
     action,
@@ -1006,11 +1113,15 @@ class AdminService {
         metadata,
       });
     } catch (error) {
-      // Don't crash if logging fails, just log to console
       logger.error('Failed to create admin log:', error);
     }
   }
 
+  /**
+   * Get list of admin logs with pagination and filters
+   * @param {Object} options - Options {page, limit, level, startDate, endDate}
+   * @returns {Promise<{logs: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getAdminLogs(options = {}) {
     const { page = 1, limit = 20, level, startDate, endDate } = options;
 
@@ -1037,14 +1148,13 @@ class AdminService {
       AdminLog.countDocuments(query),
     ]);
 
-    // Transform logs to match frontend expectations
     const formattedLogs = logs.map(log => ({
       _id: log._id,
       createdAt: log.createdAt,
       level: log.level,
       action: log.action,
       message: log.details,
-      user: log.admin, // Key 'user' for table column 'Người dùng'
+      user: log.admin,
       ip: log.ip,
       metadata: log.metadata,
     }));
@@ -1058,10 +1168,14 @@ class AdminService {
     };
   }
 
-  // ======================================
-  // System Management
-  // ======================================
-
+  /**
+   * Broadcast notification to a group of users
+   * @param {string} adminId - Admin ID performing the action
+   * @param {string} content - Notification content
+   * @param {string} targetGroup - Target group (all, active)
+   * @returns {Promise<{sentCount: number}>} Number of notifications sent
+   * @throws {Error} If targetGroup is invalid
+   */
   static async broadcastNotification(adminId, content, targetGroup = 'all') {
     let users;
 
@@ -1101,10 +1215,10 @@ class AdminService {
 
     return { sentCount: users.length };
   }
-  // ======================================
-  // Settings Management
-  // ======================================
-
+  /**
+   * Get system settings
+   * @returns {Promise<Object>} System settings object
+   */
   static async getSystemSettings() {
     let settings = await SystemSetting.findOne().lean();
     if (!settings) {
@@ -1113,6 +1227,12 @@ class AdminService {
     return settings;
   }
 
+  /**
+   * Update system settings
+   * @param {Object} updateData - Update data
+   * @param {string} adminId - Admin ID performing the action
+   * @returns {Promise<Object>} Updated system settings
+   */
   static async updateSystemSettings(updateData, adminId) {
     const settings = await SystemSetting.findOneAndUpdate(
       {},
@@ -1132,10 +1252,10 @@ class AdminService {
     return settings;
   }
 
-  // ======================================
-  // Revenue & Transactions
-  // ======================================
-
+  /**
+   * Get revenue statistics
+   * @returns {Promise<Object>} Revenue stats with total, thisMonth, lastMonth, growth, transactions, avgTransaction, chartData
+   */
   static async getRevenueStats() {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1153,19 +1273,16 @@ class AdminService {
       transactionCount,
       monthlyData,
     ] = await Promise.all([
-      // Total Revenue
       Transaction.aggregate([
         { $match: { status: 'completed' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      // This Month
       Transaction.aggregate([
         {
           $match: { status: 'completed', createdAt: { $gte: firstDayOfMonth } },
         },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      // Last Month
       Transaction.aggregate([
         {
           $match: {
@@ -1175,9 +1292,7 @@ class AdminService {
         },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      // Transaction Count
       Transaction.countDocuments({ status: 'completed' }),
-      // Monthly Data for Chart (Last 6 months)
       Transaction.aggregate([
         {
           $match: {
@@ -1204,7 +1319,6 @@ class AdminService {
     const thisMonth = thisMonthRevenue[0]?.total || 0;
     const lastMonth = lastMonthRevenue[0]?.total || 0;
 
-    // Calculate growth
     let growth = 0;
     if (lastMonth > 0) {
       growth = ((thisMonth - lastMonth) / lastMonth) * 100;
@@ -1228,6 +1342,11 @@ class AdminService {
     };
   }
 
+  /**
+   * Get list of transactions with pagination and filters
+   * @param {Object} options - Options {page, limit, status, type}
+   * @returns {Promise<{transactions: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
+   */
   static async getTransactions(options = {}) {
     const { page = 1, limit = 20, status, type } = options;
     const query = {};

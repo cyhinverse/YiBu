@@ -6,20 +6,34 @@ import socketService from "../services/Socket.Service.js";
 
 /**
  * Notification Controller
- * Xử lý tất cả các request liên quan đến thông báo
+ * Handle all notification-related requests
  *
- * Các chức năng chính:
- * - Tạo và lấy thông báo
- * - Đánh dấu đã đọc (mark as read)
- * - Xóa thông báo
- * - Thống kê thông báo chưa đọc
- * - Cài đặt thông báo (preferences)
+ * Main features:
+ * - Create and retrieve notifications
+ * - Mark as read
+ * - Delete notifications
+ * - Unread notification statistics
+ * - Notification preferences
  */
 const NotificationController = {
-  // ======================================
-  // Create Notification (Admin/System use)
-  // ======================================
 
+  /**
+   * Create a new notification
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.recipient - ID of the notification recipient
+   * @param {string} req.body.type - Type of notification
+   * @param {string} [req.body.content] - Notification content
+   * @param {string} [req.body.relatedPost] - ID of related post
+   * @param {string} [req.body.relatedComment] - ID of related comment
+   * @param {string} [req.body.groupKey] - Group key for notification grouping
+   * @param {Object} [req.body.metadata] - Additional metadata
+   * @param {string} [req.body.sender] - ID of sender (defaults to current user)
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with created notification data
+   */
   createNotification: CatchError(async (req, res) => {
     const {
       recipient,
@@ -54,10 +68,19 @@ const NotificationController = {
     return formatResponse(res, 201, 1, "Đã tạo thông báo", notification);
   }),
 
-  // ======================================
-  // Get Notifications
-  // ======================================
-
+  /**
+   * Get notifications for current user
+   * @param {Object} req - Express request object
+   * @param {Object} req.query - Query parameters
+   * @param {number} [req.query.page] - Page number for pagination
+   * @param {number} [req.query.limit] - Number of items per page
+   * @param {string} [req.query.type] - Filter by notification type
+   * @param {string} [req.query.unreadOnly] - Filter to show only unread notifications ("true"/"false")
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with notifications array, total count, unread count, and hasMore flag
+   */
   getNotifications: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { page, limit } = getPaginationParams(req.query, {
@@ -80,6 +103,16 @@ const NotificationController = {
     });
   }),
 
+  /**
+   * Get single notification by ID
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.notificationId - ID of the notification to retrieve
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with notification data or 404 if not found
+   */
   getNotificationById: CatchError(async (req, res) => {
     const { notificationId } = req.params;
     const userId = req.user.id;
@@ -96,10 +129,16 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Success", notification);
   }),
 
-  // ======================================
-  // Mark as Read
-  // ======================================
-
+  /**
+   * Mark a notification as read
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.notificationId - ID of the notification to mark as read
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with updated notification data or 404 if not found
+   */
   markAsRead: CatchError(async (req, res) => {
     const { notificationId } = req.params;
     const userId = req.user.id;
@@ -116,6 +155,16 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Đã đánh dấu đã đọc", notification);
   }),
 
+  /**
+   * Mark all notifications as read
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} [req.body.type] - Optional notification type to filter which notifications to mark as read
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with result of the mark all operation
+   */
   markAllAsRead: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { type } = req.body;
@@ -124,10 +173,16 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Đã đánh dấu tất cả là đã đọc", result);
   }),
 
-  // ======================================
-  // Delete Notifications
-  // ======================================
-
+  /**
+   * Delete a notification
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.notificationId - ID of the notification to delete
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with success message or 404 if not found
+   */
   deleteNotification: CatchError(async (req, res) => {
     const { notificationId } = req.params;
     const userId = req.user.id;
@@ -144,6 +199,16 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Đã xóa thông báo");
   }),
 
+  /**
+   * Delete all notifications
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} [req.body.type] - Optional notification type to filter which notifications to delete
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with deleted count and result data
+   */
   deleteAllNotifications: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { type } = req.body;
@@ -161,10 +226,14 @@ const NotificationController = {
     );
   }),
 
-  // ======================================
-  // Stats
-  // ======================================
-
+  /**
+   * Get total unread notification count
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with unreadCount number
+   */
   getUnreadCount: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -172,6 +241,14 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Success", { unreadCount });
   }),
 
+  /**
+   * Get unread notification count by type
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with counts object grouped by notification type
+   */
   getUnreadCountByType: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -179,10 +256,14 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Success", counts);
   }),
 
-  // ======================================
-  // Notification Settings
-  // ======================================
-
+  /**
+   * Get notification preferences for current user
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with user's notification preferences
+   */
   getNotificationPreferences: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -192,6 +273,15 @@ const NotificationController = {
     return formatResponse(res, 200, 1, "Success", preferences);
   }),
 
+  /**
+   * Update notification preferences
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body containing preference settings to update
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with updated notification preferences
+   */
   updateNotificationPreferences: CatchError(async (req, res) => {
     const userId = req.user.id;
     const preferences = req.body;

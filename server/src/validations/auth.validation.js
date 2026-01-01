@@ -2,13 +2,10 @@ import Joi from 'joi';
 
 /**
  * Auth Validation Schemas
- * Validation cho tất cả endpoints trong auth.router.js
+ * Validation for all endpoints in auth.router.js
  */
 
-// ======================================
-// POST /register
-// Body: { name, username, email, password, confirmPassword }
-// ======================================
+
 export const registerBody = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Tên không được để trống',

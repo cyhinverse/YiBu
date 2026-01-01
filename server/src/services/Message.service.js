@@ -19,11 +19,23 @@ import Conversation from '../models/Conversation.js';
  */
 class MessageService {
 
+  /**
+   * Generate conversation ID from 2 user IDs
+   * @param {string} userId1 - First user ID
+   * @param {string} userId2 - Second user ID
+   * @returns {string} Conversation ID in format "userId1_userId2" (sorted)
+   */
   static generateConversationId(userId1, userId2) {
     const ids = [userId1.toString(), userId2.toString()].sort();
     return `${ids[0]}_${ids[1]}`;
   }
 
+  /**
+   * Get list of conversations for user
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{conversations: Array, hasMore: boolean}>} List of conversations
+   */
   static async getConversations(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -33,13 +45,12 @@ class MessageService {
 
     const blockedUsers = settings?.blockedUsers?.map(id => id.toString()) || [];
 
-
     const conversations = await Conversation.find({
       members: userId,
       $or: [
         { isGroup: true },
         { lastMessage: { $ne: null } },
-        { createdAt: { $gt: new Date(Date.now() - 60000) } } // Only show empty chats if created in last 60s
+        { createdAt: { $gt: new Date(Date.now() - 60000) } }
       ]
     })
       .populate('members', 'username name avatar lastActiveAt')
@@ -83,7 +94,6 @@ class MessageService {
             unreadCount,
           };
         } else {
-          // Group chat
           const unreadCount = await Message.countDocuments({
             conversationId: conv._id.toString(),
             'seenBy.user': { $ne: userId },
@@ -107,7 +117,11 @@ class MessageService {
   }
 
   /**
-   * Get or create a direct conversation between two users
+   * Get or create direct conversation between 2 users
+   * @param {string} userId - Current user ID
+   * @param {string} participantId - Other user ID
+   * @returns {Promise<Object>} Conversation object with participant information
+   * @throws {Error} If not allowed to send message
    */
   static async getOrCreateDirectConversation(userId, participantId) {
     const canSend = await this.canSendMessage(userId, participantId);
@@ -152,6 +166,12 @@ class MessageService {
     };
   }
 
+  /**
+   * Create new group conversation
+   * @param {string} userId - User ID creating the group
+   * @param {Object} data - Group data {participantIds, groupName, groupAvatar}
+   * @returns {Promise<Object>} Created conversation object
+   */
   static async createGroupConversation(userId, data) {
     const { participantIds, groupName, groupAvatar } = data;
     
@@ -170,6 +190,14 @@ class MessageService {
       .lean();
   }
 
+  /**
+   * Update group information
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID performing the action
+   * @param {Object} data - Update data {groupName, groupAvatar}
+   * @returns {Promise<Object>} Updated conversation object
+   * @throws {Error} If conversation not found or unauthorized
+   */
   static async updateGroup(conversationId, userId, data) {
     const conversation = await Conversation.findOne({
       _id: conversationId,
@@ -189,6 +217,14 @@ class MessageService {
       .lean();
   }
 
+  /**
+   * Add members to group
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID performing the action
+   * @param {Array} memberIds - List of new member IDs
+   * @returns {Promise<Object>} Updated conversation object
+   * @throws {Error} If not a group or unauthorized
+   */
   static async addGroupMembers(conversationId, userId, memberIds) {
     const conversation = await Conversation.findOne({
       _id: conversationId,
@@ -203,7 +239,6 @@ class MessageService {
       throw new Error('Đây không phải là nhóm');
     }
 
-    // Add unique members
     const currentMembers = conversation.members.map(m => m.toString());
     const newMembers = memberIds.filter(id => !currentMembers.includes(id.toString()));
     
@@ -217,6 +252,14 @@ class MessageService {
       .lean();
   }
 
+  /**
+   * Remove member from group
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID performing the action (must be admin or self-leaving)
+   * @param {string} memberId - Member ID to remove
+   * @returns {Promise<Object>} Updated conversation object
+   * @throws {Error} If unauthorized to remove
+   */
   static async removeGroupMember(conversationId, userId, memberId) {
     const conversation = await Conversation.findOne({
       _id: conversationId,
@@ -236,9 +279,7 @@ class MessageService {
     );
 
     if (conversation.members.length === 0) {
-      // In reality, might want to delete the group or something
     } else if (conversation.admin.toString() === memberId.toString()) {
-      // Assign new admin if old admin left
       conversation.admin = conversation.members[0];
     }
 
@@ -248,6 +289,13 @@ class MessageService {
       .lean();
   }
 
+  /**
+   * Find conversation by ID
+   * @param {string} conversationId - Conversation ID (ObjectId or directId)
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {autoCreate: boolean}
+   * @returns {Promise<Object|null>} Conversation object or null
+   */
   static async findConversation(conversationId, userId, options = {}) {
     const { autoCreate = false } = options;
     const isCompound = typeof conversationId === 'string' && conversationId.includes('_');
@@ -267,6 +315,13 @@ class MessageService {
     return conversation;
   }
 
+  /**
+   * Get conversation information by ID
+   * @param {string} conversationId - Conversation ID
+   * @param {string} currentUserId - Current user ID
+   * @returns {Promise<Object>} Conversation object with full information
+   * @throws {Error} If conversation not found
+   */
   static async getConversationById(conversationId, currentUserId) {
     const conversation = await this.findConversation(conversationId, currentUserId);
 
@@ -274,7 +329,6 @@ class MessageService {
       throw new Error('Hội thoại không tồn tại');
     }
 
-    // Populate members if not already populated (lean/find returns raw doc)
     const populated = await Conversation.findById(conversation._id)
       .populate('members', 'username name avatar lastActiveAt')
       .populate('lastMessage')
@@ -299,6 +353,14 @@ class MessageService {
     };
   }
 
+  /**
+   * Get list of messages in conversation
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, before}
+   * @returns {Promise<{messages: Array, total: number, hasMore: boolean}>} List of messages
+   * @throws {Error} If conversation not found or not a participant
+   */
   static async getMessages(conversationId, userId, options = {}) {
     const { page = 1, limit = 50, before } = options;
 
@@ -315,10 +377,6 @@ class MessageService {
     if (conversation.isGroup) {
       query.conversationId = conversation._id.toString();
     } else {
-      // Direct Message: Be extremely flexible. Search by:
-      // 1. The new ObjectId
-      // 2. The compound directId string
-      // 3. Fallback: Any message exchanged between these specific two people
       const members = conversation.members.map(m => m._id || m);
       query.$or = [
         { conversationId: conversation._id.toString() },
@@ -349,7 +407,6 @@ class MessageService {
       isMine: msg.sender._id.toString() === userId.toString(),
     }));
 
-    // Async mark as read
     this.markConversationAsRead(conversationId, userId).catch(err =>
       logger.error('Mark read failed:', err)
     );
@@ -361,10 +418,12 @@ class MessageService {
     };
   }
 
-  // ======================================
-  // Message Sending
-  // ======================================
-
+  /**
+   * Check if can send message to user
+   * @param {string} senderId - Sender ID
+   * @param {string} receiverId - Receiver ID
+   * @returns {Promise<{allowed: boolean, reason?: string}>} Check result
+   */
   static async canSendMessage(senderId, receiverId) {
     if (senderId.toString() === receiverId.toString()) {
       return {
@@ -419,10 +478,24 @@ class MessageService {
     return { allowed: true };
   }
 
+  /**
+   * Leave group
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID leaving the group
+   * @returns {Promise<Object>} Updated conversation object
+   */
   static async leaveGroup(conversationId, userId) {
     return this.removeGroupMember(conversationId, userId, userId);
   }
 
+  /**
+   * Send message in conversation
+   * @param {string} conversationId - Conversation ID
+   * @param {string} senderId - Sender ID
+   * @param {Object} messageData - Message data {content, type, media, replyTo}
+   * @returns {Promise<Object>} Created message object
+   * @throws {Error} If conversation not found or content is empty
+   */
   static async sendMessage(conversationId, senderId, messageData) {
     const conversation = await this.findConversation(conversationId, senderId, { autoCreate: true });
 
@@ -436,7 +509,6 @@ class MessageService {
       throw new Error('Nội dung tin nhắn không được để trống');
     }
 
-    // For direct message backward compatibility
     let receiverId = null;
     if (!conversation.isGroup) {
       receiverId = conversation.members.find(
@@ -457,8 +529,8 @@ class MessageService {
 
     const message = await Message.create({
       sender: senderId,
-      receiver: receiverId || conversation._id, // If group, receiver points to conversation
-      conversationId: conversation._id, // Always use the real ObjectId in DB
+      receiver: receiverId || conversation._id,
+      conversationId: conversation._id,
       content: content?.trim(),
       type,
       media,
@@ -472,7 +544,6 @@ class MessageService {
       status: 'sent',
     });
 
-    // Update conversation metadata
     conversation.lastMessage = message._id;
     await conversation.save();
 
@@ -480,18 +551,16 @@ class MessageService {
       .populate('sender', 'username name avatar')
       .lean();
 
-    // Mark as delivered/seen for sender
     await Message.findByIdAndUpdate(message._id, {
         $push: { seenBy: { user: senderId, at: new Date() } }
     });
 
-    // Emit realtime message via socket to all members
     try {
       conversation.members.forEach(memberId => {
         if (memberId.toString() !== senderId.toString()) {
            socketService.sendMessage(senderId, memberId, {
              ...populatedMessage,
-             conversationId // Ensure client gets the ID
+             conversationId
            });
         }
       });
@@ -507,6 +576,12 @@ class MessageService {
     };
   }
 
+  /**
+   * Upload attachments for message
+   * @param {Array|Object} files - File(s) to upload
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of media objects {url, type, publicId}
+   */
   static async uploadAttachments(files, userId) {
     const cloudinary = (await import('../configs/cloudinaryConfig.js')).default;
     const uploadedMedia = [];
@@ -531,8 +606,12 @@ class MessageService {
     return uploadedMedia;
   }
 
-
-
+  /**
+   * Mark all messages in conversation as read
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{updatedCount: number}>} Number of messages updated
+   */
   static async markConversationAsRead(conversationId, userId) {
     const conversation = await this.findConversation(conversationId, userId);
     if (!conversation) return { updatedCount: 0 };
@@ -553,7 +632,6 @@ class MessageService {
       )
     );
 
-    // Socket notification
     if (!conversation.isGroup) {
         const otherUser = conversation.members.find(m => m.toString() !== userId.toString());
         if (otherUser) {
@@ -564,8 +642,12 @@ class MessageService {
     return { updatedCount: result.modifiedCount };
   }
 
-
-
+  /**
+   * Mark a message as read
+   * @param {string} messageId - Message ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} Updated message object or null
+   */
   static async markMessageAsRead(messageId, userId) {
     const message = await retryOperation(() =>
       Message.findOneAndUpdate(
@@ -594,10 +676,14 @@ class MessageService {
     return message;
   }
 
-  // ======================================
-  // Message Management
-  // ======================================
-
+  /**
+   * Delete message
+   * @param {string} messageId - Message ID
+   * @param {string} userId - User ID (must be sender)
+   * @param {boolean} forEveryone - Delete for everyone or just for self
+   * @returns {Promise<{success: boolean, forEveryone: boolean}>} Delete result
+   * @throws {Error} If message not found, unauthorized, or past 15 minutes
+   */
   static async deleteMessage(messageId, userId, forEveryone = false) {
     const message = await Message.findOne({ _id: messageId, sender: userId });
 
@@ -629,18 +715,19 @@ class MessageService {
     return { success: true, forEveryone };
   }
 
-
-  // ======================================
-  // Conversation Actions
-  // ======================================
-
+  /**
+   * Delete conversation (hide all messages for user)
+   * @param {string} conversationId - Conversation ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean}>} Delete result
+   * @throws {Error} If conversation not found
+   */
   static async deleteConversation(conversationId, userId) {
     const conversation = await this.findConversation(conversationId, userId);
     if (!conversation) throw new Error('Hội thoại không tồn tại');
 
     const convId = conversation._id.toString();
 
-    // Mark all messages in this conversation as deleted for this user
     await Message.updateMany(
       { 
         conversationId: { $in: [convId, conversation.directId].filter(Boolean) },
@@ -652,6 +739,11 @@ class MessageService {
     return { success: true };
   }
 
+  /**
+   * Get unread message count for user
+   * @param {string} userId - User ID
+   * @returns {Promise<number>} Number of unread messages
+   */
   static async getUnreadCount(userId) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('blockedUsers')
@@ -669,7 +761,13 @@ class MessageService {
     return count;
   }
 
-
+  /**
+   * Search messages by content
+   * @param {string} userId - User ID
+   * @param {string} query - Search keyword
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{messages: Array, total: number, hasMore: boolean}>} Search results
+   */
   static async searchMessages(userId, query, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -707,10 +805,14 @@ class MessageService {
     };
   }
 
-  // ======================================
-  // Reactions
-  // ======================================
-
+  /**
+   * Add reaction to message
+   * @param {string} messageId - Message ID
+   * @param {string} userId - User ID
+   * @param {string} emoji - Emoji reaction
+   * @returns {Promise<{success: boolean, reactions: Array}>} Result and list of reactions
+   * @throws {Error} If message not found
+   */
   static async addReaction(messageId, userId, emoji) {
     const message = await Message.findOne({
       _id: messageId,
@@ -721,25 +823,20 @@ class MessageService {
       throw new Error('Tin nhắn không tồn tại');
     }
 
-    // Initialize reactions array if not exists
     if (!message.reactions) {
       message.reactions = [];
     }
 
-    // Check if user already reacted with this emoji
     const existingReactionIndex = message.reactions.findIndex(
       r => r.user.toString() === userId.toString() && r.emoji === emoji
     );
 
     if (existingReactionIndex > -1) {
-      // Remove existing reaction (toggle off)
       message.reactions.splice(existingReactionIndex, 1);
     } else {
-      // Remove any existing reaction from this user first
       message.reactions = message.reactions.filter(
         r => r.user.toString() !== userId.toString()
       );
-      // Add new reaction
       message.reactions.push({
         user: userId,
         emoji,
@@ -749,7 +846,6 @@ class MessageService {
 
     await message.save();
 
-    // Emit socket event for real-time update
     socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
       messageId,
       reactions: message.reactions,
@@ -758,6 +854,13 @@ class MessageService {
     return { success: true, reactions: message.reactions };
   }
 
+  /**
+   * Remove reaction from message
+   * @param {string} messageId - Message ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{success: boolean, reactions: Array}>} Result and list of reactions
+   * @throws {Error} If message not found
+   */
   static async removeReaction(messageId, userId) {
     const message = await Message.findOne({
       _id: messageId,
@@ -772,14 +875,12 @@ class MessageService {
       return { success: true, reactions: [] };
     }
 
-    // Remove user's reaction
     message.reactions = message.reactions.filter(
       r => r.user.toString() !== userId.toString()
     );
 
     await message.save();
 
-    // Emit socket event for real-time update
     socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
       messageId,
       reactions: message.reactions,
@@ -788,7 +889,11 @@ class MessageService {
     return { success: true, reactions: message.reactions };
   }
 
-
+  /**
+   * Get list of users for chat (from conversations)
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of users
+   */
   static async getUsersForChat(userId) {
     const { conversations } = await this.getConversations(userId, {
       limit: 100,

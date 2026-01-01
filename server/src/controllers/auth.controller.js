@@ -5,22 +5,30 @@ import logger from "../configs/logger.js";
 
 /**
  * Auth Controller
- * Xử lý tất cả các request liên quan đến xác thực
+ * Handle all authentication-related requests
  *
- * Các chức năng chính:
- * - Đăng ký và đăng nhập (register, login)
- * - Quản lý token (refresh, logout)
- * - Quản lý mật khẩu (change, reset)
- * - Xác thực email
+ * Main features:
+ * - Registration and login
+ * - Token management (refresh, logout)
+ * - Password management (change, reset)
+ * - Email verification
  * - Two-Factor Authentication (2FA)
- * - Quản lý phiên đăng nhập (sessions)
+ * - Session management
  * - OAuth (Google)
  */
 const AuthController = {
-  // ======================================
-  // Registration & Login
-  // ======================================
 
+  /**
+   * Register new user account
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.name - User's full name
+   * @param {string} req.body.email - User's email address
+   * @param {string} req.body.password - User's password
+   * @param {string} req.body.username - User's unique username
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with user data and access token
+   */
   Register: CatchError(async (req, res) => {
     const { name, email, password, username } = req.body;
 
@@ -49,6 +57,16 @@ const AuthController = {
     });
   }),
 
+  /**
+   * Login user and return tokens
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.email - User's email address
+   * @param {string} req.body.password - User's password
+   * @param {string} [req.body.platform='web'] - Login platform (web/mobile/desktop)
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with user data, access token, and refresh token cookie
+   */
   Login: CatchError(async (req, res) => {
     const { email, password } = req.body;
 
@@ -67,12 +85,11 @@ const AuthController = {
       deviceInfo
     );
 
-    // Set refresh token as httpOnly cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return formatResponse(res, 200, 1, "Đăng nhập thành công", user, {
@@ -80,10 +97,16 @@ const AuthController = {
     });
   }),
 
-  // ======================================
-  // Token Management
-  // ======================================
-
+  /**
+   * Refresh access token using refresh token
+   * @param {Object} req - Express request object
+   * @param {Object} [req.cookies] - Request cookies
+   * @param {string} [req.cookies.refreshToken] - Refresh token from cookie
+   * @param {Object} [req.body] - Request body
+   * @param {string} [req.body.refreshToken] - Refresh token from body (fallback)
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with new access token and refresh token cookie
+   */
   RefreshToken: CatchError(async (req, res) => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
@@ -99,7 +122,6 @@ const AuthController = {
     const { accessToken, refreshToken: newRefreshToken } =
       await AuthService.refreshToken(refreshToken, deviceInfo);
 
-    // Update refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -112,17 +134,34 @@ const AuthController = {
     });
   }),
 
+  /**
+   * Logout user and invalidate refresh token
+   * @param {Object} req - Express request object
+   * @param {Object} [req.cookies] - Request cookies
+   * @param {string} [req.cookies.refreshToken] - Refresh token from cookie
+   * @param {Object} [req.body] - Request body
+   * @param {string} [req.body.refreshToken] - Refresh token from body (fallback)
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with logout success message
+   */
   Logout: CatchError(async (req, res) => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     await AuthService.logout(refreshToken);
 
-    // Clear cookie
     res.clearCookie("refreshToken");
 
     return formatResponse(res, 200, 1, "Đăng xuất thành công");
   }),
 
+  /**
+   * Logout user from all devices
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with logout all devices success message
+   */
   LogoutAllDevices: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -133,10 +172,17 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Đã đăng xuất khỏi tất cả thiết bị");
   }),
 
-  // ======================================
-  // Password Management
-  // ======================================
-
+  /**
+   * Update user password
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.currentPassword - User's current password
+   * @param {string} req.body.newPassword - User's new password (min 6 characters)
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with password change success message
+   */
   UpdatePassword: CatchError(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
@@ -171,6 +217,14 @@ const AuthController = {
     );
   }),
 
+  /**
+   * Request password reset email
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.email - User's email address
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with password reset email sent message
+   */
   RequestPasswordReset: CatchError(async (req, res) => {
     const { email } = req.body;
 
@@ -188,6 +242,15 @@ const AuthController = {
     );
   }),
 
+  /**
+   * Reset password using token
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.token - Password reset token from email
+   * @param {string} req.body.newPassword - New password (min 6 characters)
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with password reset success message
+   */
   ResetPassword: CatchError(async (req, res) => {
     const { token, newPassword } = req.body;
 
@@ -209,10 +272,14 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Đặt lại mật khẩu thành công");
   }),
 
-  // ======================================
-  // Email Verification
-  // ======================================
-
+  /**
+   * Request email verification for account
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with verification email sent message
+   */
   VerifyAccount: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -226,6 +293,14 @@ const AuthController = {
     );
   }),
 
+  /**
+   * Verify email using token
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.token - Email verification token
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with email verification success message
+   */
   VerifyEmail: CatchError(async (req, res) => {
     const { token } = req.body;
 
@@ -238,10 +313,14 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Xác thực email thành công");
   }),
 
-  // ======================================
-  // Two-Factor Authentication
-  // ======================================
-
+  /**
+   * Enable two-factor authentication
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with 2FA secret and QR code for setup
+   */
   EnableTwoFactor: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -253,6 +332,16 @@ const AuthController = {
     });
   }),
 
+  /**
+   * Verify and complete 2FA setup
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.token - 2FA verification token from authenticator app
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with backup codes for 2FA recovery
+   */
   VerifyTwoFactor: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { token } = req.body;
@@ -271,6 +360,16 @@ const AuthController = {
     });
   }),
 
+  /**
+   * Disable two-factor authentication
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.password - User's current password for verification
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with 2FA disabled success message
+   */
   DisableTwoFactor: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { password } = req.body;
@@ -284,10 +383,18 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Đã tắt xác thực 2 lớp");
   }),
 
-  // ======================================
-  // Session Management
-  // ======================================
-
+  /**
+   * Get all active login sessions
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} [req.cookies] - Request cookies
+   * @param {string} [req.cookies.refreshToken] - Refresh token from cookie
+   * @param {Object} [req.body] - Request body
+   * @param {string} [req.body.refreshToken] - Refresh token from body (fallback)
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with list of active sessions
+   */
   GetActiveSessions: CatchError(async (req, res) => {
     const userId = req.user.id;
 
@@ -297,6 +404,16 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Success", sessions);
   }),
 
+  /**
+   * Revoke a specific login session
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.sessionId - Session ID to revoke
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with session revoked success message
+   */
   RevokeSession: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { sessionId } = req.params;
@@ -310,10 +427,14 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Đã thu hồi phiên đăng nhập");
   }),
 
-  // ======================================
-  // OAuth
-  // ======================================
-
+  /**
+   * Authenticate user via Google OAuth
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.credential - Google OAuth credential token
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with user data, access token, and refresh token cookie
+   */
   GoogleAuth: CatchError(async (req, res) => {
     const { credential } = req.body;
 
@@ -321,7 +442,6 @@ const AuthController = {
       return formatResponse(res, 400, 0, "Google credential is required");
     }
 
-    // Decode Google JWT credential
     const { OAuth2Client } = await import("google-auth-library");
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -348,10 +468,17 @@ const AuthController = {
     });
   }),
 
-  // ======================================
-  // Account Management
-  // ======================================
-
+  /**
+   * Update user email address
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.email - New email address
+   * @param {string} req.body.password - User's current password for verification
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with email update status (feature in development)
+   */
   UpdateEmail: CatchError(async (req, res) => {
     const { email, password } = req.body;
     const userId = req.user.id;
@@ -360,12 +487,19 @@ const AuthController = {
       return formatResponse(res, 400, 0, "Email mới là bắt buộc");
     }
 
-    // For security, could require password verification here
-    // This would need to be added to AuthService
-
     return formatResponse(res, 200, 1, "Tính năng đang được phát triển");
   }),
 
+  /**
+   * Delete user account permanently
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Request body
+   * @param {string} req.body.password - User's current password for verification
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with account deletion success message
+   */
   DeleteAccount: CatchError(async (req, res) => {
     const { password } = req.body;
     const userId = req.user.id;
@@ -379,10 +513,8 @@ const AuthController = {
       );
     }
 
-    // Verify password before deletion
     const UserService = (await import("../services/User.Service.js")).default;
 
-    // This would need password verification logic
     await UserService.deleteUser(userId);
 
     res.clearCookie("refreshToken");
@@ -390,7 +522,12 @@ const AuthController = {
     return formatResponse(res, 200, 1, "Tài khoản đã được xóa");
   }),
 
-  // Backward compatibility
+  /**
+   * Connect social account to user profile
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with social account connection status (feature in development)
+   */
   ConnectSocialAccount: CatchError(async (req, res) => {
     return formatResponse(res, 200, 1, "Tính năng đang được phát triển");
   }),

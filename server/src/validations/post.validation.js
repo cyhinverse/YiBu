@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Post Validation Schemas
- * Validation cho tất cả endpoints trong post.router.js
+ * Validation for all endpoints in post.router.js
  */
 
 // ======================================

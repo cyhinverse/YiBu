@@ -3,12 +3,9 @@ import { objectId } from './common.validation.js';
 
 /**
  * Admin Validation Schemas
- * Validation cho tất cả endpoints trong admin.router.js
+ * Validation for all endpoints in admin.router.js
  */
 
-// ======================================
-// User Management
-// ======================================
 
 // GET /users
 export const getUsersQuery = Joi.object({
@@ -86,9 +83,6 @@ export const warnUserBody = Joi.object({
   severity: Joi.string().valid('low', 'medium', 'high').default('low'),
 });
 
-// ======================================
-// Content Moderation
-// ======================================
 
 // GET /posts
 export const getPostsQuery = Joi.object({
@@ -146,9 +140,6 @@ export const moderateCommentBody = Joi.object({
     }),
 });
 
-// ======================================
-// Reports Management
-// ======================================
 
 // GET /reports
 export const getReportsQuery = Joi.object({
@@ -204,9 +195,6 @@ export const resolveReportBody = Joi.object({
   notes: Joi.string().trim().max(1000),
 });
 
-// ======================================
-// System Management
-// ======================================
 
 // POST /broadcast
 export const broadcastBody = Joi.object({

@@ -21,12 +21,10 @@ import logger from '../configs/logger.js';
  * 4. Integrates with UserInteraction for recommendations
  */
 class UserService {
-  // ======================================
-  // Helper Methods
-  // ======================================
-
   /**
    * Check if a string is a valid MongoDB ObjectId
+   * @param {string} str - String to check
+   * @returns {boolean} True if valid ObjectId
    */
   static isValidObjectId(str) {
     return (
@@ -35,32 +33,30 @@ class UserService {
   }
 
   /**
-   * Resolve a user ID or username to a user ID string
-   * Returns the user's _id as a string, or null if not found
+   * Convert user ID or username to user ID string
+   * @param {string} identifier - User ID or username
+   * @returns {Promise<string|null>} User ID as string or null if not found
    */
   static async resolveUserIdOrUsername(identifier) {
     if (!identifier) return null;
 
-    // If it's already a valid ObjectId, verify the user exists and return the ID
     if (this.isValidObjectId(identifier)) {
       const user = await User.findById(identifier).select('_id').lean();
       return user ? user._id.toString() : null;
     }
 
-    // Otherwise, look up by username
     const user = await User.findOne({ username: identifier.toLowerCase() })
       .select('_id')
       .lean();
 
     return user ? user._id.toString() : null;
   }
-
-  // ======================================
-  // User Core Methods
-  // ======================================
-
+  
   /**
-   * Find user by email (for auth)
+   * Find user by email (for authentication)
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} User object with password or null
+   * @throws {Error} If email not provided
    */
   static async findUserByEmail(email) {
     if (!email) {
@@ -76,6 +72,9 @@ class UserService {
 
   /**
    * Find user by username
+   * @param {string} username - User username
+   * @returns {Promise<Object|null>} User object or null
+   * @throws {Error} If username not provided
    */
   static async getUserByUsername(username) {
     if (!username) {
@@ -90,7 +89,11 @@ class UserService {
   }
 
   /**
-   * Get user by ID with full profile data
+   * Get user information by ID with full profile data
+   * @param {string} userId - User ID to get
+   * @param {string|null} requesterId - Requesting user ID (to check view permissions)
+   * @returns {Promise<Object>} User object with follow status
+   * @throws {Error} If userId not provided or user not found
    */
   static async getUserById(userId, requesterId = null) {
     if (!userId) {
@@ -103,7 +106,6 @@ class UserService {
       throw new Error('User not found');
     }
 
-    // Check privacy settings if requester is different user
     if (requesterId && requesterId !== userId.toString()) {
       if (user.privacy?.profileVisibility === 'private') {
         const isFollowing = await Follow.isFollowing(requesterId, userId);
@@ -122,7 +124,6 @@ class UserService {
       }
     }
 
-    // Get follow status if requester provided
     let isFollowing = false;
     let followStatus = 'none';
     if (requesterId && requesterId !== userId.toString()) {
@@ -138,7 +139,10 @@ class UserService {
   }
 
   /**
-   * Get user profile with posts and stats
+   * Get user profile with posts and statistics
+   * @param {string} userId - User ID
+   * @param {string|null} requesterId - Requesting user ID
+   * @returns {Promise<Object>} Profile object with recent posts
    */
   static async getUserProfile(userId, requesterId = null) {
     const user = await this.getUserById(userId, requesterId);
@@ -147,7 +151,6 @@ class UserService {
       return user;
     }
 
-    // Get recent posts
     const posts = await Post.find({
       user: userId,
       isDeleted: false,
@@ -169,6 +172,10 @@ class UserService {
 
   /**
    * Get user profile by ID or username
+   * @param {string} identifier - User ID or username
+   * @param {string|null} requesterId - Requesting user ID
+   * @returns {Promise<Object>} Profile object
+   * @throws {Error} If user not found
    */
   static async getUserProfileByIdOrUsername(identifier, requesterId = null) {
     let userId;
@@ -176,7 +183,6 @@ class UserService {
     if (this.isValidObjectId(identifier)) {
       userId = identifier;
     } else {
-      // It's a username
       const user = await User.findOne({ username: identifier.toLowerCase() })
         .select('_id')
         .lean();
@@ -190,7 +196,11 @@ class UserService {
   }
 
   /**
-   * Update user basic info
+   * Update basic user information
+   * @param {string} userId - User ID
+   * @param {Object} updateData - Data to update
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
    */
   static async updateUser(userId, updateData) {
     const {
@@ -218,6 +228,10 @@ class UserService {
 
   /**
    * Update user profile fields
+   * @param {string} userId - User ID
+   * @param {Object} profileData - Profile data (name, bio, birthday, gender, website, avatar, cover, location, interests)
+   * @returns {Promise<Object>} Updated user object
+   * @throws {Error} If user not found
    */
   static async updateProfile(userId, profileData) {
     const allowedFields = [
@@ -262,7 +276,10 @@ class UserService {
   }
 
   /**
-   * Delete user and all associated data
+   * Delete user and all related data (posts, comments, likes, follows, messages, notifications)
+   * @param {string} userId - User ID to delete
+   * @returns {Promise<Object>} Deleted user object
+   * @throws {Error} If user not found or error in transaction
    */
   static async deleteUser(userId) {
     const session = await mongoose.startSession();
@@ -274,7 +291,6 @@ class UserService {
         throw new Error('User not found');
       }
 
-      // Get all user's posts for cleanup
       const userPosts = await Post.find({ user: userId })
         .select('_id')
         .session(session);
@@ -340,10 +356,13 @@ class UserService {
     }
   }
 
-  // ======================================
-  // Search & Discovery
-  // ======================================
-
+  /**
+   * Search users by query
+   * @param {string} query - Search keyword (username or name)
+   * @param {string} currentUserId - Searching user ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{users: Array, total: number}>} List of users and total count
+   */
   static async searchUsers(query, currentUserId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -389,19 +408,33 @@ class UserService {
     return { users: usersWithStatus, total };
   }
 
+  /**
+   * Get list of recommended users
+   * @param {string} userId - User ID
+   * @param {number} limit - Maximum number of users
+   * @returns {Promise<Array>} List of recommended users
+   */
   static async getRecommendedUsers(userId, limit = 10) {
     return User.getRecommendedUsers(userId, limit);
   }
 
+  /**
+   * Get list of users for chat
+   * @param {string} currentUserId - Current user ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<Object>} List of conversations
+   */
   static async getUsersForChat(currentUserId, options = {}) {
     const { page = 1, limit = 20 } = options;
     return Message.getConversations(currentUserId, { page, limit });
   }
 
-  // ======================================
-  // Follow System
-  // ======================================
-
+  /**
+   * Follow a user
+   * @param {string} currentUserId - Following user ID
+   * @param {string} targetUserId - User ID to follow
+   * @returns {Promise<Object>} Follow result {success, status}
+   */
   static async followUser(currentUserId, targetUserId) {
     const result = await Follow.follow(currentUserId, targetUserId);
 
@@ -422,14 +455,32 @@ class UserService {
     return result;
   }
 
+  /**
+   * Unfollow a user
+   * @param {string} currentUserId - Unfollowing user ID
+   * @param {string} targetUserId - User ID to unfollow
+   * @returns {Promise<Object>} Unfollow result
+   */
   static async unfollowUser(currentUserId, targetUserId) {
     return Follow.unfollow(currentUserId, targetUserId);
   }
 
+  /**
+   * Check follow status between 2 users
+   * @param {string} currentUserId - Current user ID
+   * @param {string} targetUserId - User ID to check
+   * @returns {Promise<string>} Follow status (active, pending, none)
+   */
   static async checkFollowStatus(currentUserId, targetUserId) {
     return Follow.getFollowStatus(currentUserId, targetUserId);
   }
 
+  /**
+   * Get list of followers of a user
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, requesterId}
+   * @returns {Promise<Array>} List of followers with isFollowing status
+   */
   static async getFollowers(userId, options = {}) {
     const users = await Follow.getFollowers(userId, options);
 
@@ -454,6 +505,12 @@ class UserService {
     return users;
   }
 
+  /**
+   * Get list of users that a user is following
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, requesterId}
+   * @returns {Promise<Array>} List of following with isFollowing status
+   */
   static async getFollowing(userId, options = {}) {
     const users = await Follow.getFollowing(userId, options);
 
@@ -478,10 +535,23 @@ class UserService {
     return users;
   }
 
+  /**
+   * Get list of mutual followers between 2 users
+   * @param {string} userId1 - First user ID
+   * @param {string} userId2 - Second user ID
+   * @param {number} limit - Maximum count
+   * @returns {Promise<Array>} List of mutual followers
+   */
   static async getMutualFollowers(userId1, userId2, limit = 10) {
     return Follow.getMutualFollowers(userId1, userId2, limit);
   }
 
+  /**
+   * Accept follow request
+   * @param {string} userId - User ID receiving the request
+   * @param {string} followerId - User ID who sent the request
+   * @returns {Promise<Object>} Accept result
+   */
   static async acceptFollowRequest(userId, followerId) {
     const result = await Follow.acceptFollowRequest(userId, followerId);
 
@@ -497,18 +567,31 @@ class UserService {
     return result;
   }
 
+  /**
+   * Reject follow request
+   * @param {string} userId - User ID receiving the request
+   * @param {string} followerId - User ID who sent the request
+   * @returns {Promise<Object>} Reject result
+   */
   static async rejectFollowRequest(userId, followerId) {
     return Follow.rejectFollowRequest(userId, followerId);
   }
 
+  /**
+   * Get list of pending follow requests
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options
+   * @returns {Promise<Array>} List of pending requests
+   */
   static async getPendingFollowRequests(userId, options = {}) {
     return Follow.getPendingRequests(userId, options);
   }
 
-  // ======================================
-  // User Settings
-  // ======================================
-
+  /**
+   * Get all user settings
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Settings object including privacy, notifications, security, appearance
+   */
   static async getUserSettings(userId) {
     const [userSettings, user] = await Promise.all([
       UserSettings.getOrCreate(userId),
@@ -517,35 +600,29 @@ class UserService {
 
     const settings = userSettings.toObject();
 
-    // Serialize privacy settings from both sources
     settings.privacy = {
       ...settings.privacy,
       profileVisibility: user.privacy?.profileVisibility || 'public',
       allowMessages: user.privacy?.allowMessages || 'everyone',
-      // Map for frontend compatibility
       messagePermission: user.privacy?.allowMessages || 'everyone',
       showActivity: user.privacy?.showActivity ?? true,
       activityStatus: user.privacy?.showActivity ?? true,
     };
 
-    // Flatten notification settings for frontend compatibility
     if (settings.notifications) {
       const push = settings.notifications.push || {};
       const email = settings.notifications.email || {};
 
       settings.notifications = {
-        // Flat structure expected by FE
         likes: push.likes ?? true,
         comments: push.comments ?? true,
         follows: push.follows ?? true,
         messages: push.messages ?? true,
         mentions: push.mentions ?? true,
 
-        // Delivery methods
         push: push.enabled ?? true,
         email: email.enabled ?? true,
 
-        // Preserve other legacy/nested fields if needed
         ...settings.notifications,
       };
     }
@@ -553,6 +630,12 @@ class UserService {
     return settings;
   }
 
+  /**
+   * Update privacy settings
+   * @param {string} userId - User ID
+   * @param {Object} privacySettings - Privacy settings {profileVisibility, allowMessages, showActivity}
+   * @returns {Promise<Object>} Updated privacy settings
+   */
   static async updatePrivacySettings(userId, privacySettings) {
     const { profileVisibility, allowMessages, showActivity } = privacySettings;
 
@@ -583,13 +666,11 @@ class UserService {
       );
     }
 
-    // Get latest settings to return merged result
     const latestUserSettings = await UserSettings.findOne({ user: userId });
 
     return {
       profileVisibility: user.privacy?.profileVisibility || 'public',
       allowMessages: user.privacy?.allowMessages || 'everyone',
-      // Map for frontend compatibility
       messagePermission: user.privacy?.allowMessages || 'everyone',
       showActivity: user.privacy?.showActivity ?? true,
       activityStatus: user.privacy?.showActivity ?? true,
@@ -599,17 +680,21 @@ class UserService {
     };
   }
 
+  /**
+   * Update notification settings
+   * @param {string} userId - User ID
+   * @param {Object} notificationSettings - Notification settings {likes, comments, follows, messages, mentions, push, email}
+   * @returns {Promise<Object>} Updated notification settings
+   */
   static async updateNotificationSettings(userId, notificationSettings) {
     const updateOps = {};
 
-    // Map of flat keys to schema paths
     const keyMapping = {
       likes: 'notifications.push.likes',
       comments: 'notifications.push.comments',
       follows: 'notifications.push.follows',
       messages: 'notifications.push.messages',
       mentions: 'notifications.push.mentions',
-      // 'replies' field in FE doesn't exist in Schema, mapping to comments or ignoring? Ignoring for now.
     };
 
     for (const [key, value] of Object.entries(notificationSettings)) {
@@ -632,7 +717,6 @@ class UserService {
       } else if (keyMapping[key]) {
         updateOps[keyMapping[key]] = value;
       } else {
-        // Fallback for other fields or legacy structure
         updateOps[`notifications.${key}`] = value;
       }
     }
@@ -643,7 +727,6 @@ class UserService {
       { new: true, upsert: true }
     );
 
-    // Return flattened structure for checking immediately in FE without reload
     const push = settings.notifications?.push || {};
     const email = settings.notifications?.email || {};
 
@@ -659,6 +742,12 @@ class UserService {
     };
   }
 
+  /**
+   * Update security settings
+   * @param {string} userId - User ID
+   * @param {Object} securitySettings - Security settings {twoFactorEnabled, loginAlerts}
+   * @returns {Promise<Object>} Updated security settings
+   */
   static async updateSecuritySettings(userId, securitySettings) {
     const { twoFactorEnabled, loginAlerts } = securitySettings;
 
@@ -677,6 +766,12 @@ class UserService {
     return settings.security;
   }
 
+  /**
+   * Update appearance settings
+   * @param {string} userId - User ID
+   * @param {Object} appearanceSettings - Appearance settings {theme, fontSize, language}
+   * @returns {Promise<Object>} Updated appearance settings
+   */
   static async updateAppearanceSettings(userId, appearanceSettings) {
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -687,6 +782,12 @@ class UserService {
     return settings.appearance;
   }
 
+  /**
+   * Update content settings
+   * @param {string} userId - User ID
+   * @param {Object} contentSettings - Content settings {autoplayVideos, showSensitiveContent}
+   * @returns {Promise<Object>} Updated content settings
+   */
   static async updateContentSettings(userId, contentSettings) {
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -697,7 +798,6 @@ class UserService {
     return settings.content;
   }
 
-  // Alias methods for backward compatibility
   static async updateProfileSettings(userId, updatedFields, avatarUrl = null) {
     if (avatarUrl) {
       updatedFields.avatar = avatarUrl;
@@ -717,10 +817,13 @@ class UserService {
     return this.updateSecuritySettings(userId, twoFactorSettings);
   }
 
-  // ======================================
-  // Block & Mute
-  // ======================================
-
+  /**
+   * Block a user
+   * @param {string} userId - User ID performing the block
+   * @param {string} targetUserId - User ID to block
+   * @returns {Promise<{success: boolean}>} Block result
+   * @throws {Error} If blocking self or user not found
+   */
   static async blockUser(userId, targetUserId) {
     if (userId === targetUserId) {
       throw new Error('Cannot block yourself');
@@ -752,6 +855,12 @@ class UserService {
     return { success: true };
   }
 
+  /**
+   * Unblock a user
+   * @param {string} userId - User ID performing the unblock
+   * @param {string} targetUserId - User ID to unblock
+   * @returns {Promise<{success: boolean}>} Unblock result
+   */
   static async unblockUser(userId, targetUserId) {
     await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -761,6 +870,13 @@ class UserService {
     return { success: true };
   }
 
+  /**
+   * Mute a user (hide their content)
+   * @param {string} userId - User ID performing the mute
+   * @param {string} targetUserId - User ID to mute
+   * @returns {Promise<{success: boolean}>} Mute result
+   * @throws {Error} If muting self
+   */
   static async muteUser(userId, targetUserId) {
     if (userId === targetUserId) {
       throw new Error('Cannot mute yourself');
@@ -782,6 +898,12 @@ class UserService {
     return { success: true };
   }
 
+  /**
+   * Unmute a user
+   * @param {string} userId - User ID performing the unmute
+   * @param {string} targetUserId - User ID to unmute
+   * @returns {Promise<{success: boolean}>} Unmute result
+   */
   static async unmuteUser(userId, targetUserId) {
     await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -791,6 +913,11 @@ class UserService {
     return { success: true };
   }
 
+  /**
+   * Get list of blocked users
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of blocked users with basic info
+   */
   static async getBlockedUsers(userId) {
     const settings = await UserSettings.findOne({ user: userId })
       .populate('blockedUsers', 'username name avatar')
@@ -799,6 +926,11 @@ class UserService {
     return settings?.blockedUsers || [];
   }
 
+  /**
+   * Get list of muted users
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} List of muted users with basic info
+   */
   static async getMutedUsers(userId) {
     const settings = await UserSettings.findOne({ user: userId })
       .populate('mutedUsers', 'username name avatar')
@@ -807,11 +939,16 @@ class UserService {
     return settings?.mutedUsers || [];
   }
 
+  /**
+   * Check if a user is blocked
+   * @param {string} userId - Checking user ID
+   * @param {string} targetUserId - User ID to check
+   * @returns {Promise<boolean>} True if blocked
+   */
   static async isBlocked(userId, targetUserId) {
     return UserSettings.isBlocked(userId, targetUserId);
   }
 
-  // Alias for backward compatibility
   static async updateBlockedUsers(userId, action, blockedUserId) {
     if (action === 'block') {
       return this.blockUser(userId, blockedUserId);
@@ -821,14 +958,20 @@ class UserService {
     throw new Error('Invalid action');
   }
 
-  // ======================================
-  // Activity & Metrics
-  // ======================================
-
+  /**
+   * Update user last active time
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
   static async updateLastActive(userId) {
     await User.findByIdAndUpdate(userId, { lastActiveAt: new Date() });
   }
 
+  /**
+   * Update user engagement metrics
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
   static async updateUserMetrics(userId) {
     const user = await User.findById(userId);
     if (user) {
@@ -836,6 +979,11 @@ class UserService {
     }
   }
 
+  /**
+   * Get list of top users by engagement rate
+   * @param {number} limit - Maximum number of users
+   * @returns {Promise<Array>} List of top users
+   */
   static async getTopUsersByEngagement(limit = 10) {
     return User.find({
       isActive: true,
@@ -849,7 +997,6 @@ class UserService {
       .lean();
   }
 
-  // Alias for backward compatibility
   static async getTopUsersByLikes() {
     return this.getTopUsersByEngagement(10);
   }
@@ -858,10 +1005,13 @@ class UserService {
     return this.getUsersForChat(currentUserId);
   }
 
-  // ======================================
-  // Avatar Upload
-  // ======================================
-
+  /**
+   * Upload avatar to Cloudinary and update user
+   * @param {Object} avatar - Avatar file {tempFilePath, size}
+   * @param {string} userId - User ID
+   * @returns {Promise<string>} Uploaded avatar URL
+   * @throws {Error} If file exceeds 10MB
+   */
   static async uploadAvatarToCloudinary(avatar, userId) {
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -887,10 +1037,11 @@ class UserService {
     return result.secure_url;
   }
 
-  // ======================================
-  // User Creation (for Auth)
-  // ======================================
-
+  /**
+   * Create new user (for registration)
+   * @param {Object} userData - User data {name, email, password, username}
+   * @returns {Promise<Object>} Created user object
+   */
   static async createUser(userData) {
     const { name, email, password, username } = userData;
 
@@ -906,11 +1057,15 @@ class UserService {
     return user;
   }
 
+  /**
+   * Get user by email (alias for findUserByEmail)
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} User object or null
+   */
   static async getUserByEmail(email) {
     return this.findUserByEmail(email);
   }
 
-  // Profile methods aliases
   static async findProfileByUserId(userId) {
     const user = await User.findById(userId).lean();
     if (!user) return null;

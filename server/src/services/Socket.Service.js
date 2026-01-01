@@ -20,24 +20,24 @@ class SocketService {
     this.userSockets = new Map();
   }
 
-  // ======================================
-  // Initialization
-  // ======================================
-
+  /**
+   * Initialize Socket Service with Socket.IO instance
+   * @param {Object} io - Socket.IO server instance
+   */
   init(io) {
     this.io = io;
     logger.info('SocketService initialized');
   }
 
-  // Alias for backward compatibility
   initialize(io) {
     this.init(io);
   }
 
-  // ======================================
-  // User Management
-  // ======================================
-
+  /**
+   * Add user to online list
+   * @param {string} userId - User ID
+   * @param {string} socketId - Socket ID
+   */
   addUser(userId, socketId) {
     const userIdStr = userId.toString();
 
@@ -53,6 +53,10 @@ class SocketService {
     logger.debug(`User ${userIdStr} connected with socket ${socketId}`);
   }
 
+  /**
+   * Remove user from online list when disconnected
+   * @param {string} socketId - Socket ID
+   */
   removeUser(socketId) {
     const userId = this.onlineUsers.get(socketId);
 
@@ -73,25 +77,42 @@ class SocketService {
     }
   }
 
+  /**
+   * Get all socket IDs of a user
+   * @param {string} userId - User ID
+   * @returns {Set} Set containing socket IDs
+   */
   getUserSockets(userId) {
     const userIdStr = userId.toString();
     return this.userSockets.get(userIdStr) || new Set();
   }
 
+  /**
+   * Check if user is online
+   * @param {string} userId - User ID
+   * @returns {boolean} True if user is online
+   */
   isUserOnline(userId) {
     const userIdStr = userId.toString();
     const sockets = this.userSockets.get(userIdStr);
     return sockets && sockets.size > 0;
   }
 
+  /**
+   * Get list of all online users
+   * @returns {Array} List of user IDs
+   */
   getOnlineUsers() {
     return Array.from(this.userSockets.keys());
   }
 
-  // ======================================
-  // Messaging
-  // ======================================
-
+  /**
+   * Send realtime message to user
+   * @param {string} senderId - Sender ID
+   * @param {string} receiverId - Receiver ID
+   * @param {Object} message - Message object
+   * @returns {Promise<{delivered: boolean, reason?: string, socketCount?: number}>} Send result
+   */
   async sendMessage(senderId, receiverId, message) {
     const settings = await UserSettings.findOne({ user: receiverId })
       .select('blockedUsers')
@@ -124,6 +145,12 @@ class SocketService {
     return { delivered: false, reason: 'offline' };
   }
 
+  /**
+   * Send typing status
+   * @param {string} senderId - Sender ID
+   * @param {string} receiverId - Receiver ID
+   * @param {boolean} isTyping - Is typing or not
+   */
   sendTypingStatus(senderId, receiverId, isTyping) {
     const receiverSockets = this.getUserSockets(receiverId);
 
@@ -136,6 +163,13 @@ class SocketService {
     });
   }
 
+  /**
+   * Send message status (sent, delivered, read)
+   * @param {string} senderId - Sender ID
+   * @param {string} receiverId - Receiver ID
+   * @param {string} messageId - Message ID
+   * @param {string} status - New status
+   */
   sendMessageStatus(senderId, receiverId, messageId, status) {
     const senderSockets = this.getUserSockets(senderId);
 
@@ -148,6 +182,12 @@ class SocketService {
     });
   }
 
+  /**
+   * Send conversation read notification
+   * @param {string} senderId - Original message sender ID
+   * @param {string} readerId - Reader ID
+   * @param {string} conversationId - Conversation ID
+   */
   sendConversationRead(senderId, readerId, conversationId) {
     const senderSockets = this.getUserSockets(senderId);
 
@@ -160,7 +200,6 @@ class SocketService {
     });
   }
 
-  // Alias methods for backward compatibility
   emitNotification(userId, notification) {
     return this.sendNotification(userId, notification);
   }
@@ -198,10 +237,12 @@ class SocketService {
     });
   }
 
-  // ======================================
-  // Notifications
-  // ======================================
-
+  /**
+   * Send realtime notification to user
+   * @param {string} userId - Recipient user ID
+   * @param {Object} notification - Notification object
+   * @returns {Promise<{sent: boolean, reason?: string, socketCount?: number}>} Send result
+   */
   async sendNotification(userId, notification) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('notifications')
@@ -233,6 +274,12 @@ class SocketService {
     return { sent: false, reason: 'offline' };
   }
 
+  /**
+   * Send notification to multiple users
+   * @param {Array} userIds - List of user IDs
+   * @param {Object} notification - Notification object
+   * @returns {Promise<{sent: number, failed: number}>} Send result
+   */
   async broadcastNotification(userIds, notification) {
     const results = { sent: 0, failed: 0 };
 
@@ -248,10 +295,11 @@ class SocketService {
     return results;
   }
 
-  // ======================================
-  // Post Events
-  // ======================================
-
+  /**
+   * Emit post like event
+   * @param {string} postOwnerId - Post owner ID
+   * @param {Object} data - Like data
+   */
   emitPostLike(postOwnerId, data) {
     const ownerSockets = this.getUserSockets(postOwnerId);
 
@@ -260,6 +308,11 @@ class SocketService {
     });
   }
 
+  /**
+   * Emit post comment event
+   * @param {string} postOwnerId - Post owner ID
+   * @param {Object} data - Comment data
+   */
   emitPostComment(postOwnerId, data) {
     const ownerSockets = this.getUserSockets(postOwnerId);
 
@@ -268,6 +321,11 @@ class SocketService {
     });
   }
 
+  /**
+   * Emit new post event to followers
+   * @param {Array} followerIds - List of follower IDs
+   * @param {Object} post - Post object
+   */
   emitNewPost(followerIds, post) {
     followerIds.forEach(followerId => {
       const followerSockets = this.getUserSockets(followerId);
@@ -286,10 +344,11 @@ class SocketService {
     });
   }
 
-  // ======================================
-  // Follow Events
-  // ======================================
-
+  /**
+   * Emit new follow event
+   * @param {string} targetUserId - Followed user ID
+   * @param {Object} data - Follow data
+   */
   emitFollowEvent(targetUserId, data) {
     const targetSockets = this.getUserSockets(targetUserId);
 
@@ -298,6 +357,11 @@ class SocketService {
     });
   }
 
+  /**
+   * Emit follow request event
+   * @param {string} targetUserId - User ID receiving the request
+   * @param {Object} data - Follow request data
+   */
   emitFollowRequestEvent(targetUserId, data) {
     const targetSockets = this.getUserSockets(targetUserId);
 
@@ -306,10 +370,11 @@ class SocketService {
     });
   }
 
-  // ======================================
-  // Room Management
-  // ======================================
-
+  /**
+   * Join socket to room
+   * @param {string} socketId - Socket ID
+   * @param {string} roomId - Room ID
+   */
   joinRoom(socketId, roomId) {
     if (this.io) {
       const socket = this.io.sockets.sockets.get(socketId);
@@ -319,6 +384,11 @@ class SocketService {
     }
   }
 
+  /**
+   * Leave socket from room
+   * @param {string} socketId - Socket ID
+   * @param {string} roomId - Room ID
+   */
   leaveRoom(socketId, roomId) {
     if (this.io) {
       const socket = this.io.sockets.sockets.get(socketId);
@@ -328,16 +398,23 @@ class SocketService {
     }
   }
 
+  /**
+   * Emit event to all sockets in room
+   * @param {string} roomId - Room ID
+   * @param {string} event - Event name
+   * @param {Object} data - Data to send
+   */
   emitToRoom(roomId, event, data) {
     if (this.io) {
       this.io.to(roomId).emit(event, data);
     }
   }
 
-  // ======================================
-  // Presence
-  // ======================================
-
+  /**
+   * Get user presence status
+   * @param {string} userId - User ID
+   * @returns {Promise<{userId: string, status: string, lastActiveAt: Date}>} Presence info
+   */
   async getUserPresence(userId) {
     const isOnline = this.isUserOnline(userId);
 
@@ -358,6 +435,11 @@ class SocketService {
     };
   }
 
+  /**
+   * Get presence status of multiple users
+   * @param {Array} userIds - List of user IDs
+   * @returns {Promise<Array>} List of presence info
+   */
   async getMultiplePresence(userIds) {
     const presenceList = await Promise.all(
       userIds.map(userId => this.getUserPresence(userId))
@@ -366,10 +448,10 @@ class SocketService {
     return presenceList;
   }
 
-  // ======================================
-  // System Events
-  // ======================================
-
+  /**
+   * Broadcast system message to all users
+   * @param {string} message - Message content
+   */
   broadcastSystemMessage(message) {
     if (this.io) {
       this.io.emit('system_message', {
@@ -379,6 +461,11 @@ class SocketService {
     }
   }
 
+  /**
+   * Disconnect user from all sockets
+   * @param {string} userId - User ID
+   * @param {string} reason - Disconnect reason
+   */
   disconnectUser(userId, reason = 'forced_disconnect') {
     const userSockets = this.getUserSockets(userId);
 
@@ -393,10 +480,10 @@ class SocketService {
     logger.info(`User ${userId} forcefully disconnected: ${reason}`);
   }
 
-  // ======================================
-  // Stats
-  // ======================================
-
+  /**
+   * Get socket connection statistics
+   * @returns {{totalConnections: number, uniqueUsers: number, timestamp: Date}} Stats object
+   */
   getStats() {
     return {
       totalConnections: this.onlineUsers.size,

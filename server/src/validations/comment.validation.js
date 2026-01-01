@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Comment Validation Schemas
- * Validation cho tất cả endpoints trong comment.router.js
+ * Validation for all endpoints in comment.router.js
  */
 
 // ======================================

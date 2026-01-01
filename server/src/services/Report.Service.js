@@ -17,10 +17,16 @@ import logger from "../configs/logger.js";
  * 4. Content snapshots for evidence
  */
 class ReportService {
-  // ======================================
-  // Report Creation
-  // ======================================
 
+  /**
+   * Create new report
+   * @param {string} reporterId - Reporting user ID
+   * @param {string} targetType - Target type (post, comment, user, message)
+   * @param {string} targetId - Target ID
+   * @param {Object} reportData - Report data {category, reason, description}
+   * @returns {Promise<Object>} Created report object
+   * @throws {Error} If targetType is invalid, already reported, or reporting self
+   */
   static async createReport(reporterId, targetType, targetId, reportData) {
     const { category, reason, description } = reportData;
 
@@ -115,30 +121,56 @@ class ReportService {
     return populatedReport;
   }
 
-  // ======================================
-  // Report Types
-  // ======================================
-
+  /**
+   * Report post
+   * @param {string} reporterId - Reporting user ID
+   * @param {string} postId - Post ID
+   * @param {Object} reportData - Report data
+   * @returns {Promise<Object>} Report object
+   */
   static async reportPost(reporterId, postId, reportData) {
     return this.createReport(reporterId, "post", postId, reportData);
   }
 
+  /**
+   * Report comment
+   * @param {string} reporterId - Reporting user ID
+   * @param {string} commentId - Comment ID
+   * @param {Object} reportData - Report data
+   * @returns {Promise<Object>} Report object
+   */
   static async reportComment(reporterId, commentId, reportData) {
     return this.createReport(reporterId, "comment", commentId, reportData);
   }
 
+  /**
+   * Report user
+   * @param {string} reporterId - Reporting user ID
+   * @param {string} userId - Reported user ID
+   * @param {Object} reportData - Report data
+   * @returns {Promise<Object>} Report object
+   */
   static async reportUser(reporterId, userId, reportData) {
     return this.createReport(reporterId, "user", userId, reportData);
   }
 
+  /**
+   * Report message
+   * @param {string} reporterId - Reporting user ID
+   * @param {string} messageId - Message ID
+   * @param {Object} reportData - Report data
+   * @returns {Promise<Object>} Report object
+   */
   static async reportMessage(reporterId, messageId, reportData) {
     return this.createReport(reporterId, "message", messageId, reportData);
   }
 
-  // ======================================
-  // Report Retrieval
-  // ======================================
-
+  /**
+   * Get report by ID
+   * @param {string} reportId - Report ID
+   * @returns {Promise<Object>} Report object with full information
+   * @throws {Error} If report not found
+   */
   static async getReportById(reportId) {
     const report = await Report.findById(reportId)
       .populate("reporter", "username name avatar")
@@ -153,6 +185,12 @@ class ReportService {
     return report;
   }
 
+  /**
+   * Get list of reports by user (reports that user created)
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
+   */
   static async getUserReports(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
@@ -173,6 +211,12 @@ class ReportService {
     };
   }
 
+  /**
+   * Get list of reports against user (reports where user is reported)
+   * @param {string} userId - User ID
+   * @param {Object} options - Options {page, limit, status}
+   * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
+   */
   static async getReportsAgainstUser(userId, options = {}) {
     const { page = 1, limit = 20, status } = options;
 
@@ -198,10 +242,11 @@ class ReportService {
     };
   }
 
-  // ======================================
-  // Report Management (Admin)
-  // ======================================
-
+  /**
+   * Get list of pending reports
+   * @param {Object} options - Options {page, limit, category, targetType, priority}
+   * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
+   */
   static async getPendingReports(options = {}) {
     const { page = 1, limit = 20, category, targetType, priority } = options;
 
@@ -229,6 +274,13 @@ class ReportService {
     };
   }
 
+  /**
+   * Start reviewing report
+   * @param {string} reportId - Report ID
+   * @param {string} adminId - Admin ID
+   * @returns {Promise<Object>} Updated report object
+   * @throws {Error} If report not found
+   */
   static async startReview(reportId, adminId) {
     const report = await Report.findByIdAndUpdate(
       reportId,
@@ -248,6 +300,14 @@ class ReportService {
     return report;
   }
 
+  /**
+   * Resolve report
+   * @param {string} reportId - Report ID
+   * @param {string} adminId - Admin ID
+   * @param {Object} resolution - Decision {decision, actionTaken, notes}
+   * @returns {Promise<Object>} Updated report object
+   * @throws {Error} If decision is invalid or report not found
+   */
   static async resolveReport(reportId, adminId, resolution) {
     const { decision, actionTaken, notes } = resolution;
 
@@ -358,6 +418,13 @@ class ReportService {
     }
   }
 
+  /**
+   * Dismiss report (no violation found)
+   * @param {string} reportId - Report ID
+   * @param {string} adminId - Admin ID
+   * @param {string} reason - Dismiss reason
+   * @returns {Promise<Object>} Updated report object
+   */
   static async dismissReport(reportId, adminId, reason = "") {
     return this.resolveReport(reportId, adminId, {
       decision: "rejected",
@@ -366,10 +433,11 @@ class ReportService {
     });
   }
 
-  // ======================================
-  // Report Statistics
-  // ======================================
-
+  /**
+   * Get report statistics
+   * @param {string} timeframe - Time period (day, week, month, year)
+   * @returns {Promise<Object>} Stats object with pending, reviewing, resolvedInPeriod, byCategory, byTargetType
+   */
   static async getReportStats(timeframe = "week") {
     const timeframeDays = { day: 1, week: 7, month: 30, year: 365 };
     const days = timeframeDays[timeframe] || 7;
@@ -415,6 +483,11 @@ class ReportService {
     };
   }
 
+  /**
+   * Get user report history
+   * @param {string} userId - User ID
+   * @returns {Promise<{reportsMade: number, reportsReceived: number, violationsConfirmed: number}>}
+   */
   static async getUserReportHistory(userId) {
     const [reportsBy, reportsAgainst, resolvedAgainst] = await Promise.all([
       Report.countDocuments({ reporter: userId }),
@@ -429,10 +502,10 @@ class ReportService {
     };
   }
 
-  // ======================================
-  // Report Categories
-  // ======================================
-
+  /**
+   * Get list of report categories
+   * @returns {Array<{value: string, label: string, priority: number}>} List of categories
+   */
   static getReportCategories() {
     return [
       { value: "spam", label: "Spam hoặc lừa đảo", priority: 2 },
@@ -451,10 +524,14 @@ class ReportService {
     ];
   }
 
-  // ======================================
-  // Bulk Operations
-  // ======================================
-
+  /**
+   * Bulk resolve reports
+   * @param {Array} reportIds - List of report IDs
+   * @param {string} adminId - Admin ID
+   * @param {string} decision - Decision (resolved, rejected, escalated)
+   * @param {string} actionTaken - Action taken
+   * @returns {Promise<Array<{reportId: string, success: boolean, error?: string}>>} Processing results
+   */
   static async bulkResolve(reportIds, adminId, decision, actionTaken = "") {
     const results = [];
 
