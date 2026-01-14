@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom";
-import SideBarSettings from "./SideBarSettings";
+import { Outlet } from 'react-router-dom';
+import SideBarSettings from './SideBarSettings';
 
 const SettingsLayout = () => {
   return (
@@ -12,7 +12,7 @@ const SettingsLayout = () => {
 
         {/* Content */}
         <div className="md:col-span-3">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 h-full overflow-hidden">
+          <div className="bg-neutral-50/50 dark:bg-neutral-800/20 rounded-2xl h-full overflow-hidden">
             <div className="p-6 overflow-y-auto h-full">
               <Outlet />
             </div>

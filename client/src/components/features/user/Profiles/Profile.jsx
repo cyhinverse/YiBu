@@ -283,31 +283,31 @@ const Profile = () => {
           <img
             src={currentProfile?.avatar}
             alt={currentProfile?.username}
-            className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-neutral-900 bg-white dark:bg-neutral-900"
+            className="w-32 h-32 rounded-full object-cover bg-white dark:bg-neutral-900"
           />
         </div>
       </div>
 
       {/* Profile Header */}
-      <div className="px-4 pb-4 pt-20 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="px-4 pb-4 pt-20">
         {/* Actions */}
         <div className="flex justify-end mb-4">
           <div className="flex items-center gap-2">
             {isOwnProfile ? (
               <button
                 onClick={() => navigate('/settings/profile')}
-                className="px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Edit Profile
               </button>
             ) : (
               <>
-                <button className="p-2 rounded-full border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                <button className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
                   <MoreHorizontal size={18} className="text-neutral-500" />
                 </button>
                 <button
                   onClick={handleMessage}
-                  className="p-2 rounded-full border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                 >
                   <MessageCircle size={18} className="text-neutral-500" />
                 </button>
@@ -322,7 +322,7 @@ const Profile = () => {
                       : ''
                   } ${
                     isFollowing
-                      ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
+                      ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white hover:bg-red-500/10 hover:text-red-500'
                       : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                   }`}
                 >
@@ -426,7 +426,7 @@ const Profile = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex bg-neutral-50 dark:bg-neutral-800/30 rounded-t-xl overflow-hidden mt-4">
         {tabs.map(tab => (
           <button
             key={tab.id}

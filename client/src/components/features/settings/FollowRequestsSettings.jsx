@@ -103,7 +103,7 @@ const FollowRequestsSettings = () => {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm yêu cầu..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
       )}
@@ -119,7 +119,7 @@ const FollowRequestsSettings = () => {
             return (
               <div
                 key={requestId}
-                className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
+                className="flex items-center justify-between p-4 rounded-2xl bg-neutral-100/40 dark:bg-neutral-800/30 hover:bg-neutral-200/40 dark:hover:bg-neutral-700/40 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <img
@@ -185,7 +185,7 @@ const FollowRequestsSettings = () => {
 
       {/* Info */}
       {followRequests?.length > 0 && (
-        <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10">
           <p className="text-sm text-blue-800 dark:text-blue-200">
             💡 <strong>Mẹo:</strong> Nếu bạn muốn tắt chế độ tài khoản riêng tư,
             hãy vào <strong>Cài đặt &gt; Quyền riêng tư</strong>.

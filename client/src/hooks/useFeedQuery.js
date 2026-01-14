@@ -24,6 +24,9 @@ export const useHomeFeed = (type = 'forYou') => {
         case 'latest':
           endpoint = POST_API.GET_TRENDING;
           break;
+        case 'hashtags':
+          endpoint = POST_API.GET_HASHTAG_FEED;
+          break;
         default:
           endpoint = POST_API.GET_ALL;
       }

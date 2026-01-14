@@ -1,23 +1,23 @@
-import React from "react";
-import PropTypes from "prop-types";
+import React from 'react';
+import PropTypes from 'prop-types';
 
 const Card = ({
   children,
-  className = "",
+  className = '',
   hover = false,
-  noBorder = false,
+  noBorder = true,
   ...props
 }) => {
   return (
     <div
       className={`
         bg-surface
-        ${noBorder ? "" : "border border-border"}
+        ${noBorder ? '' : 'border border-border'}
         rounded-2xl
         ${
           hover
-            ? "hover:bg-surface-hover transition-colors duration-200 cursor-pointer"
-            : ""
+            ? 'hover:bg-surface-hover transition-colors duration-200 cursor-pointer'
+            : ''
         }
         ${className}
       `}

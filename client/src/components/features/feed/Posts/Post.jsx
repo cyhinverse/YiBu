@@ -1,4 +1,11 @@
-import { useState, useCallback, lazy, Suspense, useEffect, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+} from 'react';
 import { useSelector } from 'react-redux';
 import {
   MoreHorizontal,
@@ -58,8 +65,8 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     if (!video || !container) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           setIsInView(entry.isIntersecting);
           if (entry.isIntersecting) {
             // Video is in view - auto play
@@ -82,7 +89,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     };
   }, []);
 
-  const togglePlay = (e) => {
+  const togglePlay = e => {
     e.stopPropagation();
     if (videoRef.current) {
       if (isPlaying) {
@@ -94,7 +101,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     }
   };
 
-  const toggleMute = (e) => {
+  const toggleMute = e => {
     e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
@@ -106,7 +113,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     }
   };
 
-  const handleVolumeChange = (e) => {
+  const handleVolumeChange = e => {
     e.stopPropagation();
     const newVolume = parseFloat(e.target.value);
     if (videoRef.current) {
@@ -119,11 +126,13 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+      setProgress(
+        (videoRef.current.currentTime / videoRef.current.duration) * 100
+      );
     }
   };
 
-  const handleSeek = (e) => {
+  const handleSeek = e => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
@@ -132,7 +141,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     }
   };
 
-  const formatTime = (time) => {
+  const formatTime = time => {
     if (isNaN(time)) return '0:00';
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
@@ -157,12 +166,16 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
 
       {/* Play/Pause Overlay (shows when paused) */}
       {!isPlaying && (
-        <div 
+        <div
           className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
           onClick={togglePlay}
         >
           <div className="w-14 h-14 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform">
-            <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-7 h-7 text-white ml-1"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path d="M8 5v14l11-7z" />
             </svg>
           </div>
@@ -172,11 +185,11 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
       {/* Bottom Controls */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
         {/* Progress Bar */}
-        <div 
+        <div
           className="h-1 bg-white/30 rounded-full cursor-pointer mb-2"
           onClick={handleSeek}
         >
-          <div 
+          <div
             className="h-full bg-white rounded-full"
             style={{ width: `${progress}%` }}
           />
@@ -191,18 +204,26 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
               className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
             >
               {isPlaying ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M8 5v14l11-7z" />
                 </svg>
               )}
             </button>
 
             {/* Mute/Unmute with Volume Slider */}
-            <div 
+            <div
               className="relative flex items-center"
               onMouseEnter={() => setShowVolumeSlider(true)}
               onMouseLeave={() => setShowVolumeSlider(false)}
@@ -212,19 +233,48 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
                 className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
               >
                 {isMuted || volume === 0 ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                    />
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    />
                   </svg>
                 )}
               </button>
-              
+
               {/* Volume Slider */}
-              <div className={`flex items-center overflow-hidden transition-all duration-200 ${showVolumeSlider ? 'w-16 ml-1' : 'w-0'}`}>
+              <div
+                className={`flex items-center overflow-hidden transition-all duration-200 ${
+                  showVolumeSlider ? 'w-16 ml-1' : 'w-0'
+                }`}
+              >
                 <input
                   type="range"
                   min="0"
@@ -232,7 +282,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
                   step="0.1"
                   value={isMuted ? 0 : volume}
                   onChange={handleVolumeChange}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
                   className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                 />
               </div>
@@ -246,15 +296,25 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
 
           {/* Expand Button */}
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               onExpand();
             }}
             className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
             title="Expand"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+              />
             </svg>
           </button>
         </div>
@@ -421,14 +481,14 @@ const Post = ({ data, onDelete }) => {
     );
 
   return (
-    <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
+    <article className="rounded-2xl p-4 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <UserProfilePreview userId={user._id || user.id}>
           <div className="flex items-center gap-3">
             <div className="relative group cursor-pointer">
               <img
-                className="w-11 h-11 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                className="w-11 h-11 rounded-full object-cover"
                 src={user.avatar}
                 alt={user.name}
               />
@@ -494,8 +554,8 @@ const Post = ({ data, onDelete }) => {
               } ${data.media.length === 1 ? 'max-h-[450px]' : 'aspect-square'}`}
             >
               {item.type === 'video' ? (
-                <VideoPlayer 
-                  src={item.url} 
+                <VideoPlayer
+                  src={item.url}
                   onExpand={() => setShowVideo(item.url)}
                   isGrid={data.media.length > 1}
                 />
@@ -530,7 +590,7 @@ const Post = ({ data, onDelete }) => {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-neutral-200 dark:bg-neutral-800 mb-3" />
+      <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 mb-3" />
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between">
@@ -647,7 +707,7 @@ const Post = ({ data, onDelete }) => {
                     setShowEditModal(true);
                     setShowOptions(false);
                   }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
                 >
                   <Edit3 size={18} />
                   Edit post
@@ -657,7 +717,7 @@ const Post = ({ data, onDelete }) => {
                     setShowDeleteConfirm(true);
                     setShowOptions(false);
                   }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500"
                 >
                   <Trash2 size={18} />
                   Delete post
@@ -672,7 +732,7 @@ const Post = ({ data, onDelete }) => {
                   setShowReportModal(true);
                   setShowOptions(false);
                 }}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500"
               >
                 <Flag size={18} />
                 Report post
@@ -682,7 +742,7 @@ const Post = ({ data, onDelete }) => {
             <button
               onClick={handleShare}
               disabled={sharePending}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
             >
               <Share2 size={18} />
               {sharePending ? 'Sharing...' : 'Share post'}
@@ -690,14 +750,14 @@ const Post = ({ data, onDelete }) => {
 
             <button
               onClick={handleCopyLink}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
             >
               <Link2 size={18} />
               Copy link
             </button>
 
             {!isOwner && (
-              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800">
+              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white">
                 <EyeOff size={18} />
                 Hide post
               </button>
@@ -733,7 +793,7 @@ const Post = ({ data, onDelete }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Cancel
               </button>
@@ -791,10 +851,7 @@ const Post = ({ data, onDelete }) => {
       {/* Video Modal */}
       {showVideo && (
         <Suspense fallback={null}>
-          <VideoModal
-            videoUrl={showVideo}
-            onClose={() => setShowVideo(null)}
-          />
+          <VideoModal videoUrl={showVideo} onClose={() => setShowVideo(null)} />
         </Suspense>
       )}
     </article>

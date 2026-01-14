@@ -16,11 +16,11 @@ export default function ReportDetailModal({
   return (
     <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
       <div
-        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
+        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+        <div className="px-6 py-5 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Chi tiết báo cáo
           </h2>
@@ -34,11 +34,11 @@ export default function ReportDetailModal({
 
         <div className="p-6 overflow-y-auto max-h-[80vh]">
           {/* Reporter Info */}
-          <div className="flex items-center gap-4 mb-6 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-4 mb-6 p-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl shadow-sm">
             <img
               src={report.reporter?.avatar || '/images/default-avatar.png'}
               alt="Reporter"
-              className="w-12 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
+              className="w-12 h-12 rounded-full object-cover"
             />
             <div>
               <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-0.5">
@@ -60,7 +60,7 @@ export default function ReportDetailModal({
             <p className="text-xs font-bold text-neutral-900 dark:text-white mb-2.5">
               Lý do báo cáo
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30 font-bold text-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-100 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 font-bold text-sm">
               <AlertTriangle size={16} />
               {report.reason}
             </div>
@@ -71,7 +71,7 @@ export default function ReportDetailModal({
             <p className="text-xs font-bold text-neutral-900 dark:text-white mb-2.5">
               Mô tả chi tiết
             </p>
-            <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 italic text-sm">
+            <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-100 dark:bg-neutral-800/50 p-4 rounded-2xl italic text-sm">
               "{report.description || 'Không có mô tả bổ sung.'}"
             </p>
           </div>
@@ -86,11 +86,10 @@ export default function ReportDetailModal({
                 Nội dung bị báo cáo
               </p>
             </div>
-            <div className="p-5 bg-neutral-50 dark:bg-neutral-800/30 rounded-2xl border border-neutral-200 dark:border-neutral-800 relative group">
-              <div className="absolute top-4 right-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-white dark:bg-neutral-900 px-2 py-1 rounded-md border border-neutral-100 dark:border-neutral-800">
+            <div className="p-5 bg-neutral-100 dark:bg-neutral-800/30 rounded-2xl relative group">
+              <div className="absolute top-4 right-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-white dark:bg-neutral-900 px-2 py-1 rounded-md shadow-sm">
                 {getTargetTypeText(report.target?.type)}
               </div>
-
               <p className="text-xs font-bold text-neutral-500 mb-2 flex items-center gap-1.5">
                 <User size={12} />
                 Tác giả:{' '}
@@ -122,7 +121,7 @@ export default function ReportDetailModal({
 
         {/* Actions */}
         {(report.status === 'pending' || !report.status) && (
-          <div className="p-6 pt-2 border-t border-neutral-50 dark:border-neutral-800/50 flex gap-3 bg-white dark:bg-neutral-900 rounded-b-3xl">
+          <div className="p-6 pt-2 bg-neutral-100/50 dark:bg-neutral-800/40 flex gap-3 rounded-b-3xl">
             <button
               onClick={() => onReject(report, resolutionNote)}
               className="px-6 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-1 flex items-center justify-center gap-2"
@@ -132,7 +131,7 @@ export default function ReportDetailModal({
             </button>
             <button
               onClick={() => onResolve(report, resolutionNote)}
-              className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2 shadow-lg shadow-neutral-500/10"
+              className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
               Chấp nhận báo cáo

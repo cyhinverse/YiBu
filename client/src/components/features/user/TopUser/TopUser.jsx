@@ -83,10 +83,10 @@ const TopUser = ({ users = [], loading = false }) => {
                   `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                 }
                 alt={user.name || user.username}
-                className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                className="w-10 h-10 rounded-full object-cover"
               />
               {user.isVerified && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                   <Check size={8} className="text-white dark:text-black" />
                 </div>
               )}
@@ -111,7 +111,7 @@ const TopUser = ({ users = [], loading = false }) => {
                 disabled={isLoading}
                 className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 transition-colors disabled:opacity-50 ${
                   isFollowed
-                    ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
+                    ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
                     : 'bg-primary text-primary-foreground'
                 }`}
               >

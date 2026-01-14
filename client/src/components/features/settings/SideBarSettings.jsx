@@ -54,18 +54,12 @@ const menuItems = [
     icon: UserPlus,
     path: '/settings/follow-requests',
   },
-  {
-    title: 'Appearance',
-    description: 'Theme and display settings',
-    icon: Palette,
-    path: '/settings/theme',
-  },
 ];
 
 const SideBarSettings = () => {
   return (
-    <div className="h-full overflow-hidden rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col">
-      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+    <div className="h-full overflow-hidden rounded-2xl bg-neutral-50/50 dark:bg-neutral-800/20 flex flex-col">
+      <div className="p-4 bg-neutral-100/50 dark:bg-neutral-700/30">
         <h2 className="text-xl font-bold text-content dark:text-white">
           Settings
         </h2>
@@ -89,16 +83,14 @@ const SideBarSettings = () => {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         isActive
-                          ? 'bg-primary'
-                          : 'bg-neutral-100 dark:bg-neutral-800'
+                          ? 'bg-primary/20 text-primary'
+                          : 'bg-neutral-100/50 dark:bg-neutral-800/40'
                       }`}
                     >
                       <item.icon
                         size={18}
                         className={
-                          isActive
-                            ? 'text-primary-foreground'
-                            : 'text-neutral-500'
+                          isActive ? 'text-primary' : 'text-neutral-500'
                         }
                       />
                     </div>
@@ -119,9 +111,7 @@ const SideBarSettings = () => {
                     <ChevronRight
                       size={16}
                       className={`flex-shrink-0 ${
-                        isActive
-                          ? 'text-primary'
-                          : 'text-neutral-300'
+                        isActive ? 'text-primary' : 'text-neutral-300'
                       }`}
                     />
                   </>

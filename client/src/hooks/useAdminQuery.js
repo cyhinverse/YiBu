@@ -254,7 +254,7 @@ export const useAdminUserPosts = ({ userId, page = 1, limit = 20 } = {}) => {
     queryKey: ['admin', 'users', 'posts', userId, { page, limit }],
     queryFn: async () => {
       if (!userId) return { posts: [], total: 0 };
-      const response = await api.get(`/api/admin/users/${userId}/posts`, {
+      const response = await api.get(ADMIN_API.GET_USER_POSTS(userId), {
         params: { page, limit },
       });
       return extractData(response);
@@ -287,7 +287,7 @@ export const useAdminPostReports = ({ postId, page = 1, limit = 20 } = {}) => {
     queryKey: ['admin', 'posts', 'reports', postId, { page, limit }],
     queryFn: async () => {
       if (!postId) return { reports: [], total: 0 };
-      const response = await api.get(`/api/admin/posts/${postId}/reports`, {
+      const response = await api.get(ADMIN_API.GET_POST_REPORTS(postId), {
         params: { page, limit },
       });
       return extractData(response);
@@ -479,31 +479,6 @@ export const useSystemHealth = () => {
   });
 };
 
-export const useAdminLogs = ({
-  page = 1,
-  limit = 50,
-  search,
-  level,
-  startDate,
-  endDate,
-} = {}) => {
-  return useQuery({
-    queryKey: [
-      'admin',
-      'system',
-      'logs',
-      { page, limit, search, level, startDate, endDate },
-    ],
-    queryFn: async () => {
-      const response = await api.get(ADMIN_API.GET_LOGS, {
-        params: { page, limit, search, level, startDate, endDate },
-      });
-      return extractData(response);
-    },
-    keepPreviousData: true,
-  });
-};
-
 export const useBroadcastNotification = () => {
   return useMutation({
     mutationFn: async ({
@@ -566,9 +541,6 @@ export const useModerateComment = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      // toast.success('Xử lý bình luận thành công'); // Helper handles toast usually, but here we might want it.
-      // logic in component handles toast success message often, or we do it here.
-      // Other hooks in this file have toast.success.
       queryClient.invalidateQueries(['admin', 'comments']);
     },
     onError: error => {
@@ -581,86 +553,14 @@ export const useDeleteCommentAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ commentId }) => {
-      // API might just take commentId usually, but admin action might log reason?
-      // Check adminActions.js: deleteComment thunk only calls DELETE endpoint. Reason is unused in API call ??
-      // adminActions.js: await api.delete(ADMIN_API.DELETE_COMMENT(commentId));
-      // So reason is ignored in API call.
       const response = await api.delete(ADMIN_API.DELETE_COMMENT(commentId));
       return extractData(response);
     },
     onSuccess: () => {
-      // toast.success('Xóa bình luận thành công');
       queryClient.invalidateQueries(['admin', 'comments']);
     },
     onError: error => {
       toast.error(error.response?.data?.message || 'Xóa bình luận thất bại');
     },
-  });
-};
-
-// ==================== SETTINGS ====================
-
-export const useSystemSettings = () => {
-  return useQuery({
-    queryKey: ['admin', 'settings'],
-    queryFn: async () => {
-      const response = await api.get(ADMIN_API.GET_SYSTEM_SETTINGS);
-      return extractData(response);
-    },
-  });
-};
-
-export const useUpdateSystemSettings = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async settings => {
-      const response = await api.put(
-        ADMIN_API.UPDATE_SYSTEM_SETTINGS,
-        settings
-      );
-      return extractData(response);
-    },
-    onSuccess: () => {
-      toast.success('Cập nhật cài đặt thành công');
-      queryClient.invalidateQueries(['admin', 'settings']);
-    },
-    onError: error => {
-      toast.error(error.response?.data?.message || 'Cập nhật cài đặt thất bại');
-    },
-  });
-};
-
-// ==================== REVENUE ====================
-
-export const useRevenueStats = () => {
-  return useQuery({
-    queryKey: ['admin', 'revenue', 'stats'],
-    queryFn: async () => {
-      const response = await api.get(ADMIN_API.GET_REVENUE_STATS);
-      return extractData(response);
-    },
-  });
-};
-
-export const useTransactions = ({
-  page = 1,
-  limit = 20,
-  status,
-  type,
-} = {}) => {
-  return useQuery({
-    queryKey: [
-      'admin',
-      'revenue',
-      'transactions',
-      { page, limit, status, type },
-    ],
-    queryFn: async () => {
-      const response = await api.get(ADMIN_API.GET_TRANSACTIONS, {
-        params: { page, limit, status, type },
-      });
-      return extractData(response);
-    },
-    keepPreviousData: true,
   });
 };

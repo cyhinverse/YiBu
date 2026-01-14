@@ -68,7 +68,7 @@ const FollowingUser = () => {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md">
         <div className="px-4 py-3">
           <div className="flex items-center gap-3 mb-4">
             <Users size={24} className="text-black dark:text-white" />
@@ -148,7 +148,7 @@ const FollowingUser = () => {
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
           {filteredUsers.map(user => {
             const isFollowingUser =
               activeTab === 'following' ? true : user.isFollowing;
@@ -174,10 +174,10 @@ const FollowingUser = () => {
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                       }
                       alt={user.name || user.username}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                      className="w-12 h-12 rounded-full object-cover"
                     />
                     {user.isVerified && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                         <Check
                           size={8}
                           className="text-white dark:text-black"
@@ -215,7 +215,7 @@ const FollowingUser = () => {
                         mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                       } ${
                         isFollowingUser
-                          ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:text-red-500'
+                          ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white hover:bg-red-500/10 hover:text-red-500'
                           : 'bg-black dark:bg-white text-white dark:text-black'
                       }`}
                     >

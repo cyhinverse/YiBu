@@ -23,9 +23,9 @@ export default function ReportStatusModal({
 
   return (
     <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl transform animate-scale-in border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+        <div className="px-6 py-5 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Cập nhật trạng thái
           </h2>
@@ -36,7 +36,6 @@ export default function ReportStatusModal({
             <X size={20} />
           </button>
         </div>
-
         <div className="p-6">
           <div className="space-y-5">
             <div>
@@ -72,7 +71,7 @@ export default function ReportStatusModal({
                   onUpdateStatus(report, newStatus, resolutionNote)
                 }
                 disabled={loading}
-                className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2 shadow-lg shadow-neutral-500/10"
+                className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 Cập nhật

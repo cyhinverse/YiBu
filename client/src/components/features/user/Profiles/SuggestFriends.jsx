@@ -44,8 +44,8 @@ const SuggestFriends = () => {
 
   if (suggestionsLoading) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50">
           <h2 className="font-semibold text-black dark:text-white">
             Suggested for you
           </h2>
@@ -63,9 +63,9 @@ const SuggestFriends = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+    <div className="bg-white dark:bg-neutral-900 rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50">
         <h2 className="font-semibold text-black dark:text-white">
           Suggested for you
         </h2>
@@ -73,7 +73,7 @@ const SuggestFriends = () => {
       </div>
 
       {/* Users List */}
-      <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+      <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
         {suggestions.map(user => {
           const isFollowed = followedUsers.includes(user._id);
           const mutationLoading =
@@ -98,10 +98,10 @@ const SuggestFriends = () => {
                       `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                     }
                     alt={user.name || user.username}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                    className="w-12 h-12 rounded-full object-cover"
                   />
                   {user.isVerified && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                       <Check size={8} className="text-white dark:text-black" />
                     </div>
                   )}
@@ -141,7 +141,7 @@ const SuggestFriends = () => {
                     mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                   } ${
                     isFollowed
-                      ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
+                      ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
                       : 'bg-black dark:bg-white text-white dark:text-black'
                   }`}
                 >
@@ -168,7 +168,7 @@ const SuggestFriends = () => {
       {/* See All Link */}
       <Link
         to="/explore/people"
-        className="block px-4 py-3 text-center text-sm font-medium text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors border-t border-neutral-200 dark:border-neutral-800"
+        className="block px-4 py-3 text-center text-sm font-medium text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors"
       >
         See all suggestions
       </Link>

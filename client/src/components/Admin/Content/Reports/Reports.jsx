@@ -154,7 +154,7 @@ export default function Reports() {
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
+          className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
           title="Làm mới"
         >
           <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -165,7 +165,7 @@ export default function Reports() {
       <ReportStats reports={reports} />
 
       {/* Filters */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full md:w-auto">
           <Search
             size={18}
@@ -179,7 +179,6 @@ export default function Reports() {
             className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
         </div>
-
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           <div className="relative min-w-[140px]">
             <Filter
@@ -189,7 +188,7 @@ export default function Reports() {
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer appearance-none hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             >
               <option value="all">Tất cả loại</option>
               <option value="post">Bài viết</option>
@@ -206,7 +205,7 @@ export default function Reports() {
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer appearance-none hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ xử lý</option>
@@ -218,7 +217,7 @@ export default function Reports() {
       </div>
 
       {/* Reports List */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-sm">
         <ReportsList
           loading={loading}
           reports={reports}

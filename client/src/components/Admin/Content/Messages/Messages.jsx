@@ -64,7 +64,7 @@ const Messages = () => {
     conversationsData?.conversations || conversationsData || [];
 
   return (
-    <div className="h-[calc(100vh-8rem)] bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 flex overflow-hidden">
+    <div className="h-[calc(100vh-8rem)] bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex overflow-hidden shadow-sm">
       <ChatSidebar
         conversations={conversations}
         loading={loading}

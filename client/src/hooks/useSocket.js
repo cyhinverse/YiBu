@@ -18,14 +18,11 @@ const useSocket = userId => {
     if (!userId) return;
 
     const socket = io(SOCKET_URL, {
-      withCredentials: true,
+      withCredentials: true, // Cookies will be sent automatically
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-      extraHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-      },
       path: '/socket.io/',
     });
 

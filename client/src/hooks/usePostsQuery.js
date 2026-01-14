@@ -67,6 +67,20 @@ export const useSharedPosts = (userId, limit = 20) => {
     enabled: !!userId,
   });
 };
+
+export const useGetPostsByHashtag = (hashtag, limit = 20) => {
+  return useQuery({
+    queryKey: ['posts', 'hashtag', hashtag],
+    queryFn: async () => {
+      const response = await api.get(POST_API.GET_BY_HASHTAG(hashtag), {
+        params: { limit },
+      });
+      return extractData(response);
+    },
+    enabled: !!hashtag,
+  });
+};
+
 export const useTrendingHashtags = (limit = 10) => {
   return useQuery({
     queryKey: ['hashtags', 'trending', { limit }],
@@ -76,6 +90,8 @@ export const useTrendingHashtags = (limit = 10) => {
       });
       return extractData(response);
     },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time feel
+    refetchIntervalInBackground: true,
   });
 };
 

@@ -30,7 +30,7 @@ const REPORT_REASONS = [
     description: 'Adult or explicit content',
   },
   {
-    id: 'false_info',
+    id: 'misinformation',
     label: 'False Information',
     description: 'Misinformation or fake news',
   },
@@ -40,7 +40,7 @@ const REPORT_REASONS = [
     description: 'Attempts to deceive for personal gain',
   },
   {
-    id: 'intellectual_property',
+    id: 'copyright',
     label: 'Intellectual Property',
     description: 'Copyright or trademark violation',
   },
@@ -65,10 +65,15 @@ const ReportModal = ({
     }
 
     try {
+      const reasonLabel =
+        REPORT_REASONS.find(r => r.id === selectedReason)?.label ||
+        selectedReason;
+
       await submitReport({
         targetId,
         targetType,
-        reason: selectedReason,
+        category: selectedReason,
+        reason: reasonLabel,
         description: description.trim(),
       });
 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users,
   UserPlus,
@@ -7,43 +7,43 @@ import {
   MessageCircle,
   MoreHorizontal,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Fake friends
 const FAKE_FRIENDS = [
   {
-    _id: "u1",
-    name: "Sarah Chen",
-    username: "sarahchen",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    bio: "Product Designer",
+    _id: 'u1',
+    name: 'Sarah Chen',
+    username: 'sarahchen',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
+    bio: 'Product Designer',
     isVerified: true,
     isOnline: true,
   },
   {
-    _id: "u2",
-    name: "Mike Johnson",
-    username: "mikej",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-    bio: "Software Engineer",
+    _id: 'u2',
+    name: 'Mike Johnson',
+    username: 'mikej',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike',
+    bio: 'Software Engineer',
     isVerified: false,
     isOnline: false,
   },
   {
-    _id: "u3",
-    name: "Emma Wilson",
-    username: "emmaw",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-    bio: "UI/UX Designer",
+    _id: 'u3',
+    name: 'Emma Wilson',
+    username: 'emmaw',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma',
+    bio: 'UI/UX Designer',
     isVerified: true,
     isOnline: true,
   },
   {
-    _id: "u4",
-    name: "Alex Kim",
-    username: "alexk",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-    bio: "Full Stack Developer",
+    _id: 'u4',
+    name: 'Alex Kim',
+    username: 'alexk',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
+    bio: 'Full Stack Developer',
     isVerified: false,
     isOnline: false,
   },
@@ -53,15 +53,15 @@ const Friends = () => {
   const [friends, setFriends] = useState(FAKE_FRIENDS);
   const [showMenu, setShowMenu] = useState(null);
 
-  const handleRemoveFriend = (userId) => {
-    setFriends((prev) => prev.filter((f) => f._id !== userId));
+  const handleRemoveFriend = userId => {
+    setFriends(prev => prev.filter(f => f._id !== userId));
     setShowMenu(null);
   };
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md">
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <Users size={24} className="text-black dark:text-white" />
@@ -88,10 +88,10 @@ const Friends = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-          {friends.map((friend) => (
+          {friends.map(friend => (
             <div
               key={friend._id}
-              className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-neutral-900 rounded-xl p-4 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
             >
               <div className="flex items-start gap-3">
                 {/* Avatar */}
@@ -102,13 +102,13 @@ const Friends = () => {
                   <img
                     src={friend.avatar}
                     alt={friend.name}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                    className="w-14 h-14 rounded-full object-cover"
                   />
                   {friend.isOnline && (
-                    <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
+                    <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" />
                   )}
                   {friend.isVerified && !friend.isOnline && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                       <Check size={8} className="text-white dark:text-black" />
                     </div>
                   )}
@@ -144,7 +144,7 @@ const Friends = () => {
                   </button>
 
                   {showMenu === friend._id && (
-                    <div className="absolute right-0 top-10 w-48 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-lg overflow-hidden z-10">
+                    <div className="absolute right-0 top-10 w-48 bg-white dark:bg-neutral-900 rounded-xl overflow-hidden z-10 shadow-lg">
                       <button
                         onClick={() => handleRemoveFriend(friend._id)}
                         className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -167,7 +167,7 @@ const Friends = () => {
                 </Link>
                 <Link
                   to={`/profile/${friend.username}`}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
                 >
                   View Profile
                 </Link>

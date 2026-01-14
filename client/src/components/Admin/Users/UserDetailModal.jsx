@@ -17,15 +17,15 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-3xl shadow-2xl max-h-[85vh] flex flex-col rounded-3xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-3xl shadow-2xl max-h-[85vh] flex flex-col rounded-3xl overflow-hidden">
         {/* Modal Header */}
-        <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0 bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="p-6 shrink-0 bg-neutral-100/50 dark:bg-neutral-800/40">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-5">
               <img
                 src={user.avatar || '/images/default-avatar.png'}
                 alt={user.name}
-                className="w-20 h-20 rounded-full border-4 border-white dark:border-neutral-800 shadow-md object-cover"
+                className="w-20 h-20 rounded-full object-cover"
               />
               <div>
                 <h3 className="text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-3 tracking-tight">
@@ -54,9 +54,8 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             </button>
           </div>
         </div>
-
         {/* Tabs */}
-        <div className="flex px-6 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
+        <div className="flex px-6 bg-white dark:bg-neutral-900 shrink-0">
           {[
             { id: 'overview', label: 'Tổng quan', icon: Info },
             { id: 'posts', label: 'Bài viết', icon: FileText },
@@ -76,13 +75,12 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             </button>
           ))}
         </div>
-
         {/* Modal Content */}
         <div className="p-8 overflow-y-auto flex-1">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="p-5 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl">
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Vai trò
                   </p>
@@ -90,7 +88,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                     {user.role || 'Thành viên'}
                   </p>
                 </div>
-                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="p-5 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl">
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Bài viết
                   </p>
@@ -98,7 +96,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                     {user.postsCount || 0}
                   </p>
                 </div>
-                <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="p-5 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl">
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                     Theo dõi
                   </p>
@@ -108,7 +106,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                 </div>
               </div>
 
-              <div className="p-6 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              <div className="p-6 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl">
                 <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">
                   Giới thiệu
                 </p>
@@ -125,7 +123,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                 posts.map(post => (
                   <div
                     key={post._id}
-                    className="flex gap-5 p-4 border border-neutral-100 dark:border-neutral-800 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-all"
+                    className="flex gap-5 p-4 rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all bg-neutral-50 dark:bg-neutral-800/20"
                   >
                     {post.media?.[0] && (
                       <img
@@ -211,11 +209,10 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             </div>
           )}
         </div>
-
-        <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20 flex justify-end shrink-0">
+        <div className="p-6 bg-neutral-100/50 dark:bg-neutral-800/40 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl font-bold text-neutral-600 bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+            className="px-6 py-2.5 rounded-xl font-bold text-neutral-600 bg-white hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
           >
             Đóng
           </button>

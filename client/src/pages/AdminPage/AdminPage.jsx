@@ -20,9 +20,7 @@ const Interactions = lazy(() =>
 const BannedAccounts = lazy(() =>
   import('../../components/Admin/Users/BannedAccounts')
 );
-const Logs = lazy(() => import('../../components/Admin/System/Logs/Logs'));
-const Settings = lazy(() => import('../../components/Admin/System/Settings'));
-const Revenue = lazy(() => import('../../components/Admin/System/Revenue'));
+
 const SystemHealth = lazy(() =>
   import('../../components/Admin/System/SystemHealth')
 );

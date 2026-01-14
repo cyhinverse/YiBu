@@ -46,7 +46,7 @@ const InputField = ({
             onChange={onChange}
             placeholder={placeholder}
             rows={3}
-            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full px-4 py-2.5 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/40 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
           />
         ) : (
           <input
@@ -56,7 +56,7 @@ const InputField = ({
             placeholder={placeholder}
             className={`w-full pl-10 ${
               rightElement ? 'pr-12' : 'pr-4'
-            } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
+            } py-2.5 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/40 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40`}
           />
         )}
         {rightElement && (
@@ -194,7 +194,7 @@ const ProfileSettings = () => {
       {/* Cover & Avatar */}
       <div className="space-y-4">
         {/* Cover */}
-        <div className="relative h-32 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+        <div className="relative h-32 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <img
             src={
               coverPreview ||
@@ -225,7 +225,7 @@ const ProfileSettings = () => {
             <img
               src={avatarPreview || currentProfile?.avatar}
               alt={currentProfile?.username}
-              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-900"
+              className="w-24 h-24 rounded-full object-cover"
             />
             <input
               ref={fileInputRef}

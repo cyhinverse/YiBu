@@ -11,8 +11,13 @@ import {
   Sparkles,
   Send,
   Video,
+  Hash,
 } from 'lucide-react';
-import { useCreatePost, useUpdatePost } from '@/hooks/usePostsQuery';
+import {
+  useCreatePost,
+  useUpdatePost,
+  useTrendingHashtags,
+} from '@/hooks/usePostsQuery';
 
 const PRIVACY_OPTIONS = [
   {
@@ -221,6 +226,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                 autoFocus
               />
 
+              {/* Hashtag suggestions */}
+              <HashtagSuggestions caption={caption} setCaption={setCaption} />
+
               {/* Media previews */}
               {allMedia.length > 0 && (
                 <div
@@ -410,6 +418,43 @@ const ModelPost = ({ closeModal, editPost = null }) => {
           </button>
         </div>
       )}
+    </div>
+  );
+};
+
+const HashtagSuggestions = ({ caption, setCaption }) => {
+  const { data: trendingHashtags } = useTrendingHashtags();
+
+  const hashtags = Array.isArray(trendingHashtags)
+    ? trendingHashtags
+    : trendingHashtags?.data || [];
+
+  const handleHashtagClick = tag => {
+    const hashtag = `#${tag} `;
+    if (!caption.includes(hashtag)) {
+      setCaption(prev => prev.trim() + (prev.trim() ? ' ' : '') + hashtag);
+    }
+  };
+
+  if (!hashtags || hashtags.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-1.5 mb-2 text-xs font-medium text-neutral-400">
+        <Hash size={12} />
+        <span>Trending now</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {hashtags.slice(0, 6).map(tag => (
+          <button
+            key={tag._id}
+            onClick={() => handleHashtagClick(tag.name)}
+            className="px-2.5 py-1 text-xs font-medium rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20"
+          >
+            #{tag.name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

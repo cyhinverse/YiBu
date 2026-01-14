@@ -10,11 +10,7 @@ import {
   LogOut,
   Monitor,
 } from 'lucide-react';
-import {
-  logout,
-  logoutAll,
-  updatePassword,
-} from '@/redux/actions/authActions';
+import { logout, logoutAll, updatePassword } from '@/redux/actions/authActions';
 import toast from 'react-hot-toast';
 
 const AccountSettings = () => {
@@ -113,7 +109,7 @@ const AccountSettings = () => {
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
     </div>
@@ -131,8 +127,8 @@ const AccountSettings = () => {
       </div>
 
       {/* Account Info */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <User size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -160,8 +156,8 @@ const AccountSettings = () => {
       </div>
 
       {/* Security */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -208,8 +204,8 @@ const AccountSettings = () => {
       </div>
 
       {/* Session Management */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Monitor size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -257,8 +253,8 @@ const AccountSettings = () => {
       </div>
 
       {/* Danger Zone */}
-      <div className="rounded-xl border border-red-200 dark:border-red-900/50 overflow-hidden">
-        <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-900/50">
+      <div className="rounded-2xl overflow-hidden bg-red-50/30 dark:bg-red-900/10">
+        <div className="px-4 py-3 bg-red-50/50 dark:bg-red-900/20">
           <div className="flex items-center gap-2">
             <Trash2 size={16} className="text-red-500" />
             <h3 className="text-sm font-medium text-red-600 dark:text-red-400">
@@ -269,7 +265,7 @@ const AccountSettings = () => {
         <div className="p-4">
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="w-full py-2.5 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
           >
             Delete Account
           </button>
@@ -300,7 +296,7 @@ const AccountSettings = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Cancel
               </button>
@@ -340,7 +336,7 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập mật khẩu hiện tại"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
               <div className="space-y-2">
@@ -357,7 +353,7 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
               <div className="space-y-2">
@@ -374,7 +370,7 @@ const AccountSettings = () => {
                     })
                   }
                   placeholder="Nhập lại mật khẩu mới"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             </div>
@@ -388,7 +384,7 @@ const AccountSettings = () => {
                     confirmPassword: '',
                   });
                 }}
-                className="flex-1 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Hủy
               </button>

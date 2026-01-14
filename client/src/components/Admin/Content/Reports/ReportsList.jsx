@@ -48,7 +48,7 @@ export default function ReportsList({
   }
 
   return (
-    <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+    <div className="bg-white dark:bg-neutral-900">
       {reports.map(report => {
         const reporter = report.reporter || report.reportedBy || {};
         const targetType = report.targetType || report.target?.type || 'post';
@@ -62,7 +62,7 @@ export default function ReportsList({
         return (
           <div
             key={report._id || report.id}
-            className="p-5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors duration-200"
+            className="p-5 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 rounded-2xl mb-2 bg-white dark:bg-neutral-900 shadow-sm"
           >
             <div className="flex items-start gap-4">
               {/* Reporter Avatar */}
@@ -70,9 +70,9 @@ export default function ReportsList({
                 <img
                   src={reporter.avatar || '/images/default-avatar.png'}
                   alt={reporter.name || reporter.username || 'Reporter'}
-                  className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700"
+                  className="w-10 h-10 rounded-full object-cover"
                 />
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center border border-neutral-200 dark:border-neutral-700 text-neutral-500">
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center text-neutral-500 shadow-sm">
                   {getTargetIcon(targetType)}
                 </div>
               </div>
@@ -108,7 +108,7 @@ export default function ReportsList({
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(
                         report.status || 'pending'
                       )}`}
                     >
@@ -131,7 +131,7 @@ export default function ReportsList({
                       </button>
 
                       {activeDropdown === (report._id || report.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-20 overflow-hidden animate-scale-in">
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in">
                           <button
                             onClick={() => {
                               onViewDetails(report);
@@ -142,10 +142,9 @@ export default function ReportsList({
                             <Eye size={16} />
                             Xem chi tiết
                           </button>
-
                           {(report.status === 'pending' || !report.status) && (
                             <>
-                              <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1 mx-2" />
+                              <div className="h-px bg-neutral-100/50 dark:bg-neutral-800/20 my-1 mx-2" />
                               <button
                                 onClick={() => {
                                   onStartReview(report);
@@ -186,7 +185,7 @@ export default function ReportsList({
 
                 {/* Reason Badge */}
                 <div className="mb-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-medium border border-orange-100 dark:border-orange-900/30">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-medium">
                     <span className="font-semibold">Lý do:</span>{' '}
                     {report.reason || report.type || 'Vi phạm'}
                   </span>
@@ -194,13 +193,13 @@ export default function ReportsList({
 
                 {/* Description */}
                 {report.description && (
-                  <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-3 pl-3 border-l-2 border-neutral-200 dark:border-neutral-700 italic">
+                  <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-3 pl-3 bg-neutral-50/50 dark:bg-neutral-800/30 py-2 rounded-lg italic">
                     "{report.description}"
                   </p>
                 )}
 
                 {/* Target Content Preview */}
-                <div className="flex items-center gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 mt-3">
+                <div className="flex items-center gap-3 pt-3 bg-neutral-50/20 dark:bg-neutral-800/10 rounded-xl px-2 py-1 mt-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
                       Nội dung bị báo cáo

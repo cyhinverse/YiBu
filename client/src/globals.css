@@ -1,5 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import 'tailwindcss';
 
 /* Enable dark mode with class strategy in Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -60,9 +60,9 @@
   --color-transparent: transparent;
 
   /* Font Family */
-  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
-  --font-family-heading: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Border Radius */
   --radius-sm: 0.375rem;
@@ -115,42 +115,6 @@
   --color-comment: #a1a1aa;
 
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.2);
-}
-
-/* ===== Custom Theme Color Overrides ===== */
-/* These ensure custom colors from ThemeSettings apply to common patterns */
-:root {
-  /* Custom color CSS variables that can be overridden by JS */
-  --custom-primary: var(--color-primary);
-  --custom-secondary: var(--color-secondary);
-  --custom-content: var(--color-content);
-}
-
-/* When custom primary color is set, apply it to common elements */
-:root[style*="--color-primary"] .text-primary,
-:root[style*="--color-primary"] .bg-primary,
-:root[style*="--color-primary"] .border-primary {
-  --tw-text-opacity: 1;
-  color: var(--color-primary) !important;
-}
-
-:root[style*="--color-primary"] .bg-primary {
-  background-color: var(--color-primary) !important;
-  color: var(--color-primary-foreground) !important;
-}
-
-:root[style*="--color-primary"] .border-primary {
-  border-color: var(--color-primary) !important;
-}
-
-/* Apply custom content/text color */
-:root[style*="--color-content"] .text-content {
-  color: var(--color-content) !important;
-}
-
-/* Apply custom secondary color */
-:root[style*="--color-secondary"] .text-secondary {
-  color: var(--color-secondary) !important;
 }
 
 /* ===== Base Styles ===== */

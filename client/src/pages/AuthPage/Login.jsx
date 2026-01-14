@@ -1,31 +1,34 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
-import { login, googleAuth } from "@/redux/actions/authActions";
-import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { login, googleAuth } from '@/redux/actions/authActions';
+import { clearError } from '@/redux/slices/AuthSlice';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const googleButtonRef = useRef(null);
   const googleInitialized = useRef(false);
   const { loading, error, isAuthenticated, user } = useSelector(
-    (state) => state.auth
+    state => state.auth
   );
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
 
-  // Clear error on unmount
+  // Redirect if already authenticated AND user data is loaded
   useEffect(() => {
-    return () => {
-      dispatch(clearError());
-    };
-  }, [dispatch]);
+    if (isAuthenticated && user) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  // Clear error on unmount
 
   // Initialize Google Sign-In
   const initGoogle = useCallback(() => {
@@ -41,26 +44,24 @@ const Login = () => {
 
     window.google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async (response) => {
+      callback: async response => {
         if (response.credential) {
-          const result = await dispatch(
-            googleAuth({ credential: response.credential })
-          );
+          const result = await dispatch(googleAuth(response.credential));
           if (googleAuth.fulfilled.match(result)) {
-            toast.success("Đăng nhập Google thành công!");
+            toast.success('Đăng nhập Google thành công!');
           } else {
-            toast.error("Đăng nhập Google thất bại");
+            toast.error('Đăng nhập Google thất bại');
           }
         }
       },
     });
 
     window.google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: "outline",
-      size: "large",
+      theme: 'outline',
+      size: 'large',
       width: 320,
-      text: "continue_with",
-      shape: "pill",
+      text: 'continue_with',
+      shape: 'pill',
     });
   }, [dispatch]);
 
@@ -88,26 +89,26 @@ const Login = () => {
     }
   }, [initGoogle]);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
     const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
-      toast.success("Đăng nhập thành công!");
+      toast.success('Đăng nhập thành công!');
     }
   };
 
-  // Redirect if already authenticated AND user data is loaded
-  if (isAuthenticated && user) {
-    return <Navigate to="/" replace />;
-  }
+  // No longer needed due to useEffect redirect above
+  // if (isAuthenticated && user) {
+  //   return <Navigate to="/" replace />;
+  // }
 
   return (
     <div className="min-h-screen flex">
@@ -190,7 +191,7 @@ const Login = () => {
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
                 />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
@@ -224,7 +225,7 @@ const Login = () => {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
-                "Sign In"
+                'Sign In'
               )}
             </button>
 
@@ -243,7 +244,7 @@ const Login = () => {
 
           {/* Footer */}
           <p className="mt-10 text-center text-neutral-500">
-            Don't have an account?{" "}
+            Don't have an account?{' '}
             <Link
               to="/auth/register"
               className="font-medium text-primary hover:underline"

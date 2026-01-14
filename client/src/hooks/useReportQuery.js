@@ -5,7 +5,13 @@ import { REPORT_API } from '@/axios/apiEndpoint';
 // Submit a report
 export const useSubmitReport = () => {
   return useMutation({
-    mutationFn: async ({ targetId, targetType, reason, description }) => {
+    mutationFn: async ({
+      targetId,
+      targetType,
+      category,
+      reason,
+      description,
+    }) => {
       let endpoint;
       switch (targetType) {
         case 'post':
@@ -24,7 +30,11 @@ export const useSubmitReport = () => {
           throw new Error('Invalid target type');
       }
 
-      const response = await api.post(endpoint, { reason, description });
+      const response = await api.post(endpoint, {
+        category,
+        reason,
+        description,
+      });
       return response.data;
     },
     onSuccess: _ => {

@@ -59,8 +59,8 @@ const GroupInfoModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-neutral-200 dark:border-neutral-800">
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] shadow-xl">
+        <div className="p-5 flex justify-between items-center bg-neutral-50 dark:bg-neutral-800/50">
           <h2 className="text-xl font-bold text-black dark:text-white">
             Thông tin nhóm
           </h2>
@@ -87,7 +87,7 @@ const GroupInfoModal = ({
                     type="text"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
-                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     autoFocus
                   />
                   <button
@@ -142,7 +142,7 @@ const GroupInfoModal = ({
 
             {/* Add Member Search Area */}
             {showAddMember && (
-              <div className="bg-neutral-50 dark:bg-neutral-800/40 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-2">
+              <div className="bg-neutral-100 dark:bg-neutral-800/40 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
                 <div className="relative mb-3">
                   <Search
                     size={16}
@@ -153,7 +153,7 @@ const GroupInfoModal = ({
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Tìm tên bạn bè..."
-                    className="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-black dark:text-white"
+                    className="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-black dark:text-white"
                   />
                 </div>
                 {isSearching ? (
@@ -169,14 +169,14 @@ const GroupInfoModal = ({
                       return (
                         <div
                           key={user._id}
-                          className="flex items-center justify-between p-2.5 hover:bg-white dark:hover:bg-neutral-800 rounded-xl transition-colors border border-transparent hover:border-neutral-100 dark:hover:border-neutral-700"
+                          className="flex items-center justify-between p-2.5 hover:bg-white dark:hover:bg-neutral-800 rounded-xl transition-colors"
                         >
                           <div className="flex items-center gap-3">
                             <img
                               src={
                                 user.avatar || 'https://via.placeholder.com/150'
                               }
-                              className="w-9 h-9 rounded-full object-cover border border-neutral-100"
+                              className="w-9 h-9 rounded-full object-cover"
                               alt=""
                             />
                             <div className="min-w-0">
@@ -228,7 +228,7 @@ const GroupInfoModal = ({
                     <img
                       src={member.avatar || 'https://via.placeholder.com/150'}
                       alt={member.name}
-                      className="w-11 h-11 rounded-full object-cover border-2 border-neutral-100 dark:border-neutral-800 shadow-sm"
+                      className="w-11 h-11 rounded-full object-cover"
                     />
                     <div className="min-w-0">
                       <p className="font-bold text-black dark:text-white text-sm truncate">
@@ -264,10 +264,10 @@ const GroupInfoModal = ({
           </div>
         </div>
 
-        <div className="p-5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/30">
+        <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50">
           <button
             onClick={onLeaveGroup}
-            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-all border border-red-100 dark:border-red-900/20"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-all"
           >
             <LogOut size={20} />
             Rời khỏi nhóm này

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, RefreshCcw, Filter, Plus } from 'lucide-react';
+import { Search, RefreshCcw, Filter } from 'lucide-react';
 import {
   useAdminUsers,
   useDeleteUser,
@@ -17,7 +17,6 @@ import UserDetailModal from './UserDetailModal';
 import AdminActionModal from './AdminActionModal';
 
 const Users = () => {
-  /* State */
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRole] = useState('all');
@@ -30,7 +29,6 @@ const Users = () => {
   const [actionReason, setActionReason] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Queries
   const {
     data: usersData,
     isLoading: usersLoading,
@@ -46,7 +44,6 @@ const Users = () => {
   const usersList = usersData?.users || [];
   const pagination = { pages: usersData?.totalPages || 1 };
 
-  // User Details Queries
   const { data: postsData } = useAdminUserPosts({
     userId: selectedUser?._id,
     enabled: !!selectedUser,
@@ -59,14 +56,13 @@ const Users = () => {
   });
   const currentUserReports = reportsData?.reports || [];
 
-  // Mutations
   const deleteMutation = useDeleteUser();
   const banMutation = useBanUser();
   const unbanMutation = useUnbanUser();
   const suspendMutation = useSuspendUser();
   const warnMutation = useWarnUser();
 
-  const loading = usersLoading; // Simplify loading state
+  const loading = usersLoading;
   const users = Array.isArray(usersList) ? usersList : [];
 
   const handleViewUser = user => {
@@ -137,86 +133,74 @@ const Users = () => {
     setActionReason('');
   };
 
-  const handleRefresh = () => {
-    refetchUsers();
-  };
-
-  const handlePageChange = newPage => {
-    setCurrentPage(newPage);
-  };
-
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h2 className="text-xl font-semibold text-neutral-800 dark:text-white">
             Quản lý người dùng
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Quản lý tài khoản, vai trò và phân quyền hệ thống
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            Quản lý tài khoản và phân quyền
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
-          >
-            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-
-          {/* <button className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-full text-sm font-bold shadow-sm hover:opacity-90 transition-opacity">
-            <Plus size={18} />
-            <span>Thêm mới</span>
-          </button> */}
-        </div>
+        <button
+          onClick={() => refetchUsers()}
+          className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
+        >
+          <RefreshCcw
+            size={18}
+            strokeWidth={1.5}
+            className={loading ? 'animate-spin' : ''}
+          />
+        </button>
       </div>
 
-      {/* Filters & Actions */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full sm:w-auto">
+      {/* Filters */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
+        <div className="relative flex-1 w-full">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
           />
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên, email..."
+            placeholder="Tìm theo tên, email..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
+            className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <div className="relative min-w-[160px]">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
             <Filter
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
             />
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="w-full sm:w-auto pl-8 pr-8 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-sm font-medium text-neutral-600 dark:text-neutral-300 focus:outline-none appearance-none cursor-pointer"
             >
-              <option value="all">Tất cả trạng thái</option>
+              <option value="all">Tất cả</option>
               <option value="active">Hoạt động</option>
               <option value="pending">Chờ duyệt</option>
               <option value="suspended">Tạm ngưng</option>
               <option value="banned">Bị chặn</option>
             </select>
-            {/* Custom arrow for select could be added here if appearance-none is used fully */}
           </div>
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Table */}
       <UsersTable
         users={users}
         loading={usersLoading}
         currentPage={currentPage}
         pagination={pagination}
-        onPageChange={handlePageChange}
+        onPageChange={newPage => setCurrentPage(newPage)}
         onViewUser={handleViewUser}
         onBanUser={handleBanUser}
         onUnbanUser={handleUnbanUser}

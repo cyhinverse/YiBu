@@ -52,12 +52,14 @@ const ConversationItem = ({
         <img
           src={displayUser.avatar || 'https://via.placeholder.com/150'}
           alt={displayUser.name}
-          className={`w-12 h-12 rounded-full object-cover border-2 shadow-sm transition-all duration-300 ${
-            isActive ? 'border-primary' : 'border-border'
+          className={`w-12 h-12 rounded-full object-cover transition-all duration-300 ${
+            isActive
+              ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-neutral-900'
+              : ''
           }`}
         />
         {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success rounded-full border-[3px] border-surface shadow-sm" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success rounded-full ring-2 ring-white dark:ring-neutral-900 shadow-sm" />
         )}
       </div>
 

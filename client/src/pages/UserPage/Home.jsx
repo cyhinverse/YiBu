@@ -1,4 +1,4 @@
-import Contents from "@/components/features/feed/Contents/Contents";
+import Contents from '@/components/features/feed/Contents/Contents';
 
 const Home = () => {
   return (

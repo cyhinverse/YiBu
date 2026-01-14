@@ -1,5 +1,5 @@
-import React, { forwardRef } from "react";
-import PropTypes from "prop-types";
+import React, { forwardRef } from 'react';
+import PropTypes from 'prop-types';
 
 const Input = forwardRef(
   (
@@ -7,30 +7,27 @@ const Input = forwardRef(
       label,
       error,
       icon,
-      className = "",
-      type = "text",
-      variant = "default",
+      className = '',
+      type = 'text',
+      variant = 'default',
       ...props
     },
     ref
   ) => {
     const variants = {
       default: `
-        bg-transparent
-        border border-border
-        focus:border-primary focus:ring-1 focus:ring-primary/20
+        bg-surface-highlight/50
+        focus:bg-surface-highlight focus:ring-1 focus:ring-primary/20
         rounded-[4px]
       `,
       search: `
         bg-surface-highlight
-        border-transparent
-        focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/20
+        focus:bg-surface focus:ring-1 focus:ring-primary/20
         rounded-full
       `,
       outline: `
-        bg-transparent
-        border border-border-hover
-        focus:border-primary focus:ring-1 focus:ring-primary/20
+        bg-surface-highlight/30
+        focus:bg-surface-highlight focus:ring-1 focus:ring-primary/20
         rounded-[4px]
       `,
     };
@@ -58,11 +55,11 @@ const Input = forwardRef(
               focus:outline-none
               disabled:opacity-50 disabled:cursor-not-allowed
               placeholder:text-text-secondary
-              ${icon ? "pl-10 pr-4" : "px-4"}
+              ${icon ? 'pl-10 pr-4' : 'px-4'}
               ${
                 error
-                  ? "border-error focus:border-error focus:ring-error/20"
-                  : ""
+                  ? 'border-error focus:border-error focus:ring-error/20'
+                  : ''
               }
               py-3
               text-[15px]
@@ -79,7 +76,7 @@ const Input = forwardRef(
   }
 );
 
-Input.displayName = "Input";
+Input.displayName = 'Input';
 
 Input.propTypes = {
   label: PropTypes.string,
@@ -87,7 +84,7 @@ Input.propTypes = {
   icon: PropTypes.node,
   className: PropTypes.string,
   type: PropTypes.string,
-  variant: PropTypes.oneOf(["default", "search", "outline"]),
+  variant: PropTypes.oneOf(['default', 'search', 'outline']),
 };
 
 export default Input;

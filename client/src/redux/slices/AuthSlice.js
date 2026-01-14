@@ -36,6 +36,9 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
     },
+    setIsAuthenticated: (state, action) => {
+      state.isAuthenticated = action.payload;
+    },
     updateUserProfile: (state, action) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
@@ -52,9 +55,9 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
+        state.user = action.payload;
         state.isAuthenticated = true;
-        state.twoFactorEnabled = action.payload.user?.twoFactorEnabled || false;
+        state.twoFactorEnabled = action.payload?.twoFactorEnabled || false;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
@@ -67,7 +70,7 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
+        state.user = action.payload;
         state.isAuthenticated = true;
       })
       .addCase(register.rejected, (state, action) => {
@@ -81,7 +84,7 @@ const authSlice = createSlice({
       })
       .addCase(googleAuth.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
+        state.user = action.payload;
         state.isAuthenticated = true;
       })
       .addCase(googleAuth.rejected, (state, action) => {
@@ -172,6 +175,11 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, updateUserProfile, resetAuthState } =
-  authSlice.actions;
+export const {
+  clearError,
+  setUser,
+  setIsAuthenticated,
+  updateUserProfile,
+  resetAuthState,
+} = authSlice.actions;
 export default authSlice.reducer;

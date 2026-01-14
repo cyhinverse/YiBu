@@ -86,7 +86,7 @@ const BannedAccounts = () => {
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors disabled:opacity-50"
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors disabled:opacity-50"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -94,7 +94,7 @@ const BannedAccounts = () => {
       </div>
 
       {/* Search */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 shadow-sm">
         <div className="relative max-w-md w-full">
           <Search
             size={18}
@@ -111,7 +111,7 @@ const BannedAccounts = () => {
       </div>
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm overflow-hidden">
         {loading && bannedUsers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
             <Loader2 size={32} className="animate-spin mb-4" />
@@ -127,7 +127,7 @@ const BannedAccounts = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
+                  <tr className="bg-neutral-50/50 dark:bg-neutral-800/20">
                     <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Người dùng
                     </th>
@@ -159,7 +159,7 @@ const BannedAccounts = () => {
                           <img
                             src={user.avatar || '/images/default-avatar.png'}
                             alt={user.fullName || user.name}
-                            className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover grayscale opacity-70"
+                            className="w-10 h-10 rounded-full object-cover grayscale opacity-70"
                           />
                           <div>
                             <div className="font-bold text-sm text-neutral-900 dark:text-white">
@@ -180,7 +180,7 @@ const BannedAccounts = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
                             user.banDuration === 'Permanent' ||
                             !user.banDuration
                               ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
@@ -212,7 +212,7 @@ const BannedAccounts = () => {
                         <button
                           onClick={() => handleUnban(user)}
                           disabled={loading}
-                          className="px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 ml-auto"
+                          className="px-3 py-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 ml-auto"
                         >
                           <Check size={14} />
                           Mở chặn
@@ -226,7 +226,7 @@ const BannedAccounts = () => {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
+              <div className="flex items-center justify-between px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/20">
                 <span className="text-sm text-neutral-500 font-medium">
                   Trang{' '}
                   <span className="text-neutral-900 dark:text-white font-bold">
@@ -259,7 +259,7 @@ const BannedAccounts = () => {
       {/* Unban Modal */}
       {showUnbanModal && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-xl rounded-3xl p-8 transform animate-in scale-95 duration-200 border border-neutral-100 dark:border-neutral-800">
+          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl p-8 transform animate-in scale-95 duration-200 overflow-hidden">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
                 <Check size={32} />
@@ -275,7 +275,6 @@ const BannedAccounts = () => {
                 ? Người dùng sẽ có thể đăng nhập lại ngay lập tức.
               </p>
             </div>
-
             <div className="flex gap-3">
               <button
                 onClick={() => setShowUnbanModal(false)}
@@ -285,7 +284,7 @@ const BannedAccounts = () => {
               </button>
               <button
                 onClick={confirmUnban}
-                className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"
+                className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
               >
                 Xác nhận
               </button>

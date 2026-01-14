@@ -11,7 +11,7 @@ export const useSearchUsers = ({ query, page = 1, limit = 10 } = {}) => {
     queryFn: async () => {
       if (!query?.trim()) return { data: [], total: 0 };
       const response = await api.get(USER_API.SEARCH, {
-        params: { query, page, limit },
+        params: { q: query, page, limit },
       });
       return extractData(response);
     },
@@ -26,7 +26,7 @@ export const useSearchPosts = ({ query, page = 1, limit = 10 } = {}) => {
     queryFn: async () => {
       if (!query?.trim()) return { data: [], total: 0 };
       const response = await api.get(POST_API.SEARCH, {
-        params: { query, page, limit },
+        params: { q: query, page, limit },
       });
       return extractData(response);
     },

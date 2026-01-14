@@ -24,13 +24,13 @@ const ChatWindow = ({
   if (!selectedChat) {
     return (
       <div className="flex-1 hidden md:flex flex-col items-center justify-center text-neutral-500">
-        <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
-          <MessageSquare size={32} />
+        <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-3">
+          <MessageSquare size={28} strokeWidth={1.5} />
         </div>
-        <h3 className="text-xl font-bold text-black dark:text-white mb-2">
-          Your Messages
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
+          Tin nhắn
         </h3>
-        <p>Select a conversation to start chatting</p>
+        <p className="text-sm">Chọn cuộc trò chuyện để bắt đầu</p>
       </div>
     );
   }
@@ -42,13 +42,13 @@ const ChatWindow = ({
       }`}
     >
       {/* Header */}
-      <div className="h-16 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-6 bg-white dark:bg-neutral-900 z-10">
+      <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 bg-white dark:bg-neutral-900 z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSelectedChat(null)}
-            className="md:hidden p-2 -ml-2 text-neutral-500"
+            className="md:hidden p-1.5 -ml-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           >
-            <MoreHorizontal />
+            <MoreHorizontal size={18} />
           </button>
           <img
             src={
@@ -57,28 +57,29 @@ const ChatWindow = ({
               '/images/default-avatar.png'
             }
             alt="User"
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-9 h-9 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
           />
           <div>
-            <h3 className="font-bold text-black dark:text-white">
+            <h3 className="font-semibold text-sm text-neutral-900 dark:text-white">
               {selectedChat.name ||
                 selectedChat.participants?.[0]?.name ||
-                'Chat'}
+                'Cuộc trò chuyện'}
             </h3>
-            <span className="text-xs text-green-500 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span> Online
+            <span className="text-[11px] text-emerald-500 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>{' '}
+              Trực tuyến
             </span>
           </div>
         </div>
-        <div className="flex gap-4 text-neutral-500">
-          <button className="hover:text-black dark:hover:text-white">
-            <Phone size={20} />
+        <div className="flex gap-1 text-neutral-400">
+          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors hover:text-neutral-900 dark:hover:text-white">
+            <Phone size={18} strokeWidth={1.5} />
           </button>
-          <button className="hover:text-black dark:hover:text-white">
-            <Video size={20} />
+          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors hover:text-neutral-900 dark:hover:text-white">
+            <Video size={18} strokeWidth={1.5} />
           </button>
-          <button className="hover:text-black dark:hover:text-white">
-            <MoreVertical size={20} />
+          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors hover:text-neutral-900 dark:hover:text-white">
+            <MoreVertical size={18} strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -125,39 +126,39 @@ const ChatWindow = ({
       {/* Input */}
       <form
         onSubmit={handleSend}
-        className="p-4 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex items-center gap-3"
+        className="p-3 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex items-center gap-2"
       >
         <button
           type="button"
-          className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full"
+          className="p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
         >
-          <Paperclip size={20} />
+          <Paperclip size={18} strokeWidth={1.5} />
         </button>
         <button
           type="button"
-          className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full"
+          className="p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
         >
-          <Image size={20} />
+          <Image size={18} strokeWidth={1.5} />
         </button>
         <input
           type="text"
           value={messageInput}
           onChange={e => setMessageInput(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
+          placeholder="Nhập tin nhắn..."
+          className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 transition-all"
         />
         <button
           type="button"
-          className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full"
+          className="p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
         >
-          <Smile size={20} />
+          <Smile size={18} strokeWidth={1.5} />
         </button>
         <button
           type="submit"
           disabled={!messageInput.trim()}
-          className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-full hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="p-2.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
-          <Send size={18} />
+          <Send size={16} />
         </button>
       </form>
     </div>

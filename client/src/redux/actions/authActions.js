@@ -1,258 +1,218 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
-import api, { updateAccessToken, clearTokenRefresh } from "@/axios/axiosConfig";
-import { AUTH_API } from "@/axios/apiEndpoint";
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import api from '@/axios/axiosConfig';
+import { AUTH_API } from '@/axios/apiEndpoint';
 
-// Login
+// Helper to extract data from response
+const extractData = response => {
+  const responseData = response.data;
+  return responseData?.data !== undefined ? responseData.data : responseData;
+};
+
+// ========== Authentication ==========
+
 export const login = createAsyncThunk(
-  "auth/login",
-  async (credentials, { rejectWithValue }) => {
+  'auth/login',
+  async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.LOGIN, credentials);
-      // Save token to localStorage and schedule refresh
-      if (response.data.accessToken) {
-        updateAccessToken(response.data.accessToken);
-      }
-      // Server returns { data: user, accessToken }, transform to { user, accessToken }
-      return {
-        user: response.data.data,
-        accessToken: response.data.accessToken,
-      };
+      const response = await api.post(AUTH_API.LOGIN, { email, password });
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Đăng nhập thất bại"
+        error.response?.data?.message || 'Đăng nhập thất bại'
       );
     }
   }
 );
 
-// Register
 export const register = createAsyncThunk(
-  "auth/register",
-  async (userData, { rejectWithValue }) => {
+  'auth/register',
+  async ({ email, password, username, name }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.REGISTER, userData);
-      // Save token to localStorage and schedule refresh
-      if (response.data.accessToken) {
-        updateAccessToken(response.data.accessToken);
-      }
-      // Server returns { data: user, accessToken }, transform to { user, accessToken }
-      return {
-        user: response.data.data,
-        accessToken: response.data.accessToken,
-      };
+      const response = await api.post(AUTH_API.REGISTER, {
+        email,
+        password,
+        username,
+        name,
+      });
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Đăng ký thất bại"
+        error.response?.data?.message || 'Đăng ký thất bại'
       );
     }
   }
 );
 
-// Google Auth
 export const googleAuth = createAsyncThunk(
-  "auth/googleAuth",
-  async (tokenData, { rejectWithValue }) => {
+  'auth/googleAuth',
+  async (arg, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.GOOGLE_AUTH, tokenData);
-      // Save token to localStorage and schedule refresh
-      if (response.data.accessToken) {
-        updateAccessToken(response.data.accessToken);
+      // Handle both direct string and { credential: '...' } object
+      const credential = typeof arg === 'string' ? arg : arg?.credential;
+
+      if (!credential) {
+        return rejectWithValue('Google credential is required');
       }
-      // Server returns { data: user, accessToken }, transform to { user, accessToken }
-      return {
-        user: response.data.data,
-        accessToken: response.data.accessToken,
-      };
+
+      const response = await api.post(AUTH_API.GOOGLE_AUTH, { credential });
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Đăng nhập Google thất bại"
+        error.response?.data?.message || 'Đăng nhập Google thất bại'
       );
     }
   }
 );
 
-// Logout
 export const logout = createAsyncThunk(
-  "auth/logout",
+  'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
       await api.post(AUTH_API.LOGOUT);
-      // Clear token and refresh timer
-      clearTokenRefresh();
-      localStorage.removeItem("accessToken");
-      return true;
+      return {};
     } catch (error) {
-      // Still clear token even if API fails
-      clearTokenRefresh();
-      localStorage.removeItem("accessToken");
       return rejectWithValue(
-        error.response?.data?.message || "Đăng xuất thất bại"
+        error.response?.data?.message || 'Đăng xuất thất bại'
       );
     }
   }
 );
 
-// Logout All Devices
 export const logoutAll = createAsyncThunk(
-  "auth/logoutAll",
+  'auth/logoutAll',
   async (_, { rejectWithValue }) => {
     try {
       await api.post(AUTH_API.LOGOUT_ALL);
-      // Clear token and refresh timer
-      clearTokenRefresh();
-      localStorage.removeItem("accessToken");
-      return true;
+      return {};
     } catch (error) {
-      // Still clear token even if API fails
-      clearTokenRefresh();
-      localStorage.removeItem("accessToken");
       return rejectWithValue(
-        error.response?.data?.message || "Đăng xuất tất cả thiết bị thất bại"
+        error.response?.data?.message || 'Đăng xuất tất cả thiết bị thất bại'
       );
     }
   }
 );
 
-// Refresh Token
-export const refreshToken = createAsyncThunk(
-  "auth/refreshToken",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await api.post(AUTH_API.REFRESH_TOKEN);
-      // Save new token to localStorage and schedule next refresh
-      if (response.data.accessToken) {
-        updateAccessToken(response.data.accessToken);
-      }
-      return response.data;
-    } catch (error) {
-      // Don't clear token immediately - let axios interceptor handle retries
-      return rejectWithValue(
-        error.response?.data?.message || "Làm mới token thất bại"
-      );
-    }
-  }
-);
+// ========== Password ==========
 
-// Update Password
 export const updatePassword = createAsyncThunk(
-  "auth/updatePassword",
-  async (passwordData, { rejectWithValue }) => {
+  'auth/updatePassword',
+  async ({ currentPassword, newPassword }, { rejectWithValue }) => {
     try {
-      const response = await api.put(AUTH_API.UPDATE_PASSWORD, passwordData);
-      return response.data;
+      const response = await api.put(AUTH_API.UPDATE_PASSWORD, {
+        currentPassword,
+        newPassword,
+      });
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Cập nhật mật khẩu thất bại"
+        error.response?.data?.message || 'Cập nhật mật khẩu thất bại'
       );
     }
   }
 );
 
-// Request Password Reset
 export const requestPasswordReset = createAsyncThunk(
-  "auth/requestPasswordReset",
-  async (email, { rejectWithValue }) => {
+  'auth/requestPasswordReset',
+  async ({ email }, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.REQUEST_PASSWORD_RESET, {
         email,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Gửi yêu cầu đặt lại mật khẩu thất bại"
+        error.response?.data?.message || 'Gửi yêu cầu đặt lại mật khẩu thất bại'
       );
     }
   }
 );
 
-// Reset Password
 export const resetPassword = createAsyncThunk(
-  "auth/resetPassword",
+  'auth/resetPassword',
   async ({ token, newPassword }, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.RESET_PASSWORD, {
         token,
         newPassword,
       });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Đặt lại mật khẩu thất bại"
+        error.response?.data?.message || 'Đặt lại mật khẩu thất bại'
       );
     }
   }
 );
 
-// Enable 2FA
+// ========== 2FA ==========
+
 export const enable2FA = createAsyncThunk(
-  "auth/enable2FA",
+  'auth/enable2FA',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.ENABLE_2FA);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Kích hoạt 2FA thất bại"
+        error.response?.data?.message || 'Bật 2FA thất bại'
       );
     }
   }
 );
 
-// Verify 2FA
 export const verify2FA = createAsyncThunk(
-  "auth/verify2FA",
-  async (payload, { rejectWithValue }) => {
+  'auth/verify2FA',
+  async ({ code }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.VERIFY_2FA, payload);
-      return response.data;
+      const response = await api.post(AUTH_API.VERIFY_2FA, { code });
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Xác thực 2FA thất bại"
+        error.response?.data?.message || 'Xác thực 2FA thất bại'
       );
     }
   }
 );
 
-// Disable 2FA
 export const disable2FA = createAsyncThunk(
-  "auth/disable2FA",
-  async (code, { rejectWithValue }) => {
+  'auth/disable2FA',
+  async ({ code }, { rejectWithValue }) => {
     try {
       const response = await api.post(AUTH_API.DISABLE_2FA, { code });
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Tắt 2FA thất bại"
+        error.response?.data?.message || 'Tắt 2FA thất bại'
       );
     }
   }
 );
 
-// Get Sessions
+// ========== Sessions ==========
+
 export const getSessions = createAsyncThunk(
-  "auth/getSessions",
+  'auth/getSessions',
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get(AUTH_API.GET_SESSIONS);
-      return response.data;
+      return extractData(response);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Lấy danh sách phiên thất bại"
+        error.response?.data?.message || 'Lấy danh sách phiên thất bại'
       );
     }
   }
 );
 
-// Revoke Session
 export const revokeSession = createAsyncThunk(
-  "auth/revokeSession",
-  async (sessionId, { rejectWithValue }) => {
+  'auth/revokeSession',
+  async ({ sessionId }, { rejectWithValue }) => {
     try {
       await api.delete(AUTH_API.REVOKE_SESSION(sessionId));
-      return sessionId;
+      return { sessionId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Thu hồi phiên thất bại"
+        error.response?.data?.message || 'Thu hồi phiên thất bại'
       );
     }
   }

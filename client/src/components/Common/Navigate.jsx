@@ -129,7 +129,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Mobile Bottom Navigation
   if (mobile) {
     return (
-      <div className="h-[56px] w-full flex justify-around items-center border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl">
+      <div className="h-[56px] w-full flex justify-around items-center bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl">
         {navItems.slice(0, 5).map((item, i) => (
           <NavLink
             key={i}
@@ -166,7 +166,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Desktop Sidebar
   return (
     <div
-      className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ease-in-out ${
+      className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 transition-all duration-300 ease-in-out ${
         collapsed ? 'px-2 w-[72px]' : 'px-4 w-full'
       }`}
     >
@@ -190,7 +190,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
       {/* Collapse Toggle */}
       <button
         onClick={toggleSidebar}
-        className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 transition-all self-center"
+        className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all self-center"
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
@@ -258,7 +258,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
       </nav>
 
       {/* User Profile Card */}
-      <div className="mt-auto pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="mt-auto pt-4">
         <div
           className={`flex items-center gap-3 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all group ${
             collapsed ? 'justify-center' : ''
@@ -269,9 +269,9 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
             <img
               src={user?.avatar || DEFAULT_USER.avatar}
               alt="Profile"
-              className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+              className="w-10 h-10 rounded-full object-cover"
             />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full" />
           </Link>
           {!collapsed && (
             <>

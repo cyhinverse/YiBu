@@ -20,7 +20,7 @@ const AdminActionModal = ({
           icon: actionType === 'delete' ? Ban : Ban, // Or specific icon for delete if available
           bg: 'bg-rose-50 dark:bg-rose-900/20',
           text: 'text-rose-600 dark:text-rose-400',
-          btn: 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none',
+          btn: 'bg-rose-600 hover:bg-rose-700 text-white',
           title: actionType === 'ban' ? 'Chặn tài khoản' : 'Xóa tài khoản',
         };
       case 'unban':
@@ -28,7 +28,7 @@ const AdminActionModal = ({
           icon: Check,
           bg: 'bg-emerald-50 dark:bg-emerald-900/20',
           text: 'text-emerald-600 dark:text-emerald-400',
-          btn: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 dark:shadow-none',
+          btn: 'bg-emerald-600 hover:bg-emerald-700 text-white',
           title: 'Gỡ chặn',
         };
       case 'warn':
@@ -36,7 +36,7 @@ const AdminActionModal = ({
           icon: AlertTriangle,
           bg: 'bg-amber-50 dark:bg-amber-900/20',
           text: 'text-amber-600 dark:text-amber-400',
-          btn: 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 dark:shadow-none',
+          btn: 'bg-amber-500 hover:bg-amber-600 text-white',
           title: 'Cảnh báo',
         };
       case 'suspend':
@@ -44,7 +44,7 @@ const AdminActionModal = ({
           icon: AlertTriangle,
           bg: 'bg-orange-50 dark:bg-orange-900/20',
           text: 'text-orange-600 dark:text-orange-400',
-          btn: 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 dark:shadow-none',
+          btn: 'bg-orange-500 hover:bg-orange-600 text-white',
           title: 'Tạm ngưng',
         };
       default:
@@ -63,10 +63,10 @@ const AdminActionModal = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-xl rounded-3xl p-8 transform animate-in scale-95 duration-200 border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl p-8 transform animate-in scale-95 duration-200 overflow-hidden">
         <div className="flex flex-col items-center text-center mb-8">
           <div
-            className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm ${config.bg} ${config.text}`}
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${config.bg} ${config.text}`}
           >
             <Icon size={32} strokeWidth={2.5} />
           </div>
@@ -86,7 +86,6 @@ const AdminActionModal = ({
               `Tạm ngưng tài khoản ${targetName} trong 7 ngày?`}
           </p>
         </div>
-
         {['ban', 'suspend', 'warn'].includes(actionType) && (
           <div className="mb-8">
             <label className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wide block mb-2.5 ml-1">
@@ -96,11 +95,10 @@ const AdminActionModal = ({
               value={reason}
               onChange={e => onReasonChange(e.target.value)}
               placeholder="Nhập chi tiết tại đây..."
-              className="w-full p-4 h-32 resize-none text-sm font-medium bg-neutral-50 dark:bg-neutral-800 border-none rounded-2xl focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all outline-none"
+              className="w-full p-4 h-32 resize-none text-sm font-medium bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl focus:ring-2 focus:ring-primary/50 transition-all outline-none"
             />
           </div>
         )}
-
         <div className="flex gap-3">
           <button
             onClick={onCancel}

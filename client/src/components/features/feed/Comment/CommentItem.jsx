@@ -1,13 +1,5 @@
 import { useState, memo, useCallback } from 'react';
-import {
-  Heart,
-  MessageSquare,
-  MoreHorizontal,
-  Edit2,
-  Trash2,
-  Send,
-  X,
-} from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, Send, X } from 'lucide-react';
 import { formatDistanceToNow } from '@/utils/dateUtils';
 
 /**
@@ -75,8 +67,7 @@ CommentInput.displayName = 'CommentInput';
 const OptionsMenu = memo(({ isOwner, onEdit, onDelete, onClose }) => (
   <div
     className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-800 
-                  rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 
-                  py-1 z-20 animate-in fade-in slide-in-from-top-1 duration-150"
+                  rounded-lg py-1 z-20 animate-in fade-in slide-in-from-top-1 duration-150"
   >
     {isOwner ? (
       <>

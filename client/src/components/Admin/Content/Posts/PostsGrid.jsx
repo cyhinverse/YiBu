@@ -30,13 +30,13 @@ const getTypeIcon = type => {
 const getStatusStyle = status => {
   switch (status) {
     case 'active':
-      return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800';
+      return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400';
     case 'hidden':
-      return 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800';
+      return 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400';
     case 'pending':
-      return 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+      return 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400';
     default:
-      return 'bg-neutral-50 text-neutral-600 border-neutral-100 dark:bg-neutral-800/50 dark:text-neutral-400 dark:border-neutral-700';
+      return 'bg-neutral-50 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
   }
 };
 
@@ -86,14 +86,14 @@ export default function PostsGrid({
         return (
           <div
             key={post._id || post.id}
-            className="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-neutral-200 dark:border-neutral-800 hover:shadow-lg transition-all duration-300"
+            className="bg-white dark:bg-neutral-900 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-start gap-5">
               {/* Author Avatar */}
               <img
                 src={author.avatar || '/images/default-avatar.png'}
                 alt={author.name || author.username || 'User'}
-                className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                className="w-12 h-12 rounded-full object-cover"
               />
 
               {/* Content */}
@@ -130,7 +130,7 @@ export default function PostsGrid({
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(
                         post.status || 'active'
                       )}`}
                     >
@@ -144,7 +144,7 @@ export default function PostsGrid({
                     {(post.reportsCount || post.reports) > 0 && (
                       <button
                         onClick={() => onViewReports(post)}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
                       >
                         <Flag size={12} />
                         {post.reportsCount || post.reports}
@@ -167,7 +167,7 @@ export default function PostsGrid({
                       </button>
 
                       {activeDropdown === (post._id || post.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 overflow-hidden animate-scale-in">
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-10 overflow-hidden animate-scale-in">
                           <button
                             onClick={() => {
                               onViewDetails(post);
@@ -251,7 +251,7 @@ export default function PostsGrid({
                       return (
                         <div
                           key={idx}
-                          className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
+                          className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800"
                         >
                           <img
                             src={mediaUrl}
@@ -270,7 +270,7 @@ export default function PostsGrid({
                       );
                     })}
                     {mediaItems.length > 4 && (
-                      <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-medium">
+                      <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 font-medium">
                         +{mediaItems.length - 4}
                       </div>
                     )}
@@ -278,7 +278,7 @@ export default function PostsGrid({
                 )}
 
                 {/* Stats */}
-                <div className="flex items-center gap-6 pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
+                <div className="flex items-center gap-6 pt-4 bg-neutral-50/10 dark:bg-neutral-800/10 mt-2 px-2 rounded-xl">
                   <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
                     <Heart size={14} className="text-neutral-400" />
                     {post.likesCount || post.likes || 0}

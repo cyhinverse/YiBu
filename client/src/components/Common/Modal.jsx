@@ -45,8 +45,8 @@ export default function Modal({
       <div
         className={`
           relative w-full ${sizeClasses[size] || sizeClasses.md}
-          bg-surface border border-surface-highlight
-          rounded-2xl shadow-3xl transform transition-all
+          bg-surface
+          rounded-2xl transform transition-all
           flex flex-col max-h-[90vh]
           animate-bounce-in
         `}
@@ -54,7 +54,7 @@ export default function Modal({
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-highlight">
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-highlight/30 rounded-t-2xl">
           <h3 className="text-xl font-heading font-semibold text-text-primary">
             {title}
           </h3>
@@ -73,7 +73,7 @@ export default function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-surface-highlight bg-surface/50 rounded-b-2xl">
+          <div className="px-6 py-4 bg-surface-highlight/30 rounded-b-2xl">
             {footer}
           </div>
         )}

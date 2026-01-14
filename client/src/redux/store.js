@@ -2,6 +2,7 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import authReducer from './slices/AuthSlice.js';
+import { injectStore } from '@/axios/axiosConfig';
 
 const persistConfig = {
   key: 'root',
@@ -22,6 +23,9 @@ const store = configureStore({
       serializableCheck: false,
     }),
 });
+
+// Inject store into axios for auth state management
+injectStore(store);
 
 const persistor = persistStore(store);
 

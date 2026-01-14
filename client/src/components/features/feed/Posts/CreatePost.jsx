@@ -16,13 +16,13 @@ const CreatePost = () => {
 
   return (
     <>
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
+      <div className="rounded-2xl p-4 bg-white dark:bg-neutral-900">
         <div className="flex gap-3">
           {/* Avatar */}
           <img
             src={avatarUrl}
             alt={user?.fullName || user?.username || 'User'}
-            className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
           />
 
           {/* Input Area */}
