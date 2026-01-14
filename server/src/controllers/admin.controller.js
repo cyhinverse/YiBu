@@ -11,7 +11,6 @@ import {
 import logger from '../configs/logger.js';
 
 export const AdminController = {
-
   /**
    * Get dashboard statistics
    * @param {Object} req - Express request object
@@ -803,90 +802,5 @@ export const AdminController = {
       timestamp: new Date(),
     };
     return formatResponse(res, 200, 1, 'System health retrieved', health);
-  }),
-
-  /**
-   * Get admin activity logs
-   * @param {Object} req - Express request object
-   * @param {Object} req.query - Query parameters
-   * @param {number} [req.query.page] - Page number for pagination
-   * @param {number} [req.query.limit] - Number of items per page
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with admin activity logs and pagination info
-   */
-  getAdminLogs: CatchError(async (req, res) => {
-    const { page, limit } = getPaginationParams(req.query);
-
-    const result = await AdminService.getAdminLogs({ page, limit });
-    return formatResponse(res, 200, 1, 'Admin logs retrieved', result);
-  }),
-
-  /**
-   * Get system settings
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with current system settings
-   */
-  getSystemSettings: CatchError(async (req, res) => {
-    const settings = await AdminService.getSystemSettings();
-    return formatResponse(res, 200, 1, 'System settings retrieved', settings);
-  }),
-
-  /**
-   * Update system settings
-   * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body containing settings to update
-   * @param {Object} req.user - Authenticated admin user object
-   * @param {string} req.user.id - Admin user's ID
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with updated system settings
-   */
-  updateSystemSettings: CatchError(async (req, res) => {
-    const updatedSettings = await AdminService.updateSystemSettings(
-      req.body,
-      req.user.id
-    );
-    return formatResponse(
-      res,
-      200,
-      1,
-      'System settings updated',
-      updatedSettings
-    );
-  }),
-
-  /**
-   * Get revenue statistics
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with revenue statistics data
-   */
-  getRevenueStats: CatchError(async (req, res) => {
-    const stats = await AdminService.getRevenueStats();
-    return formatResponse(res, 200, 1, 'Revenue stats retrieved', stats);
-  }),
-
-  /**
-   * Get transactions list
-   * @param {Object} req - Express request object
-   * @param {Object} req.query - Query parameters
-   * @param {number} [req.query.page] - Page number for pagination
-   * @param {number} [req.query.limit] - Number of items per page
-   * @param {string} [req.query.status] - Filter by transaction status
-   * @param {string} [req.query.type] - Filter by transaction type
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with transactions array and pagination info
-   */
-  getTransactions: CatchError(async (req, res) => {
-    const { page, limit } = getPaginationParams(req.query);
-    const { status, type } = req.query;
-
-    const result = await AdminService.getTransactions({
-      page,
-      limit,
-      status,
-      type,
-    });
-    return formatResponse(res, 200, 1, 'Transactions retrieved', result);
   }),
 };

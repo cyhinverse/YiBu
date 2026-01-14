@@ -11,8 +11,6 @@ import {
   securitySettingsBody,
   contentSettingsBody,
   themeSettingsBody,
-  addDeviceBody,
-  deviceIdParam,
 } from '../validations/userSettings.validation.js';
 
 const router = express.Router();
@@ -51,19 +49,6 @@ router.put(
   '/theme',
   validateBody(themeSettingsBody),
   UserController.updateThemeSettings
-);
-
-/* POST /devices - Add trusted device (deprecated) */
-router.post(
-  '/devices',
-  validateBody(addDeviceBody),
-  UserController.addTrustedDevice
-);
-/* DELETE /devices/:deviceId - Remove trusted device (deprecated) */
-router.delete(
-  '/devices/:deviceId',
-  validateParams(deviceIdParam),
-  UserController.removeTrustedDevice
 );
 
 export default router;

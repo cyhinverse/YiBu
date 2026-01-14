@@ -26,7 +26,6 @@ import {
   reviewReportBody,
   resolveReportBody,
   broadcastBody,
-  getLogsQuery,
 } from '../validations/admin.validation.js';
 
 const router = express.Router();
@@ -193,17 +192,6 @@ router.put(
   validateBody(resolveReportBody),
   ReportController.resolveReport
 );
-
-/* GET /settings - Get system settings */
-router.get('/settings', AdminController.getSystemSettings);
-/* PUT /settings - Update system settings */
-router.put('/settings', AdminController.updateSystemSettings);
-
-/* GET /revenue/stats - Get revenue statistics */
-router.get('/revenue/stats', AdminController.getRevenueStats);
-/* GET /transactions - Get transactions list */
-router.get('/transactions', AdminController.getTransactions);
-
 /* POST /broadcast - Broadcast notification to users */
 router.post(
   '/broadcast',
@@ -212,7 +200,5 @@ router.post(
 );
 /* GET /system/health - Get system health status */
 router.get('/system/health', AdminController.getSystemHealth);
-/* GET /logs - Get admin activity logs */
-router.get('/logs', validateQuery(getLogsQuery), AdminController.getAdminLogs);
 
 export default router;

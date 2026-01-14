@@ -18,7 +18,6 @@ import Conversation from '../models/Conversation.js';
  * 4. Pagination with cursor-based loading
  */
 class MessageService {
-
   /**
    * Generate conversation ID from 2 user IDs
    * @param {string} userId1 - First user ID
@@ -50,8 +49,8 @@ class MessageService {
       $or: [
         { isGroup: true },
         { lastMessage: { $ne: null } },
-        { createdAt: { $gt: new Date(Date.now() - 60000) } }
-      ]
+        { createdAt: { $gt: new Date(Date.now() - 60000) } },
+      ],
     })
       .populate('members', 'username name avatar lastActiveAt')
       .populate({
@@ -130,7 +129,7 @@ class MessageService {
     }
 
     const directId = this.generateConversationId(userId, participantId);
-    
+
     let conversation = await Conversation.findOne({ directId })
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
@@ -174,9 +173,9 @@ class MessageService {
    */
   static async createGroupConversation(userId, data) {
     const { participantIds, groupName, groupAvatar } = data;
-    
+
     const members = [...new Set([userId, ...participantIds])];
-    
+
     const conversation = await Conversation.create({
       name: groupName,
       avatar: groupAvatar,
@@ -240,8 +239,10 @@ class MessageService {
     }
 
     const currentMembers = conversation.members.map(m => m.toString());
-    const newMembers = memberIds.filter(id => !currentMembers.includes(id.toString()));
-    
+    const newMembers = memberIds.filter(
+      id => !currentMembers.includes(id.toString())
+    );
+
     if (newMembers.length > 0) {
       conversation.members.push(...newMembers);
       await conversation.save();
@@ -270,7 +271,10 @@ class MessageService {
       throw new Error('Hội thoại không tồn tại hoặc bạn không có quyền');
     }
 
-    if (conversation.admin.toString() !== userId.toString() && userId.toString() !== memberId.toString()) {
+    if (
+      conversation.admin.toString() !== userId.toString() &&
+      userId.toString() !== memberId.toString()
+    ) {
       throw new Error('Chỉ admin mới có quyền xóa thành viên');
     }
 
@@ -298,8 +302,9 @@ class MessageService {
    */
   static async findConversation(conversationId, userId, options = {}) {
     const { autoCreate = false } = options;
-    const isCompound = typeof conversationId === 'string' && conversationId.includes('_');
-    const query = isCompound 
+    const isCompound =
+      typeof conversationId === 'string' && conversationId.includes('_');
+    const query = isCompound
       ? { directId: conversationId, members: userId }
       : { _id: conversationId, members: userId };
 
@@ -323,7 +328,10 @@ class MessageService {
    * @throws {Error} If conversation not found
    */
   static async getConversationById(conversationId, currentUserId) {
-    const conversation = await this.findConversation(conversationId, currentUserId);
+    const conversation = await this.findConversation(
+      conversationId,
+      currentUserId
+    );
 
     if (!conversation) {
       throw new Error('Hội thoại không tồn tại');
@@ -334,15 +342,17 @@ class MessageService {
       .populate('lastMessage')
       .lean();
 
-    const otherUser = populated.isGroup ? null : populated.members?.find(
-      m => m._id.toString() !== currentUserId.toString()
-    );
+    const otherUser = populated.isGroup
+      ? null
+      : populated.members?.find(
+          m => m._id.toString() !== currentUserId.toString()
+        );
 
     const unreadCount = await Message.countDocuments({
-        conversationId: populated._id.toString(),
-        receiver: currentUserId,
-        status: { $ne: 'read' },
-        isDeleted: false,
+      conversationId: populated._id.toString(),
+      receiver: currentUserId,
+      status: { $ne: 'read' },
+      isDeleted: false,
     });
 
     return {
@@ -371,7 +381,7 @@ class MessageService {
     }
 
     let query = {
-      isDeleted: { $ne: true }
+      isDeleted: { $ne: true },
     };
 
     if (conversation.isGroup) {
@@ -382,10 +392,10 @@ class MessageService {
         { conversationId: conversation._id.toString() },
         { conversationId: conversation._id },
         { conversationId: conversation.directId },
-        { 
-          sender: { $in: members }, 
-          receiver: { $in: members } 
-        }
+        {
+          sender: { $in: members },
+          receiver: { $in: members },
+        },
       ].filter(item => item.conversationId || (item.sender && item.receiver));
     }
 
@@ -497,7 +507,9 @@ class MessageService {
    * @throws {Error} If conversation not found or content is empty
    */
   static async sendMessage(conversationId, senderId, messageData) {
-    const conversation = await this.findConversation(conversationId, senderId, { autoCreate: true });
+    const conversation = await this.findConversation(conversationId, senderId, {
+      autoCreate: true,
+    });
 
     if (!conversation) {
       throw new Error('Hội thoại không tồn tại hoặc bạn không tham gia');
@@ -552,16 +564,16 @@ class MessageService {
       .lean();
 
     await Message.findByIdAndUpdate(message._id, {
-        $push: { seenBy: { user: senderId, at: new Date() } }
+      $push: { seenBy: { user: senderId, at: new Date() } },
     });
 
     try {
       conversation.members.forEach(memberId => {
         if (memberId.toString() !== senderId.toString()) {
-           socketService.sendMessage(senderId, memberId, {
-             ...populatedMessage,
-             conversationId
-           });
+          socketService.sendMessage(senderId, memberId, {
+            ...populatedMessage,
+            conversationId,
+          });
         }
       });
       logger.debug(`Socket messages sent for conversation ${conversationId}`);
@@ -578,23 +590,33 @@ class MessageService {
 
   /**
    * Upload attachments for message
-   * @param {Array|Object} files - File(s) to upload
+   * @param {Array|Object} files - File(s) from multer memory storage
    * @param {string} userId - User ID
    * @returns {Promise<Array>} List of media objects {url, type, publicId}
    */
   static async uploadAttachments(files, userId) {
-    const cloudinary = (await import('../configs/cloudinaryConfig.js')).default;
+    const { uploadToCloudinary } = await import(
+      '../middlewares/multerUpload.js'
+    );
     const uploadedMedia = [];
     const fileArray = Array.isArray(files) ? files : [files];
 
     for (const file of fileArray) {
-      const resourceType = file.mimetype?.startsWith('video/') ? 'video' : 'image';
-      const result = await cloudinary.uploader.upload(file.tempFilePath, {
+      const resourceType = file.mimetype?.startsWith('video/')
+        ? 'video'
+        : 'image';
+      const publicId = `msg_${userId}_${Date.now()}_${
+        file.originalname.split('.')[0]
+      }`;
+
+      const result = await uploadToCloudinary(file.buffer, {
         folder: 'messages',
-        resource_type: resourceType,
-        transformation: resourceType === 'image' 
-          ? [{ quality: 'auto' }, { width: 1200, crop: 'limit' }]
-          : [{ quality: 'auto' }],
+        resourceType: resourceType,
+        publicId: publicId,
+        transformation:
+          resourceType === 'image'
+            ? [{ quality: 'auto' }, { width: 1200, crop: 'limit' }]
+            : [{ quality: 'auto' }],
       });
 
       uploadedMedia.push({
@@ -620,23 +642,31 @@ class MessageService {
     const result = await retryOperation(() =>
       Message.updateMany(
         {
-          conversationId: { $in: [convId, conversation.directId].filter(Boolean) },
+          conversationId: {
+            $in: [convId, conversation.directId].filter(Boolean),
+          },
           'seenBy.user': { $ne: userId },
           sender: { $ne: userId },
-          isDeleted: false
+          isDeleted: false,
         },
         {
           $push: { seenBy: { user: userId, at: new Date() } },
-          status: 'read'
+          status: 'read',
         }
       )
     );
 
     if (!conversation.isGroup) {
-        const otherUser = conversation.members.find(m => m.toString() !== userId.toString());
-        if (otherUser) {
-           socketService.sendConversationRead(otherUser.toString(), userId, convId);
-        }
+      const otherUser = conversation.members.find(
+        m => m.toString() !== userId.toString()
+      );
+      if (otherUser) {
+        socketService.sendConversationRead(
+          otherUser.toString(),
+          userId,
+          convId
+        );
+      }
     }
 
     return { updatedCount: result.modifiedCount };
@@ -729,9 +759,11 @@ class MessageService {
     const convId = conversation._id.toString();
 
     await Message.updateMany(
-      { 
-        conversationId: { $in: [convId, conversation.directId].filter(Boolean) },
-        deletedFor: { $ne: userId }
+      {
+        conversationId: {
+          $in: [convId, conversation.directId].filter(Boolean),
+        },
+        deletedFor: { $ne: userId },
       },
       { $addToSet: { deletedFor: userId } }
     );
@@ -846,10 +878,14 @@ class MessageService {
 
     await message.save();
 
-    socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
-      messageId,
-      reactions: message.reactions,
-    });
+    socketService.emitToRoom(
+      `conversation:${message.conversationId}`,
+      'message_reaction',
+      {
+        messageId,
+        reactions: message.reactions,
+      }
+    );
 
     return { success: true, reactions: message.reactions };
   }
@@ -881,10 +917,14 @@ class MessageService {
 
     await message.save();
 
-    socketService.emitToRoom(`conversation:${message.conversationId}`, 'message_reaction', {
-      messageId,
-      reactions: message.reactions,
-    });
+    socketService.emitToRoom(
+      `conversation:${message.conversationId}`,
+      'message_reaction',
+      {
+        messageId,
+        reactions: message.reactions,
+      }
+    );
 
     return { success: true, reactions: message.reactions };
   }

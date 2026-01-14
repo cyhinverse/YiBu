@@ -1,4 +1,4 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model, Types } from 'mongoose';
 
 /**
  * Report Model - Optimized for moderation workflow
@@ -13,7 +13,7 @@ const ReportSchema = new Schema(
   {
     reporter: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
@@ -21,7 +21,7 @@ const ReportSchema = new Schema(
     // Type of reported content
     targetType: {
       type: String,
-      enum: ["post", "comment", "user", "message"],
+      enum: ['post', 'comment', 'user', 'message'],
       required: true,
       index: true,
     },
@@ -35,7 +35,7 @@ const ReportSchema = new Schema(
     // Reported user (for easier querying)
     targetUser: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       index: true,
     },
 
@@ -43,20 +43,27 @@ const ReportSchema = new Schema(
     category: {
       type: String,
       enum: [
-        "spam",
-        "harassment",
-        "hate_speech",
-        "violence",
-        "nudity",
-        "misinformation",
-        "copyright",
-        "impersonation",
-        "self_harm",
-        "illegal",
-        "other",
+        'spam',
+        'harassment',
+        'hate_speech',
+        'violence',
+        'nudity',
+        'misinformation',
+        'copyright',
+        'impersonation',
+        'self_harm',
+        'illegal',
+        'scam',
+        'other',
       ],
       required: true,
       index: true,
+    },
+
+    // Specific reason label
+    reason: {
+      type: String,
+      required: true,
     },
 
     // Additional details from reporter
@@ -75,14 +82,21 @@ const ReportSchema = new Schema(
     // For comment reports, link to parent post
     parentPost: {
       type: Types.ObjectId,
-      ref: "Post",
+      ref: 'Post',
     },
 
     // Report status
     status: {
       type: String,
-      enum: ["pending", "under_review", "resolved", "dismissed", "escalated"],
-      default: "pending",
+      enum: [
+        'pending',
+        'reviewing',
+        'resolved',
+        'dismissed',
+        'rejected',
+        'escalated',
+      ],
+      default: 'pending',
       index: true,
     },
 
@@ -98,15 +112,15 @@ const ReportSchema = new Schema(
       action: {
         type: String,
         enum: [
-          "no_violation",
-          "warning",
-          "content_removed",
-          "user_suspended",
-          "user_banned",
+          'no_violation',
+          'warning',
+          'content_removed',
+          'user_suspended',
+          'user_banned',
         ],
       },
       note: { type: String },
-      resolvedBy: { type: Types.ObjectId, ref: "User" },
+      resolvedBy: { type: Types.ObjectId, ref: 'User' },
       resolvedAt: { type: Date },
     },
 
@@ -116,20 +130,20 @@ const ReportSchema = new Schema(
         action: {
           type: String,
           enum: [
-            "created",
-            "assigned",
-            "reviewed",
-            "resolved",
-            "dismissed",
-            "escalated",
-            "reopened",
-            "note_added",
+            'created',
+            'assigned',
+            'reviewed',
+            'resolved',
+            'dismissed',
+            'escalated',
+            'reopened',
+            'note_added',
           ],
           required: true,
         },
         performedBy: {
           type: Types.ObjectId,
-          ref: "User",
+          ref: 'User',
         },
         note: { type: String },
         performedAt: {
@@ -142,7 +156,7 @@ const ReportSchema = new Schema(
     // Assigned moderator
     assignedTo: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       index: true,
     },
 
@@ -160,7 +174,7 @@ const ReportSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "Reports",
+    collection: 'Reports',
   }
 );
 
@@ -203,30 +217,30 @@ ReportSchema.statics.createReport = async function (data) {
     reporter,
     targetType,
     targetId,
-    status: { $in: ["pending", "under_review"] },
+    status: { $in: ['pending', 'under_review'] },
   });
 
   if (existing) {
-    return { success: false, error: "You have already reported this content" };
+    return { success: false, error: 'You have already reported this content' };
   }
 
   // Get target user and content snapshot
   let targetUser = null;
   let contentSnapshot = {};
 
-  if (targetType === "post") {
-    const Post = model("Post");
+  if (targetType === 'post') {
+    const Post = model('Post');
     const post = await Post.findById(targetId).lean();
     if (post) {
       targetUser = post.user;
       contentSnapshot = {
         text: post.caption,
-        media: post.media?.map((m) => m.url) || [],
+        media: post.media?.map(m => m.url) || [],
         capturedAt: new Date(),
       };
     }
-  } else if (targetType === "comment") {
-    const Comment = model("Comment");
+  } else if (targetType === 'comment') {
+    const Comment = model('Comment');
     const comment = await Comment.findById(targetId).lean();
     if (comment) {
       targetUser = comment.user;
@@ -235,7 +249,7 @@ ReportSchema.statics.createReport = async function (data) {
         capturedAt: new Date(),
       };
     }
-  } else if (targetType === "user") {
+  } else if (targetType === 'user') {
     targetUser = targetId;
   }
 
@@ -246,7 +260,7 @@ ReportSchema.statics.createReport = async function (data) {
   const existingReports = await this.countDocuments({
     targetType,
     targetId,
-    status: { $in: ["pending", "under_review"] },
+    status: { $in: ['pending', 'under_review'] },
   });
 
   const priority = basePriority + existingReports * 10;
@@ -267,7 +281,7 @@ ReportSchema.statics.createReport = async function (data) {
     groupKey,
     actions: [
       {
-        action: "created",
+        action: 'created',
         performedBy: reporter,
         performedAt: new Date(),
       },
@@ -287,7 +301,7 @@ ReportSchema.statics.getReportsForModeration = async function (options = {}) {
   const {
     page = 1,
     limit = 20,
-    status = "pending",
+    status = 'pending',
     category = null,
     assignedTo = null,
   } = options;
@@ -302,9 +316,9 @@ ReportSchema.statics.getReportsForModeration = async function (options = {}) {
     .sort({ priority: -1, createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate("reporter", "username name avatar")
-    .populate("targetUser", "username name avatar")
-    .populate("assignedTo", "username name")
+    .populate('reporter', 'username name avatar')
+    .populate('targetUser', 'username name avatar')
+    .populate('assignedTo', 'username name')
     .lean();
 };
 
@@ -316,14 +330,14 @@ ReportSchema.statics.resolveReport = async function (
   const report = await this.findById(reportId);
   if (!report) return null;
 
-  report.status = "resolved";
+  report.status = 'resolved';
   report.resolution = {
     ...resolution,
     resolvedBy: adminId,
     resolvedAt: new Date(),
   };
   report.actions.push({
-    action: "resolved",
+    action: 'resolved',
     performedBy: adminId,
     note: resolution.note,
     performedAt: new Date(),
@@ -336,10 +350,10 @@ ReportSchema.statics.getReportStats = async function () {
   return this.aggregate([
     {
       $facet: {
-        byStatus: [{ $group: { _id: "$status", count: { $sum: 1 } } }],
+        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
         byCategory: [
-          { $match: { status: "pending" } },
-          { $group: { _id: "$category", count: { $sum: 1 } } },
+          { $match: { status: 'pending' } },
+          { $group: { _id: '$category', count: { $sum: 1 } } },
         ],
         recentTrend: [
           {
@@ -352,7 +366,7 @@ ReportSchema.statics.getReportStats = async function () {
           {
             $group: {
               _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
               },
               count: { $sum: 1 },
             },
@@ -364,5 +378,5 @@ ReportSchema.statics.getReportStats = async function () {
   ]);
 };
 
-const Report = model("Report", ReportSchema);
+const Report = model('Report', ReportSchema);
 export default Report;

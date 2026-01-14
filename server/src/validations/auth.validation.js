@@ -116,12 +116,11 @@ export const resetPasswordBody = Joi.object({
 
 // ======================================
 // POST /refresh
-// Body: { refreshToken }
+// Body: { refreshToken } - optional, fallback if cookie not available
 // ======================================
 export const refreshTokenBody = Joi.object({
-  refreshToken: Joi.string().required().messages({
+  refreshToken: Joi.string().optional().messages({
     'string.empty': 'Refresh token không được để trống',
-    'any.required': 'Refresh token là bắt buộc',
   }),
 });
 

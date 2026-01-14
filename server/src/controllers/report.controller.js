@@ -1,8 +1,8 @@
-import { CatchError } from "../configs/CatchError.js";
-import { formatResponse } from "../helpers/formatResponse.js";
-import { getPaginationParams } from "../helpers/pagination.js";
-import ReportService from "../services/Report.Service.js";
-import mongoose from "mongoose";
+import { CatchError } from '../configs/CatchError.js';
+import { formatResponse } from '../helpers/formatResponse.js';
+import { getPaginationParams } from '../helpers/pagination.js';
+import ReportService from '../services/Report.Service.js';
+import mongoose from 'mongoose';
 
 /**
  * Report Controller
@@ -14,7 +14,6 @@ import mongoose from "mongoose";
  * - Admin: Manage and process reports
  */
 const ReportController = {
-
   /**
    * Create a new report
    * @param {Object} req - Express request object
@@ -38,12 +37,12 @@ const ReportController = {
         res,
         400,
         0,
-        "Target type and target ID are required"
+        'Target type and target ID are required'
       );
     }
 
     if (!category || !reason) {
-      return formatResponse(res, 400, 0, "Category and reason are required");
+      return formatResponse(res, 400, 0, 'Category and reason are required');
     }
 
     const report = await ReportService.createReport(
@@ -57,7 +56,7 @@ const ReportController = {
       }
     );
 
-    return formatResponse(res, 201, 1, "Report submitted successfully", report);
+    return formatResponse(res, 201, 1, 'Report submitted successfully', report);
   }),
 
   /**
@@ -80,7 +79,11 @@ const ReportController = {
     const { category, reason, description } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return formatResponse(res, 400, 0, "Invalid post ID");
+      return formatResponse(res, 400, 0, 'Invalid post ID');
+    }
+
+    if (!category || !reason) {
+      return formatResponse(res, 400, 0, 'Category and reason are required');
     }
 
     const report = await ReportService.reportPost(reporterId, postId, {
@@ -89,7 +92,7 @@ const ReportController = {
       description,
     });
 
-    return formatResponse(res, 201, 1, "Post reported successfully", report);
+    return formatResponse(res, 201, 1, 'Post reported successfully', report);
   }),
 
   /**
@@ -112,7 +115,11 @@ const ReportController = {
     const { category, reason, description } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      return formatResponse(res, 400, 0, "Invalid comment ID");
+      return formatResponse(res, 400, 0, 'Invalid comment ID');
+    }
+
+    if (!category || !reason) {
+      return formatResponse(res, 400, 0, 'Category and reason are required');
     }
 
     const report = await ReportService.reportComment(reporterId, commentId, {
@@ -121,7 +128,7 @@ const ReportController = {
       description,
     });
 
-    return formatResponse(res, 201, 1, "Comment reported successfully", report);
+    return formatResponse(res, 201, 1, 'Comment reported successfully', report);
   }),
 
   /**
@@ -144,7 +151,11 @@ const ReportController = {
     const { category, reason, description } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Invalid user ID");
+      return formatResponse(res, 400, 0, 'Invalid user ID');
+    }
+
+    if (!category || !reason) {
+      return formatResponse(res, 400, 0, 'Category and reason are required');
     }
 
     const report = await ReportService.reportUser(reporterId, userId, {
@@ -153,7 +164,7 @@ const ReportController = {
       description,
     });
 
-    return formatResponse(res, 201, 1, "User reported successfully", report);
+    return formatResponse(res, 201, 1, 'User reported successfully', report);
   }),
 
   /**
@@ -176,7 +187,11 @@ const ReportController = {
     const { category, reason, description } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(messageId)) {
-      return formatResponse(res, 400, 0, "Invalid message ID");
+      return formatResponse(res, 400, 0, 'Invalid message ID');
+    }
+
+    if (!category || !reason) {
+      return formatResponse(res, 400, 0, 'Category and reason are required');
     }
 
     const report = await ReportService.reportMessage(reporterId, messageId, {
@@ -185,7 +200,7 @@ const ReportController = {
       description,
     });
 
-    return formatResponse(res, 201, 1, "Message reported successfully", report);
+    return formatResponse(res, 201, 1, 'Message reported successfully', report);
   }),
 
   /**
@@ -205,7 +220,7 @@ const ReportController = {
 
     const result = await ReportService.getUserReports(userId, { page, limit });
 
-    return formatResponse(res, 200, 1, "Success", {
+    return formatResponse(res, 200, 1, 'Success', {
       reports: result.reports,
       total: result.total,
       hasMore: result.hasMore,
@@ -229,18 +244,17 @@ const ReportController = {
     const isAdmin = req.user.isAdmin;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return formatResponse(res, 400, 0, "Invalid report ID");
+      return formatResponse(res, 400, 0, 'Invalid report ID');
     }
 
     const report = await ReportService.getReportById(reportId);
 
     if (!isAdmin && report.reporter._id.toString() !== userId) {
-      return formatResponse(res, 403, 0, "Not authorized to view this report");
+      return formatResponse(res, 403, 0, 'Not authorized to view this report');
     }
 
-    return formatResponse(res, 200, 1, "Success", report);
+    return formatResponse(res, 200, 1, 'Success', report);
   }),
-
 
   /**
    * Get all reports (admin only)
@@ -259,14 +273,14 @@ const ReportController = {
    */
   getAllReports: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { page, limit } = getPaginationParams(req.query);
     const { status, category, targetType, priority } = req.query;
 
     let result;
-    if (status === "pending") {
+    if (status === 'pending') {
       result = await ReportService.getPendingReports({
         page,
         limit,
@@ -284,7 +298,7 @@ const ReportController = {
       });
     }
 
-    return formatResponse(res, 200, 1, "Success", {
+    return formatResponse(res, 200, 1, 'Success', {
       reports: result.reports,
       total: result.total,
       hasMore: result.hasMore,
@@ -307,7 +321,7 @@ const ReportController = {
    */
   getPendingReports: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { page, limit } = getPaginationParams(req.query);
@@ -321,7 +335,7 @@ const ReportController = {
       priority,
     });
 
-    return formatResponse(res, 200, 1, "Success", {
+    return formatResponse(res, 200, 1, 'Success', {
       reports: result.reports,
       total: result.total,
       hasMore: result.hasMore,
@@ -344,7 +358,7 @@ const ReportController = {
    */
   getReportsAgainstUser: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { userId } = req.params;
@@ -352,7 +366,7 @@ const ReportController = {
     const { status } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return formatResponse(res, 400, 0, "Invalid user ID");
+      return formatResponse(res, 400, 0, 'Invalid user ID');
     }
 
     const result = await ReportService.getReportsAgainstUser(userId, {
@@ -361,7 +375,7 @@ const ReportController = {
       status,
     });
 
-    return formatResponse(res, 200, 1, "Success", {
+    return formatResponse(res, 200, 1, 'Success', {
       reports: result.reports,
       total: result.total,
       hasMore: result.hasMore,
@@ -381,18 +395,18 @@ const ReportController = {
    */
   startReview: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { reportId } = req.params;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return formatResponse(res, 400, 0, "Invalid report ID");
+      return formatResponse(res, 400, 0, 'Invalid report ID');
     }
 
     const report = await ReportService.startReview(reportId, adminId);
-    return formatResponse(res, 200, 1, "Review started", report);
+    return formatResponse(res, 200, 1, 'Review started', report);
   }),
 
   /**
@@ -412,7 +426,7 @@ const ReportController = {
    */
   resolveReport: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { reportId } = req.params;
@@ -420,7 +434,7 @@ const ReportController = {
     const { decision, actionTaken, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return formatResponse(res, 400, 0, "Invalid report ID");
+      return formatResponse(res, 400, 0, 'Invalid report ID');
     }
 
     if (!decision) {
@@ -428,7 +442,7 @@ const ReportController = {
         res,
         400,
         0,
-        "Decision is required (resolved/rejected/escalated)"
+        'Decision is required (resolved/rejected/escalated)'
       );
     }
 
@@ -457,7 +471,7 @@ const ReportController = {
    */
   updateReportStatus: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
-      return formatResponse(res, 403, 0, "Admin access required");
+      return formatResponse(res, 403, 0, 'Admin access required');
     }
 
     const { reportId } = req.params;
@@ -465,7 +479,7 @@ const ReportController = {
     const { status, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      return formatResponse(res, 400, 0, "Invalid report ID");
+      return formatResponse(res, 400, 0, 'Invalid report ID');
     }
 
     const report = await ReportService.resolveReport(reportId, adminId, {

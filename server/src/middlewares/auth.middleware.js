@@ -5,18 +5,21 @@ import logger from "../configs/logger.js";
 const VerifyToken = {
   VerifyAccessToken: (req, res, next) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return res
-          .status(401)
-          .json({ code: 0, message: "You are not authenticated" });
+      // Try to get token from cookie first, then fallback to Authorization header
+      let accessToken = req.cookies?.accessToken;
+      
+      // Fallback to Authorization header for backward compatibility
+      if (!accessToken) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          accessToken = authHeader.split(" ")[1];
+        }
       }
 
-      const accessToken = authHeader.split(" ")[1];
       if (!accessToken) {
         return res
           .status(401)
-          .json({ code: 0, message: "Access token is missing" });
+          .json({ code: 0, message: "You are not authenticated" });
       }
 
       jwt.verify(accessToken, config.jwt.accessSecret, (err, user) => {

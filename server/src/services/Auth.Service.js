@@ -361,11 +361,16 @@ class AuthService {
   }
 
   static async requestPasswordReset(email) {
+    logger.info(`Password reset requested for email: ${email}`);
+    
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
+      logger.warn(`Password reset: User not found for email ${email}`);
       return { success: true };
     }
+
+    logger.info(`Password reset: User found - ${user._id}`);
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = crypto
@@ -379,8 +384,10 @@ class AuthService {
     });
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
-    await EmailService.sendPasswordReset(email, resetLink);
-    logger.info(`Password reset requested for ${email}`);
+    logger.info(`Password reset link generated: ${resetLink}`);
+    
+    const emailResult = await EmailService.sendPasswordReset(email, resetLink);
+    logger.info(`Password reset email result: ${emailResult ? 'SUCCESS' : 'FAILED'}`);
 
     return { success: true, resetToken };
   }

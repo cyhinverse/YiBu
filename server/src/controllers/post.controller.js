@@ -20,7 +20,6 @@ import logger from '../configs/logger.js';
  * - Share and report posts
  */
 const PostController = {
-
   /**
    * Get home feed posts for current user
    * @param {Object} req - Express request object
@@ -56,6 +55,25 @@ const PostController = {
     const { page = 1, limit = 20 } = getPaginationParams(req.query);
 
     const result = await PostService.getExploreFeed(userId, { page, limit });
+    return formatResponse(res, 200, 1, 'Success', result);
+  }),
+
+  /**
+   * Get hashtag feed posts (posts containing hashtags)
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user object
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} req.query - Query parameters
+   * @param {number} [req.query.page=1] - Page number for pagination
+   * @param {number} [req.query.limit=20] - Number of posts per page
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with paginated hashtag feed posts
+   */
+  GetHashtagFeed: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const { page = 1, limit = 20 } = getPaginationParams(req.query);
+
+    const result = await PostService.getHashtagFeed(userId, { page, limit });
     return formatResponse(res, 200, 1, 'Success', result);
   }),
 

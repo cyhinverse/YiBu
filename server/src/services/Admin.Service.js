@@ -7,8 +7,6 @@ import RefreshToken from '../models/RefreshToken.js';
 import UserSettings from '../models/UserSettings.js';
 import Notification from '../models/Notification.js';
 import logger from '../configs/logger.js';
-import SystemSetting from '../models/SystemSetting.js';
-import Transaction from '../models/Transaction.js';
 import Like from '../models/Like.js';
 import Follow from '../models/Follow.js';
 import SavePost from '../models/SavePost.js';
@@ -1085,87 +1083,14 @@ class AdminService {
     targetId,
     metadata = {}
   ) {
-    try {
-      const AdminLog = (await import('../models/AdminLog.js')).default;
-
-      let level = 'info';
-      if (
-        action.includes('ban') ||
-        action.includes('delete') ||
-        action.includes('remove')
-      ) {
-        level = 'warning';
-      } else if (
-        action.includes('unban') ||
-        action.includes('approve') ||
-        action.includes('resolve')
-      ) {
-        level = 'success';
-      }
-
-      await AdminLog.create({
-        admin: adminId,
-        action,
-        targetType,
-        targetId,
-        level,
-        details: metadata.reason || metadata.content || `Performed ${action}`,
-        metadata,
-      });
-    } catch (error) {
-      logger.error('Failed to create admin log:', error);
-    }
-  }
-
-  /**
-   * Get list of admin logs with pagination and filters
-   * @param {Object} options - Options {page, limit, level, startDate, endDate}
-   * @returns {Promise<{logs: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
-   */
-  static async getAdminLogs(options = {}) {
-    const { page = 1, limit = 20, level, startDate, endDate } = options;
-
-    const AdminLog = (await import('../models/AdminLog.js')).default;
-    const query = {};
-
-    if (level && level !== 'all') {
-      query.level = level;
-    }
-
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
-
-    const [logs, total] = await Promise.all([
-      AdminLog.find(query)
-        .populate('admin', 'username name email avatar')
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      AdminLog.countDocuments(query),
-    ]);
-
-    const formattedLogs = logs.map(log => ({
-      _id: log._id,
-      createdAt: log.createdAt,
-      level: log.level,
-      action: log.action,
-      message: log.details,
-      user: log.admin,
-      ip: log.ip,
-      metadata: log.metadata,
-    }));
-
-    return {
-      logs: formattedLogs,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page * limit < total,
-    };
+    // Simply log to console instead of using AdminLog model
+    logger.info(`Admin action: ${action}`, {
+      adminId,
+      action,
+      targetType,
+      targetId,
+      metadata,
+    });
   }
 
   /**
@@ -1214,162 +1139,6 @@ class AdminService {
     );
 
     return { sentCount: users.length };
-  }
-  /**
-   * Get system settings
-   * @returns {Promise<Object>} System settings object
-   */
-  static async getSystemSettings() {
-    let settings = await SystemSetting.findOne().lean();
-    if (!settings) {
-      settings = await SystemSetting.create({});
-    }
-    return settings;
-  }
-
-  /**
-   * Update system settings
-   * @param {Object} updateData - Update data
-   * @param {string} adminId - Admin ID performing the action
-   * @returns {Promise<Object>} Updated system settings
-   */
-  static async updateSystemSettings(updateData, adminId) {
-    const settings = await SystemSetting.findOneAndUpdate(
-      {},
-      {
-        $set: {
-          ...updateData,
-          updatedBy: adminId,
-        },
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
-
-    await this._logAdminAction(adminId, 'update_settings', 'system', null, {
-      changes: Object.keys(updateData),
-    });
-
-    return settings;
-  }
-
-  /**
-   * Get revenue statistics
-   * @returns {Promise<Object>} Revenue stats with total, thisMonth, lastMonth, growth, transactions, avgTransaction, chartData
-   */
-  static async getRevenueStats() {
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const firstDayOfLastMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() - 1,
-      1
-    );
-    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-
-    const [
-      totalRevenue,
-      thisMonthRevenue,
-      lastMonthRevenue,
-      transactionCount,
-      monthlyData,
-    ] = await Promise.all([
-      Transaction.aggregate([
-        { $match: { status: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]),
-      Transaction.aggregate([
-        {
-          $match: { status: 'completed', createdAt: { $gte: firstDayOfMonth } },
-        },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]),
-      Transaction.aggregate([
-        {
-          $match: {
-            status: 'completed',
-            createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth },
-          },
-        },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]),
-      Transaction.countDocuments({ status: 'completed' }),
-      Transaction.aggregate([
-        {
-          $match: {
-            status: 'completed',
-            createdAt: {
-              $gte: new Date(now.getFullYear(), now.getMonth() - 5, 1),
-            },
-          },
-        },
-        {
-          $group: {
-            _id: {
-              month: { $month: '$createdAt' },
-              year: { $year: '$createdAt' },
-            },
-            revenue: { $sum: '$amount' },
-          },
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } },
-      ]),
-    ]);
-
-    const total = totalRevenue[0]?.total || 0;
-    const thisMonth = thisMonthRevenue[0]?.total || 0;
-    const lastMonth = lastMonthRevenue[0]?.total || 0;
-
-    let growth = 0;
-    if (lastMonth > 0) {
-      growth = ((thisMonth - lastMonth) / lastMonth) * 100;
-    } else if (thisMonth > 0) {
-      growth = 100;
-    }
-
-    const avgTransaction = transactionCount > 0 ? total / transactionCount : 0;
-
-    return {
-      total,
-      thisMonth,
-      lastMonth,
-      growth,
-      transactions: transactionCount,
-      avgTransaction,
-      chartData: monthlyData.map(d => ({
-        month: `T${d._id.month}`,
-        revenue: d.revenue,
-      })),
-    };
-  }
-
-  /**
-   * Get list of transactions with pagination and filters
-   * @param {Object} options - Options {page, limit, status, type}
-   * @returns {Promise<{transactions: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
-   */
-  static async getTransactions(options = {}) {
-    const { page = 1, limit = 20, status, type } = options;
-    const query = {};
-    if (status) query.status = status;
-    if (type) query.type = type;
-
-    const [transactions, total] = await Promise.all([
-      Transaction.find(query)
-        .populate('user', 'username name avatar email')
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      Transaction.countDocuments(query),
-    ]);
-
-    return {
-      transactions,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page * limit < total,
-    };
   }
 }
 

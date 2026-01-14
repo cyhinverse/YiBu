@@ -1,7 +1,8 @@
-import { CatchError } from "../configs/CatchError.js";
-import AuthService from "../services/Auth.Service.js";
-import { formatResponse } from "../helpers/formatResponse.js";
-import logger from "../configs/logger.js";
+import { CatchError } from '../configs/CatchError.js';
+import AuthService from '../services/Auth.Service.js';
+import { formatResponse } from '../helpers/formatResponse.js';
+import { setAuthCookies, clearAuthCookies } from '../helpers/cookieOptions.js';
+import logger from '../configs/logger.js';
 
 /**
  * Auth Controller
@@ -17,7 +18,6 @@ import logger from "../configs/logger.js";
  * - OAuth (Google)
  */
 const AuthController = {
-
   /**
    * Register new user account
    * @param {Object} req - Express request object
@@ -27,7 +27,7 @@ const AuthController = {
    * @param {string} req.body.password - User's password
    * @param {string} req.body.username - User's unique username
    * @param {Object} res - Express response object
-   * @returns {Object} Response with user data and access token
+   * @returns {Object} Response with user data and access token cookie
    */
   Register: CatchError(async (req, res) => {
     const { name, email, password, username } = req.body;
@@ -37,12 +37,12 @@ const AuthController = {
         res,
         400,
         0,
-        "Vui lòng điền đầy đủ thông tin bắt buộc"
+        'Vui lòng điền đầy đủ thông tin bắt buộc'
       );
     }
 
     if (!username) {
-      return formatResponse(res, 400, 0, "Username là bắt buộc");
+      return formatResponse(res, 400, 0, 'Username là bắt buộc');
     }
 
     const { user, accessToken } = await AuthService.register({
@@ -52,9 +52,9 @@ const AuthController = {
       username,
     });
 
-    return formatResponse(res, 201, 1, "Đăng ký tài khoản thành công", user, {
-      accessToken,
-    });
+    setAuthCookies(res, accessToken);
+
+    return formatResponse(res, 201, 1, 'Đăng ký tài khoản thành công', user);
   }),
 
   /**
@@ -65,19 +65,19 @@ const AuthController = {
    * @param {string} req.body.password - User's password
    * @param {string} [req.body.platform='web'] - Login platform (web/mobile/desktop)
    * @param {Object} res - Express response object
-   * @returns {Object} Response with user data, access token, and refresh token cookie
+   * @returns {Object} Response with user data and HttpOnly cookies for tokens
    */
   Login: CatchError(async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return formatResponse(res, 400, 0, "Vui lòng nhập email và mật khẩu");
+      return formatResponse(res, 400, 0, 'Vui lòng nhập email và mật khẩu');
     }
 
     const deviceInfo = {
-      userAgent: req.headers["user-agent"],
+      userAgent: req.headers['user-agent'],
       ip: req.ip || req.connection?.remoteAddress,
-      platform: req.body.platform || "web",
+      platform: req.body.platform || 'web',
     };
 
     const { user, accessToken, refreshToken } = await AuthService.login(
@@ -85,16 +85,9 @@ const AuthController = {
       deviceInfo
     );
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 200, 1, "Đăng nhập thành công", user, {
-      accessToken,
-    });
+    return formatResponse(res, 200, 1, 'Đăng nhập thành công', user);
   }),
 
   /**
@@ -105,37 +98,30 @@ const AuthController = {
    * @param {Object} [req.body] - Request body
    * @param {string} [req.body.refreshToken] - Refresh token from body (fallback)
    * @param {Object} res - Express response object
-   * @returns {Object} Response with new access token and refresh token cookie
+   * @returns {Object} Response with new HttpOnly cookies for tokens
    */
   RefreshToken: CatchError(async (req, res) => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
-      return formatResponse(res, 401, 0, "Refresh token không hợp lệ");
+      return formatResponse(res, 401, 0, 'Refresh token không hợp lệ');
     }
 
     const deviceInfo = {
-      userAgent: req.headers["user-agent"],
+      userAgent: req.headers['user-agent'],
       ip: req.ip || req.connection?.remoteAddress,
     };
 
     const { accessToken, refreshToken: newRefreshToken } =
       await AuthService.refreshToken(refreshToken, deviceInfo);
 
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, accessToken, newRefreshToken);
 
-    return formatResponse(res, 200, 1, "Token refreshed successfully", null, {
-      accessToken,
-    });
+    return formatResponse(res, 200, 1, 'Token refreshed successfully');
   }),
 
   /**
-   * Logout user and invalidate refresh token
+   * Logout user and invalidate tokens
    * @param {Object} req - Express request object
    * @param {Object} [req.cookies] - Request cookies
    * @param {string} [req.cookies.refreshToken] - Refresh token from cookie
@@ -149,9 +135,9 @@ const AuthController = {
 
     await AuthService.logout(refreshToken);
 
-    res.clearCookie("refreshToken");
+    clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, "Đăng xuất thành công");
+    return formatResponse(res, 200, 1, 'Đăng xuất thành công');
   }),
 
   /**
@@ -167,9 +153,9 @@ const AuthController = {
 
     await AuthService.logoutAllDevices(userId);
 
-    res.clearCookie("refreshToken");
+    clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, "Đã đăng xuất khỏi tất cả thiết bị");
+    return formatResponse(res, 200, 1, 'Đã đăng xuất khỏi tất cả thiết bị');
   }),
 
   /**
@@ -192,7 +178,7 @@ const AuthController = {
         res,
         400,
         0,
-        "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới"
+        'Vui lòng nhập mật khẩu hiện tại và mật khẩu mới'
       );
     }
 
@@ -201,19 +187,19 @@ const AuthController = {
         res,
         400,
         0,
-        "Mật khẩu mới phải có ít nhất 6 ký tự"
+        'Mật khẩu mới phải có ít nhất 6 ký tự'
       );
     }
 
     await AuthService.changePassword(userId, currentPassword, newPassword);
 
-    res.clearCookie("refreshToken");
+    clearAuthCookies(res);
 
     return formatResponse(
       res,
       200,
       1,
-      "Đổi mật khẩu thành công. Vui lòng đăng nhập lại"
+      'Đổi mật khẩu thành công. Vui lòng đăng nhập lại'
     );
   }),
 
@@ -229,7 +215,7 @@ const AuthController = {
     const { email } = req.body;
 
     if (!email) {
-      return formatResponse(res, 400, 0, "Vui lòng nhập email");
+      return formatResponse(res, 400, 0, 'Vui lòng nhập email');
     }
 
     await AuthService.requestPasswordReset(email);
@@ -238,7 +224,7 @@ const AuthController = {
       res,
       200,
       1,
-      "Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu"
+      'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu'
     );
   }),
 
@@ -255,7 +241,7 @@ const AuthController = {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      return formatResponse(res, 400, 0, "Token và mật khẩu mới là bắt buộc");
+      return formatResponse(res, 400, 0, 'Token và mật khẩu mới là bắt buộc');
     }
 
     if (newPassword.length < 6) {
@@ -263,13 +249,13 @@ const AuthController = {
         res,
         400,
         0,
-        "Mật khẩu mới phải có ít nhất 6 ký tự"
+        'Mật khẩu mới phải có ít nhất 6 ký tự'
       );
     }
 
     await AuthService.resetPassword(token, newPassword);
 
-    return formatResponse(res, 200, 1, "Đặt lại mật khẩu thành công");
+    return formatResponse(res, 200, 1, 'Đặt lại mật khẩu thành công');
   }),
 
   /**
@@ -289,7 +275,7 @@ const AuthController = {
       res,
       200,
       1,
-      "Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư"
+      'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư'
     );
   }),
 
@@ -305,12 +291,12 @@ const AuthController = {
     const { token } = req.body;
 
     if (!token) {
-      return formatResponse(res, 400, 0, "Token xác thực là bắt buộc");
+      return formatResponse(res, 400, 0, 'Token xác thực là bắt buộc');
     }
 
     await AuthService.verifyEmail(token);
 
-    return formatResponse(res, 200, 1, "Xác thực email thành công");
+    return formatResponse(res, 200, 1, 'Xác thực email thành công');
   }),
 
   /**
@@ -326,7 +312,7 @@ const AuthController = {
 
     const { secret, qrCode } = await AuthService.enableTwoFactor(userId);
 
-    return formatResponse(res, 200, 1, "Quét mã QR để kích hoạt 2FA", {
+    return formatResponse(res, 200, 1, 'Quét mã QR để kích hoạt 2FA', {
       secret,
       qrCode,
     });
@@ -347,7 +333,7 @@ const AuthController = {
     const { token } = req.body;
 
     if (!token) {
-      return formatResponse(res, 400, 0, "Mã xác thực là bắt buộc");
+      return formatResponse(res, 400, 0, 'Mã xác thực là bắt buộc');
     }
 
     const { backupCodes } = await AuthService.verifyAndEnableTwoFactor(
@@ -355,7 +341,7 @@ const AuthController = {
       token
     );
 
-    return formatResponse(res, 200, 1, "Đã kích hoạt xác thực 2 lớp", {
+    return formatResponse(res, 200, 1, 'Đã kích hoạt xác thực 2 lớp', {
       backupCodes,
     });
   }),
@@ -375,12 +361,12 @@ const AuthController = {
     const { password } = req.body;
 
     if (!password) {
-      return formatResponse(res, 400, 0, "Mật khẩu là bắt buộc");
+      return formatResponse(res, 400, 0, 'Mật khẩu là bắt buộc');
     }
 
     await AuthService.disableTwoFactor(userId, password);
 
-    return formatResponse(res, 200, 1, "Đã tắt xác thực 2 lớp");
+    return formatResponse(res, 200, 1, 'Đã tắt xác thực 2 lớp');
   }),
 
   /**
@@ -401,7 +387,7 @@ const AuthController = {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
     const sessions = await AuthService.getActiveSessions(userId, refreshToken);
 
-    return formatResponse(res, 200, 1, "Success", sessions);
+    return formatResponse(res, 200, 1, 'Success', sessions);
   }),
 
   /**
@@ -419,12 +405,12 @@ const AuthController = {
     const { sessionId } = req.params;
 
     if (!sessionId) {
-      return formatResponse(res, 400, 0, "Session ID là bắt buộc");
+      return formatResponse(res, 400, 0, 'Session ID là bắt buộc');
     }
 
     await AuthService.revokeSession(userId, sessionId);
 
-    return formatResponse(res, 200, 1, "Đã thu hồi phiên đăng nhập");
+    return formatResponse(res, 200, 1, 'Đã thu hồi phiên đăng nhập');
   }),
 
   /**
@@ -433,16 +419,16 @@ const AuthController = {
    * @param {Object} req.body - Request body
    * @param {string} req.body.credential - Google OAuth credential token
    * @param {Object} res - Express response object
-   * @returns {Object} Response with user data, access token, and refresh token cookie
+   * @returns {Object} Response with user data and HttpOnly cookies for tokens
    */
   GoogleAuth: CatchError(async (req, res) => {
     const { credential } = req.body;
 
     if (!credential) {
-      return formatResponse(res, 400, 0, "Google credential is required");
+      return formatResponse(res, 400, 0, 'Google credential is required');
     }
 
-    const { OAuth2Client } = await import("google-auth-library");
+    const { OAuth2Client } = await import('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
     const ticket = await client.verifyIdToken({
@@ -456,16 +442,9 @@ const AuthController = {
       profile
     );
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 200, 1, "Đăng nhập Google thành công", user, {
-      accessToken,
-    });
+    return formatResponse(res, 200, 1, 'Đăng nhập Google thành công', user);
   }),
 
   /**
@@ -484,10 +463,10 @@ const AuthController = {
     const userId = req.user.id;
 
     if (!email) {
-      return formatResponse(res, 400, 0, "Email mới là bắt buộc");
+      return formatResponse(res, 400, 0, 'Email mới là bắt buộc');
     }
 
-    return formatResponse(res, 200, 1, "Tính năng đang được phát triển");
+    return formatResponse(res, 200, 1, 'Tính năng đang được phát triển');
   }),
 
   /**
@@ -509,17 +488,17 @@ const AuthController = {
         res,
         400,
         0,
-        "Mật khẩu là bắt buộc để xóa tài khoản"
+        'Mật khẩu là bắt buộc để xóa tài khoản'
       );
     }
 
-    const UserService = (await import("../services/User.Service.js")).default;
+    const UserService = (await import('../services/User.Service.js')).default;
 
     await UserService.deleteUser(userId);
 
-    res.clearCookie("refreshToken");
+    clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, "Tài khoản đã được xóa");
+    return formatResponse(res, 200, 1, 'Tài khoản đã được xóa');
   }),
 
   /**
@@ -529,7 +508,7 @@ const AuthController = {
    * @returns {Object} Response with social account connection status (feature in development)
    */
   ConnectSocialAccount: CatchError(async (req, res) => {
-    return formatResponse(res, 200, 1, "Tính năng đang được phát triển");
+    return formatResponse(res, 200, 1, 'Tính năng đang được phát triển');
   }),
 };
 

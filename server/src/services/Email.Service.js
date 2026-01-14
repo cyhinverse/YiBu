@@ -30,6 +30,11 @@ class EmailService {
    */
   async sendEmail(to, subject, html) {
     try {
+      // Log email config for debugging
+      logger.info(`Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`);
+      logger.info(`Email user configured: ${config.email.user ? 'Yes' : 'No'}`);
+      logger.info(`Email pass configured: ${config.email.pass ? 'Yes' : 'No'}`);
+
       const info = await this.transporter.sendMail({
         from: `"YiBu Security" <${config.email.user}>`,
         to,
@@ -37,10 +42,11 @@ class EmailService {
         html,
       });
 
-      logger.info(`Email sent to ${to}: ${info.messageId}`);
+      logger.info(`Email sent successfully to ${to}: ${info.messageId}`);
       return info;
     } catch (error) {
-      logger.error(`Error sending email to ${to}:`, error);
+      logger.error(`Error sending email to ${to}:`, error.message);
+      logger.error(`Full error:`, error);
       return null;
     }
   }

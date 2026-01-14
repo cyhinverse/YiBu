@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import config from './configs/config.js';
 import { morganMiddleware } from './configs/logger.js';
 import errorMiddleware from './middlewares/error.middleware.js';
@@ -19,7 +20,6 @@ import commentRoutes from './routes/comment.router.js';
 import adminRoutes from './routes/admin.router.js';
 import reportRoutes from './routes/reports.router.js';
 import likeRoutes from './routes/like.router.js';
-import profileRoutes from './routes/profile.router.js';
 import messageRoutes from './routes/message.router.js';
 import savePostRoutes from './routes/savepost.router.js';
 import notificationRoutes from './routes/notification.router.js';
@@ -69,6 +69,9 @@ app.options('*', cors(corsOptions));
 // Apply CORS to all routes
 app.use(cors(corsOptions));
 
+// Cookie Parser - Parse cookies from request headers
+app.use(cookieParser());
+
 // Helmet - HTTP Security Headers (sau CORS)
 app.use(helmetMiddleware);
 
@@ -83,6 +86,9 @@ app.use((req, res, next) => {
 // Body parsers
 app.use(express.json({ limit: '10kb' })); // Giới hạn body size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Cookie parser - for HttpOnly cookies
+app.use(cookieParser());
 
 // Data Sanitization - Chống NoSQL Injection
 app.use(mongoSanitizeMiddleware);
@@ -110,15 +116,12 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 
-app.use('/api/posts', postRoutes); // server.js had /api/v1 for posts.
-app.use('/api/v1', postRoutes); // Alias for legacy support
+app.use('/api/posts', postRoutes);
 
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes); // check filename
 app.use('/api/like', likeRoutes);
-app.use('/profile', profileRoutes); // Legacy path?
-app.use('/api/profile', profileRoutes); // New standard path
 
 app.use('/api/messages', messageRoutes);
 app.use('/api/savepost', savePostRoutes);

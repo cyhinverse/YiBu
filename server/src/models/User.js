@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema, model } from 'mongoose';
 
 /**
  * User Model - Optimized for Ranking & Recommendation
@@ -216,10 +216,13 @@ UserSchema.methods.calculateActivityScore = function () {
 
 // ============ STATICS ============
 UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
-  const user = await this.findById(userId).select('interests');
+  const user = await this.findById(userId).select('interests location');
   const Follow = model('Follow');
 
   if (!user) return [];
+
+  // Convert to ObjectId for correct matching in aggregation
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   // Get users that current user is following
   const following = await Follow.find({ follower: userId })
@@ -227,27 +230,43 @@ UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
     .lean();
   const followingIds = following.map(f => f.following);
 
-  // Find users with similar interests who are not followed
+  // Match criteria: Not following, active, and same location if available
+  const matchStage = {
+    _id: { $ne: userObjectId, $nin: followingIds },
+    isActive: true,
+    'moderation.status': 'active',
+  };
+
+  // If user has location, prefer same location. If not, fallback to interests.
+  if (user.location) {
+    matchStage.location = user.location;
+  } else if (user.interests && user.interests.length > 0) {
+    matchStage.interests = { $in: user.interests };
+  }
+
   return this.aggregate([
-    {
-      $match: {
-        _id: { $ne: userId, $nin: followingIds },
-        isActive: true,
-        'moderation.status': 'active',
-        interests: { $in: user.interests || [] },
-      },
-    },
+    { $match: matchStage },
     {
       $addFields: {
         commonInterests: {
-          $size: { $setIntersection: ['$interests', user.interests || []] },
+          $size: {
+            $setIntersection: ['$interests', user.interests || []],
+          },
+        },
+        locationMatch: {
+          $cond: {
+            if: { $eq: ['$location', user.location || ''] },
+            then: 1,
+            else: 0,
+          },
         },
         score: {
           $add: [
             { $multiply: ['$metrics.engagementRate', 0.3] },
             { $multiply: ['$metrics.activityScore', 0.3] },
             { $multiply: [{ $log10: { $add: ['$followersCount', 1] } }, 0.2] },
-            { $multiply: ['$commonInterests', 10] }, // Boost for common interests
+            { $multiply: ['$commonInterests', 10] },
+            { $multiply: ['$locationMatch', 50] }, // Strong boost for same location
           ],
         },
       },

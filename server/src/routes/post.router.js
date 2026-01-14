@@ -53,6 +53,13 @@ router.get(
   PostController.GetTrendingPosts
 );
 
+/* GET /hashtags/feed - Get posts with hashtags */
+router.get(
+  '/hashtags/feed',
+  validateQuery(exploreQuery),
+  PostController.GetHashtagFeed
+);
+
 /* GET /search - Search posts */
 router.get(
   '/search',

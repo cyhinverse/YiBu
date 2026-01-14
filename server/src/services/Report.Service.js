@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
-import Report from "../models/Report.js";
-import User from "../models/User.js";
-import Post from "../models/Post.js";
-import Comment from "../models/Comment.js";
-import Message from "../models/Message.js";
-import Notification from "../models/Notification.js";
-import logger from "../configs/logger.js";
+import mongoose from 'mongoose';
+import Report from '../models/Report.js';
+import User from '../models/User.js';
+import Post from '../models/Post.js';
+import Comment from '../models/Comment.js';
+import Message from '../models/Message.js';
+import Notification from '../models/Notification.js';
+import logger from '../configs/logger.js';
 
 /**
  * Report Service - Refactored for new model structure
@@ -17,7 +17,6 @@ import logger from "../configs/logger.js";
  * 4. Content snapshots for evidence
  */
 class ReportService {
-
   /**
    * Create new report
    * @param {string} reporterId - Reporting user ID
@@ -30,29 +29,29 @@ class ReportService {
   static async createReport(reporterId, targetType, targetId, reportData) {
     const { category, reason, description } = reportData;
 
-    const validTargetTypes = ["post", "comment", "user", "message"];
+    const validTargetTypes = ['post', 'comment', 'user', 'message'];
     if (!validTargetTypes.includes(targetType)) {
-      throw new Error("Invalid report target type");
+      throw new Error('Invalid report target type');
     }
 
     const existingReport = await Report.findOne({
       reporter: reporterId,
       targetType,
       targetId,
-      status: { $in: ["pending", "reviewing"] },
+      status: { $in: ['pending', 'reviewing'] },
     });
 
     if (existingReport) {
-      throw new Error("Bạn đã báo cáo nội dung này rồi");
+      throw new Error('Bạn đã báo cáo nội dung này rồi');
     }
 
     let targetUser;
     let contentSnapshot = {};
 
     switch (targetType) {
-      case "post":
+      case 'post':
         const post = await Post.findById(targetId).lean();
-        if (!post) throw new Error("Bài viết không tồn tại");
+        if (!post) throw new Error('Bài viết không tồn tại');
         targetUser = post.user;
         contentSnapshot = {
           caption: post.caption,
@@ -61,9 +60,9 @@ class ReportService {
         };
         break;
 
-      case "comment":
+      case 'comment':
         const comment = await Comment.findById(targetId).lean();
-        if (!comment) throw new Error("Bình luận không tồn tại");
+        if (!comment) throw new Error('Bình luận không tồn tại');
         targetUser = comment.user;
         contentSnapshot = {
           content: comment.content,
@@ -72,9 +71,9 @@ class ReportService {
         };
         break;
 
-      case "user":
+      case 'user':
         const user = await User.findById(targetId).lean();
-        if (!user) throw new Error("Người dùng không tồn tại");
+        if (!user) throw new Error('Người dùng không tồn tại');
         targetUser = targetId;
         contentSnapshot = {
           username: user.username,
@@ -84,9 +83,9 @@ class ReportService {
         };
         break;
 
-      case "message":
+      case 'message':
         const message = await Message.findById(targetId).lean();
-        if (!message) throw new Error("Tin nhắn không tồn tại");
+        if (!message) throw new Error('Tin nhắn không tồn tại');
         targetUser = message.sender;
         contentSnapshot = {
           content: message.content,
@@ -97,7 +96,7 @@ class ReportService {
     }
 
     if (targetUser?.toString() === reporterId.toString()) {
-      throw new Error("Bạn không thể báo cáo nội dung của chính mình");
+      throw new Error('Bạn không thể báo cáo nội dung của chính mình');
     }
 
     const report = await Report.create({
@@ -112,8 +111,8 @@ class ReportService {
     });
 
     const populatedReport = await Report.findById(report._id)
-      .populate("reporter", "username name avatar")
-      .populate("targetUser", "username name avatar")
+      .populate('reporter', 'username name avatar')
+      .populate('targetUser', 'username name avatar')
       .lean();
 
     logger.info(`Report created: ${report._id} by user ${reporterId}`);
@@ -129,7 +128,7 @@ class ReportService {
    * @returns {Promise<Object>} Report object
    */
   static async reportPost(reporterId, postId, reportData) {
-    return this.createReport(reporterId, "post", postId, reportData);
+    return this.createReport(reporterId, 'post', postId, reportData);
   }
 
   /**
@@ -140,7 +139,7 @@ class ReportService {
    * @returns {Promise<Object>} Report object
    */
   static async reportComment(reporterId, commentId, reportData) {
-    return this.createReport(reporterId, "comment", commentId, reportData);
+    return this.createReport(reporterId, 'comment', commentId, reportData);
   }
 
   /**
@@ -151,7 +150,7 @@ class ReportService {
    * @returns {Promise<Object>} Report object
    */
   static async reportUser(reporterId, userId, reportData) {
-    return this.createReport(reporterId, "user", userId, reportData);
+    return this.createReport(reporterId, 'user', userId, reportData);
   }
 
   /**
@@ -162,7 +161,7 @@ class ReportService {
    * @returns {Promise<Object>} Report object
    */
   static async reportMessage(reporterId, messageId, reportData) {
-    return this.createReport(reporterId, "message", messageId, reportData);
+    return this.createReport(reporterId, 'message', messageId, reportData);
   }
 
   /**
@@ -173,13 +172,13 @@ class ReportService {
    */
   static async getReportById(reportId) {
     const report = await Report.findById(reportId)
-      .populate("reporter", "username name avatar")
-      .populate("targetUser", "username name avatar")
-      .populate("reviewedBy", "username name")
+      .populate('reporter', 'username name avatar')
+      .populate('targetUser', 'username name avatar')
+      .populate('reviewedBy', 'username name')
       .lean();
 
     if (!report) {
-      throw new Error("Report not found");
+      throw new Error('Report not found');
     }
 
     return report;
@@ -196,7 +195,7 @@ class ReportService {
 
     const [reports, total] = await Promise.all([
       Report.find({ reporter: userId })
-        .populate("targetUser", "username name avatar")
+        .populate('targetUser', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -227,7 +226,7 @@ class ReportService {
 
     const [reports, total] = await Promise.all([
       Report.find(query)
-        .populate("reporter", "username name avatar")
+        .populate('reporter', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -250,7 +249,7 @@ class ReportService {
   static async getPendingReports(options = {}) {
     const { page = 1, limit = 20, category, targetType, priority } = options;
 
-    const query = { status: "pending" };
+    const query = { status: 'pending' };
 
     if (category) query.category = category;
     if (targetType) query.targetType = targetType;
@@ -258,8 +257,8 @@ class ReportService {
 
     const [reports, total] = await Promise.all([
       Report.find(query)
-        .populate("reporter", "username name avatar")
-        .populate("targetUser", "username name avatar")
+        .populate('reporter', 'username name avatar')
+        .populate('targetUser', 'username name avatar')
         .sort({ priority: -1, createdAt: 1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -286,7 +285,7 @@ class ReportService {
       reportId,
       {
         $set: {
-          status: "reviewing",
+          status: 'reviewing',
           reviewedBy: adminId,
         },
       },
@@ -294,7 +293,7 @@ class ReportService {
     );
 
     if (!report) {
-      throw new Error("Report not found");
+      throw new Error('Report not found');
     }
 
     return report;
@@ -311,9 +310,9 @@ class ReportService {
   static async resolveReport(reportId, adminId, resolution) {
     const { decision, actionTaken, notes } = resolution;
 
-    const validDecisions = ["resolved", "rejected", "escalated"];
+    const validDecisions = ['resolved', 'rejected', 'escalated'];
     if (!validDecisions.includes(decision)) {
-      throw new Error("Invalid decision");
+      throw new Error('Invalid decision');
     }
 
     const session = await mongoose.startSession();
@@ -337,20 +336,20 @@ class ReportService {
         },
         { new: true, session }
       )
-        .populate("reporter", "username name avatar")
-        .populate("targetUser", "username name avatar");
+        .populate('reporter', 'username name avatar')
+        .populate('targetUser', 'username name avatar');
 
       if (!report) {
-        throw new Error("Report not found");
+        throw new Error('Report not found');
       }
 
-      if (decision === "resolved" && actionTaken) {
+      if (decision === 'resolved' && actionTaken) {
         await this._executeAction(report, actionTaken, adminId, session);
       }
 
       await Notification.createNotification({
         recipient: report.reporter,
-        type: "system",
+        type: 'system',
         content: `Báo cáo của bạn đã được xử lý. Kết quả: ${this._getDecisionText(
           decision
         )}`,
@@ -373,34 +372,34 @@ class ReportService {
 
   static _getDecisionText(decision) {
     const texts = {
-      resolved: "Đã xử lý vi phạm",
-      rejected: "Không phát hiện vi phạm",
-      escalated: "Đang điều tra thêm",
+      resolved: 'Đã xử lý vi phạm',
+      rejected: 'Không phát hiện vi phạm',
+      escalated: 'Đang điều tra thêm',
     };
     return texts[decision] || decision;
   }
 
   static async _executeAction(report, action, adminId, session) {
-    const AdminService = (await import("./Admin.Service.js")).default;
+    const AdminService = (await import('./Admin.Service.js')).default;
 
     switch (action) {
-      case "warn_user":
+      case 'warn_user':
         await AdminService.warnUser(report.targetUser, adminId, report.reason);
         break;
 
-      case "remove_content":
-        if (report.targetType === "post") {
+      case 'remove_content':
+        if (report.targetType === 'post') {
           await Post.findByIdAndUpdate(report.targetId, {
             isDeleted: true,
           }).session(session);
-        } else if (report.targetType === "comment") {
+        } else if (report.targetType === 'comment') {
           await Comment.findByIdAndUpdate(report.targetId, {
             isDeleted: true,
           }).session(session);
         }
         break;
 
-      case "suspend_user":
+      case 'suspend_user':
         await AdminService.suspendUser(
           report.targetUser,
           adminId,
@@ -409,7 +408,7 @@ class ReportService {
         );
         break;
 
-      case "ban_user":
+      case 'ban_user':
         await AdminService.banUser(report.targetUser, adminId, report.reason);
         break;
 
@@ -425,11 +424,11 @@ class ReportService {
    * @param {string} reason - Dismiss reason
    * @returns {Promise<Object>} Updated report object
    */
-  static async dismissReport(reportId, adminId, reason = "") {
+  static async dismissReport(reportId, adminId, reason = '') {
     return this.resolveReport(reportId, adminId, {
-      decision: "rejected",
-      actionTaken: "none",
-      notes: reason || "No violation found",
+      decision: 'rejected',
+      actionTaken: 'none',
+      notes: reason || 'No violation found',
     });
   }
 
@@ -438,7 +437,7 @@ class ReportService {
    * @param {string} timeframe - Time period (day, week, month, year)
    * @returns {Promise<Object>} Stats object with pending, reviewing, resolvedInPeriod, byCategory, byTargetType
    */
-  static async getReportStats(timeframe = "week") {
+  static async getReportStats(timeframe = 'week') {
     const timeframeDays = { day: 1, week: 7, month: 30, year: 365 };
     const days = timeframeDays[timeframe] || 7;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -450,19 +449,19 @@ class ReportService {
       byCategory,
       byTargetType,
     ] = await Promise.all([
-      Report.countDocuments({ status: "pending" }),
-      Report.countDocuments({ status: "reviewing" }),
+      Report.countDocuments({ status: 'pending' }),
+      Report.countDocuments({ status: 'reviewing' }),
       Report.countDocuments({
-        status: "resolved",
+        status: 'resolved',
         reviewedAt: { $gte: startDate },
       }),
       Report.aggregate([
         { $match: { createdAt: { $gte: startDate } } },
-        { $group: { _id: "$category", count: { $sum: 1 } } },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
       ]),
       Report.aggregate([
         { $match: { createdAt: { $gte: startDate } } },
-        { $group: { _id: "$targetType", count: { $sum: 1 } } },
+        { $group: { _id: '$targetType', count: { $sum: 1 } } },
       ]),
     ]);
 
@@ -492,7 +491,7 @@ class ReportService {
     const [reportsBy, reportsAgainst, resolvedAgainst] = await Promise.all([
       Report.countDocuments({ reporter: userId }),
       Report.countDocuments({ targetUser: userId }),
-      Report.countDocuments({ targetUser: userId, status: "resolved" }),
+      Report.countDocuments({ targetUser: userId, status: 'resolved' }),
     ]);
 
     return {
@@ -508,19 +507,18 @@ class ReportService {
    */
   static getReportCategories() {
     return [
-      { value: "spam", label: "Spam hoặc lừa đảo", priority: 2 },
-      { value: "harassment", label: "Quấy rối hoặc bắt nạt", priority: 3 },
-      { value: "hate_speech", label: "Ngôn từ thù địch", priority: 3 },
-      { value: "violence", label: "Bạo lực hoặc nguy hiểm", priority: 4 },
-      { value: "nudity", label: "Nội dung khiêu dâm", priority: 3 },
-      { value: "false_information", label: "Thông tin sai lệch", priority: 2 },
-      {
-        value: "intellectual_property",
-        label: "Vi phạm bản quyền",
-        priority: 2,
-      },
-      { value: "self_harm", label: "Tự làm hại bản thân", priority: 5 },
-      { value: "other", label: "Khác", priority: 1 },
+      { value: 'spam', label: 'Spam hoặc lừa đảo', priority: 2 },
+      { value: 'harassment', label: 'Quấy rối hoặc bắt nạt', priority: 3 },
+      { value: 'hate_speech', label: 'Ngôn từ thù địch', priority: 3 },
+      { value: 'violence', label: 'Bạo lực hoặc nguy hiểm', priority: 4 },
+      { value: 'nudity', label: 'Nội dung khiêu dâm', priority: 3 },
+      { value: 'misinformation', label: 'Thông tin sai lệch', priority: 2 },
+      { value: 'copyright', label: 'Vi phạm bản quyền', priority: 2 },
+      { value: 'self_harm', label: 'Tự làm hại bản thân', priority: 5 },
+      { value: 'impersonation', label: 'Giả mạo', priority: 4 },
+      { value: 'illegal', label: 'Nội dung bất hợp pháp', priority: 5 },
+      { value: 'scam', label: 'Lừa đảo', priority: 3 },
+      { value: 'other', label: 'Khác', priority: 1 },
     ];
   }
 
@@ -532,7 +530,7 @@ class ReportService {
    * @param {string} actionTaken - Action taken
    * @returns {Promise<Array<{reportId: string, success: boolean, error?: string}>>} Processing results
    */
-  static async bulkResolve(reportIds, adminId, decision, actionTaken = "") {
+  static async bulkResolve(reportIds, adminId, decision, actionTaken = '') {
     const results = [];
 
     for (const reportId of reportIds) {
@@ -540,7 +538,7 @@ class ReportService {
         const report = await this.resolveReport(reportId, adminId, {
           decision,
           actionTaken,
-          notes: "Bulk action",
+          notes: 'Bulk action',
         });
         results.push({ reportId, success: true });
       } catch (error) {

@@ -131,9 +131,7 @@ class PostService {
       })
       .lean();
 
-    const posts = likes
-      .filter(like => like.post)
-      .map(like => like.post);
+    const posts = likes.filter(like => like.post).map(like => like.post);
 
     const postsWithStatus = await this._addUserStatus(posts, userId);
 
@@ -516,6 +514,51 @@ class PostService {
     const posts = await Post.find(query)
       .populate('user', 'username name avatar verified')
       .sort({ trendingScore: -1, engagementScore: -1, createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const postsWithStatus = await this._addUserStatus(posts, userId);
+
+    return {
+      posts: postsWithStatus,
+      hasMore: posts.length === limit,
+    };
+  }
+
+  /**
+   * Get hashtags feed (posts that contain at least one hashtag)
+   * @param {string} userId - User ID
+   * @param {Object} options - Pagination options {page, limit}
+   * @returns {Promise<{posts: Array, hasMore: boolean}>} List of hashtag posts
+   */
+  static async getHashtagFeed(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+
+    const settings = await UserSettings.findOne({ user: userId })
+      .select('blockedUsers mutedUsers')
+      .lean();
+
+    const excludeUsers = [
+      userId,
+      ...(settings?.blockedUsers || []),
+      ...(settings?.mutedUsers || []),
+    ];
+
+    const query = {
+      user: { $nin: excludeUsers },
+      isDeleted: false,
+      visibility: 'public',
+      'moderation.status': 'approved',
+      $and: [
+        { hashtags: { $exists: true } },
+        { hashtags: { $not: { $size: 0 } } },
+      ],
+    };
+
+    const posts = await Post.find(query)
+      .populate('user', 'username name avatar verified')
+      .sort({ createdAt: -1, engagementScore: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean();
@@ -1437,23 +1480,37 @@ class PostService {
 
   /**
    * Upload media files (already processed by multer-storage-cloudinary)
-   * @param {Array|Object} files - Uploaded file(s)
+   * @param {Array|Object} files - Uploaded file(s) from multer memory storage
    * @param {string} userId - User ID
    * @returns {Promise<Array>} List of media objects {url, type, publicId}
    */
   static async uploadMedia(files, userId) {
+    const { uploadToCloudinary } = await import(
+      '../middlewares/multerUpload.js'
+    );
     const fileArray = Array.isArray(files) ? files : [files];
-    const uploadedMedia = fileArray.map(file => {
+    const uploadedMedia = [];
+
+    for (const file of fileArray) {
       const resourceType = file.mimetype?.startsWith('video/')
         ? 'video'
         : 'image';
+      const publicId = `${userId}_${Date.now()}_${
+        file.originalname.split('.')[0]
+      }`;
 
-      return {
-        url: file.path,
+      const result = await uploadToCloudinary(file.buffer, {
+        folder: 'posts',
+        resourceType: resourceType,
+        publicId: publicId,
+      });
+
+      uploadedMedia.push({
+        url: result.secure_url,
         type: resourceType,
-        publicId: file.filename,
-      };
-    });
+        publicId: result.public_id,
+      });
+    }
 
     return uploadedMedia;
   }

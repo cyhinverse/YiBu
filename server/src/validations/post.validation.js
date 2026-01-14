@@ -91,7 +91,7 @@ export const trendingHashtagsQuery = Joi.object({
 // Note: files được xử lý bởi multer
 // ======================================
 export const createPostBody = Joi.object({
-  caption: Joi.string().trim().max(5000).allow('').default('').messages({
+  caption: Joi.string().trim().max(5000).allow('', null).default('').messages({
     'string.max': 'Nội dung không được quá 5000 ký tự',
   }),
   visibility: Joi.string()
@@ -99,12 +99,12 @@ export const createPostBody = Joi.object({
     .default('public'),
   hashtags: Joi.alternatives().try(
     Joi.array().items(Joi.string().trim().max(50)).max(10),
-    Joi.string() // Cho phép string JSON
+    Joi.string().allow('', null) // Cho phép string JSON hoặc rỗng
   ),
-  location: Joi.string().trim().max(100).allow(''),
+  location: Joi.string().trim().max(100).allow('', null),
   mentions: Joi.alternatives().try(
     Joi.array().items(Joi.string()).max(20),
-    Joi.string() // Cho phép string JSON
+    Joi.string().allow('', null) // Cho phép string JSON hoặc rỗng
   ),
   allowComments: Joi.boolean().default(true),
   allowSharing: Joi.boolean().default(true),
@@ -151,20 +151,23 @@ export const postIdParam = Joi.object({
 // Body: { content?, visibility?, hashtags? }
 // ======================================
 export const updatePostBody = Joi.object({
-  caption: Joi.string().trim().min(0).max(5000).allow('').messages({
+  caption: Joi.string().trim().min(0).max(5000).allow('', null).messages({
     'string.max': 'Nội dung không được quá 5000 ký tự',
   }),
   visibility: Joi.string().valid('public', 'followers', 'private'),
   hashtags: Joi.alternatives().try(
     Joi.array().items(Joi.string().trim().max(50)).max(10),
-    Joi.string()
+    Joi.string().allow('', null)
   ),
   mentions: Joi.alternatives().try(
     Joi.array().items(Joi.string()).max(20),
-    Joi.string()
+    Joi.string().allow('', null)
   ),
-  location: Joi.string().trim().max(100).allow(''),
-  existingMedia: Joi.alternatives().try(Joi.string(), Joi.array()),
+  location: Joi.string().trim().max(100).allow('', null),
+  existingMedia: Joi.alternatives().try(
+    Joi.string().allow('', null),
+    Joi.array()
+  ),
   allowComments: Joi.boolean(),
   allowSharing: Joi.boolean(),
 });

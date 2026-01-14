@@ -1,4 +1,4 @@
-import winston from 'winston';
+import { format, transports, createLogger } from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
 import fs from 'fs';
@@ -11,23 +11,23 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir);
 }
 
-const customFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+const customFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.printf(({ timestamp, level, message, ...meta }) => {
     return `${timestamp} [${level.toUpperCase()}]: ${message} ${
       Object.keys(meta).length ? JSON.stringify(meta) : ''
     }`;
   })
 );
 
-const logger = winston.createLogger({
+const logger = createLogger({
   format: customFormat,
   transports: [
     // Console transport
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    new transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(({ timestamp, level, message, ...meta }) => {
           return `${timestamp} [${level}]: ${message} ${
             Object.keys(meta).length ? JSON.stringify(meta) : ''
           }`;
@@ -35,7 +35,7 @@ const logger = winston.createLogger({
       ),
     }),
     // Error log file rotate
-    new winston.transports.DailyRotateFile({
+    new transports.DailyRotateFile({
       filename: path.join(logDir, 'error-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -44,7 +44,7 @@ const logger = winston.createLogger({
       level: 'error',
     }),
     // Combined log file rotate
-    new winston.transports.DailyRotateFile({
+    new transports.DailyRotateFile({
       filename: path.join(logDir, 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,

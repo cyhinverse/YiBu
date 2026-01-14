@@ -15,7 +15,6 @@ import logger from '../configs/logger.js';
  * - Block and mute users
  */
 const UserController = {
-
   /**
    * Get user by ID
    * @param {Object} req - Express request object
@@ -400,7 +399,7 @@ const UserController = {
    * @param {string} [req.body.name] - User's display name
    * @param {string} [req.body.bio] - User's biography
    * @param {string} [req.body.website] - User's website URL
-   * @param {Object} [req.files] - Uploaded files
+   * @param {Object} [req.files] - Uploaded files from multer memory storage
    * @param {Array} [req.files.avatar] - Avatar image file
    * @param {Array} [req.files.cover] - Cover image file
    * @param {Object} req.user - Authenticated user object
@@ -409,15 +408,30 @@ const UserController = {
    * @returns {Object} Response with updated user profile
    */
   updateProfileSettings: CatchError(async (req, res) => {
+    const { uploadToCloudinary } = await import(
+      '../middlewares/multerUpload.js'
+    );
     const userId = req.user.id;
     const profileData = { ...req.body };
 
     if (req.files?.avatar && req.files.avatar[0]) {
-      profileData.avatar = req.files.avatar[0].path;
+      const avatarFile = req.files.avatar[0];
+      const result = await uploadToCloudinary(avatarFile.buffer, {
+        folder: 'avatars',
+        publicId: `avatar_${userId}_${Date.now()}`,
+        transformation: [{ width: 400, height: 400, crop: 'fill' }],
+      });
+      profileData.avatar = result.secure_url;
     }
 
     if (req.files?.cover && req.files.cover[0]) {
-      profileData.cover = req.files.cover[0].path;
+      const coverFile = req.files.cover[0];
+      const result = await uploadToCloudinary(coverFile.buffer, {
+        folder: 'covers',
+        publicId: `cover_${userId}_${Date.now()}`,
+        transformation: [{ width: 1500, height: 500, crop: 'fill' }],
+      });
+      profileData.cover = result.secure_url;
     }
 
     const user = await UserService.updateProfile(userId, profileData);
