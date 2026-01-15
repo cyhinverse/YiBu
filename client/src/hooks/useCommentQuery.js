@@ -2,12 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { COMMENT_API } from '@/axios/apiEndpoint';
 
+/**
+ * Extract data from API response
+ * @param {Object} response - Axios response object
+ * @returns {*} Extracted data
+ */
 const extractData = response => {
   const responseData = response.data;
   return responseData?.data !== undefined ? responseData.data : responseData;
 };
 
-// Fetch Comments by Post
+/**
+ * Hook to fetch comments for a post
+ * @param {string} postId - Post ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing comments list
+ */
 export const usePostComments = postId => {
   return useQuery({
     queryKey: ['comments', postId],
@@ -15,14 +24,17 @@ export const usePostComments = postId => {
       const response = await api.get(COMMENT_API.GET_BY_POST(postId), {
         params: { page: 1, limit: 50 },
       });
-      return extractData(response); // Expected to return { comments: [...] } or [...]
+      return extractData(response);
     },
     enabled: !!postId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 };
 
-// Mutations
+/**
+ * Hook to create a new comment
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to create comment
+ */
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -40,6 +52,10 @@ export const useCreateComment = () => {
   });
 };
 
+/**
+ * Hook to update a comment
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to update comment
+ */
 export const useUpdateComment = () => {
   return useMutation({
     mutationFn: async ({ commentId, content }) => {
@@ -48,10 +64,13 @@ export const useUpdateComment = () => {
       });
       return extractData(response);
     },
-    // onSuccess handled by caller or socket
   });
 };
 
+/**
+ * Hook to delete a comment
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete comment
+ */
 export const useDeleteComment = () => {
   return useMutation({
     mutationFn: async ({ commentId }) => {
@@ -61,6 +80,10 @@ export const useDeleteComment = () => {
   });
 };
 
+/**
+ * Hook to toggle like/unlike on a comment
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to toggle comment like
+ */
 export const useToggleLikeComment = () => {
   return useMutation({
     mutationFn: async ({ commentId, isLiked }) => {

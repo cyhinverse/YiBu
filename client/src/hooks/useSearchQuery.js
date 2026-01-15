@@ -2,9 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { USER_API, POST_API } from '@/axios/apiEndpoint';
 
+/**
+ * Extract data from API response
+ * @param {Object} response - Axios response object
+ * @returns {*} Extracted data
+ */
 const extractData = response =>
   response?.data?.data || response?.data || response;
 
+/**
+ * Hook to search users
+ * @param {Object} [options] - Search options
+ * @param {string} [options.query] - Search keyword
+ * @param {number} [options.page=1] - Page number
+ * @param {number} [options.limit=10] - Items per page
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing user search results
+ */
 export const useSearchUsers = ({ query, page = 1, limit = 10 } = {}) => {
   return useQuery({
     queryKey: ['search', 'users', { query, page, limit }],
@@ -20,6 +33,14 @@ export const useSearchUsers = ({ query, page = 1, limit = 10 } = {}) => {
   });
 };
 
+/**
+ * Hook to search posts
+ * @param {Object} [options] - Search options
+ * @param {string} [options.query] - Search keyword
+ * @param {number} [options.page=1] - Page number
+ * @param {number} [options.limit=10] - Items per page
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing post search results
+ */
 export const useSearchPosts = ({ query, page = 1, limit = 10 } = {}) => {
   return useQuery({
     queryKey: ['search', 'posts', { query, page, limit }],
@@ -35,6 +56,11 @@ export const useSearchPosts = ({ query, page = 1, limit = 10 } = {}) => {
   });
 };
 
+/**
+ * Hook to fetch search suggestions
+ * @param {string} query - Search keyword
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing suggestions
+ */
 export const useSearchSuggestions = query => {
   return useQuery({
     queryKey: ['search', 'suggestions', query],
@@ -46,6 +72,6 @@ export const useSearchSuggestions = query => {
       return extractData(response);
     },
     enabled: !!query?.trim() && query.length >= 2,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 };

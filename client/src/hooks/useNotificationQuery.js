@@ -7,12 +7,21 @@ import {
 import api from '@/axios/axiosConfig';
 import { NOTIFICATION_API } from '@/axios/apiEndpoint';
 
-// Helper to extract data
+/**
+ * Extract data from API response
+ * @param {Object} response - Axios response object
+ * @returns {*} Extracted data
+ */
 const extractData = response => {
   const responseData = response.data;
   return responseData?.data !== undefined ? responseData.data : responseData;
 };
 
+/**
+ * Hook to fetch notifications with infinite scroll
+ * @param {string} [filter='all'] - Notification filter ('all' | 'unread' | specific type)
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult} Infinite query result containing notifications
+ */
 export const useNotifications = (filter = 'all') => {
   return useInfiniteQuery({
     queryKey: ['notifications', 'list', filter],
@@ -30,10 +39,17 @@ export const useNotifications = (filter = 'all') => {
         ? lastPage.pagination?.page + 1 || allPages.length + 1
         : undefined;
     },
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60,
   });
 };
 
+/**
+ * Hook to fetch notifications by page
+ * @param {number} [page=1] - Page number
+ * @param {number} [limit=10] - Items per page
+ * @param {string} [filter='all'] - Notification filter
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing notifications
+ */
 export const useNotificationsPage = (page = 1, limit = 10, filter = 'all') => {
   return useQuery({
     queryKey: ['notifications', 'page', page, limit, filter],
@@ -50,23 +66,27 @@ export const useNotificationsPage = (page = 1, limit = 10, filter = 'all') => {
   });
 };
 
+/**
+ * Hook to fetch unread notifications count
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing unread count
+ */
 export const useUnreadCount = () => {
   return useQuery({
     queryKey: ['notifications', 'unreadCount'],
     queryFn: async () => {
       const response = await api.get(NOTIFICATION_API.GET_UNREAD_COUNT);
-      // Logic from notificationActions.js
       const data = response.data;
       const count = data?.data?.unreadCount ?? data?.unreadCount ?? data ?? 0;
       return typeof count === 'number' ? count : 0;
     },
-    // Refetch often or rely on socket invalidation
     staleTime: 1000 * 60,
   });
 };
 
-// --- Mutations ---
-
+/**
+ * Hook to mark notification as read
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to mark as read
+ */
 export const useMarkAsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -75,10 +95,7 @@ export const useMarkAsRead = () => {
       return { notificationId };
     },
     onSuccess: data => {
-      // Update unread count
       queryClient.invalidateQueries(['notifications', 'unreadCount']);
-
-      // Update list cache - mark specific item as read
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -95,6 +112,10 @@ export const useMarkAsRead = () => {
   });
 };
 
+/**
+ * Hook to mark all notifications as read
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to mark all as read
+ */
 export const useMarkAllAsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -104,8 +125,6 @@ export const useMarkAllAsRead = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['notifications', 'unreadCount']);
-
-      // Optimistically mark all as read in cache
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -123,6 +142,10 @@ export const useMarkAllAsRead = () => {
   });
 };
 
+/**
+ * Hook to delete a notification
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete notification
+ */
 export const useDeleteNotification = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -132,8 +155,6 @@ export const useDeleteNotification = () => {
     },
     onSuccess: data => {
       queryClient.invalidateQueries(['notifications', 'unreadCount']);
-
-      // Remove from cache
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -150,6 +171,10 @@ export const useDeleteNotification = () => {
   });
 };
 
+/**
+ * Hook to delete all notifications
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete all notifications
+ */
 export const useDeleteAllNotifications = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -169,7 +194,6 @@ export const useDeleteAllNotifications = () => {
           })),
         };
       });
-      // Optionally just invalidate to refresh from empty state
       queryClient.invalidateQueries(['notifications', 'list']);
     },
   });

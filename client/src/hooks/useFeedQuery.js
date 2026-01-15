@@ -2,11 +2,23 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { POST_API } from '@/axios/apiEndpoint';
 
+/**
+ * Extract data from API response
+ * @param {Object} response - Axios response object
+ * @returns {*} Extracted data
+ */
 const extractData = response => {
   const responseData = response.data;
   return responseData?.data !== undefined ? responseData.data : responseData;
 };
 
+/**
+ * Hook to fetch home feed with infinite scroll
+ * @param {string} [type='forYou'] - Feed type ('forYou' | 'following' | 'latest' | 'hashtags')
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult} Infinite query result containing feed data
+ * @example
+ * const { data, fetchNextPage, hasNextPage } = useHomeFeed('following');
+ */
 export const useHomeFeed = (type = 'forYou') => {
   return useInfiniteQuery({
     queryKey: ['feed', type],
@@ -35,10 +47,8 @@ export const useHomeFeed = (type = 'forYou') => {
       return extractData(response);
     },
     getNextPageParam: (lastPage, allPages) => {
-      // Assuming backend returns { posts: [], hasMore: boolean } or similar
-      // Adjust based on actual API response structure
       return lastPage.hasMore ? allPages.length + 1 : undefined;
     },
-    staleTime: 1000 * 60 * 1, // 1 minute stale time for feed
+    staleTime: 1000 * 60 * 1,
   });
 };

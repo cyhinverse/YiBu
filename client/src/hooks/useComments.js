@@ -10,10 +10,14 @@ import {
   useToggleLikeComment,
 } from './useCommentQuery';
 
-// Recursive helper to add reply to tree
+/**
+ * Add reply to comment tree (recursive)
+ * @param {Array} comments - Comments list
+ * @param {Object} newComment - New comment to add
+ * @returns {Array} Updated comments list
+ */
 const addReplyToTree = (comments, newComment) => {
   return comments.map(cmt => {
-    // If this is the direct parent
     if (cmt._id === newComment.parentComment) {
       return {
         ...cmt,
@@ -21,7 +25,6 @@ const addReplyToTree = (comments, newComment) => {
         repliesCount: (cmt.repliesCount || 0) + 1,
       };
     }
-    // If it has replies, look deeper
     if (cmt.replies?.length > 0) {
       return {
         ...cmt,
@@ -32,11 +35,15 @@ const addReplyToTree = (comments, newComment) => {
   });
 };
 
-// Recursive helper to update comment in tree
+/**
+ * Update comment in tree (recursive)
+ * @param {Array} comments - Comments list
+ * @param {Object} updatedComment - Updated comment data
+ * @returns {Array} Updated comments list
+ */
 const updateCommentInTree = (comments, updatedComment) => {
   return comments.map(cmt => {
     if (cmt._id === updatedComment._id) {
-      // Preserve replies
       return { ...cmt, ...updatedComment, replies: cmt.replies };
     }
     if (cmt.replies?.length > 0) {
@@ -49,7 +56,12 @@ const updateCommentInTree = (comments, updatedComment) => {
   });
 };
 
-// Recursive helper to remove comment from tree
+/**
+ * Remove comment from tree (recursive)
+ * @param {Array} comments - Comments list
+ * @param {string} commentId - Comment ID to remove
+ * @returns {Array} Updated comments list
+ */
 const removeCommentFromTree = (comments, commentId) => {
   return comments
     .filter(cmt => cmt._id !== commentId)
@@ -58,10 +70,6 @@ const removeCommentFromTree = (comments, commentId) => {
         return {
           ...cmt,
           replies: removeCommentFromTree(cmt.replies, commentId),
-          // We might want to decrement repliesCount here if we knew the parent
-          // But tree structure naturally removes it.
-          // If we need to update parent's repliesCount, we need more complex logic
-          // For now assuming simplistic removal is fine.
         };
       }
       return cmt;
@@ -69,18 +77,30 @@ const removeCommentFromTree = (comments, commentId) => {
 };
 
 /**
- * Custom hook để quản lý comments của một post
- * @param {string} postId - ID của post
- * @returns {Object} - State và các hàm xử lý comment
+ * Hook to manage comments for a post
+ * @param {string} postId - Post ID
+ * @returns {Object} State and comment handler functions
+ * @returns {Array} returns.comments - Comments list
+ * @returns {boolean} returns.loading - Loading state
+ * @returns {string|null} returns.error - Error message
+ * @returns {number} returns.totalCount - Total comments count
+ * @returns {Object|null} returns.currentUser - Current user
+ * @returns {Object|null} returns.replyingTo - Reply target info
+ * @returns {Function} returns.addComment - Add comment function
+ * @returns {Function} returns.editComment - Edit comment function
+ * @returns {Function} returns.removeComment - Remove comment function
+ * @returns {Function} returns.toggleLike - Toggle like function
+ * @returns {Function} returns.startReply - Start reply function
+ * @returns {Function} returns.cancelReply - Cancel reply function
+ * @returns {Function} returns.refresh - Refresh comments function
  */
 const useComments = postId => {
   const { socket } = useSocketContext();
   const { user } = useSelector(state => state.auth);
   const queryClient = useQueryClient();
-  const [replyingTo, setReplyingTo] = useState(null); // { commentId, username }
+  const [replyingTo, setReplyingTo] = useState(null);
   const [localError, setLocalError] = useState(null);
 
-  // Queries
   const {
     data: commentsData,
     isLoading: loading,
@@ -89,13 +109,17 @@ const useComments = postId => {
 
   const comments = commentsData?.comments || commentsData || [];
 
-  // Mutations
   const createMutation = useCreateComment();
   const updateMutation = useUpdateComment();
   const deleteMutation = useDeleteComment();
   const likeMutation = useToggleLikeComment();
 
-  // Add comment
+  /**
+   * Add a new comment
+   * @param {string} content - Comment content
+   * @param {string|null} [parentId=null] - Parent comment ID (for replies)
+   * @returns {Promise<Object|null>} New comment or null on error
+   */
   const addComment = useCallback(
     async (content, parentId = null) => {
       if (!content.trim()) return null;
@@ -108,14 +132,19 @@ const useComments = postId => {
         });
         return result;
       } catch (err) {
-        setLocalError(err?.message || 'Không thể thêm bình luận');
+        setLocalError(err?.message || 'Failed to add comment');
         return null;
       }
     },
     [postId, createMutation]
   );
 
-  // Update comment
+  /**
+   * Edit a comment
+   * @param {string} commentId - Comment ID
+   * @param {string} content - New content
+   * @returns {Promise<boolean>} Success/failure result
+   */
   const editComment = useCallback(
     async (commentId, content) => {
       if (!content.trim()) return false;
@@ -123,28 +152,37 @@ const useComments = postId => {
         await updateMutation.mutateAsync({ commentId, content });
         return true;
       } catch (err) {
-        setLocalError(err?.message || 'Không thể cập nhật bình luận');
+        setLocalError(err?.message || 'Failed to update comment');
         return false;
       }
     },
     [updateMutation]
   );
 
-  // Delete comment
+  /**
+   * Remove a comment
+   * @param {string} commentId - Comment ID to remove
+   * @returns {Promise<boolean>} Success/failure result
+   */
   const removeComment = useCallback(
     async commentId => {
       try {
         await deleteMutation.mutateAsync({ commentId });
         return true;
       } catch (err) {
-        setLocalError(err?.message || 'Không thể xóa bình luận');
+        setLocalError(err?.message || 'Failed to delete comment');
         return false;
       }
     },
     [deleteMutation]
   );
 
-  // Like/Unlike comment
+  /**
+   * Toggle like/unlike on a comment
+   * @param {string} commentId - Comment ID
+   * @param {boolean} isLiked - Current like status
+   * @returns {Promise<boolean>} Success/failure result
+   */
   const toggleLike = useCallback(
     async (commentId, isLiked) => {
       try {
@@ -158,22 +196,31 @@ const useComments = postId => {
     [likeMutation]
   );
 
-  // Reply handlers
+  /**
+   * Start replying to a comment
+   * @param {string} commentId - Comment ID to reply to
+   * @param {string} username - Username of comment author
+   */
   const startReply = useCallback((commentId, username) => {
     setReplyingTo({ commentId, username });
   }, []);
 
+  /**
+   * Cancel reply
+   */
   const cancelReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
 
-  // Update Cache Helper
+  /**
+   * Update React Query cache
+   * @param {Function} updater - Cache updater function
+   */
   const updateCache = useCallback(
     updater => {
       queryClient.setQueryData(['comments', postId], oldData => {
         const oldComments = oldData?.comments || oldData || [];
         const newComments = updater(oldComments);
-        // Return same structure as API
         return oldData?.comments
           ? { ...oldData, comments: newComments }
           : newComments;
@@ -182,7 +229,10 @@ const useComments = postId => {
     [queryClient, postId]
   );
 
-  // Socket handlers
+  /**
+   * Handle new comment from socket
+   * @param {Object} data - New comment data
+   */
   const handleNewComment = useCallback(
     data => {
       if (data.postId !== postId) return;
@@ -190,7 +240,6 @@ const useComments = postId => {
 
       updateCache(prev => {
         if (!newComment.parentComment) {
-          // Check duplicate
           if (prev.some(c => c._id === newComment._id)) return prev;
           return [{ ...newComment, replies: [] }, ...prev];
         }
@@ -200,6 +249,10 @@ const useComments = postId => {
     [postId, updateCache]
   );
 
+  /**
+   * Handle comment update from socket
+   * @param {Object} data - Updated comment data
+   */
   const handleUpdateComment = useCallback(
     data => {
       if (data.postId !== postId) return;
@@ -209,6 +262,10 @@ const useComments = postId => {
     [postId, updateCache]
   );
 
+  /**
+   * Handle comment deletion from socket
+   * @param {Object} data - Deleted comment data
+   */
   const handleDeleteComment = useCallback(
     data => {
       if (data.postId !== postId) return;
@@ -218,7 +275,6 @@ const useComments = postId => {
     [postId, updateCache]
   );
 
-  // Socket setup
   useEffect(() => {
     if (!postId || !socket) return;
 
@@ -249,7 +305,7 @@ const useComments = postId => {
   return {
     comments,
     loading,
-    error: localError, // Return local error for mutation failures
+    error: localError,
     totalCount: totalCount || 0,
     currentUser: user,
     replyingTo,
