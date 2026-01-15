@@ -1,16 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { COMMENT_API } from '@/axios/apiEndpoint';
-
-/**
- * Extract data from API response
- * @param {Object} response - Axios response object
- * @returns {*} Extracted data
- */
-const extractData = response => {
-  const responseData = response.data;
-  return responseData?.data !== undefined ? responseData.data : responseData;
-};
+import { extractData } from '@/utils/apiUtils';
 
 /**
  * Hook to fetch comments for a post

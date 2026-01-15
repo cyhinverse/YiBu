@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Users, UserPlus, Check, Search, X, Loader2 } from 'lucide-react';
@@ -9,6 +9,7 @@ import {
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const FollowingUser = () => {
   const authUser = useSelector(state => state.auth?.user);
@@ -129,7 +130,7 @@ const FollowingUser = () => {
       {/* Users List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="animate-spin text-neutral-400" />
+          <LoadingSpinner size="md" />
         </div>
       ) : filteredUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-500">

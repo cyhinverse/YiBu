@@ -1,8 +1,5 @@
 import React from 'react';
 import {
-  Image,
-  Video,
-  FileText,
   Calendar,
   Heart,
   MessageCircle,
@@ -14,31 +11,12 @@ import {
   XCircle,
   Trash2,
   Loader2,
+  Video,
 } from 'lucide-react';
-
-const getTypeIcon = type => {
-  switch (type) {
-    case 'image':
-      return <Image size={16} strokeWidth={1.5} />;
-    case 'video':
-      return <Video size={16} strokeWidth={1.5} />;
-    default:
-      return <FileText size={16} strokeWidth={1.5} />;
-  }
-};
-
-const getStatusStyle = status => {
-  switch (status) {
-    case 'active':
-      return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400';
-    case 'hidden':
-      return 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400';
-    case 'pending':
-      return 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400';
-    default:
-      return 'bg-neutral-50 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
-  }
-};
+import {
+  getPostTypeIcon as getTypeIcon,
+  getPostStatusStyle as getStatusStyle,
+} from '@/utils/postUtils';
 
 export default function PostsGrid({
   loading,

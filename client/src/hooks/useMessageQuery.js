@@ -6,14 +6,7 @@ import {
 } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { MESSAGE_API } from '@/axios/apiEndpoint';
-
-/**
- * Extract data from API response
- * @param {Object} response - Axios response object
- * @returns {*} Extracted data
- */
-const extractData = response =>
-  response?.data?.data || response?.data || response;
+import { extractData } from '@/utils/apiUtils';
 
 /**
  * Hook to fetch conversations list

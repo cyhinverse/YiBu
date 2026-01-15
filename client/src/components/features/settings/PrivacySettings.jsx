@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Eye, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const PrivacySettings = () => {
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
@@ -111,7 +112,7 @@ const PrivacySettings = () => {
   if (settingsLoading && !settingsData) {
     return (
       <div className="flex justify-center items-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }

@@ -1,12 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import api from '@/axios/axiosConfig';
 import { AUTH_API } from '@/axios/apiEndpoint';
-
-// Helper to extract data from response
-const extractData = response => {
-  const responseData = response.data;
-  return responseData?.data !== undefined ? responseData.data : responseData;
-};
+import { extractData } from '@/utils/apiUtils';
 
 // ========== Authentication ==========
 

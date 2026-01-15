@@ -3,6 +3,7 @@ import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
 import Post from '@/components/features/feed/Posts/Post';
 import { useSavedPosts, useToggleSave } from '@/hooks/usePostsQuery';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const SavePosts = () => {
   const [viewMode, setViewMode] = useState('list');
@@ -88,7 +89,7 @@ const SavePosts = () => {
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="animate-spin text-neutral-400" />
+          <LoadingSpinner size="md" />
         </div>
       ) : posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-500">

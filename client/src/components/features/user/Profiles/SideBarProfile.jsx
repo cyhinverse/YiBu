@@ -1,17 +1,8 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { User, Settings, Bookmark, Users, Lock, Check } from 'lucide-react';
-
-// Fake user for sidebar
-const FAKE_USER = {
-  _id: 'johndoe',
-  name: 'John Doe',
-  username: 'johndoe',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
-  isVerified: true,
-  following: 234,
-  followers: 1520,
-};
+import { useProfile } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const menuItems = [
   { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
@@ -19,7 +10,7 @@ const menuItems = [
     id: 'saved',
     label: 'Saved Posts',
     icon: Bookmark,
-    path: '/profile/save-posts',
+    path: '/saved',
   },
   {
     id: 'following',
@@ -34,6 +25,25 @@ const menuItems = [
 
 const SideBarProfile = () => {
   const location = useLocation();
+  const authUser = useSelector(state => state.auth?.user);
+  const userId = authUser?._id || authUser?.id;
+
+  const { data: profileData, isLoading } = useProfile(userId);
+  const user = profileData?.data || profileData || authUser;
+
+  if (isLoading) {
+    return (
+      <aside className="w-64 h-fit sticky top-20 p-4 bg-white dark:bg-neutral-900 rounded-xl">
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="sm" />
+        </div>
+      </aside>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <aside className="w-64 h-fit sticky top-20 p-4 bg-white dark:bg-neutral-900 rounded-xl">
@@ -41,11 +51,14 @@ const SideBarProfile = () => {
       <div className="flex items-center gap-3 pb-4 bg-neutral-50 dark:bg-neutral-800/30 p-2 rounded-lg mb-4">
         <div className="relative">
           <img
-            src={FAKE_USER.avatar}
-            alt={FAKE_USER.name}
+            src={
+              user.avatar ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+            }
+            alt={user.name || user.fullName}
             className="w-12 h-12 rounded-full object-cover"
           />
-          {FAKE_USER.isVerified && (
+          {user.isVerified && (
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
               <Check size={8} className="text-white dark:text-black" />
             </div>
@@ -53,11 +66,9 @@ const SideBarProfile = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-black dark:text-white truncate">
-            {FAKE_USER.name}
+            {user.name || user.fullName}
           </p>
-          <p className="text-sm text-neutral-500 truncate">
-            @{FAKE_USER.username}
-          </p>
+          <p className="text-sm text-neutral-500 truncate">@{user.username}</p>
         </div>
       </div>
 
@@ -65,14 +76,14 @@ const SideBarProfile = () => {
       <div className="flex items-center justify-around py-4 bg-neutral-100/50 dark:bg-neutral-800/20 rounded-lg">
         <div className="text-center">
           <p className="font-bold text-black dark:text-white">
-            {FAKE_USER.following}
+            {user.followingCount || user.following?.length || 0}
           </p>
           <p className="text-xs text-neutral-500">Following</p>
         </div>
         <div className="w-px h-8 bg-neutral-200/50 dark:bg-neutral-700/50" />
         <div className="text-center">
           <p className="font-bold text-black dark:text-white">
-            {FAKE_USER.followers}
+            {user.followersCount || user.followers?.length || 0}
           </p>
           <p className="text-xs text-neutral-500">Followers</p>
         </div>

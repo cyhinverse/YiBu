@@ -30,17 +30,11 @@ import {
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
 import { useCreateConversation } from '@/hooks/useMessageQuery';
-import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { formatNumber } from '@/utils/numberUtils';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const FollowList = lazy(() => import('../FollowList/FollowList'));
-
-const formatNumber = num => {
-  if (num == null) return '0';
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-};
 
 const Profile = () => {
   const { userId } = useParams();
@@ -80,8 +74,6 @@ const Profile = () => {
   );
 
   const savedPosts = savedPostsData?.posts || savedPostsData || [];
-
-  const queryClient = useQueryClient();
 
   // React Query for Shared Posts
   const { data: sharedPostsData, isLoading: isSharedLoading } = useSharedPosts(
@@ -144,7 +136,7 @@ const Profile = () => {
   if (profileLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-neutral-300 border-t-black dark:border-t-white rounded-full animate-spin" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -166,7 +158,7 @@ const Profile = () => {
         if (isPostsLoading) {
           return (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={32} className="animate-spin text-neutral-400" />
+              <LoadingSpinner size="md" />
             </div>
           );
         }

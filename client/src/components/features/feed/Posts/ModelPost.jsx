@@ -1,44 +1,13 @@
 import { useState, useRef, lazy, Suspense } from 'react';
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { useSelector } from 'react-redux';
-import {
-  Image,
-  X,
-  Smile,
-  Globe,
-  Lock,
-  Users,
-  Sparkles,
-  Send,
-  Video,
-  Hash,
-} from 'lucide-react';
+import { Image, X, Smile, Sparkles, Send, Video, Hash } from 'lucide-react';
 import {
   useCreatePost,
   useUpdatePost,
   useTrendingHashtags,
 } from '@/hooks/usePostsQuery';
-
-const PRIVACY_OPTIONS = [
-  {
-    value: 'public',
-    label: 'Public',
-    icon: Globe,
-    description: 'Anyone can see this post',
-  },
-  {
-    value: 'followers',
-    label: 'Followers',
-    icon: Users,
-    description: 'Only followers can see',
-  },
-  {
-    value: 'private',
-    label: 'Only me',
-    icon: Lock,
-    description: 'Only you can see this post',
-  },
-];
+import { PRIVACY_OPTIONS } from '@/constants/privacy';
 
 const ModelPost = ({ closeModal, editPost = null }) => {
   const { user: authUser } = useSelector(state => state.auth);

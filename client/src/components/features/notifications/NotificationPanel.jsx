@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Bell,
-  Heart,
-  MessageCircle,
-  UserPlus,
-  Repeat2,
   Check,
   Filter,
   Loader2,
@@ -20,37 +16,10 @@ import {
 } from '../../../../hooks/useNotificationQuery';
 import toast from 'react-hot-toast';
 import { useInView } from 'react-intersection-observer';
-
-const formatTime = dateStr => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-};
-
-const getNotificationIcon = type => {
-  switch (type) {
-    case 'like':
-      return <Heart size={16} className="text-red-500" />;
-    case 'comment':
-      return <MessageCircle size={16} className="text-blue-500" />;
-    case 'follow':
-      return <UserPlus size={16} className="text-green-500" />;
-    case 'repost':
-    case 'share':
-      return <Repeat2 size={16} className="text-purple-500" />;
-    default:
-      return <Bell size={16} className="text-neutral-500" />;
-  }
-};
+import {
+  formatNotificationTime as formatTime,
+  getNotificationIcon,
+} from '@/utils/notificationUtils';
 
 const NotificationPanel = () => {
   const [filter, setFilter] = useState('all');

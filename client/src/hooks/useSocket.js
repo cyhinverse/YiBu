@@ -2,9 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
 import { toast } from 'react-hot-toast';
-
-const SOCKET_URL = 'http://localhost:5000';
-const MAX_RECONNECT_ATTEMPTS = 3;
+import { SOCKET_URL, MAX_RECONNECT_ATTEMPTS } from '@/constants/socket';
 
 /**
  * Hook to manage Socket.IO connection

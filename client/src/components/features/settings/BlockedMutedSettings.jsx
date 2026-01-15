@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  UserX,
-  VolumeX,
-  Search,
-  MoreHorizontal,
-  Loader2,
-  Ban,
-  Volume2,
-} from 'lucide-react';
+import { UserX, VolumeX, Search, Ban } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useBlockedUsers,
@@ -15,6 +7,7 @@ import {
   useUnblockUser,
   useUnmuteUser,
 } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const BlockedMutedSettings = () => {
   const { data: blockedUsers, isLoading: blockedLoading } = useBlockedUsers();
@@ -98,7 +91,7 @@ const BlockedMutedSettings = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }

@@ -1,10 +1,10 @@
 import { Outlet, Route, Routes } from 'react-router-dom';
-import { Suspense, lazy, useMemo, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSettings } from './hooks/useUserQuery';
 import { SocketProvider } from './contexts/SocketContext';
-import { ROUTES } from './constants/routes';
+import { ROUTES } from './constants/route';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './pages/AuthPage/ProtectedRoute';
 import AdminRoute from './pages/AuthPage/AdminRoute';
@@ -75,7 +75,7 @@ const AccessDenied = lazy(() => import('./pages/ErrorPages/AccessDenied'));
 const App = () => {
   const dispatch = useDispatch();
   const authUser = useSelector(state => state.auth?.user);
-  const { data: settingsData } = useSettings({ enabled: !!authUser });
+  useSettings({ enabled: !!authUser });
 
   // Listen for auth logout events from axios interceptor
   useEffect(() => {

@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import { useProfile, useUpdateProfile } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
 import { Suspense, lazy } from 'react';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const LocationPickerModal = lazy(() =>
   import('@/components/common/LocationPickerModal')
@@ -175,7 +176,7 @@ const ProfileSettings = () => {
   if (profileLoading && !currentProfile) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }

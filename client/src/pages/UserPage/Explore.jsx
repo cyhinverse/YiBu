@@ -22,12 +22,7 @@ import {
 } from '@/hooks/useUserQuery';
 import { useSearchUsers, useSearchPosts } from '@/hooks/useSearchQuery';
 import { useDebounce } from '@/hooks/useDebounce';
-
-const formatNumber = num => {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num?.toString() || '0';
-};
+import { formatNumber } from '@/utils/numberUtils';
 
 const Explore = () => {
   const { user: currentUser } = useSelector(state => state.auth);

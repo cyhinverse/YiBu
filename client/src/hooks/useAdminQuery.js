@@ -2,15 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { ADMIN_API, REPORT_API } from '@/axios/apiEndpoint';
 import { toast } from 'react-hot-toast';
-
-/**
- * Extract data from API response
- * @param {Object} response - Axios response object
- * @returns {*} Extracted data
- */
-const extractData = response => {
-  return response.data?.data !== undefined ? response.data.data : response.data;
-};
+import { extractData } from '@/utils/apiUtils';
 
 /**
  * Hook to fetch admin dashboard statistics

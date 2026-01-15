@@ -13,6 +13,7 @@ import {
   useAcceptFollowRequest,
   useRejectFollowRequest,
 } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const FollowRequestsSettings = () => {
   const { data: followRequests, isLoading: loading } = useFollowRequests();
@@ -75,7 +76,7 @@ const FollowRequestsSettings = () => {
   if (loading && !followRequests?.length) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }

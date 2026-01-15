@@ -7,9 +7,9 @@ import {
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
-const SuggestFriends = () => {
-  // React Query hooks
+export default function SuggestFriends() {
   const { data: suggestionsData, isLoading: suggestionsLoading } =
     useSuggestions(5);
   const followMutation = useFollowUser();
@@ -52,7 +52,7 @@ const SuggestFriends = () => {
           <p className="text-sm text-neutral-500">People you may know</p>
         </div>
         <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-neutral-400" />
+          <LoadingSpinner size="sm" />
         </div>
       </div>
     );
@@ -174,6 +174,4 @@ const SuggestFriends = () => {
       </Link>
     </div>
   );
-};
-
-export default SuggestFriends;
+}

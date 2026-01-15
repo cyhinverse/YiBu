@@ -31,6 +31,10 @@ import {
   useSharePost,
 } from '@/hooks/usePostsQuery';
 import UserProfilePreview from '../../../Common/UserProfilePreview';
+import {
+  formatCount,
+  formatPostTime as formatTime,
+} from '@/utils/postUtils';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -323,34 +327,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
   );
 };
 
-// Fake post data for component testing
-const formatCount = count => {
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return count.toString();
-};
-
-const formatTime = date => {
-  const now = new Date();
-  const postDate = new Date(date);
-  const diffMs = now - postDate;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return postDate.toLocaleDateString();
-};
-
 const Post = ({ data, onDelete }) => {
-  const authUser = useSelector(state => state.auth?.user);
 
   const [isLiked, setIsLiked] = useState(data?.isLiked || false);
   const [isSaved, setIsSaved] = useState(data?.isSaved || false);

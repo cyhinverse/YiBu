@@ -19,6 +19,7 @@ import {
   revokeSession,
 } from '@/redux/actions/authActions';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const SecuritySettings = () => {
   const dispatch = useDispatch();
@@ -158,7 +159,7 @@ const SecuritySettings = () => {
   if (settingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
