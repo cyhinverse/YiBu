@@ -37,7 +37,11 @@ router.get(
 );
 
 /* POST /:postId - Save a post */
-router.post('/:postId', validateParams(savePostParam), PostController.savePost);
+router.post(
+  '/:postId',
+  validateParams(savePostParam),
+  PostController.savePost
+);
 /* DELETE /:postId - Unsave a post */
 router.delete(
   '/:postId',

@@ -26,7 +26,11 @@ router.post('/', validateBody(createLikeBody), PostController.CreateLike);
 /* DELETE / - Unlike a post */
 router.delete('/', validateBody(deleteLikeBody), PostController.DeleteLike);
 /* POST /toggle - Toggle like status on a post */
-router.post('/toggle', validateBody(toggleLikeBody), PostController.ToggleLike);
+router.post(
+  '/toggle',
+  validateBody(toggleLikeBody),
+  PostController.ToggleLike
+);
 
 /* GET /status/:postId - Get like status for a post */
 router.get(

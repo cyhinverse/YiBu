@@ -31,7 +31,9 @@ class EmailService {
   async sendEmail(to, subject, html) {
     try {
       // Log email config for debugging
-      logger.info(`Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`);
+      logger.info(
+        `Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`
+      );
       logger.info(`Email user configured: ${config.email.user ? 'Yes' : 'No'}`);
       logger.info(`Email pass configured: ${config.email.pass ? 'Yes' : 'No'}`);
 

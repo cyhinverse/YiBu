@@ -27,6 +27,7 @@ import {
   reportPostParam,
   reportPostBody,
 } from '../validations/post.validation.js';
+import { getCommentsQuery } from '../validations/comment.validation.js';
 
 const router = express.Router();
 
@@ -56,7 +57,7 @@ router.get(
 /* GET /hashtags/feed - Get posts with hashtags */
 router.get(
   '/hashtags/feed',
-  validateQuery(exploreQuery),
+  validateQuery(hashtagQuery),
   PostController.GetHashtagFeed
 );
 

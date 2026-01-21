@@ -21,7 +21,6 @@ import EmailService from './Email.Service.js';
  * 4. Creates UserSettings on registration
  */
 class AuthService {
-
   static async register(userData) {
     const { email, username, password, name } = userData;
 
@@ -362,7 +361,7 @@ class AuthService {
 
   static async requestPasswordReset(email) {
     logger.info(`Password reset requested for email: ${email}`);
-    
+
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
@@ -385,9 +384,11 @@ class AuthService {
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
     logger.info(`Password reset link generated: ${resetLink}`);
-    
+
     const emailResult = await EmailService.sendPasswordReset(email, resetLink);
-    logger.info(`Password reset email result: ${emailResult ? 'SUCCESS' : 'FAILED'}`);
+    logger.info(
+      `Password reset email result: ${emailResult ? 'SUCCESS' : 'FAILED'}`
+    );
 
     return { success: true, resetToken };
   }

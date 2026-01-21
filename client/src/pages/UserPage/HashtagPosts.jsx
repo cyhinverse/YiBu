@@ -18,7 +18,7 @@ import { formatNumber } from '@/utils/numberUtils';
 
 const HashtagPosts = () => {
   const { hashtag } = useParams();
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState('list'); 
   const { data, isLoading: loading } = useGetPostsByHashtag(hashtag);
   const { data: trendingHashtags } = useTrendingHashtags(5);
   

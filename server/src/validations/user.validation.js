@@ -263,6 +263,17 @@ export const getUserByIdParam = Joi.object({
   id: objectId.required(),
 });
 
+// GET /mutual-followers/:targetUserId
+export const getMutualFollowersQuery = Joi.object({
+  limit: Joi.number().integer().min(1).max(50).default(10),
+});
+
+// GET /follow-requests/pending
+export const getPendingFollowRequestsQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(50).default(20),
+});
+
 export default {
   searchUsersQuery,
   suggestionsQuery,
@@ -283,4 +294,6 @@ export default {
   addDeviceBody,
   deviceIdParam,
   getUserByIdParam,
+  getMutualFollowersQuery,
+  getPendingFollowRequestsQuery,
 };

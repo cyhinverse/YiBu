@@ -226,6 +226,30 @@ export const getLogsQuery = Joi.object({
   adminId: objectId,
 });
 
+// GET /dashboard/stats
+export const getStatsQuery = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+});
+
+// GET /analytics/top-users
+export const getTopUsersQuery = Joi.object({
+  limit: Joi.number().integer().min(1).max(100).default(10),
+});
+
+// GET /analytics/interactions
+export const getInteractionsQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  type: Joi.string().valid('like', 'comment', 'follow', 'share', 'report'),
+  search: Joi.string().trim().max(100),
+});
+
+// GET /users/banned
+export const getBannedUsersQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
 export default {
   getUsersQuery,
   userIdParam,
@@ -245,4 +269,8 @@ export default {
   resolveReportBody,
   broadcastBody,
   getLogsQuery,
+  getStatsQuery,
+  getTopUsersQuery,
+  getInteractionsQuery,
+  getBannedUsersQuery,
 };

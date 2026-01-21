@@ -26,36 +26,58 @@ import {
   reviewReportBody,
   resolveReportBody,
   broadcastBody,
+  getStatsQuery,
+  getTopUsersQuery,
+  getInteractionsQuery,
+  getBannedUsersQuery,
 } from '../validations/admin.validation.js';
 
 const router = express.Router();
 
 /* GET /health - Health check endpoint */
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    message: 'Admin API is running',
-    timestamp: new Date(),
-  });
-});
+router.get('/health', AdminController.getSystemHealth);
 
 router.use(verifyToken, adminMiddleware);
 
 /* GET /dashboard/stats - Get dashboard statistics */
-router.get('/dashboard/stats', AdminController.getDashboardStats);
+router.get(
+  '/dashboard/stats',
+  validateQuery(getStatsQuery),
+  AdminController.getDashboardStats
+);
 /* GET /analytics/user-growth - Get user growth analytics */
-router.get('/analytics/user-growth', AdminController.getUserGrowthStats);
+router.get(
+  '/analytics/user-growth',
+  validateQuery(getStatsQuery),
+  AdminController.getUserGrowthStats
+);
 /* GET /analytics/posts - Get post analytics */
-router.get('/analytics/posts', AdminController.getPostStats);
+router.get(
+  '/analytics/posts',
+  validateQuery(getStatsQuery),
+  AdminController.getPostStats
+);
 /* GET /analytics/top-users - Get top engaged users */
-router.get('/analytics/top-users', AdminController.getTopEngagedUsers);
+router.get(
+  '/analytics/top-users',
+  validateQuery(getTopUsersQuery),
+  AdminController.getTopEngagedUsers
+);
 /* GET /analytics/interactions - Get user interactions */
-router.get('/analytics/interactions', AdminController.getInteractions);
+router.get(
+  '/analytics/interactions',
+  validateQuery(getInteractionsQuery),
+  AdminController.getInteractions
+);
 
 /* GET /users - Get all users with pagination */
 router.get('/users', validateQuery(getUsersQuery), AdminController.getAllUsers);
 /* GET /users/banned - Get list of banned users */
-router.get('/users/banned', AdminController.getBannedUsers);
+router.get(
+  '/users/banned',
+  validateQuery(getBannedUsersQuery),
+  AdminController.getBannedUsers
+);
 /* GET /users/:userId/posts - Get posts by user ID */
 router.get(
   '/users/:userId/posts',

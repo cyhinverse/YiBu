@@ -8,16 +8,15 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - PORT=5000
+      - PORT=${PORT}
       - CLIENT_URL=http://localhost:3000
       - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      # JWT Secrets (REQUIRED for auth to work - replace with your own secure values)
       - ACCESS_TOKEN_SECRET=your_access_token_secret_here_change_in_production
       - REFRESH_TOKEN_SECRET=your_refresh_token_secret_here_change_in_production
-      # Cloudinary (optional, uncomment if needed)
-      # - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      # - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      # - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_USER=cyhin2508@gmail.com
+      - EMAIL_PASS=ontbbfoaapatkuhu
     depends_on:
       - mongo
       - redis
@@ -28,7 +27,7 @@ services:
     build: ./client
     container_name: social_client
     ports:
-      - "3000:9258" # Map host 3000 to vite 9258
+      - "3000:9258"
     depends_on:
       - server
     networks:

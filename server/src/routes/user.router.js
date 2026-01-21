@@ -27,6 +27,8 @@ import {
   addDeviceBody,
   deviceIdParam,
   getUserByIdParam,
+  getMutualFollowersQuery,
+  getPendingFollowRequestsQuery,
 } from '../validations/user.validation.js';
 
 const router = express.Router();
@@ -44,6 +46,14 @@ router.get(
   '/suggestions',
   validateQuery(suggestionsQuery),
   UserController.getRecommendedUsers
+);
+
+/* GET /mutual/:targetUserId - Get mutual followers */
+router.get(
+  '/mutual/:targetUserId',
+  validateParams(targetUserIdParam),
+  validateQuery(getMutualFollowersQuery),
+  UserController.getMutualFollowers
 );
 
 /* GET /profile/:id - Get profile by user ID or username */
@@ -93,7 +103,11 @@ router.get(
 );
 
 /* GET /follow-requests - Get pending follow requests */
-router.get('/follow-requests', UserController.getPendingFollowRequests);
+router.get(
+  '/follow-requests',
+  validateQuery(getPendingFollowRequestsQuery),
+  UserController.getPendingFollowRequests
+);
 /* POST /follow-requests/:requestId/accept - Accept a follow request */
 router.post(
   '/follow-requests/:requestId/accept',
