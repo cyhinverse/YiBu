@@ -283,9 +283,38 @@ class SocketService {
   async broadcastNotification(userIds, notification) {
     const results = { sent: 0, failed: 0 };
 
+    // Batch fetch user settings to avoid N+1 query
+    const settings = await UserSettings.find({ user: { $in: userIds } })
+      .select('user notifications')
+      .lean();
+
+    const settingsMap = new Map();
+    settings.forEach(s => settingsMap.set(s.user.toString(), s.notifications));
+
+    const typeMap = {
+      like: 'likes',
+      comment: 'comments',
+      follow: 'follows',
+      mention: 'mentions',
+      message: 'messages',
+    };
+    const settingKey = typeMap[notification.type];
+
     for (const userId of userIds) {
-      const result = await this.sendNotification(userId, notification);
-      if (result.sent) {
+      const userSettings = settingsMap.get(userId.toString());
+      
+      // Check notification settings if applicable
+      if (settingKey && userSettings && userSettings[settingKey] === false) {
+        results.failed++;
+        continue;
+      }
+
+      const userSockets = this.getUserSockets(userId);
+
+      if (userSockets.size > 0) {
+        userSockets.forEach(socketId => {
+          this.io.to(socketId).emit('new_notification', notification);
+        });
         results.sent++;
       } else {
         results.failed++;

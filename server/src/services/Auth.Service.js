@@ -127,12 +127,11 @@ class AuthService {
       email: user.email,
       isAdmin: user.isAdmin,
     });
-    const refreshTokenData = await this._createRefreshToken(
-      user._id,
-      deviceInfo
-    );
 
-    await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() });
+    const [refreshTokenData] = await Promise.all([
+      this._createRefreshToken(user._id, deviceInfo),
+      User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() })
+    ]);
 
     const userResponse = {
       _id: user._id,

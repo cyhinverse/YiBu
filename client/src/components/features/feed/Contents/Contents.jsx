@@ -11,7 +11,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 const Contents = () => {
   const [activeTab, setActiveTab] = useState('forYou');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
   const contentRef = useRef(null);
 
   // Debounce search

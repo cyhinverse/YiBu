@@ -91,10 +91,25 @@ class PostService {
     if (!matches) return [];
 
     const tags = [...new Set(matches.map(tag => tag.slice(1).toLowerCase()))];
-    const processedTags = [];
+    
+    // Use the optimized bulk increment method from Hashtag model
+    // Note: session support might need to be added to Hashtag.incrementMany if strictly required, 
+    // but for stats counting, strict transactional consistency might be tradeable for performance.
+    // If Hashtag.incrementMany doesn't support session yet, we can fall back to parallel execution.
+    
+    // Checking if Hashtag model has incrementMany (based on my read it does)
+    if (Hashtag.incrementMany) {
+        await Hashtag.incrementMany(tags);
+        
+        // Fetch IDs to return
+        const hashtags = await Hashtag.find({ name: { $in: tags } }).select('_id name').session(session);
+        return hashtags.map(h => ({ tag: h.name, hashtagId: h._id }));
+    }
 
-    for (const tag of tags.slice(0, 30)) {
-      const hashtag = await retryOperation(() =>
+    // Fallback if bulk method not available (or if we strictly need session which bulkWrite supports but method might not expose)
+    const processedTags = [];
+    const operations = tags.slice(0, 30).map(tag => 
+      retryOperation(() =>
         Hashtag.findOneAndUpdate(
           { name: tag },
           {
@@ -103,10 +118,14 @@ class PostService {
           },
           { upsert: true, new: true, session }
         )
-      );
+      )
+    );
 
-      processedTags.push({ tag, hashtagId: hashtag._id });
-    }
+    const results = await Promise.all(operations);
+    
+    results.forEach(hashtag => {
+        processedTags.push({ tag: hashtag.name, hashtagId: hashtag._id });
+    });
 
     return processedTags;
   }
@@ -1424,10 +1443,27 @@ class PostService {
       ],
     });
 
-    for (const post of posts) {
+    if (posts.length === 0) return;
+
+    const bulkOps = posts.map(post => {
       post.calculateEngagementScore();
       post.calculateTrendingScore();
-      await post.save();
+      
+      return {
+        updateOne: {
+          filter: { _id: post._id },
+          update: {
+            $set: {
+              engagementScore: post.engagementScore,
+              trendingScore: post.trendingScore
+            }
+          }
+        }
+      };
+    });
+
+    if (bulkOps.length > 0) {
+      await Post.bulkWrite(bulkOps);
     }
 
     logger.info(`Updated scores for ${posts.length} posts`);

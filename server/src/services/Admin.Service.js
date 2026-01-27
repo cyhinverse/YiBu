@@ -1128,7 +1128,7 @@ class AdminService {
       metadata: { broadcastBy: adminId },
     }));
 
-    await Notification.insertMany(notifications, { ordered: false });
+    await Promise.all(notifications);
 
     await this._logAdminAction(
       adminId,

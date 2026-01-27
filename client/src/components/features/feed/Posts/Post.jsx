@@ -31,10 +31,7 @@ import {
   useSharePost,
 } from '@/hooks/usePostsQuery';
 import UserProfilePreview from '../../../Common/UserProfilePreview';
-import {
-  formatCount,
-  formatPostTime as formatTime,
-} from '@/utils/postUtils';
+import { formatCount, formatPostTime as formatTime } from '@/utils/postUtils';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -51,7 +48,7 @@ const ModelPost = lazy(() => import('./ModelPost'));
 const VideoModal = lazy(() => import('../../../Common/VideoModal'));
 
 // Inline Video Player with basic controls
-const VideoPlayer = ({ src, onExpand, isGrid }) => {
+const VideoPlayer = ({ src, onExpand }) => {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -59,8 +56,6 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
   const [volume, setVolume] = useState(1);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isInView, setIsInView] = useState(false);
 
   // Auto play/pause when scrolling in/out of view
   useEffect(() => {
@@ -71,7 +66,6 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
     const observer = new IntersectionObserver(
       entries => {
         entries.forEach(entry => {
-          setIsInView(entry.isIntersecting);
           if (entry.isIntersecting) {
             // Video is in view - auto play
             video.play().catch(() => {});
@@ -162,7 +156,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
         loop
         className="w-full h-full object-cover"
         onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
+        onLoadedMetadata={() => {}}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onClick={togglePlay}
@@ -328,6 +322,7 @@ const VideoPlayer = ({ src, onExpand, isGrid }) => {
 };
 
 const Post = ({ data, onDelete }) => {
+  const { user: authUser } = useSelector(state => state.auth);
 
   const [isLiked, setIsLiked] = useState(data?.isLiked || false);
   const [isSaved, setIsSaved] = useState(data?.isSaved || false);
@@ -404,7 +399,7 @@ const Post = ({ data, onDelete }) => {
     toggleSave(
       { postId: data._id, isSaved: prevSaved },
       {
-        onSuccess: response => {
+        onSuccess: () => {
           toast.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
         },
         onError: error => {

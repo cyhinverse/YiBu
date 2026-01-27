@@ -135,7 +135,7 @@ const authSlice = createSlice({
       .addCase(enable2FA.pending, state => {
         state.loading = true;
       })
-      .addCase(enable2FA.fulfilled, (state, action) => {
+      .addCase(enable2FA.fulfilled, state => {
         state.loading = false;
         state.twoFactorPending = true;
       })

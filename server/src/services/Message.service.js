@@ -62,6 +62,33 @@ class MessageService {
       .limit(limit)
       .lean();
 
+    // Prepare batch unread count query
+    const conversationIds = conversations.map(c => c._id.toString());
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          conversationId: { $in: conversationIds },
+          isDeleted: false,
+          $or: [
+            { receiver: userId, status: { $ne: 'read' } }, // Direct
+            { 
+              'seenBy.user': { $ne: userId }, 
+              sender: { $ne: userId },
+              receiver: { $ne: userId } // Ensure we don't count direct messages here if logic overlaps, though receiver check above handles it
+            } 
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: '$conversationId',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const unreadMap = new Map(unreadCounts.map(c => [c._id.toString(), c.count]));
+
     const formattedConversations = await Promise.all(
       conversations.map(async conv => {
         if (!conv.isGroup) {
@@ -73,13 +100,6 @@ class MessageService {
             return null;
           }
 
-          const unreadCount = await Message.countDocuments({
-            conversationId: conv._id.toString(),
-            receiver: userId,
-            status: { $ne: 'read' },
-            isDeleted: false,
-          });
-
           return {
             ...conv,
             conversationId: conv._id.toString(),
@@ -90,20 +110,13 @@ class MessageService {
                 Date.now() - new Date(otherUser.lastActiveAt).getTime() <
                   5 * 60 * 1000,
             },
-            unreadCount,
+            unreadCount: unreadMap.get(conv._id.toString()) || 0,
           };
         } else {
-          const unreadCount = await Message.countDocuments({
-            conversationId: conv._id.toString(),
-            'seenBy.user': { $ne: userId },
-            sender: { $ne: userId },
-            isDeleted: false,
-          });
-
           return {
             ...conv,
             conversationId: conv._id.toString(),
-            unreadCount,
+            unreadCount: unreadMap.get(conv._id.toString()) || 0,
           };
         }
       })
@@ -595,9 +608,8 @@ class MessageService {
    * @returns {Promise<Array>} List of media objects {url, type, publicId}
    */
   static async uploadAttachments(files, userId) {
-    const { uploadToCloudinary } = await import(
-      '../middlewares/multerUpload.js'
-    );
+    const { uploadToCloudinary } =
+      await import('../middlewares/multerUpload.js');
     const uploadedMedia = [];
     const fileArray = Array.isArray(files) ? files : [files];
 

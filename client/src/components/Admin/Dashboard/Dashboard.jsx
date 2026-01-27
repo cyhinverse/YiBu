@@ -46,10 +46,7 @@ const Dashboard = () => {
 
   const topUsers = topUsersData?.users || [];
 
-  const { data: growthData, isLoading: growthLoading } = useUserGrowth(
-    startDate,
-    endDate
-  );
+  const { data: growthData } = useUserGrowth(startDate, endDate);
 
   const handleRefresh = () => {
     refetchStats();

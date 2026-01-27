@@ -60,8 +60,8 @@
   --color-transparent: transparent;
 
   /* Font Family */
-  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
+  --font-family-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Border Radius */

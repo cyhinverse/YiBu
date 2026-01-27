@@ -35,7 +35,7 @@ const TopUser = ({ users = [], loading = false }) => {
         setFollowingIds(prev => new Set(prev).add(userId));
         toast.success('Đã theo dõi');
       }
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra');
     } finally {
       setLoadingIds(prev => {

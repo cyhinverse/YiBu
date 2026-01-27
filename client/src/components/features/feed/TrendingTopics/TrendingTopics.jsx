@@ -1,5 +1,5 @@
 import { TrendingUp, Hash, ChevronRight, LayoutGrid, List } from 'lucide-react';
-import { useState } from 'react';
+
 import TrendingCircles from './TrendingCircles';
 
 const TrendingTopics = ({ trendingTopics = [] }) => {

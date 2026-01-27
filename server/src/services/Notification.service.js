@@ -105,15 +105,22 @@ class NotificationService {
     }
 
     let senderData;
+    // Optimize: reuse sender info if available or fetch once
     if (sender) {
-      const senderUser = await User.findById(sender)
-        .select('username avatar')
-        .lean();
-      senderData = {
-        user: sender,
-        username: senderUser?.username,
-        avatar: senderUser?.avatar,
-      };
+        // If sender info was fetched in group check (but not used because no group found), we might need to fetch it here.
+        // Or if we didn't check group.
+        // Let's just do a clean fetch if not available, but usually caller might pass populated data? No, data is raw.
+        const senderUser = await User.findById(sender)
+            .select('username avatar')
+            .lean();
+        
+        if (senderUser) {
+            senderData = {
+                user: sender,
+                username: senderUser.username,
+                avatar: senderUser.avatar,
+            };
+        }
     }
 
     const notification = await Notification.create({
@@ -383,7 +390,7 @@ class NotificationService {
   }
 
   /**
-   * Send notification to all followers of user
+   * Send notification to all followers of user (Optimized with Batch Processing)
    * @param {string} userId - User ID
    * @param {string} type - Notification type
    * @param {string} content - Content (can contain {username} placeholder)
@@ -392,37 +399,131 @@ class NotificationService {
    */
   static async notifyFollowers(userId, type, content, relatedPost = null) {
     const Follow = (await import('../models/Follow.js')).default;
+    
+    // Get sender info once
+    const sender = await User.findById(userId).select('username avatar').lean();
+    if (!sender) return { sentCount: 0 };
 
-    const followers = await Follow.getFollowerIds(userId);
+    const notificationContent = content.replace('{username}', sender.username);
+    const notificationTypeMap = {
+      like: 'likes',
+      comment: 'comments',
+      reply: 'comments', // usually maps to comments setting
+      follow: 'follows',
+      mention: 'mentions',
+      share: 'shares',
+      message: 'messages',
+    };
+    const settingKey = notificationTypeMap[type] || type;
 
-    const user = await User.findById(userId).select('username avatar').lean();
+    // Process in batches using cursor to avoid OOM
+    const BATCH_SIZE = 500;
+    let sentCount = 0;
+    
+    // Use cursor to stream follower IDs
+    const cursor = Follow.find({ following: userId, status: 'active' })
+      .select('follower')
+      .cursor();
 
-    const notifications = followers.map(followerId => ({
-      recipient: followerId,
-      sender: userId,
-      type,
-      content: content.replace('{username}', user.username),
-      relatedPost,
-      groupKey: relatedPost ? `${type}_${relatedPost}` : null,
-      groupedSenders: [
-        {
-          user: userId,
-          username: user.username,
-          avatar: user.avatar,
-        },
-      ],
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    }));
+    let batchFollowerIds = [];
 
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications, { ordered: false }).catch(
-        err => {
-          logger.warn('Some notifications failed to insert:', err.message);
-        }
+    for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+      batchFollowerIds.push(doc.follower);
+
+      if (batchFollowerIds.length >= BATCH_SIZE) {
+        sentCount += await this._processNotificationBatch(
+            batchFollowerIds, 
+            userId, 
+            sender, 
+            type, 
+            settingKey, 
+            notificationContent, 
+            relatedPost
+        );
+        batchFollowerIds = []; // Reset batch
+      }
+    }
+
+    // Process remaining
+    if (batchFollowerIds.length > 0) {
+      sentCount += await this._processNotificationBatch(
+        batchFollowerIds, 
+        userId, 
+        sender, 
+        type, 
+        settingKey, 
+        notificationContent, 
+        relatedPost
       );
     }
 
-    return { sentCount: notifications.length };
+    return { sentCount };
+  }
+
+  /**
+   * Process a batch of followers for notification (Private helper)
+   */
+  static async _processNotificationBatch(followerIds, senderId, senderUser, type, settingKey, content, relatedPost) {
+    // 1. Bulk fetch UserSettings for this batch
+    const settingsList = await UserSettings.find({ user: { $in: followerIds } })
+        .select('user notifications blockedUsers mutedUsers')
+        .lean();
+
+    const settingsMap = new Map();
+    settingsList.forEach(s => settingsMap.set(s.user.toString(), s));
+
+    // 2. Filter valid recipients
+    const validNotifications = [];
+    const senderIdStr = senderId.toString();
+
+    for (const recipientId of followerIds) {
+        const recipientIdStr = recipientId.toString();
+        const settings = settingsMap.get(recipientIdStr);
+
+        // Check 1: Blocked Users
+        if (settings?.blockedUsers?.some(id => id.toString() === senderIdStr)) {
+            continue;
+        }
+
+        // Check 2: Muted Users
+        if (settings?.mutedUsers?.some(id => id.toString() === senderIdStr)) {
+            continue;
+        }
+
+        // Check 3: Notification Preferences
+        if (settings?.notifications?.[settingKey] === false) {
+            continue;
+        }
+
+        // Prepare Notification Object
+        validNotifications.push({
+            recipient: recipientId,
+            sender: senderId,
+            type,
+            content,
+            relatedPost,
+            groupKey: relatedPost ? `${type}_${relatedPost}` : null,
+            groupedSenders: [{
+                user: senderId,
+                username: senderUser.username,
+                avatar: senderUser.avatar,
+            }],
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        });
+    }
+
+    // 3. Bulk Insert
+    if (validNotifications.length > 0) {
+        await Notification.insertMany(validNotifications, { ordered: false }).catch(err => 
+            logger.warn('Batch notification insert error:', err.message)
+        );
+        
+        // Optional: Fire socket events for this batch? 
+        // For mass notifications, we might skip real-time socket to avoid flooding server,
+        // or just send to online users. For now, we skip socket loop to save CPU in mass broadcast.
+    }
+
+    return validNotifications.length;
   }
 
   /**

@@ -130,7 +130,7 @@ export const useMarkAsRead = () => {
       await api.post(MESSAGE_API.MARK_CONVERSATION_READ(conversationId));
       return conversationId;
     },
-    onSuccess: _ => {
+    onSuccess: () => {
       queryClient.invalidateQueries(['messages', 'conversations']);
       queryClient.invalidateQueries(['messages', 'unreadCount']);
     },

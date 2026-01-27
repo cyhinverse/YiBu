@@ -354,7 +354,7 @@ export function CardContent({ children, className = '' }) {
 export function StatCard({
   title,
   value,
-  icon: Icon,
+  icon: Icon, // eslint-disable-line no-unused-vars
   trend,
   trendValue,
   color = 'neutral',

@@ -63,7 +63,7 @@ const Notifications = () => {
     try {
       await deleteNotification(id);
       toast.success('Đã xóa thông báo');
-    } catch (err) {
+    } catch {
       toast.error('Không thể xóa thông báo');
     }
   };
@@ -73,7 +73,7 @@ const Notifications = () => {
       try {
         await deleteAllNotifications();
         toast.success('Đã xóa tất cả thông báo');
-      } catch (err) {
+      } catch {
         toast.error('Không thể xóa tất cả thông báo');
       }
     }

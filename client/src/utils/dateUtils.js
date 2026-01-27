@@ -7,7 +7,7 @@
  * formatDistanceToNow(new Date()) // "vừa xong"
  * formatDistanceToNow(new Date(Date.now() - 3600000)) // "1 giờ trước"
  */
-export const formatDistanceToNow = (date, options = {}) => {
+export const formatDistanceToNow = date => {
   if (!date) return '';
 
   const now = new Date();
@@ -36,6 +36,6 @@ export const formatDistanceToNow = (date, options = {}) => {
  * @param {Object} [options] - Format options
  * @returns {string} Relative time string
  */
-export const formatDistance = (date, baseDate, options = {}) => {
-  return formatDistanceToNow(date, options);
+export const formatDistance = date => {
+  return formatDistanceToNow(date);
 };

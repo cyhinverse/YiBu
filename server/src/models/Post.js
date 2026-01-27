@@ -280,17 +280,14 @@ PostSchema.statics.getFeedForUser = async function (userId, options = {}) {
   const Follow = model("Follow");
   const UserSettings = model("UserSettings");
 
-  // Get following list
-  const following = await Follow.find({ follower: userId })
-    .select("following")
-    .lean();
+  // Get following list and blocked/muted users in parallel
+  const [following, settings] = await Promise.all([
+    Follow.find({ follower: userId }).select("following").lean(),
+    UserSettings.findOne({ user: userId }).select("blockedUsers mutedUsers").lean()
+  ]);
+
   const followingIds = following.map((f) => f.following);
   followingIds.push(userId); // Include own posts
-
-  // Get blocked/muted users
-  const settings = await UserSettings.findOne({ user: userId })
-    .select("blockedUsers mutedUsers")
-    .lean();
 
   const excludeUsers = [
     ...(settings?.blockedUsers || []),
@@ -329,13 +326,11 @@ PostSchema.statics.getExplorePost = async function (userId, options = {}) {
   const UserSettings = model("UserSettings");
   const User = model("User");
 
-  // Get user interests
-  const user = await User.findById(userId).select("interests").lean();
-
-  // Get blocked users
-  const settings = await UserSettings.findOne({ user: userId })
-    .select("blockedUsers mutedUsers")
-    .lean();
+  // Get user interests and blocked users in parallel
+  const [user, settings] = await Promise.all([
+    User.findById(userId).select("interests").lean(),
+    UserSettings.findOne({ user: userId }).select("blockedUsers mutedUsers").lean()
+  ]);
 
   const excludeUsers = [
     userId,

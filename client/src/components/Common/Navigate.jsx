@@ -25,7 +25,7 @@ import { useUnreadMessagesCount } from '@/hooks/useMessageQuery';
 // Custom Nav Item
 const NavItem = ({
   to,
-  icon: Icon,
+  icon: Icon, // eslint-disable-line no-unused-vars
   label,
   onClick,
   badge,

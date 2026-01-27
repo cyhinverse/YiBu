@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, ArrowLeft, Check } from "lucide-react";
+import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Sparkles, ArrowLeft, Check } from 'lucide-react';
 
 const EnterCode = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [verified, setVerified] = useState(false);
   const inputRefs = useRef([]);
 
@@ -22,12 +22,12 @@ const EnterCode = () => {
   };
 
   const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !code[index] && index > 0) {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = e => {
     e.preventDefault();
     setIsLoading(true);
     // Fake verification
@@ -38,7 +38,7 @@ const EnterCode = () => {
   };
 
   const handleResend = () => {
-    console.log("Resend code");
+    // Logic to resend code
   };
 
   return (
@@ -90,12 +90,12 @@ const EnterCode = () => {
                   {code.map((digit, index) => (
                     <input
                       key={index}
-                      ref={(el) => (inputRefs.current[index] = el)}
+                      ref={el => (inputRefs.current[index] = el)}
                       type="text"
                       maxLength={1}
                       value={digit}
-                      onChange={(e) => handleChange(index, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      onChange={e => handleChange(index, e.target.value)}
+                      onKeyDown={e => handleKeyDown(index, e)}
                       className="w-12 h-14 text-center text-xl font-semibold bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
                     />
                   ))}
@@ -103,20 +103,20 @@ const EnterCode = () => {
 
                 <button
                   type="submit"
-                  disabled={isLoading || code.some((d) => !d)}
+                  disabled={isLoading || code.some(d => !d)}
                   className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <div className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
                   ) : (
-                    "Verify Code"
+                    'Verify Code'
                   )}
                 </button>
               </form>
 
               <div className="mt-8 text-center">
                 <p className="text-neutral-500">
-                  Didn't receive the code?{" "}
+                  Didn't receive the code?{' '}
                   <button
                     onClick={handleResend}
                     className="font-medium text-black dark:text-white hover:underline"

@@ -3,7 +3,6 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { login, googleAuth } from '@/redux/actions/authActions';
-import { clearError } from '@/redux/slices/AuthSlice';
 import toast from 'react-hot-toast';
 
 const Login = () => {

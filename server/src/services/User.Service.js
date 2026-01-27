@@ -100,15 +100,40 @@ class UserService {
       throw new Error('User ID is required');
     }
 
-    const user = await User.findById(userId).select('-loginAttempts').lean();
+    const userPromise = User.findById(userId).select('-loginAttempts').lean();
+    let followStatusPromise = Promise.resolve('none');
+    let isFollowingPromise = Promise.resolve(false);
+
+    if (requesterId && requesterId !== userId.toString()) {
+        // We can start checking follow status immediately
+        followStatusPromise = Follow.getFollowStatus(requesterId, userId);
+        isFollowingPromise = Follow.isFollowing(requesterId, userId); // Actually getFollowStatus might be enough if it returns 'active'
+    }
+
+    const [user, followStatusRaw] = await Promise.all([
+        userPromise,
+        followStatusPromise
+    ]);
 
     if (!user) {
       throw new Error('User not found');
     }
 
+    // Determine isFollowing based on followStatus to avoid redundant DB call if possible, 
+    // or use the specific isFollowing result if logic differs (like privacy handling)
+    // The original code used both Follow.isFollowing and Follow.getFollowStatus in different blocks.
+    // Let's stick to the logic: if private, check isFollowing to decide visibility.
+    // If not private, we just need status.
+    
+    // Simplification: We need 'isFollowing' boolean for private check AND 'followStatus' string for response.
+    // Follow.getFollowStatus returns 'active', 'pending', 'none'.
+    // So isFollowing === (followStatus === 'active').
+    
+    const followStatus = followStatusRaw;
+    const isFollowing = followStatus === 'active';
+
     if (requesterId && requesterId !== userId.toString()) {
       if (user.privacy?.profileVisibility === 'private') {
-        const isFollowing = await Follow.isFollowing(requesterId, userId);
         if (!isFollowing) {
           return {
             _id: user._id,
@@ -122,13 +147,6 @@ class UserService {
           };
         }
       }
-    }
-
-    let isFollowing = false;
-    let followStatus = 'none';
-    if (requesterId && requesterId !== userId.toString()) {
-      followStatus = await Follow.getFollowStatus(requesterId, userId);
-      isFollowing = followStatus === 'active';
     }
 
     return {
@@ -398,12 +416,20 @@ class UserService {
       User.countDocuments(searchQuery),
     ]);
 
-    const usersWithStatus = await Promise.all(
-      users.map(async user => ({
-        ...user,
-        isFollowing: await Follow.isFollowing(currentUserId, user._id),
-      }))
-    );
+    // Batch fetch follow status
+    const userIds = users.map(u => u._id);
+    const followingList = await Follow.find({
+      follower: currentUserId,
+      following: { $in: userIds },
+      status: 'active'
+    }).select('following').lean();
+
+    const followingSet = new Set(followingList.map(f => f.following.toString()));
+
+    const usersWithStatus = users.map(user => ({
+      ...user,
+      isFollowing: followingSet.has(user._id.toString())
+    }));
 
     return { users: usersWithStatus, total };
   }

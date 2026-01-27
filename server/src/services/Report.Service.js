@@ -531,22 +531,20 @@ class ReportService {
    * @returns {Promise<Array<{reportId: string, success: boolean, error?: string}>>} Processing results
    */
   static async bulkResolve(reportIds, adminId, decision, actionTaken = '') {
-    const results = [];
-
-    for (const reportId of reportIds) {
+    const promises = reportIds.map(async (reportId) => {
       try {
-        const report = await this.resolveReport(reportId, adminId, {
+        await this.resolveReport(reportId, adminId, {
           decision,
           actionTaken,
           notes: 'Bulk action',
         });
-        results.push({ reportId, success: true });
+        return { reportId, success: true };
       } catch (error) {
-        results.push({ reportId, success: false, error: error.message });
+        return { reportId, success: false, error: error.message };
       }
-    }
+    });
 
-    return results;
+    return Promise.all(promises);
   }
 }
 
