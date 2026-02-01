@@ -98,7 +98,7 @@ router.post(
 
 
 /* GET /sessions - Get all active login sessions */
-router.get('/sessions', AuthController.GetSessions);
+router.get('/sessions', AuthController.GetActiveSessions);
 
 /* DELETE /sessions/:sessionId - Revoke a specific session */
 router.delete(
