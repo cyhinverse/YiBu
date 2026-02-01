@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -9,6 +9,7 @@ import {
 import { X, Loader2, MapPin, Search } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { reverseGeocode, searchLocation } from '@/api/nominatim';
 
 // Fix for default marker icon in Leaflet with Webpack/Vite
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -22,6 +23,36 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const formatAddressFromReverse = data => {
+  const lat = parseFloat(data?.lat);
+  const lon = parseFloat(data?.lon);
+
+  if (!data?.address) {
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    }
+    return '';
+  }
+
+  const parts = [
+    data.address.house_number,
+    data.address.road || data.address.pedestrian || data.address.street,
+    data.address.quarter ||
+      data.address.neighbourhood ||
+      data.address.suburb ||
+      data.address.residential,
+    data.address.city_district || data.address.district || data.address.county,
+    data.address.city ||
+      data.address.town ||
+      data.address.village ||
+      data.address.hamlet,
+    data.address.state || data.address.province,
+    data.address.country,
+  ].filter(Boolean);
+
+  return [...new Set(parts)].join(', ');
+};
 
 // Component to handle map center updates
 const RecenterMap = ({ center, zoom }) => {
@@ -37,54 +68,14 @@ const RecenterMap = ({ center, zoom }) => {
 const LocationMarker = ({
   position,
   setPosition,
-  setAddress,
-  setIsLoading,
+  onPickLatLng,
 }) => {
   useMapEvents({
     click(e) {
       setPosition(e.latlng);
-      fetchAddress(e.latlng.lat, e.latlng.lng);
+      onPickLatLng(e.latlng);
     },
   });
-
-  const fetchAddress = async (lat, lng) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`
-      );
-      const data = await response.json();
-      if (data && data.address) {
-        // Construct a readable address
-        const parts = [
-          data.address.house_number,
-          data.address.road || data.address.pedestrian || data.address.street,
-          data.address.quarter ||
-            data.address.neighbourhood ||
-            data.address.suburb ||
-            data.address.residential,
-          data.address.city_district ||
-            data.address.district ||
-            data.address.county,
-          data.address.city ||
-            data.address.town ||
-            data.address.village ||
-            data.address.hamlet,
-          data.address.state || data.address.province,
-          data.address.country,
-        ].filter(Boolean);
-        // Remove duplicates and join
-        setAddress([...new Set(parts)].join(', '));
-      } else {
-        setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      }
-    } catch (error) {
-      console.error('Error fetching address:', error);
-      setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return position === null ? null : <Marker position={position} />;
 };
@@ -105,10 +96,21 @@ const LocationPickerModal = ({
   const [isSearching, setIsSearching] = useState(false);
   const [mapCenter, setMapCenter] = useState([21.0285, 105.8542]); // Default Hanoi
 
+  const reverseAbortRef = useRef(null);
+  const searchAbortRef = useRef(null);
+  const reverseReqIdRef = useRef(0);
+  const searchReqIdRef = useRef(0);
+
   // Default to Hanoi, Vietnam if no location
   // const defaultCenter = [21.0285, 105.8542];
 
   useEffect(() => {
+    if (!isOpen) {
+      reverseAbortRef.current?.abort();
+      searchAbortRef.current?.abort();
+      return;
+    }
+
     if (isOpen) {
       // For now, we start fresh or at default, but keep the initial text address if present
       setPosition(null);
@@ -118,27 +120,65 @@ const LocationPickerModal = ({
     }
   }, [isOpen, initialLocation]);
 
+  const fetchAddressByLatLng = useCallback(async latlng => {
+    const lat = latlng?.lat;
+    const lon = latlng?.lng;
+
+    reverseAbortRef.current?.abort();
+    const ac = new AbortController();
+    reverseAbortRef.current = ac;
+
+    const reqId = ++reverseReqIdRef.current;
+
+    setIsLoading(true);
+    try {
+      const data = await reverseGeocode({ lat, lon }, { signal: ac.signal });
+      if (reqId !== reverseReqIdRef.current) return;
+
+      const pretty = formatAddressFromReverse(data);
+      setAddress(pretty || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Error fetching address:', error);
+      }
+
+      if (reqId === reverseReqIdRef.current) {
+        setAddress(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      }
+    } finally {
+      if (reqId === reverseReqIdRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
   const handleSearch = async e => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
+    searchAbortRef.current?.abort();
+    const ac = new AbortController();
+    searchAbortRef.current = ac;
+
+    const reqId = ++searchReqIdRef.current;
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          searchQuery
-        )}&addressdetails=1&limit=5`
-      );
-      const data = await response.json();
-      setSearchResults(data);
+      const data = await searchLocation(searchQuery, { signal: ac.signal });
+      if (reqId !== searchReqIdRef.current) return;
+      setSearchResults(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error searching location:', error);
+      if (error?.name !== 'AbortError') {
+        console.error('Error searching location:', error);
+      }
     } finally {
-      setIsSearching(false);
+      if (reqId === searchReqIdRef.current) {
+        setIsSearching(false);
+      }
     }
   };
 
   const handleSelectSearchResult = result => {
+    searchAbortRef.current?.abort();
     const lat = parseFloat(result.lat);
     const lon = parseFloat(result.lon);
     const newPos = { lat, lng: lon };
@@ -224,8 +264,7 @@ const LocationPickerModal = ({
           <MapContainer
             center={mapCenter}
             zoom={12}
-            style={{ height: '100%', width: '100%' }}
-            className="z-0"
+            className="z-0 h-full w-full"
           >
             <RecenterMap center={mapCenter} />
             <TileLayer
@@ -235,8 +274,7 @@ const LocationPickerModal = ({
             <LocationMarker
               position={position}
               setPosition={setPosition}
-              setAddress={setAddress}
-              setIsLoading={setIsLoading}
+              onPickLatLng={fetchAddressByLatLng}
             />
           </MapContainer>
 
