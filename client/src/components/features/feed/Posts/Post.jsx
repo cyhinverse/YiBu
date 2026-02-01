@@ -30,7 +30,7 @@ import {
   useDeletePost,
   useSharePost,
 } from '@/hooks/usePostsQuery';
-import UserProfilePreview from '../../../Common/UserProfilePreview';
+import UserProfilePreview from '@/components/Common/UserProfilePreview';
 import { formatCount, formatPostTime as formatTime } from '@/utils/postUtils';
 
 // Lazy load modals

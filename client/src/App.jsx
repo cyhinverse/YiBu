@@ -1,6 +1,5 @@
-import { Outlet, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { Suspense, lazy, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSettings } from './hooks/useUserQuery';
 import { SocketProvider } from './contexts/SocketContext';
@@ -9,6 +8,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './pages/AuthPage/ProtectedRoute';
 import AdminRoute from './pages/AuthPage/AdminRoute';
 import { resetAuthState } from './redux/slices/AuthSlice';
+import AppToaster from './components/Common/AppToaster';
 
 // Lazy Load Pages & Components
 const UserLayout = lazy(() => import('./pages/UserPage/UserLayout'));
@@ -168,33 +168,7 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      <Outlet />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          className: 'border-0',
-          style: {
-            background: '#fff',
-            color: '#333',
-            border: 'none',
-          },
-          success: {
-            style: {
-              background: '#ECFDF5',
-              color: '#065F46',
-              border: 'none',
-            },
-          },
-          error: {
-            style: {
-              background: '#FEF2F2',
-              color: '#991B1B',
-              border: 'none',
-            },
-          },
-        }}
-      />
+      <AppToaster />
     </>
   );
 };
