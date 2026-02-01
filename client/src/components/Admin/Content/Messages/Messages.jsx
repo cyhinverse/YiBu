@@ -6,7 +6,7 @@ import {
   useSendMessage,
   useMarkAsRead,
 } from '@/hooks/useMessageQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -55,7 +55,7 @@ const Messages = () => {
       });
       setMessageInput('');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
+      notify.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
     }
   };
 
@@ -90,3 +90,4 @@ const Messages = () => {
 };
 
 export default Messages;
+

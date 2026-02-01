@@ -11,7 +11,7 @@ import {
   Monitor,
 } from 'lucide-react';
 import { logout, logoutAll, updatePassword } from '@/redux/actions/authActions';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const AccountSettings = () => {
   const dispatch = useDispatch();
@@ -39,7 +39,7 @@ const AccountSettings = () => {
   const handleLogout = async () => {
     const result = await dispatch(logout());
     if (logout.fulfilled.match(result)) {
-      toast.success('Đăng xuất thành công');
+      notify.success('Đăng xuất thành công');
       navigate('/auth/login');
     }
   };
@@ -47,22 +47,22 @@ const AccountSettings = () => {
   const handleLogoutAll = async () => {
     const result = await dispatch(logoutAll());
     if (logoutAll.fulfilled.match(result)) {
-      toast.success('Đã đăng xuất khỏi tất cả thiết bị');
+      notify.success('Đã đăng xuất khỏi tất cả thiết bị');
       navigate('/auth/login');
     }
   };
 
   const handleUpdatePassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      notify.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
+      notify.error('Mật khẩu mới phải có ít nhất 6 ký tự');
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Mật khẩu xác nhận không khớp');
+      notify.error('Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -76,7 +76,7 @@ const AccountSettings = () => {
     setLoading(false);
 
     if (updatePassword.fulfilled.match(result)) {
-      toast.success('Đổi mật khẩu thành công. Vui lòng đăng nhập lại');
+      notify.success('Đổi mật khẩu thành công. Vui lòng đăng nhập lại');
       setShowPasswordModal(false);
       setPasswordData({
         currentPassword: '',
@@ -408,3 +408,4 @@ const AccountSettings = () => {
 };
 
 export default AccountSettings;
+

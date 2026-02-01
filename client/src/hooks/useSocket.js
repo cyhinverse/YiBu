@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
-import { toast } from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { SOCKET_URL, MAX_RECONNECT_ATTEMPTS } from '@/constants/socket';
 
 /**
@@ -68,7 +68,7 @@ const useSocket = userId => {
       setIsConnected(false);
       reconnectAttempts.current++;
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
-        toast.error('Unable to connect to chat server');
+        notify.error('Unable to connect to chat server');
       }
     });
 
@@ -230,7 +230,7 @@ const registerMessageHandlers = (socket, userId, queryClient) => {
     if (!isMine) {
       const senderName =
         message.sender?.firstName || message.sender?.name || 'User';
-      toast.success(`New message from ${senderName}`);
+      notify.success(`New message from ${senderName}`);
     }
   });
 
@@ -263,7 +263,7 @@ const registerNotificationHandlers = (socket, queryClient) => {
     if (notification.type === 'like' && notification.post?.caption) {
       msg += ` - "${notification.post.caption.substring(0, 20)}..."`;
     }
-    toast.success(msg, { icon: '🔔' });
+    notify.success(msg, { icon: '🔔' });
   };
 
   socket.on('notification:new', handleNotification);
@@ -334,3 +334,4 @@ const registerCommentHandlers = (socket, currentUserId, queryClient) => {
 };
 
 export default useSocket;
+

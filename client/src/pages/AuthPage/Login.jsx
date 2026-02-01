@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { login, googleAuth } from '@/redux/actions/authActions';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -59,9 +59,9 @@ const Login = () => {
         if (response.credential) {
           const result = await dispatch(googleAuth(response.credential));
           if (googleAuth.fulfilled.match(result)) {
-            toast.success('Đăng nhập Google thành công!');
+            notify.success('Đăng nhập Google thành công!');
           } else {
-            toast.error('Đăng nhập Google thất bại');
+            notify.error('Đăng nhập Google thất bại');
           }
         }
       },
@@ -107,7 +107,7 @@ const Login = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      notify.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -118,19 +118,19 @@ const Login = () => {
 
     const result = await dispatch(login(payload));
     if (login.fulfilled.match(result)) {
-      toast.success('Đăng nhập thành công!');
+      notify.success('Đăng nhập thành công!');
       return;
     }
 
     const errorPayload = result.payload || {};
     if (errorPayload?.errorCode === '2FA_REQUIRED') {
       setRequiresTwoFactor(true);
-      toast('Vui lòng nhập mã 2FA');
+      notify('Vui lòng nhập mã 2FA');
       return;
     }
 
     if (errorPayload?.errorCode === '2FA_INVALID') {
-      toast.error('Mã 2FA không hợp lệ');
+      notify.error('Mã 2FA không hợp lệ');
       return;
     }
   };
@@ -308,3 +308,4 @@ const Login = () => {
 };
 
 export default Login;
+

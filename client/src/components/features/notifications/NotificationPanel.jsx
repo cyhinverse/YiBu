@@ -14,7 +14,7 @@ import {
   useDeleteNotification,
   useDeleteAllNotifications,
 } from '@/hooks/useNotificationQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useInView } from 'react-intersection-observer';
 import {
   formatNotificationTime as formatTime,
@@ -68,7 +68,7 @@ const NotificationPanel = () => {
   // Handlers
   const handleMarkAllAsRead = () => {
     markAllAsRead(undefined, {
-      onError: () => toast.error('Failed to mark all as read'),
+      onError: () => notify.error('Failed to mark all as read'),
     });
   };
 
@@ -79,17 +79,17 @@ const NotificationPanel = () => {
   const handleDelete = (e, id) => {
     e.stopPropagation();
     deleteNotification(id, {
-      onError: () => toast.error('Failed to delete notification'),
+      onError: () => notify.error('Failed to delete notification'),
     });
   };
 
   const handleDeleteAll = async () => {
     try {
       await deleteAllNotifications();
-      toast.success('Đã xóa tất cả thông báo');
+      notify.success('Đã xóa tất cả thông báo');
       setShowDeleteAllConfirm(false);
     } catch (error) {
-      toast.error('Xóa thông báo thất bại', error.message);
+      notify.error('Xóa thông báo thất bại', error.message);
     }
   };
 
@@ -305,3 +305,4 @@ const NotificationPanel = () => {
 };
 
 export default NotificationPanel;
+

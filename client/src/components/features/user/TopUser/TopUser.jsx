@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { UserPlus, Check, Loader2 } from 'lucide-react';
 import { useFollowUser, useUnfollowUser } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const TopUser = ({ users = [], loading = false }) => {
   const { user: currentUser } = useSelector(state => state.auth);
@@ -29,14 +29,14 @@ const TopUser = ({ users = [], loading = false }) => {
           next.delete(userId);
           return next;
         });
-        toast.success('Đã bỏ theo dõi');
+        notify.success('Đã bỏ theo dõi');
       } else {
         await followUser(userId);
         setFollowingIds(prev => new Set(prev).add(userId));
-        toast.success('Đã theo dõi');
+        notify.success('Đã theo dõi');
       }
     } catch {
-      toast.error('Có lỗi xảy ra');
+      notify.error('Có lỗi xảy ra');
     } finally {
       setLoadingIds(prev => {
         const next = new Set(prev);
@@ -138,3 +138,4 @@ const TopUser = ({ users = [], loading = false }) => {
 };
 
 export default TopUser;
+

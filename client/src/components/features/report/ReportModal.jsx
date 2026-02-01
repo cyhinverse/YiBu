@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, AlertTriangle, Flag, Loader2, Check } from 'lucide-react';
 import { useSubmitReport } from '@/hooks/useReportQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { REPORT_REASONS } from '@/constants/report';
 
 const ReportModal = ({
@@ -17,7 +17,7 @@ const ReportModal = ({
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      toast.error('Please select a reason for reporting');
+      notify.error('Please select a reason for reporting');
       return;
     }
 
@@ -35,14 +35,14 @@ const ReportModal = ({
       });
 
       setSubmitted(true);
-      toast.success('Report submitted successfully');
+      notify.success('Report submitted successfully');
 
       // Close modal after showing success
       setTimeout(() => {
         handleClose();
       }, 2000);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Failed to submit report');
+      notify.error(error?.response?.data?.message || 'Failed to submit report');
     }
   };
 
@@ -220,3 +220,4 @@ const ReportModal = ({
 };
 
 export default ReportModal;
+

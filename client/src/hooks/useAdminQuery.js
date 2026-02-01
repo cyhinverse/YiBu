@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { ADMIN_API, REPORT_API } from '@/axios/apiEndpoint';
-import { toast } from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { extractData } from '@/utils/apiUtils';
 
 /**
@@ -162,13 +162,13 @@ export const useBanUser = () => {
       return extractData(response);
     },
     onSuccess: (_, { userId }) => {
-      toast.success('User banned successfully');
+      notify.success('User banned successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'dashboard']);
       queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to ban user');
+      notify.error(error.response?.data?.message || 'Failed to ban user');
     },
   });
 };
@@ -185,12 +185,12 @@ export const useUnbanUser = () => {
       return { userId };
     },
     onSuccess: (_, { userId }) => {
-      toast.success('User unbanned successfully');
+      notify.success('User unbanned successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to unban user');
+      notify.error(error.response?.data?.message || 'Failed to unban user');
     },
   });
 };
@@ -211,12 +211,12 @@ export const useSuspendUser = () => {
       return extractData(response);
     },
     onSuccess: (_, { userId }) => {
-      toast.success('Account suspended successfully');
+      notify.success('Account suspended successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to suspend account');
+      notify.error(error.response?.data?.message || 'Failed to suspend account');
     },
   });
 };
@@ -236,12 +236,12 @@ export const useWarnUser = () => {
       return extractData(response);
     },
     onSuccess: (_, { userId }) => {
-      toast.success('Warning sent successfully');
+      notify.success('Warning sent successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to send warning');
+      notify.error(error.response?.data?.message || 'Failed to send warning');
     },
   });
 };
@@ -258,12 +258,12 @@ export const useDeleteUser = () => {
       return userId;
     },
     onSuccess: () => {
-      toast.success('User deleted successfully');
+      notify.success('User deleted successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'dashboard']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
+      notify.error(error.response?.data?.message || 'Failed to delete user');
     },
   });
 };
@@ -280,12 +280,12 @@ export const useUpdateUser = () => {
       return extractData(response);
     },
     onSuccess: (_, { userId }) => {
-      toast.success('User updated successfully');
+      notify.success('User updated successfully');
       queryClient.invalidateQueries(['admin', 'users']);
       queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to update user');
+      notify.error(error.response?.data?.message || 'Failed to update user');
     },
   });
 };
@@ -397,12 +397,12 @@ export const useDeletePost = () => {
       return postId;
     },
     onSuccess: () => {
-      toast.success('Post deleted successfully');
+      notify.success('Post deleted successfully');
       queryClient.invalidateQueries(['admin', 'posts']);
       queryClient.invalidateQueries(['admin', 'dashboard']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to delete post');
+      notify.error(error.response?.data?.message || 'Failed to delete post');
     },
   });
 };
@@ -422,11 +422,11 @@ export const useModeratePost = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      toast.success('Post moderated successfully');
+      notify.success('Post moderated successfully');
       queryClient.invalidateQueries(['admin', 'posts']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to moderate post');
+      notify.error(error.response?.data?.message || 'Failed to moderate post');
     },
   });
 };
@@ -443,11 +443,11 @@ export const useApprovePost = () => {
       return postId;
     },
     onSuccess: () => {
-      toast.success('Post approved');
+      notify.success('Post approved');
       queryClient.invalidateQueries(['admin', 'posts']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to approve post');
+      notify.error(error.response?.data?.message || 'Failed to approve post');
     },
   });
 };
@@ -523,11 +523,11 @@ export const useResolveReport = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      toast.success('Report resolved');
+      notify.success('Report resolved');
       queryClient.invalidateQueries(['admin', 'reports']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to resolve report');
+      notify.error(error.response?.data?.message || 'Failed to resolve report');
     },
   });
 };
@@ -564,11 +564,11 @@ export const useStartReportReview = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      toast.success('Started reviewing report');
+      notify.success('Started reviewing report');
       queryClient.invalidateQueries(['admin', 'reports']);
     },
     onError: error => {
-      toast.error(
+      notify.error(
         error.response?.data?.message || 'Failed to start report review'
       );
     },
@@ -590,11 +590,11 @@ export const useUpdateReportStatus = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      toast.success('Report status updated successfully');
+      notify.success('Report status updated successfully');
       queryClient.invalidateQueries(['admin', 'reports']);
     },
     onError: error => {
-      toast.error(
+      notify.error(
         error.response?.data?.message || 'Failed to update report status'
       );
     },
@@ -642,10 +642,10 @@ export const useBroadcastNotification = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      toast.success('Notification sent successfully');
+      notify.success('Notification sent successfully');
     },
     onError: error => {
-      toast.error(
+      notify.error(
         error.response?.data?.message || 'Failed to broadcast notification'
       );
     },
@@ -697,7 +697,7 @@ export const useModerateComment = () => {
       queryClient.invalidateQueries(['admin', 'comments']);
     },
     onError: error => {
-      toast.error(
+      notify.error(
         error.response?.data?.message || 'Failed to moderate comment'
       );
     },
@@ -719,7 +719,8 @@ export const useDeleteCommentAdmin = () => {
       queryClient.invalidateQueries(['admin', 'comments']);
     },
     onError: error => {
-      toast.error(error.response?.data?.message || 'Failed to delete comment');
+      notify.error(error.response?.data?.message || 'Failed to delete comment');
     },
   });
 };
+

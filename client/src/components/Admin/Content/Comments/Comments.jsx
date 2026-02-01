@@ -6,7 +6,7 @@ import {
   useModerateComment,
   useDeleteCommentAdmin,
 } from '@/hooks/useAdminQuery';
-import { toast } from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 import CommentsTable from './CommentsTable';
 import { DeleteCommentModal, CommentDetailModal } from './CommentActionModal';
@@ -61,10 +61,10 @@ export default function Comments() {
         onSuccess: () => {
           setShowDeleteModal(false);
           setCommentToDelete(null);
-          toast.success('Đã xóa bình luận thành công');
+          notify.success('Đã xóa bình luận thành công');
         },
         onError: () => {
-          toast.error('Có lỗi xảy ra khi xóa bình luận');
+          notify.error('Có lỗi xảy ra khi xóa bình luận');
         },
       }
     );
@@ -201,3 +201,4 @@ export default function Comments() {
     </div>
   );
 }
+

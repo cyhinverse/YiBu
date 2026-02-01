@@ -18,7 +18,7 @@ import {
   Video,
   Info,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   useConversations,
   useConversationById,
@@ -67,7 +67,7 @@ const MessageBubble = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
-    toast.success('Đã sao chép tin nhắn');
+    notify.success('Đã sao chép tin nhắn');
     setShowMenu(false);
   };
 
@@ -383,7 +383,7 @@ const MessageDetail = () => {
       setMessageText('');
       setSelectedImages([]);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
+      notify.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
     }
   };
 
@@ -393,9 +393,9 @@ const MessageDetail = () => {
         conversationId,
         messageId: mid,
       });
-      toast.success('Đã xóa tin nhắn');
+      notify.success('Đã xóa tin nhắn');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể xóa tin nhắn');
+      notify.error(err?.response?.data?.message || 'Không thể xóa tin nhắn');
     }
   };
 
@@ -406,9 +406,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         data: { name },
       });
-      toast.success('Đã đổi tên nhóm');
+      notify.success('Đã đổi tên nhóm');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+      notify.error(err?.response?.data?.message || 'Cập nhật thất bại');
     } finally {
       setIsUpdatingGroup(false);
     }
@@ -420,9 +420,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         memberIds: [uid],
       });
-      toast.success('Đã thêm thành viên');
+      notify.success('Đã thêm thành viên');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Thêm thành viên thất bại');
+      notify.error(err?.response?.data?.message || 'Thêm thành viên thất bại');
     }
   };
 
@@ -432,9 +432,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         userId: uid,
       });
-      toast.success('Đã mời thành viên rời nhóm');
+      notify.success('Đã mời thành viên rời nhóm');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Thực hiện thất bại');
+      notify.error(err?.response?.data?.message || 'Thực hiện thất bại');
     }
   };
 
@@ -444,7 +444,7 @@ const MessageDetail = () => {
         await leaveGroupMutation.mutateAsync(conversationId);
         navigate('/messages');
       } catch (err) {
-        toast.error(err?.response?.data?.message || 'Rời nhóm thất bại');
+        notify.error(err?.response?.data?.message || 'Rời nhóm thất bại');
       }
     }
   };
@@ -642,7 +642,7 @@ const MessageDetail = () => {
 
               const remainingSlots = maxMessageFiles - selectedImages.length;
               if (remainingSlots <= 0) {
-                toast.error(`Chỉ được chọn tối đa ${maxMessageFiles} tệp`);
+                notify.error(`Chỉ được chọn tối đa ${maxMessageFiles} tệp`);
                 e.target.value = '';
                 return;
               }
@@ -650,13 +650,13 @@ const MessageDetail = () => {
               const acceptedFiles = files.slice(0, remainingSlots).filter(file => {
                 const isValidSize = file.size <= maxMessageSizeMB * 1024 * 1024;
                 if (!isValidSize) {
-                  toast.error(`Tệp ${file.name} vượt quá ${maxMessageSizeMB}MB`);
+                  notify.error(`Tệp ${file.name} vượt quá ${maxMessageSizeMB}MB`);
                 }
                 return isValidSize;
               });
 
               if (acceptedFiles.length < files.length) {
-                toast.error('Một số tệp đã bị bỏ qua');
+                notify.error('Một số tệp đã bị bỏ qua');
               }
 
               setSelectedImages(prev => [...prev, ...acceptedFiles]);
@@ -739,3 +739,4 @@ const MessageDetail = () => {
 };
 
 export default MessageDetail;
+

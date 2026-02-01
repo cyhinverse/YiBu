@@ -22,7 +22,7 @@ import {
   useDeleteNotification,
   useDeleteAllNotifications,
 } from '@/hooks/useNotificationQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const Notifications = () => {
   const [filterType, setFilterType] = useState('all');
@@ -54,17 +54,17 @@ const Notifications = () => {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead(undefined, {
-      onError: () => toast.error('Không thể đánh dấu tất cả là đã đọc'),
-      onSuccess: () => toast.success('Đã đánh dấu tất cả là đã đọc'),
+      onError: () => notify.error('Không thể đánh dấu tất cả là đã đọc'),
+      onSuccess: () => notify.success('Đã đánh dấu tất cả là đã đọc'),
     });
   };
 
   const handleDelete = async id => {
     try {
       await deleteNotification(id);
-      toast.success('Đã xóa thông báo');
+      notify.success('Đã xóa thông báo');
     } catch {
-      toast.error('Không thể xóa thông báo');
+      notify.error('Không thể xóa thông báo');
     }
   };
 
@@ -72,16 +72,16 @@ const Notifications = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tất cả thông báo không?')) {
       try {
         await deleteAllNotifications();
-        toast.success('Đã xóa tất cả thông báo');
+        notify.success('Đã xóa tất cả thông báo');
       } catch {
-        toast.error('Không thể xóa tất cả thông báo');
+        notify.error('Không thể xóa tất cả thông báo');
       }
     }
   };
 
   const refreshType = () => {
     refetch();
-    toast.success('Đã làm mới thông báo');
+    notify.success('Đã làm mới thông báo');
   };
 
   const getIcon = type => {
@@ -315,3 +315,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+

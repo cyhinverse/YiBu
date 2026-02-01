@@ -13,7 +13,7 @@ import {
   Image,
   Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useTrendingHashtags, useExploreFeed } from '@/hooks/usePostsQuery';
 import {
   useSuggestions,
@@ -65,13 +65,13 @@ const Explore = () => {
     try {
       if (isFollowed) {
         await unfollowMutation.mutateAsync(user._id);
-        toast.success('Đã bỏ theo dõi');
+        notify.success('Đã bỏ theo dõi');
       } else {
         await followMutation.mutateAsync(user._id);
-        toast.success('Đã theo dõi');
+        notify.success('Đã theo dõi');
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+      notify.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
   };
 
@@ -339,3 +339,4 @@ const Explore = () => {
 };
 
 export default Explore;
+

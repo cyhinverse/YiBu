@@ -10,7 +10,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   enable2FA,
   verify2FA,
@@ -62,10 +62,10 @@ const SecuritySettings = () => {
         type: 'security',
         settings: newSecurity,
       });
-      toast.success('Đã lưu cài đặt bảo mật');
+      notify.success('Đã lưu cài đặt bảo mật');
     } catch (error) {
       setSecurity(security); // Revert on failure
-      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
+      notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -77,25 +77,25 @@ const SecuritySettings = () => {
       setQrCode(qrCodeData);
       setShow2FAModal(true);
     } catch (error) {
-      toast.error(error || 'Không thể bật 2FA');
+      notify.error(error || 'Không thể bật 2FA');
     }
   };
 
   const handleVerify2FA = async () => {
     if (!verifyCode || verifyCode.length !== 6) {
-      toast.error('Vui lòng nhập mã 6 số');
+      notify.error('Vui lòng nhập mã 6 số');
       return;
     }
 
     setVerifying(true);
     try {
       await dispatch(verify2FA({ token: verifyCode })).unwrap();
-      toast.success('Đã bật xác thực hai yếu tố');
+      notify.success('Đã bật xác thực hai yếu tố');
       setSecurity(prev => ({ ...prev, twoFactorEnabled: true }));
       setShow2FAModal(false);
       setVerifyCode('');
     } catch (error) {
-      toast.error(error || 'Mã xác thực không hợp lệ');
+      notify.error(error || 'Mã xác thực không hợp lệ');
     } finally {
       setVerifying(false);
     }
@@ -106,16 +106,16 @@ const SecuritySettings = () => {
 
     const password = window.prompt('Nhập mật khẩu để tắt 2FA');
     if (!password) {
-      toast.error('Mật khẩu là bắt buộc');
+      notify.error('Mật khẩu là bắt buộc');
       return;
     }
 
     try {
       await dispatch(disable2FA({ password })).unwrap();
-      toast.success('Đã tắt xác thực hai yếu tố');
+      notify.success('Đã tắt xác thực hai yếu tố');
       setSecurity(prev => ({ ...prev, twoFactorEnabled: false }));
     } catch (error) {
-      toast.error(error || 'Không thể tắt 2FA');
+      notify.error(error || 'Không thể tắt 2FA');
     }
   };
 
@@ -125,9 +125,9 @@ const SecuritySettings = () => {
 
     try {
       await dispatch(revokeSession(sessionId)).unwrap();
-      toast.success('Đã đăng xuất phiên');
+      notify.success('Đã đăng xuất phiên');
     } catch (error) {
-      toast.error(error || 'Không thể đăng xuất phiên');
+      notify.error(error || 'Không thể đăng xuất phiên');
     }
   };
 
@@ -388,3 +388,4 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
+

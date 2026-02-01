@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
 import Post from '@/components/features/feed/Posts/Post';
 import { useSavedPosts, useToggleSave } from '@/hooks/usePostsQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const SavePosts = () => {
@@ -28,12 +28,12 @@ const SavePosts = () => {
     if (!selectedPostId) return;
     try {
       await toggleSaveMutation.mutateAsync(selectedPostId);
-      toast.success('Đã bỏ lưu bài viết');
+      notify.success('Đã bỏ lưu bài viết');
       setShowDeleteModal(false);
       setSelectedPostId(null);
     } catch (error) {
       console.error('Failed to unsave post:', error);
-      toast.error('Không thể bỏ lưu bài viết');
+      notify.error('Không thể bỏ lưu bài viết');
     }
   };
 
@@ -200,3 +200,4 @@ const SavePosts = () => {
 };
 
 export default SavePosts;
+

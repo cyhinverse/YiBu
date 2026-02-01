@@ -9,7 +9,7 @@ import {
 } from '@/hooks/useNotificationQuery';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   getNotificationIcon,
   getNotificationContent,
@@ -51,7 +51,7 @@ const Notifications = () => {
 
   const handleMarkAllRead = () => {
     markAllAsRead(undefined, {
-      onError: () => toast.error('Không thể đánh dấu tất cả là đã đọc'),
+      onError: () => notify.error('Không thể đánh dấu tất cả là đã đọc'),
     });
   };
 
@@ -232,3 +232,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+

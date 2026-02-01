@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { resetPassword } from "@/redux/actions/authActions";
 import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { notify } from '@/utils/notify';
 
 const ResetPassword = () => {
   const dispatch = useDispatch();
@@ -32,7 +32,7 @@ const ResetPassword = () => {
 
   useEffect(() => {
     if (!token) {
-      toast.error("Link đặt lại mật khẩu không hợp lệ");
+      notify.error("Link đặt lại mật khẩu không hợp lệ");
       navigate("/auth/forgot-password");
     }
   }, [token, navigate]);
@@ -49,15 +49,15 @@ const ResetPassword = () => {
 
   const validateForm = () => {
     if (!formData.newPassword || !formData.confirmPassword) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+      notify.error("Vui lòng điền đầy đủ thông tin");
       return false;
     }
     if (formData.newPassword.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      notify.error("Mật khẩu phải có ít nhất 6 ký tự");
       return false;
     }
     if (formData.newPassword !== formData.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      notify.error("Mật khẩu xác nhận không khớp");
       return false;
     }
     return true;
@@ -72,7 +72,7 @@ const ResetPassword = () => {
     );
     if (resetPassword.fulfilled.match(result)) {
       setSuccess(true);
-      toast.success("Đặt lại mật khẩu thành công!");
+      notify.success("Đặt lại mật khẩu thành công!");
     }
   };
 
@@ -271,3 +271,5 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
+
+

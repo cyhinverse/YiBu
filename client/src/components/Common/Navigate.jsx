@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { logout } from '@/redux/actions/authActions';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useUnreadCount } from '@/hooks/useNotificationQuery';
 import { useUnreadMessagesCount } from '@/hooks/useMessageQuery';
 
@@ -82,7 +82,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   /* Handlers */
   const handleLogout = async () => {
     await dispatch(logout());
-    toast.success('Đăng xuất thành công');
+    notify.success('Đăng xuất thành công');
     navigate('/auth/login');
   };
 
@@ -309,3 +309,4 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
     </div>
   );
 }
+

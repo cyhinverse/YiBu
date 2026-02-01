@@ -30,7 +30,7 @@ import {
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
 import { useCreateConversation } from '@/hooks/useMessageQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { formatNumber } from '@/utils/numberUtils';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 const FollowList = lazy(() => import('../FollowList/FollowList'));
@@ -93,13 +93,13 @@ const Profile = () => {
     try {
       if (isFollowing) {
         await unfollowMutation.mutateAsync(profileId);
-        toast.success('Đã bỏ theo dõi');
+        notify.success('Đã bỏ theo dõi');
       } else {
         await followMutation.mutateAsync(profileId);
-        toast.success('Đã theo dõi');
+        notify.success('Đã theo dõi');
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+      notify.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
   }, [isFollowing, profileId, isOwnProfile, followMutation, unfollowMutation]);
 
@@ -124,7 +124,7 @@ const Profile = () => {
           state: { selectedUser: currentProfile, targetUserId: profileId },
         });
       } else {
-        toast.error(
+        notify.error(
           error?.response?.data?.message || 'Không thể tạo cuộc trò chuyện'
         );
       }
@@ -466,3 +466,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

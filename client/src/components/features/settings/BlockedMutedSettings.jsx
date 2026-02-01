@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UserX, VolumeX, Search, Ban } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   useBlockedUsers,
   useMutedUsers,
@@ -25,9 +25,9 @@ const BlockedMutedSettings = () => {
 
     try {
       await unblockMutation.mutateAsync(userId);
-      toast.success('Đã bỏ chặn người dùng');
+      notify.success('Đã bỏ chặn người dùng');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Không thể bỏ chặn');
+      notify.error(error?.response?.data?.message || 'Không thể bỏ chặn');
     }
   };
 
@@ -36,9 +36,9 @@ const BlockedMutedSettings = () => {
 
     try {
       await unmuteMutation.mutateAsync(userId);
-      toast.success('Đã bỏ ẩn người dùng');
+      notify.success('Đã bỏ ẩn người dùng');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Không thể bỏ ẩn');
+      notify.error(error?.response?.data?.message || 'Không thể bỏ ẩn');
     }
   };
 
@@ -218,3 +218,4 @@ const BlockedMutedSettings = () => {
 };
 
 export default BlockedMutedSettings;
+

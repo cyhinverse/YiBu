@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, MessageCircle, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
@@ -32,10 +32,10 @@ const PrivacySettings = () => {
         type: 'privacy',
         settings: newPrivacy,
       });
-      toast.success('Đã lưu cài đặt quyền riêng tư');
+      notify.success('Đã lưu cài đặt quyền riêng tư');
     } catch (error) {
       setPrivacy(privacy); // Revert on failure
-      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
+      notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -222,3 +222,4 @@ const PrivacySettings = () => {
 };
 
 export default PrivacySettings;
+

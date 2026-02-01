@@ -7,7 +7,7 @@ import {
   Loader2,
   Clock,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   useFollowRequests,
   useAcceptFollowRequest,
@@ -27,9 +27,9 @@ const FollowRequestsSettings = () => {
     setProcessingId(requestId);
     try {
       await acceptMutation.mutateAsync(requestId);
-      toast.success('Đã chấp nhận yêu cầu theo dõi');
+      notify.success('Đã chấp nhận yêu cầu theo dõi');
     } catch (error) {
-      toast.error(
+      notify.error(
         error?.response?.data?.message || 'Không thể chấp nhận yêu cầu'
       );
     } finally {
@@ -41,9 +41,9 @@ const FollowRequestsSettings = () => {
     setProcessingId(requestId);
     try {
       await rejectMutation.mutateAsync(requestId);
-      toast.success('Đã từ chối yêu cầu theo dõi');
+      notify.success('Đã từ chối yêu cầu theo dõi');
     } catch (error) {
-      toast.error(
+      notify.error(
         error?.response?.data?.message || 'Không thể từ chối yêu cầu'
       );
     } finally {
@@ -198,3 +198,4 @@ const FollowRequestsSettings = () => {
 };
 
 export default FollowRequestsSettings;
+

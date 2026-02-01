@@ -14,7 +14,7 @@ import {
 import { register, googleAuth } from '@/redux/actions/authActions';
 import { clearError } from '@/redux/slices/AuthSlice';
 import { useRef, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const Register = () => {
   const dispatch = useDispatch();
@@ -64,9 +64,9 @@ const Register = () => {
         if (response.credential) {
           const result = await dispatch(googleAuth(response.credential));
           if (googleAuth.fulfilled.match(result)) {
-            toast.success('Đăng ký với Google thành công!');
+            notify.success('Đăng ký với Google thành công!');
           } else {
-            toast.error('Đăng ký với Google thất bại');
+            notify.error('Đăng ký với Google thất bại');
           }
         }
       },
@@ -116,15 +116,15 @@ const Register = () => {
       !formData.email ||
       !formData.password
     ) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      notify.error('Vui lòng điền đầy đủ thông tin');
       return false;
     }
     if (formData.password.length < 6) {
-      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+      notify.error('Mật khẩu phải có ít nhất 6 ký tự');
       return false;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      toast.error('Username chỉ được chứa chữ cái, số và dấu gạch dưới');
+      notify.error('Username chỉ được chứa chữ cái, số và dấu gạch dưới');
       return false;
     }
     return true;
@@ -136,7 +136,7 @@ const Register = () => {
 
     const result = await dispatch(register(formData));
     if (register.fulfilled.match(result)) {
-      toast.success('Đăng ký thành công!');
+      notify.success('Đăng ký thành công!');
       navigate('/');
     }
   };
@@ -346,3 +346,4 @@ const Register = () => {
 };
 
 export default Register;
+

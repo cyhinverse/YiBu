@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Sparkles, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 import { requestPasswordReset } from "@/redux/actions/authActions";
 import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { notify } from '@/utils/notify';
 
 const ForgotPassword = () => {
   const dispatch = useDispatch();
@@ -22,13 +22,13 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Vui lòng nhập email");
+      notify.error("Vui lòng nhập email");
       return;
     }
     const result = await dispatch(requestPasswordReset(email));
     if (requestPasswordReset.fulfilled.match(result)) {
       setSent(true);
-      toast.success("Đã gửi link đặt lại mật khẩu!");
+      notify.success("Đã gửi link đặt lại mật khẩu!");
     }
   };
 
@@ -156,3 +156,5 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
+
+

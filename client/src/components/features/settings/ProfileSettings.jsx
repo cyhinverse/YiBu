@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { useProfile, useUpdateProfile } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { Suspense, lazy } from 'react';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
@@ -146,7 +146,7 @@ const ProfileSettings = () => {
 
       updateProfileMutation(data, {
         onSuccess: () => {
-          toast.success('Cập nhật thành công!');
+          notify.success('Cập nhật thành công!');
           setAvatarFile(null);
           setCoverFile(null);
           setAvatarPreview(null);
@@ -154,13 +154,13 @@ const ProfileSettings = () => {
           setIsSaving(false);
         },
         onError: err => {
-          toast.error(err?.message || 'Cập nhật thất bại');
+          notify.error(err?.message || 'Cập nhật thất bại');
           setIsSaving(false);
         },
       });
     } catch (error) {
       console.error(error);
-      toast.error('Có lỗi xảy ra');
+      notify.error('Có lỗi xảy ra');
       setIsSaving(false);
     }
   };
@@ -329,3 +329,4 @@ const ProfileSettings = () => {
 };
 
 export default ProfileSettings;
+

@@ -6,7 +6,7 @@ import {
   useFollowUser,
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 export default function SuggestFriends() {
@@ -29,14 +29,14 @@ export default function SuggestFriends() {
         if (isFollowed) {
           await unfollowMutation.mutateAsync(userId);
           setFollowedUsers(prev => prev.filter(id => id !== userId));
-          toast.success('Đã bỏ theo dõi');
+          notify.success('Đã bỏ theo dõi');
         } else {
           await followMutation.mutateAsync(userId);
           setFollowedUsers(prev => [...prev, userId]);
-          toast.success('Đã theo dõi');
+          notify.success('Đã theo dõi');
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
     [followedUsers, followMutation, unfollowMutation]
@@ -175,3 +175,4 @@ export default function SuggestFriends() {
     </div>
   );
 }
+

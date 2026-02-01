@@ -8,7 +8,7 @@ import {
   Mail,
   Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
@@ -59,11 +59,11 @@ const NotificationSettings = () => {
         type: 'notifications',
         settings: newNotifications,
       });
-      toast.success('Đã lưu cài đặt thông báo');
+      notify.success('Đã lưu cài đặt thông báo');
     } catch (error) {
       // Revert on failure
       setNotifications(notifications);
-      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
+      notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -227,3 +227,4 @@ const NotificationSettings = () => {
 };
 
 export default NotificationSettings;
+

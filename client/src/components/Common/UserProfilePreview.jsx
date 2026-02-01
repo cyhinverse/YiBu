@@ -1,13 +1,6 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  MapPin,
-  Link as LinkIcon,
-  Calendar,
-  Users,
-  UserPlus,
-  UserCheck,
-} from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Users } from 'lucide-react';
 import {
   useProfile,
   useFollowUser,

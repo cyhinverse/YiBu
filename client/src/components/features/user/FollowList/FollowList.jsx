@@ -8,7 +8,7 @@ import {
   useFollowUser,
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -37,13 +37,13 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
       try {
         if (isFollowing) {
           await unfollowMutation.mutateAsync(targetUserId);
-          toast.success('Đã bỏ theo dõi');
+          notify.success('Đã bỏ theo dõi');
         } else {
           await followMutation.mutateAsync(targetUserId);
-          toast.success('Đã theo dõi');
+          notify.success('Đã theo dõi');
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
     [followMutation, unfollowMutation]
@@ -173,3 +173,4 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
 };
 
 export default FollowList;
+

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Users, Check, MessageCircle, MoreHorizontal } from 'lucide-react';
 import { useFollowers, useUnfollowUser } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const Friends = () => {
@@ -20,10 +20,10 @@ const Friends = () => {
   const handleRemoveFriend = async friendId => {
     try {
       await unfollowMutation.mutateAsync(friendId);
-      toast.success('Đã xóa bạn bè thành công');
+      notify.success('Đã xóa bạn bè thành công');
       refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Không thể xóa bạn bè');
+      notify.error(error?.response?.data?.message || 'Không thể xóa bạn bè');
     } finally {
       setShowMenu(null);
     }
@@ -163,3 +163,4 @@ const Friends = () => {
 };
 
 export default Friends;
+
