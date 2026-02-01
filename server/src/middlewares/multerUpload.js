@@ -1,26 +1,43 @@
 import multer from 'multer';
 import cloudinary from '../configs/cloudinaryConfig.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 // Sử dụng memory storage thay vì multer-storage-cloudinary
 const storage = multer.memoryStorage();
 
+const allowedImageTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
+const allowedVideoTypes = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+]);
+
 const fileFilter = (req, file, cb) => {
-  const isImage = file.mimetype.startsWith('image/');
-  const isVideo = file.mimetype.startsWith('video/');
+  const isImage = allowedImageTypes.has(file.mimetype);
+  const isVideo = allowedVideoTypes.has(file.mimetype);
 
   if (!isImage && !isVideo) {
-    return cb(new Error('Only support upload image or video!'), false);
+    return cb(ApiError.unsupportedMediaType('Unsupported file type'), false);
   }
   cb(null, true);
 };
+
 
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB max
+    fileSize: 15 * 1024 * 1024, // 15MB max
+    files: 5,
   },
 });
+
 
 /**
  * Upload file buffer to Cloudinary

@@ -10,6 +10,8 @@ import {
 import crypto from 'crypto';
 import logger from '../configs/logger.js';
 import EmailService from './Email.Service.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 /**
  * Auth Service - Refactored for new model structure
@@ -33,14 +35,11 @@ class AuthService {
 
     if (existingUser) {
       if (existingUser.email === email.toLowerCase()) {
-        const error = new Error('Email đã được sử dụng');
-        error.statusCode = 400;
-        throw error;
+        throw ApiError.conflict('Email đã được sử dụng');
       }
-      const error = new Error('Username đã được sử dụng');
-      error.statusCode = 400;
-      throw error;
+      throw ApiError.conflict('Username đã được sử dụng');
     }
+
 
     const hashedPassword = await hashPassword(password);
 
@@ -59,6 +58,10 @@ class AuthService {
       isAdmin: user.isAdmin,
     });
 
+    const refreshTokenData = await this._createRefreshToken(user._id, {
+      platform: 'web',
+    });
+
     const userResponse = {
       _id: user._id,
       name: user.name,
@@ -69,22 +72,27 @@ class AuthService {
       isAdmin: user.isAdmin,
     };
 
-    return { user: userResponse, accessToken };
+    return {
+      user: userResponse,
+      accessToken,
+      refreshToken: refreshTokenData.token,
+    };
+
   }
 
   static async login(credentials, deviceInfo = {}) {
-    const { email, password } = credentials;
+    const { email, password, twoFactorToken } = credentials;
 
     const user = await User.findOne({ email: email.toLowerCase() }).select(
-      '+password + loginAttempts'
+      '+password +loginAttempts'
     );
 
     if (!user) {
-      throw new Error('Email hoặc mật khẩu không đúng');
+      throw ApiError.unauthorized('Email hoặc mật khẩu không đúng');
     }
 
     if (user.moderation?.status === 'banned') {
-      throw new Error('Tài khoản đã bị khóa vĩnh viễn');
+      throw ApiError.forbidden('Tài khoản đã bị khóa vĩnh viễn');
     }
 
     if (user.moderation?.status === 'suspended') {
@@ -93,11 +101,14 @@ class AuthService {
         const remainingDays = Math.ceil(
           (suspendedUntil - new Date()) / (1000 * 60 * 60 * 24)
         );
-        throw new Error(`Tài khoản bị tạm khóa, còn ${remainingDays} ngày`);
+        throw ApiError.forbidden(
+          `Tài khoản bị tạm khóa, còn ${remainingDays} ngày`
+        );
       }
       user.moderation.status = 'active';
       user.moderation.suspendedUntil = null;
     }
+
 
     const lockUntil =
       typeof user.loginAttempts === 'object'
@@ -108,7 +119,7 @@ class AuthService {
       const remainingMinutes = Math.ceil(
         (lockUntil - new Date()) / (1000 * 60)
       );
-      throw new Error(
+      throw ApiError.forbidden(
         `Tài khoản bị khóa tạm thời, thử lại sau ${remainingMinutes} phút`
       );
     }
@@ -117,7 +128,27 @@ class AuthService {
 
     if (!isPasswordValid) {
       await this._handleFailedLogin(user);
-      throw new Error('Email hoặc mật khẩu không đúng');
+      throw ApiError.unauthorized('Email hoặc mật khẩu không đúng');
+    }
+
+
+    const userSettings = await UserSettings.findOne({ user: user._id }).select(
+      '+security.twoFactorSecret +security.twoFactorEnabled'
+    );
+
+    if (userSettings?.security?.twoFactorEnabled) {
+      if (!twoFactorToken) {
+        throw ApiError.unauthorized('Two-factor token required', {
+          errorCode: '2FA_REQUIRED',
+        });
+      }
+
+      const verified = await this.verifyTwoFactorToken(user._id, twoFactorToken);
+      if (!verified) {
+        throw ApiError.unauthorized('Invalid verification code', {
+          errorCode: '2FA_INVALID',
+        });
+      }
     }
 
     await this._resetLoginAttempts(user);
@@ -130,8 +161,12 @@ class AuthService {
 
     const [refreshTokenData] = await Promise.all([
       this._createRefreshToken(user._id, deviceInfo),
-      User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() })
+      User.findByIdAndUpdate(user._id, {
+        lastActiveAt: new Date(),
+        lastLoginAt: new Date(),
+      })
     ]);
+
 
     const userResponse = {
       _id: user._id,
@@ -259,20 +294,23 @@ class AuthService {
         );
       }
 
-      throw new Error('Invalid refresh token');
+      throw ApiError.unauthorized('Invalid refresh token');
+
     }
 
     if (refreshTokenDoc.expiresAt < new Date()) {
       refreshTokenDoc.isRevoked = true;
       refreshTokenDoc.revokedReason = 'expired';
       await refreshTokenDoc.save();
-      throw new Error('Refresh token expired');
+      throw ApiError.unauthorized('Refresh token expired');
+
     }
 
     const user = await User.findById(refreshTokenDoc.user);
     if (!user || user.moderation?.status === 'banned') {
-      throw new Error('User not found or banned');
+      throw ApiError.forbidden('User not found or banned');
     }
+
 
     refreshTokenDoc.isRevoked = true;
     refreshTokenDoc.revokedReason = 'rotated';
@@ -332,20 +370,22 @@ class AuthService {
     const user = await User.findById(userId).select('+password');
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
+
 
     const isPasswordValid = await comparePassword(
       currentPassword,
       user.password
     );
     if (!isPasswordValid) {
-      throw new Error('Mật khẩu hiện tại không đúng');
+      throw ApiError.badRequest('Mật khẩu hiện tại không đúng');
     }
 
     if (currentPassword === newPassword) {
-      throw new Error('Mật khẩu mới phải khác mật khẩu cũ');
+      throw ApiError.badRequest('Mật khẩu mới phải khác mật khẩu cũ');
     }
+
 
     user.password = await hashPassword(newPassword);
     await user.save();
@@ -404,8 +444,9 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error('Token không hợp lệ hoặc đã hết hạn');
+      throw ApiError.badRequest('Token không hợp lệ hoặc đã hết hạn');
     }
+
 
     user.password = await hashPassword(newPassword);
     user.security.passwordResetToken = undefined;
@@ -424,12 +465,13 @@ class AuthService {
     const user = await User.findById(userId);
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     if (user.verified) {
-      throw new Error('Email đã được xác thực');
+      throw ApiError.badRequest('Email đã được xác thực');
     }
+
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenHash = crypto
@@ -463,8 +505,9 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error('Token không hợp lệ hoặc đã hết hạn');
+      throw ApiError.badRequest('Token không hợp lệ hoặc đã hết hạn');
     }
+
 
     user.verified = true;
     user.security.emailVerificationToken = undefined;
@@ -505,8 +548,9 @@ class AuthService {
     );
 
     if (!userSettings || !userSettings.security?.twoFactorSecret) {
-      throw new Error('Two-factor setup not initiated');
+      throw ApiError.badRequest('Two-factor setup not initiated');
     }
+
 
     const verified = speakeasy.totp.verify({
       secret: userSettings.security.twoFactorSecret,
@@ -516,8 +560,9 @@ class AuthService {
     });
 
     if (!verified) {
-      throw new Error('Invalid verification code');
+      throw ApiError.badRequest('Invalid verification code');
     }
+
 
     const backupCodes = Array.from({ length: 10 }, () =>
       crypto.randomBytes(4).toString('hex')
@@ -543,13 +588,14 @@ class AuthService {
     const user = await User.findById(userId).select('+password');
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
-      throw new Error('Mật khẩu không đúng');
+      throw ApiError.badRequest('Mật khẩu không đúng');
     }
+
 
     await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -571,8 +617,9 @@ class AuthService {
     );
 
     if (!userSettings || !userSettings.security?.twoFactorSecret) {
-      throw new Error('Two-factor not enabled');
+      throw ApiError.badRequest('Two-factor not enabled');
     }
+
 
     const verified = speakeasy.totp.verify({
       secret: userSettings.security.twoFactorSecret,
@@ -618,8 +665,9 @@ class AuthService {
     );
 
     if (!result) {
-      throw new Error('Session not found');
+      throw ApiError.notFound('Session not found');
     }
+
 
     return { success: true };
   }
@@ -643,6 +691,10 @@ class AuthService {
       await UserSettings.create({ user: user._id });
     }
 
+    if (user.moderation?.status === 'banned') {
+      throw ApiError.forbidden('Tài khoản đã bị khóa vĩnh viễn');
+    }
+
     const accessToken = generateAccessToken({
       id: user._id,
       email: user.email,
@@ -651,6 +703,8 @@ class AuthService {
     const refreshTokenData = await this._createRefreshToken(user._id, {
       platform: 'google_oauth',
     });
+
+    await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
     return {
       user: {
@@ -670,6 +724,7 @@ class AuthService {
       refreshToken: refreshTokenData.token,
     };
   }
+
 }
 
 export default AuthService;

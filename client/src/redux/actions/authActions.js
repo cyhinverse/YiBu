@@ -7,17 +7,24 @@ import { extractData } from '@/utils/apiUtils';
 
 export const login = createAsyncThunk(
   'auth/login',
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ email, password, twoFactorToken }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.LOGIN, { email, password });
+      const response = await api.post(AUTH_API.LOGIN, {
+        email,
+        password,
+        twoFactorToken,
+      });
       return extractData(response);
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Đăng nhập thất bại'
-      );
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Đăng nhập thất bại',
+        errorCode: error.response?.data?.errorCode,
+        status: error.response?.status,
+      });
     }
   }
 );
+
 
 export const register = createAsyncThunk(
   'auth/register',
@@ -157,9 +164,9 @@ export const enable2FA = createAsyncThunk(
 
 export const verify2FA = createAsyncThunk(
   'auth/verify2FA',
-  async ({ code }, { rejectWithValue }) => {
+  async ({ token }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.VERIFY_2FA, { code });
+      const response = await api.post(AUTH_API.VERIFY_2FA, { token });
       return extractData(response);
     } catch (error) {
       return rejectWithValue(
@@ -169,11 +176,12 @@ export const verify2FA = createAsyncThunk(
   }
 );
 
+
 export const disable2FA = createAsyncThunk(
   'auth/disable2FA',
-  async ({ code }, { rejectWithValue }) => {
+  async ({ password }, { rejectWithValue }) => {
     try {
-      const response = await api.post(AUTH_API.DISABLE_2FA, { code });
+      const response = await api.post(AUTH_API.DISABLE_2FA, { password });
       return extractData(response);
     } catch (error) {
       return rejectWithValue(
@@ -182,6 +190,7 @@ export const disable2FA = createAsyncThunk(
     }
   }
 );
+
 
 // ========== Sessions ==========
 

@@ -251,6 +251,9 @@ const MessageDetail = () => {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const maxMessageFiles = 3;
+  const maxMessageSizeMB = 15;
+
   const typingTimeoutRef = useRef(null);
 
   // Derive conversation
@@ -633,12 +636,33 @@ const MessageDetail = () => {
             multiple
             accept="image/*"
             className="hidden"
-            onChange={e =>
-              setSelectedImages(prev => [
-                ...prev,
-                ...Array.from(e.target.files),
-              ])
-            }
+            onChange={e => {
+              const files = Array.from(e.target.files);
+              if (files.length === 0) return;
+
+              const remainingSlots = maxMessageFiles - selectedImages.length;
+              if (remainingSlots <= 0) {
+                toast.error(`Chỉ được chọn tối đa ${maxMessageFiles} tệp`);
+                e.target.value = '';
+                return;
+              }
+
+              const acceptedFiles = files.slice(0, remainingSlots).filter(file => {
+                const isValidSize = file.size <= maxMessageSizeMB * 1024 * 1024;
+                if (!isValidSize) {
+                  toast.error(`Tệp ${file.name} vượt quá ${maxMessageSizeMB}MB`);
+                }
+                return isValidSize;
+              });
+
+              if (acceptedFiles.length < files.length) {
+                toast.error('Một số tệp đã bị bỏ qua');
+              }
+
+              setSelectedImages(prev => [...prev, ...acceptedFiles]);
+              e.target.value = '';
+            }}
+
           />
           <div className="flex items-center bg-surface-secondary rounded-2xl flex-1 px-1 focus-within:bg-white transition-all duration-300">
             <button

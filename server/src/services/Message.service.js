@@ -7,6 +7,8 @@ import logger from '../configs/logger.js';
 import { retryOperation } from '../helpers/retryOperation.js';
 import socketService from './Socket.Service.js';
 import Conversation from '../models/Conversation.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 /**
  * Message Service - Refactored for new model structure
@@ -138,7 +140,8 @@ class MessageService {
   static async getOrCreateDirectConversation(userId, participantId) {
     const canSend = await this.canSendMessage(userId, participantId);
     if (!canSend.allowed) {
-      throw new Error(canSend.reason);
+      throw ApiError.forbidden(canSend.reason);
+
     }
 
     const directId = this.generateConversationId(userId, participantId);
@@ -217,7 +220,8 @@ class MessageService {
     });
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại hoặc bạn không có quyền');
+      throw ApiError.forbidden('Hội thoại không tồn tại hoặc bạn không có quyền');
+
     }
 
     if (data.groupName) conversation.name = data.groupName;
@@ -244,11 +248,13 @@ class MessageService {
     });
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại hoặc bạn không có quyền');
+      throw ApiError.forbidden('Hội thoại không tồn tại hoặc bạn không có quyền');
+
     }
 
     if (!conversation.isGroup) {
-      throw new Error('Đây không phải là nhóm');
+      throw ApiError.badRequest('Đây không phải là nhóm');
+
     }
 
     const currentMembers = conversation.members.map(m => m.toString());
@@ -281,14 +287,16 @@ class MessageService {
     });
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại hoặc bạn không có quyền');
+      throw ApiError.forbidden('Hội thoại không tồn tại hoặc bạn không có quyền');
+
     }
 
     if (
       conversation.admin.toString() !== userId.toString() &&
       userId.toString() !== memberId.toString()
     ) {
-      throw new Error('Chỉ admin mới có quyền xóa thành viên');
+      throw ApiError.forbidden('Chỉ admin mới có quyền xóa thành viên');
+
     }
 
     conversation.members = conversation.members.filter(
@@ -347,7 +355,8 @@ class MessageService {
     );
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại');
+      throw ApiError.notFound('Hội thoại không tồn tại');
+
     }
 
     const populated = await Conversation.findById(conversation._id)
@@ -390,7 +399,8 @@ class MessageService {
     const conversation = await this.findConversation(conversationId, userId);
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại hoặc bạn không tham gia');
+      throw ApiError.forbidden('Hội thoại không tồn tại hoặc bạn không tham gia');
+
     }
 
     let query = {
@@ -525,13 +535,15 @@ class MessageService {
     });
 
     if (!conversation) {
-      throw new Error('Hội thoại không tồn tại hoặc bạn không tham gia');
+      throw ApiError.forbidden('Hội thoại không tồn tại hoặc bạn không tham gia');
+
     }
 
     const { content, type = 'text', media = [], replyTo } = messageData;
 
     if (type === 'text' && (!content || content.trim().length === 0)) {
-      throw new Error('Nội dung tin nhắn không được để trống');
+      throw ApiError.badRequest('Nội dung tin nhắn không được để trống');
+
     }
 
     let receiverId = null;
@@ -730,7 +742,8 @@ class MessageService {
     const message = await Message.findOne({ _id: messageId, sender: userId });
 
     if (!message) {
-      throw new Error('Tin nhắn không tồn tại hoặc bạn không có quyền xóa');
+      throw ApiError.forbidden('Tin nhắn không tồn tại hoặc bạn không có quyền xóa');
+
     }
 
     if (forEveryone) {
@@ -738,7 +751,8 @@ class MessageService {
       const maxDeleteTime = 15 * 60 * 1000;
 
       if (timeDiff > maxDeleteTime) {
-        throw new Error('Chỉ có thể xóa tin nhắn trong vòng 15 phút');
+        throw ApiError.forbidden('Chỉ có thể xóa tin nhắn trong vòng 15 phút');
+
       }
 
       message.isDeleted = true;
@@ -766,7 +780,10 @@ class MessageService {
    */
   static async deleteConversation(conversationId, userId) {
     const conversation = await this.findConversation(conversationId, userId);
-    if (!conversation) throw new Error('Hội thoại không tồn tại');
+    if (!conversation) {
+      throw ApiError.notFound('Hội thoại không tồn tại');
+    }
+
 
     const convId = conversation._id.toString();
 
@@ -864,7 +881,8 @@ class MessageService {
     });
 
     if (!message) {
-      throw new Error('Tin nhắn không tồn tại');
+      throw ApiError.notFound('Tin nhắn không tồn tại');
+
     }
 
     if (!message.reactions) {
@@ -916,7 +934,8 @@ class MessageService {
     });
 
     if (!message) {
-      throw new Error('Tin nhắn không tồn tại');
+      throw ApiError.notFound('Tin nhắn không tồn tại');
+
     }
 
     if (!message.reactions) {

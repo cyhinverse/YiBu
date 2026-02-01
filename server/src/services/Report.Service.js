@@ -6,6 +6,8 @@ import Comment from '../models/Comment.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 /**
  * Report Service - Refactored for new model structure
@@ -31,8 +33,9 @@ class ReportService {
 
     const validTargetTypes = ['post', 'comment', 'user', 'message'];
     if (!validTargetTypes.includes(targetType)) {
-      throw new Error('Invalid report target type');
+      throw ApiError.badRequest('Invalid report target type');
     }
+
 
     const existingReport = await Report.findOne({
       reporter: reporterId,
@@ -42,16 +45,17 @@ class ReportService {
     });
 
     if (existingReport) {
-      throw new Error('Bạn đã báo cáo nội dung này rồi');
+      throw ApiError.conflict('Bạn đã báo cáo nội dung này rồi');
     }
+
 
     let targetUser;
     let contentSnapshot = {};
 
     switch (targetType) {
-      case 'post':
+      case 'post': {
         const post = await Post.findById(targetId).lean();
-        if (!post) throw new Error('Bài viết không tồn tại');
+        if (!post) throw ApiError.notFound('Bài viết không tồn tại');
         targetUser = post.user;
         contentSnapshot = {
           caption: post.caption,
@@ -59,10 +63,11 @@ class ReportService {
           createdAt: post.createdAt,
         };
         break;
+      }
 
-      case 'comment':
+      case 'comment': {
         const comment = await Comment.findById(targetId).lean();
-        if (!comment) throw new Error('Bình luận không tồn tại');
+        if (!comment) throw ApiError.notFound('Bình luận không tồn tại');
         targetUser = comment.user;
         contentSnapshot = {
           content: comment.content,
@@ -70,10 +75,11 @@ class ReportService {
           createdAt: comment.createdAt,
         };
         break;
+      }
 
-      case 'user':
+      case 'user': {
         const user = await User.findById(targetId).lean();
-        if (!user) throw new Error('Người dùng không tồn tại');
+        if (!user) throw ApiError.notFound('Người dùng không tồn tại');
         targetUser = targetId;
         contentSnapshot = {
           username: user.username,
@@ -82,10 +88,11 @@ class ReportService {
           avatar: user.avatar,
         };
         break;
+      }
 
-      case 'message':
+      case 'message': {
         const message = await Message.findById(targetId).lean();
-        if (!message) throw new Error('Tin nhắn không tồn tại');
+        if (!message) throw ApiError.notFound('Tin nhắn không tồn tại');
         targetUser = message.sender;
         contentSnapshot = {
           content: message.content,
@@ -93,11 +100,14 @@ class ReportService {
           createdAt: message.createdAt,
         };
         break;
+      }
     }
 
+
     if (targetUser?.toString() === reporterId.toString()) {
-      throw new Error('Bạn không thể báo cáo nội dung của chính mình');
+      throw ApiError.forbidden('Bạn không thể báo cáo nội dung của chính mình');
     }
+
 
     const report = await Report.create({
       reporter: reporterId,
@@ -178,11 +188,12 @@ class ReportService {
       .lean();
 
     if (!report) {
-      throw new Error('Report not found');
+      throw ApiError.notFound('Report not found');
     }
 
     return report;
   }
+
 
   /**
    * Get list of reports by user (reports that user created)
@@ -242,15 +253,22 @@ class ReportService {
   }
 
   /**
-   * Get list of pending reports
-   * @param {Object} options - Options {page, limit, category, targetType, priority}
+   * Get list of reports with filters
+   * @param {Object} options - Options {page, limit, status, category, targetType, priority}
    * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
    */
-  static async getPendingReports(options = {}) {
-    const { page = 1, limit = 20, category, targetType, priority } = options;
+  static async getAllReports(options = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      category,
+      targetType,
+      priority,
+    } = options;
 
-    const query = { status: 'pending' };
-
+    const query = {};
+    if (status) query.status = status;
     if (category) query.category = category;
     if (targetType) query.targetType = targetType;
     if (priority) query.priority = priority;
@@ -274,6 +292,25 @@ class ReportService {
   }
 
   /**
+   * Get list of pending reports
+   * @param {Object} options - Options {page, limit, category, targetType, priority}
+   * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
+   */
+  static async getPendingReports(options = {}) {
+    const { page = 1, limit = 20, category, targetType, priority } = options;
+
+    return this.getAllReports({
+      page,
+      limit,
+      status: 'pending',
+      category,
+      targetType,
+      priority,
+    });
+  }
+
+
+  /**
    * Start reviewing report
    * @param {string} reportId - Report ID
    * @param {string} adminId - Admin ID
@@ -293,8 +330,9 @@ class ReportService {
     );
 
     if (!report) {
-      throw new Error('Report not found');
+      throw ApiError.notFound('Report not found');
     }
+
 
     return report;
   }
@@ -312,8 +350,9 @@ class ReportService {
 
     const validDecisions = ['resolved', 'rejected', 'escalated'];
     if (!validDecisions.includes(decision)) {
-      throw new Error('Invalid decision');
+      throw ApiError.badRequest('Invalid decision');
     }
+
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -339,9 +378,10 @@ class ReportService {
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar');
 
-      if (!report) {
-        throw new Error('Report not found');
-      }
+    if (!report) {
+      throw ApiError.notFound('Report not found');
+    }
+
 
       if (decision === 'resolved' && actionTaken) {
         await this._executeAction(report, actionTaken, adminId, session);

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import config from './configs/config.js';
 import { morganMiddleware } from './configs/logger.js';
 import errorMiddleware from './middlewares/error.middleware.js';
+import ApiError from './helpers/ApiError.js';
 import {
   helmetMiddleware,
   globalRateLimiter,
@@ -11,6 +12,7 @@ import {
   hppMiddleware,
   xssClean,
 } from './middlewares/security.middleware.js';
+
 
 // Import Routes
 import authRoutes from './routes/auth.router.js';
@@ -44,7 +46,8 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      callback(ApiError.forbidden('Not allowed by CORS'));
+
     }
   },
   credentials: true,
@@ -87,8 +90,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10kb' })); // Giới hạn body size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Cookie parser - for HttpOnly cookies
-app.use(cookieParser());
+
 
 // Data Sanitization - Chống NoSQL Injection
 app.use(mongoSanitizeMiddleware);

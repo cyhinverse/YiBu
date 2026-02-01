@@ -7,6 +7,8 @@ import RefreshToken from '../models/RefreshToken.js';
 import UserSettings from '../models/UserSettings.js';
 import Notification from '../models/Notification.js';
 import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
+
 import Like from '../models/Like.js';
 import Follow from '../models/Follow.js';
 import SavePost from '../models/SavePost.js';
@@ -82,7 +84,7 @@ class AdminService {
     const user = await User.findById(userId).select('-loginAttempts').lean();
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     const settings = await UserSettings.findOne({ user: userId }).lean();
@@ -206,7 +208,7 @@ class AdminService {
     ).select('-loginAttempts -security');
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     await this._logAdminAction(adminId, 'update_user', 'user', userId, {
@@ -243,7 +245,7 @@ class AdminService {
       );
 
       if (!user) {
-        throw new Error('User not found');
+        throw ApiError.notFound('User not found');
       }
 
       await RefreshToken.updateMany(
@@ -290,7 +292,7 @@ class AdminService {
     );
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     await this._logAdminAction(adminId, 'unban_user', 'user', userId);
@@ -336,7 +338,7 @@ class AdminService {
       );
 
       if (!user) {
-        throw new Error('User not found');
+        throw ApiError.notFound('User not found');
       }
 
       await RefreshToken.updateMany(
@@ -388,7 +390,7 @@ class AdminService {
     );
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     await Notification.createNotification({
@@ -462,7 +464,8 @@ class AdminService {
     const validActions = ['approve', 'reject', 'flag', 'remove', 'hide'];
 
     if (!validActions.includes(action)) {
-      throw new Error('Invalid moderation action');
+      throw ApiError.badRequest('Invalid moderation action');
+
     }
 
     const statusMap = {
@@ -498,7 +501,8 @@ class AdminService {
       ).populate('user', 'username name avatar');
 
       if (!post) {
-        throw new Error('Post not found');
+        throw ApiError.notFound('Post not found');
+
       }
 
       if (action === 'reject' || action === 'remove' || action === 'hide') {
@@ -606,13 +610,15 @@ class AdminService {
     const validActions = ['approve', 'remove'];
 
     if (!validActions.includes(action)) {
-      throw new Error('Invalid moderation action');
+      throw ApiError.badRequest('Invalid moderation action');
+
     }
 
     const comment = await Comment.findById(commentId);
 
     if (!comment) {
-      throw new Error('Comment not found');
+      throw ApiError.notFound('Comment not found');
+
     }
 
     if (action === 'remove') {
@@ -699,7 +705,8 @@ class AdminService {
     const validDecisions = ['resolved', 'rejected', 'escalated'];
 
     if (!validDecisions.includes(decision)) {
-      throw new Error('Invalid decision');
+      throw ApiError.badRequest('Invalid decision');
+
     }
 
     const report = await Report.findByIdAndUpdate(
@@ -722,7 +729,8 @@ class AdminService {
       .populate('targetUser', 'username name avatar');
 
     if (!report) {
-      throw new Error('Report not found');
+      throw ApiError.notFound('Report not found');
+
     }
 
     await this._logAdminAction(adminId, 'review_report', 'report', reportId, {
@@ -1118,7 +1126,8 @@ class AdminService {
           .lean();
         break;
       default:
-        throw new Error('Invalid target group');
+        throw ApiError.badRequest('Invalid target group');
+
     }
 
     const notifications = users.map(user => ({

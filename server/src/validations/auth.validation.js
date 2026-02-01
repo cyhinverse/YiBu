@@ -61,7 +61,12 @@ export const loginBody = Joi.object({
     'string.empty': 'Mật khẩu không được để trống',
     'any.required': 'Mật khẩu là bắt buộc',
   }),
+  twoFactorToken: Joi.string().length(6).pattern(/^\d+$/).optional().messages({
+    'string.length': 'Mã xác thực phải có 6 chữ số',
+    'string.pattern.base': 'Mã xác thực chỉ được chứa số',
+  }),
   rememberMe: Joi.boolean().default(false),
+
 });
 
 // ======================================

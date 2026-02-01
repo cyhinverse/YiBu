@@ -19,6 +19,9 @@ const Login = () => {
     email: '',
     password: '',
   });
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+
 
   // Redirect if already authenticated AND user data is loaded
   useEffect(() => {
@@ -26,6 +29,15 @@ const Login = () => {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
+
+  useEffect(() => {
+    if (!error?.errorCode || error.errorCode === '2FA_REQUIRED') {
+      return;
+    }
+    setRequiresTwoFactor(false);
+    setTwoFactorToken('');
+  }, [error]);
+
 
   // Clear error on unmount
 
@@ -98,11 +110,31 @@ const Login = () => {
       toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
-    const result = await dispatch(login(formData));
+
+    const payload = {
+      ...formData,
+      twoFactorToken: requiresTwoFactor ? twoFactorToken : undefined,
+    };
+
+    const result = await dispatch(login(payload));
     if (login.fulfilled.match(result)) {
       toast.success('Đăng nhập thành công!');
+      return;
+    }
+
+    const errorPayload = result.payload || {};
+    if (errorPayload?.errorCode === '2FA_REQUIRED') {
+      setRequiresTwoFactor(true);
+      toast('Vui lòng nhập mã 2FA');
+      return;
+    }
+
+    if (errorPayload?.errorCode === '2FA_INVALID') {
+      toast.error('Mã 2FA không hợp lệ');
+      return;
     }
   };
+
 
   // No longer needed due to useEffect redirect above
   // if (isAuthenticated && user) {
@@ -207,13 +239,31 @@ const Login = () => {
               </div>
             </div>
 
+            {requiresTwoFactor && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-content dark:text-white">
+                  Mã xác thực 2FA
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={twoFactorToken}
+                  onChange={e => setTwoFactorToken(e.target.value)}
+                  placeholder="Nhập mã 6 số"
+                  className="w-full px-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            )
+
             {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+            {error?.message && (
+              <div className="flex items-center gap-2 text-red-500 text-sm">
                 <AlertCircle size={16} />
-                {error}
+                <span>{error.message}</span>
               </div>
             )}
+
 
             {/* Submit */}
             <button

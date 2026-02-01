@@ -84,18 +84,19 @@ router.get(
 /* POST / - Create new post */
 router.post(
   '/',
-  upload.array('files', 10),
+  upload.array('files', 5),
   validateBody(createPostBody),
   PostController.CreatePost
 );
+
 /* GET /user/:id - Get posts by user ID */
 router.get(
   '/user/:id',
   validateParams(userPostsParam),
   validateQuery(userPostsQuery),
-  validateQuery(userPostsQuery),
   PostController.GetPostUserById
 );
+
 
 /* GET /user/:id/shared - Get shared posts by user */
 router.get(
@@ -110,11 +111,12 @@ router.get('/:id', validateParams(postIdParam), PostController.GetPostById);
 /* PUT /:id - Update existing post */
 router.put(
   '/:id',
-  upload.array('files', 10),
+  upload.array('files', 5),
   validateParams(postIdParam),
   validateBody(updatePostBody),
   PostController.UpdatePost
 );
+
 /* DELETE /:id - Delete a post */
 router.delete(
   '/:id',

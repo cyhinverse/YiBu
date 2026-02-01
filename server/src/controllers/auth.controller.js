@@ -45,16 +45,17 @@ const AuthController = {
       return formatResponse(res, 400, 0, 'Username là bắt buộc');
     }
 
-    const { user, accessToken } = await AuthService.register({
+    const { user, accessToken, refreshToken } = await AuthService.register({
       name,
       email,
       password,
       username,
     });
 
-    setAuthCookies(res, accessToken);
+    setAuthCookies(res, accessToken, refreshToken);
 
     return formatResponse(res, 201, 1, 'Đăng ký tài khoản thành công', user);
+
   }),
 
   /**
@@ -68,7 +69,7 @@ const AuthController = {
    * @returns {Object} Response with user data and HttpOnly cookies for tokens
    */
   Login: CatchError(async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, twoFactorToken } = req.body;
 
     if (!email || !password) {
       return formatResponse(res, 400, 0, 'Vui lòng nhập email và mật khẩu');
@@ -81,13 +82,16 @@ const AuthController = {
     };
 
     const { user, accessToken, refreshToken } = await AuthService.login(
-      { email, password },
+      { email, password, twoFactorToken },
       deviceInfo
     );
 
     setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 200, 1, 'Đăng nhập thành công', user);
+    return formatResponse(res, 200, 1, 'Đăng nhập thành công', user, {
+      twoFactorRequired: false,
+    });
+
   }),
 
   /**

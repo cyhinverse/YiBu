@@ -104,14 +104,21 @@ const SecuritySettings = () => {
   const handleDisable2FA = async () => {
     if (!window.confirm('Bạn có chắc muốn tắt xác thực hai yếu tố?')) return;
 
+    const password = window.prompt('Nhập mật khẩu để tắt 2FA');
+    if (!password) {
+      toast.error('Mật khẩu là bắt buộc');
+      return;
+    }
+
     try {
-      await dispatch(disable2FA()).unwrap();
+      await dispatch(disable2FA({ password })).unwrap();
       toast.success('Đã tắt xác thực hai yếu tố');
       setSecurity(prev => ({ ...prev, twoFactorEnabled: false }));
     } catch (error) {
       toast.error(error || 'Không thể tắt 2FA');
     }
   };
+
 
   const handleRevokeSession = async sessionId => {
     if (!window.confirm('Bạn có chắc muốn đăng xuất phiên này?')) return;

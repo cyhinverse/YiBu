@@ -279,24 +279,15 @@ const ReportController = {
     const { page, limit } = getPaginationParams(req.query);
     const { status, category, targetType, priority } = req.query;
 
-    let result;
-    if (status === 'pending') {
-      result = await ReportService.getPendingReports({
-        page,
-        limit,
-        category,
-        targetType,
-        priority,
-      });
-    } else {
-      result = await ReportService.getPendingReports({
-        page,
-        limit,
-        category,
-        targetType,
-        priority,
-      });
-    }
+    const result = await ReportService.getAllReports({
+      page,
+      limit,
+      status,
+      category,
+      targetType,
+      priority,
+    });
+
 
     return formatResponse(res, 200, 1, 'Success', {
       reports: result.reports,

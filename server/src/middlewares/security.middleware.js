@@ -90,6 +90,18 @@ export const hppMiddleware = hpp({
  * XSS Clean - Sanitize user input
  * Thay vì dùng xss-clean (deprecated), ta tự viết middleware đơn giản
  */
+const SANITIZE_SKIP_FIELDS = new Set([
+  'password',
+  'newPassword',
+  'confirmPassword',
+  'confirmNewPassword',
+  'currentPassword',
+  'token',
+  'refreshToken',
+  'accessToken',
+  'twoFactorToken',
+]);
+
 export const xssClean = (req, res, next) => {
   if (req.body) {
     req.body = sanitizeObject(req.body);
@@ -103,6 +115,7 @@ export const xssClean = (req, res, next) => {
   next();
 };
 
+
 // Helper function để sanitize object
 const sanitizeObject = obj => {
   if (typeof obj !== 'object' || obj === null) {
@@ -115,7 +128,9 @@ const sanitizeObject = obj => {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const value = obj[key];
       if (typeof value === 'string') {
-        sanitized[key] = sanitizeString(value);
+        sanitized[key] = SANITIZE_SKIP_FIELDS.has(key)
+          ? value
+          : sanitizeString(value);
       } else if (typeof value === 'object' && value !== null) {
         sanitized[key] = sanitizeObject(value);
       } else {
@@ -125,6 +140,7 @@ const sanitizeObject = obj => {
   }
   return sanitized;
 };
+
 
 // Sanitize string - escape HTML entities
 // Sanitize string - use sanitize-html

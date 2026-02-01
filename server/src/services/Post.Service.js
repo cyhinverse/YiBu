@@ -11,6 +11,8 @@ import Follow from '../models/Follow.js';
 import Notification from '../models/Notification.js';
 import logger from '../configs/logger.js';
 import { retryOperation } from '../helpers/retryOperation.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 /**
  * Post Service - Refactored for new model structure
@@ -230,7 +232,8 @@ class PostService {
     });
 
     if (!post) {
-      throw new Error('Post not found or unauthorized');
+      throw ApiError.forbidden('Post not found or unauthorized');
+
     }
 
     const { caption, visibility, location, mentions, media, existingMedia } =
@@ -306,7 +309,8 @@ class PostService {
       const post = await Post.findOne(query).session(session);
 
       if (!post) {
-        throw new Error('Post not found or unauthorized');
+        throw ApiError.forbidden('Post not found or unauthorized');
+
       }
 
       post.isDeleted = true;
@@ -347,7 +351,8 @@ class PostService {
       .lean();
 
     if (!post) {
-      throw new Error('Post not found');
+      throw ApiError.notFound('Post not found');
+
     }
 
     const result = { ...post };
@@ -825,7 +830,8 @@ class PostService {
         isDeleted: false,
       }).session(session);
       if (!post) {
-        throw new Error('Post not found');
+        throw ApiError.notFound('Post not found');
+
       }
 
       const existingLike = await Like.findOne({
@@ -946,7 +952,8 @@ class PostService {
         isDeleted: false,
       }).session(session);
       if (!post) {
-        throw new Error('Post not found');
+        throw ApiError.notFound('Post not found');
+
       }
 
       const existingSave = await SavePost.findOne({
@@ -1086,7 +1093,8 @@ class PostService {
     }).lean();
 
     if (!post) {
-      throw new Error('Post not found');
+      throw ApiError.notFound('Post not found');
+
     }
 
     let depth = 0;
@@ -1095,7 +1103,8 @@ class PostService {
     if (parentCommentId) {
       const parentComment = await Comment.findById(parentCommentId).lean();
       if (!parentComment || parentComment.isDeleted) {
-        throw new Error('Parent comment not found');
+        throw ApiError.notFound('Parent comment not found');
+
       }
       depth = Math.min(parentComment.depth + 1, 3);
       rootComment = parentComment.rootComment || parentComment._id;
@@ -1227,7 +1236,8 @@ class PostService {
       const comment = await Comment.findOne(query).session(session);
 
       if (!comment) {
-        throw new Error('Comment not found or unauthorized');
+        throw ApiError.forbidden('Comment not found or unauthorized');
+
       }
 
       comment.isDeleted = true;
@@ -1269,8 +1279,9 @@ class PostService {
     });
 
     if (!comment) {
-      throw new Error('Comment not found or unauthorized');
+      throw ApiError.forbidden('Comment not found or unauthorized');
     }
+
 
     comment.content = content.trim();
     comment.isEdited = true;
@@ -1301,7 +1312,8 @@ class PostService {
         isDeleted: false,
       }).session(session);
       if (!comment) {
-        throw new Error('Comment not found');
+        throw ApiError.notFound('Comment not found');
+
       }
 
       const existingLike = await Like.findOne({
@@ -1387,7 +1399,8 @@ class PostService {
   static async sharePost(postId, userId, platform = 'internal') {
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) {
-      throw new Error('Post not found');
+      throw ApiError.notFound('Post not found');
+
     }
 
     await Post.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
@@ -1483,7 +1496,8 @@ class PostService {
 
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) {
-      throw new Error('Post not found');
+      throw ApiError.notFound('Post not found');
+
     }
 
     const existingReport = await Report.findOne({
@@ -1494,7 +1508,8 @@ class PostService {
     });
 
     if (existingReport) {
-      throw new Error('You have already reported this post');
+      throw ApiError.conflict('You have already reported this post');
+
     }
 
     const report = await Report.create({

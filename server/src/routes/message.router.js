@@ -106,7 +106,8 @@ router.get(
 /* POST /send - Send a message */
 router.post(
   '/send',
-  upload.array('files', 5),
+  upload.array('files', 3),
+
   validateBody(sendMessageBody),
   MessageController.SendMessage
 );

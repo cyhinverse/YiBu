@@ -10,6 +10,8 @@ import SavePost from '../models/SavePost.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
+
 
 /**
  * User Service - Refactored for new model structure
@@ -60,8 +62,9 @@ class UserService {
    */
   static async findUserByEmail(email) {
     if (!email) {
-      throw new Error('Email is required');
+      throw ApiError.badRequest('Email is required');
     }
+
 
     const user = await User.findOne({ email: email.toLowerCase() })
       .select('+password')
@@ -78,8 +81,9 @@ class UserService {
    */
   static async getUserByUsername(username) {
     if (!username) {
-      throw new Error('Username is required');
+      throw ApiError.badRequest('Username is required');
     }
+
 
     const user = await User.findOne({ username: username.toLowerCase() })
       .select('-loginAttempts')
@@ -97,7 +101,7 @@ class UserService {
    */
   static async getUserById(userId, requesterId = null) {
     if (!userId) {
-      throw new Error('User ID is required');
+      throw ApiError.badRequest('User ID is required');
     }
 
     const userPromise = User.findById(userId).select('-loginAttempts').lean();
@@ -116,7 +120,7 @@ class UserService {
     ]);
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     // Determine isFollowing based on followStatus to avoid redundant DB call if possible, 
@@ -204,9 +208,10 @@ class UserService {
       const user = await User.findOne({ username: identifier.toLowerCase() })
         .select('_id')
         .lean();
-      if (!user) {
-        throw new Error('User not found');
-      }
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
       userId = user._id;
     }
 
@@ -238,8 +243,9 @@ class UserService {
     ).select('-loginAttempts');
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
+
 
     return user;
   }
@@ -287,8 +293,9 @@ class UserService {
     ).select('-loginAttempts');
 
     if (!user) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
+
 
     return user;
   }
@@ -306,7 +313,7 @@ class UserService {
     try {
       const user = await User.findById(userId).session(session);
       if (!user) {
-        throw new Error('User not found');
+        throw ApiError.notFound('User not found');
       }
 
       const userPosts = await Post.find({ user: userId })
@@ -852,13 +859,15 @@ class UserService {
    */
   static async blockUser(userId, targetUserId) {
     if (userId === targetUserId) {
-      throw new Error('Cannot block yourself');
+      throw ApiError.badRequest('Cannot block yourself');
     }
 
     const targetUser = await User.findById(targetUserId);
     if (!targetUser) {
-      throw new Error('User not found');
+      throw ApiError.notFound('User not found');
     }
+
+
 
     await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -905,8 +914,9 @@ class UserService {
    */
   static async muteUser(userId, targetUserId) {
     if (userId === targetUserId) {
-      throw new Error('Cannot mute yourself');
+      throw ApiError.badRequest('Cannot mute yourself');
     }
+
 
     await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -981,7 +991,8 @@ class UserService {
     } else if (action === 'unblock') {
       return this.unblockUser(userId, blockedUserId);
     }
-    throw new Error('Invalid action');
+    throw ApiError.badRequest('Invalid action');
+
   }
 
   /**
@@ -1043,7 +1054,10 @@ class UserService {
 
     if (avatar.size > MAX_FILE_SIZE) {
       const sizeMB = (avatar.size / (1024 * 1024)).toFixed(2);
-      throw new Error(`Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`);
+      throw ApiError.badRequest(
+        `Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`
+      );
+
     }
 
     const cloudinary = (await import('../configs/cloudinaryConfig.js')).default;
@@ -1111,7 +1125,10 @@ class UserService {
   }
 
   static async createProfile(profileData) {
-    if (!profileData.userId) throw new Error('UserId required');
+    if (!profileData.userId) {
+      throw ApiError.badRequest('UserId required');
+    }
+
     return this.updateProfile(profileData.userId, profileData);
   }
 

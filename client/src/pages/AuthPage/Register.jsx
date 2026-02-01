@@ -295,12 +295,13 @@ const Register = () => {
             </p>
 
             {/* Error Message */}
-            {error && (
+            {error?.message && (
               <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
                 <AlertCircle size={16} />
-                {error}
+                {error.message}
               </div>
             )}
+
 
             {/* Submit */}
             <button

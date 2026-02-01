@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import logger from "../configs/logger.js";
+import ApiError from "../helpers/ApiError.js";
+
 
 const ConnectToMongodb = async (uri) => {
   if (!uri) {
-    throw new Error("MongoDB URI is undefined in configuration");
+    throw ApiError.internal("MongoDB URI is undefined in configuration");
   }
+
   try {
     const connect = await mongoose.connect(uri, {
       autoCreate: true,

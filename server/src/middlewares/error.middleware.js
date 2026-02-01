@@ -21,16 +21,28 @@ const userErrors = [
 const errorMiddleware = (err, req, res, next) => {
   // Determine status code
   let statusCode = err.statusCode || 500;
+  if (err.name === 'ApiError' && err.statusCode) {
+    statusCode = err.statusCode;
+  }
+
 
   // Check if it's a user-facing error
   if (
     userErrors.some((msg) => err.message?.includes(msg)) ||
-    err.message?.includes("Tài khoản bị tạm khóa")
+    err.message?.includes("Tài khoản bị tạm khóa") ||
+    err.code === '2FA_REQUIRED' ||
+    err.code === '2FA_INVALID' ||
+    err.errorCode === '2FA_REQUIRED' ||
+    err.errorCode === '2FA_INVALID'
   ) {
-    statusCode = 400;
+    statusCode = err.statusCode || 400;
   }
 
+
   const message = err.message || "Internal Server Error";
+  const errorCode = err.errorCode || err.code;
+  const details = err.details;
+
 
   // Always log error stack for debugging
   logger.error("Error Caught", {
@@ -46,9 +58,12 @@ const errorMiddleware = (err, req, res, next) => {
     success: false,
     code: 0,
     message,
+    ...(errorCode && { errorCode }),
+    ...(details && { details }),
     ...(config.env === "development" &&
       statusCode >= 500 && { stack: err.stack }),
   });
+
 };
 
 export default errorMiddleware;

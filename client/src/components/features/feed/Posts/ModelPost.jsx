@@ -2,6 +2,8 @@ import { useState, useRef, lazy, Suspense } from 'react';
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { useSelector } from 'react-redux';
 import { Image, X, Smile, Sparkles, Send, Video, Hash } from 'lucide-react';
+import toast from 'react-hot-toast';
+
 import {
   useCreatePost,
   useUpdatePost,
@@ -27,6 +29,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
   const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
+  const maxMediaFiles = 5;
+  const maxMediaSizeMB = 15;
+
 
   const onEmojiClick = emojiObject => {
     setCaption(prev => prev + emojiObject.emoji);
@@ -43,10 +48,30 @@ const ModelPost = ({ closeModal, editPost = null }) => {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
+    const remainingSlots = maxMediaFiles - mediaFiles.length - existingMedia.length;
+    if (remainingSlots <= 0) {
+      toast.error(`Chỉ được chọn tối đa ${maxMediaFiles} tệp`);
+      event.target.value = '';
+      return;
+    }
+
+    const acceptedFiles = files.slice(0, remainingSlots).filter(file => {
+      const isValidSize = file.size <= maxMediaSizeMB * 1024 * 1024;
+      if (!isValidSize) {
+        toast.error(`Tệp ${file.name} vượt quá ${maxMediaSizeMB}MB`);
+      }
+      return isValidSize;
+    });
+
+    if (acceptedFiles.length < files.length) {
+      toast.error('Một số tệp đã bị bỏ qua');
+    }
+
     // Store actual files for upload
-    setMediaFiles(prev => [...prev, ...files]);
+    setMediaFiles(prev => [...prev, ...acceptedFiles]);
     event.target.value = '';
   };
+
 
   const removeMedia = (index, isExisting) => {
     if (isExisting) {
