@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { USER_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
+import { toFormData } from '@/utils/toFormData';
 
 /**
  * Hook to fetch user profile
@@ -98,7 +99,13 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async profileData => {
-      const response = await api.put(USER_API.UPDATE_PROFILE, profileData);
+      // Backend expects multipart/form-data when uploading avatar/cover.
+      const payload =
+        typeof FormData !== 'undefined' && profileData instanceof FormData
+          ? profileData
+          : toFormData(profileData);
+
+      const response = await api.put(USER_API.UPDATE_PROFILE, payload);
       return extractData(response);
     },
     onSuccess: data => {

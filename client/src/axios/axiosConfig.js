@@ -38,6 +38,16 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // If sending FormData (file upload), let the browser/axios set the correct
+    // multipart boundary. Our default JSON content-type would break uploads.
+    if (
+      typeof FormData !== 'undefined' &&
+      config.data instanceof FormData
+    ) {
+      if (!config.headers) config.headers = {};
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
     return config;
   },
   (error) => {
