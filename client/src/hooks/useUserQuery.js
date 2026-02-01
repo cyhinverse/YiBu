@@ -3,6 +3,8 @@ import api from '@/axios/axiosConfig';
 import { USER_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
 import { toFormData } from '@/utils/toFormData';
+import { useDispatch } from 'react-redux';
+import { updateUserProfile } from '@/redux/slices/AuthSlice';
 
 /**
  * Hook to fetch user profile
@@ -97,6 +99,7 @@ export const useSuggestions = (limit = 10) => {
  */
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
+  const dispatch = useDispatch();
   return useMutation({
     mutationFn: async profileData => {
       // Backend expects multipart/form-data when uploading avatar/cover.
@@ -109,7 +112,22 @@ export const useUpdateProfile = () => {
       return extractData(response);
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['profile', data?._id || data?.id]);
+      const id = data?._id || data?.id;
+
+      // Update auth user in Redux so nav/header/avatar/etc update immediately.
+      if (data && typeof data === 'object') {
+        dispatch(updateUserProfile(data));
+      }
+
+      // Update profile cache for common keys.
+      if (id) {
+        queryClient.setQueryData(['profile', id], data);
+        queryClient.invalidateQueries(['profile', id]);
+      }
+
+      // Also refresh any other cached profiles (e.g. cached by username) and posts.
+      queryClient.invalidateQueries({ queryKey: ['profile'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['posts'], exact: false });
     },
   });
 };

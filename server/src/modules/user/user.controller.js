@@ -389,7 +389,7 @@ const UserController = {
       id,
       requesterId
     );
-    return formatResponse(res, 200, 0, 'Get profile successfully!', profile);
+    return formatResponse(res, 200, 1, 'Get profile successfully!', profile);
   }),
 
   /**

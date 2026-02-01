@@ -173,22 +173,24 @@ const App = () => {
         position="top-right"
         toastOptions={{
           duration: 3000,
+          className: 'border-0',
           style: {
             background: '#fff',
             color: '#333',
+            border: 'none',
           },
           success: {
             style: {
               background: '#ECFDF5',
-              border: '1px solid #10B981',
               color: '#065F46',
+              border: 'none',
             },
           },
           error: {
             style: {
               background: '#FEF2F2',
-              border: '1px solid #EF4444',
               color: '#991B1B',
+              border: 'none',
             },
           },
         }}

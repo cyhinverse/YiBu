@@ -33,7 +33,6 @@ import { useCreateConversation } from '@/hooks/useMessageQuery';
 import toast from 'react-hot-toast';
 import { formatNumber } from '@/utils/numberUtils';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
-
 const FollowList = lazy(() => import('../FollowList/FollowList'));
 
 const Profile = () => {
@@ -46,7 +45,7 @@ const Profile = () => {
   const isOwnProfile = !userId || userId === authUser?._id;
 
   // React Query Hooks
-  const { data: profileData, isLoading: profileLoading } =
+  const { data: profileData, isLoading: profileLoading, isFetching: profileFetching } =
     useProfile(profileId);
   const currentProfile = profileData;
 
@@ -140,6 +139,8 @@ const Profile = () => {
       </div>
     );
   }
+
+  const isRefreshingProfile = profileFetching && !!currentProfile;
 
   const tabs = [
     { id: 'posts', label: 'Posts', icon: Grid3X3 },
@@ -259,6 +260,14 @@ const Profile = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {isRefreshingProfile && (
+        <div className="sticky top-0 z-10 flex justify-end py-2">
+          <div className="flex items-center gap-2 text-xs text-neutral-500 bg-white/80 dark:bg-neutral-900/70 backdrop-blur px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-neutral-800">
+            <Loader2 size={14} className="animate-spin" />
+            Updating profile
+          </div>
+        </div>
+      )}
       {/* Cover Image */}
       <div className="h-48 bg-neutral-100 dark:bg-neutral-800 relative">
         <img
