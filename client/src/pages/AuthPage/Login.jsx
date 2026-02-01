@@ -254,7 +254,7 @@ const Login = () => {
                   className="w-full px-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
-            )
+            )}
 
             {/* Error Message */}
             {error?.message && (

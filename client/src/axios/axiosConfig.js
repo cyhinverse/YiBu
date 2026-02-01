@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { AUTH_API } from './apiEndpoint';
 
-const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9785';
+// Prefer same-origin in dev (Vite proxy) so cookie auth works reliably.
+const backendUrl =
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : '');
 
 // Type for queued promise handlers
 let isRefreshing = false;

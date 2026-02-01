@@ -32,5 +32,19 @@ export default defineConfig({
       },
     },
   },
-  server: { port: 9258 },
+  server: {
+    port: 9258,
+    // Proxy API + Socket.IO in dev so HttpOnly cookies work without SameSite=None.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:9785',
+        changeOrigin: true,
+      },
+      '/socket.io': {
+        target: 'http://localhost:9785',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
 });
