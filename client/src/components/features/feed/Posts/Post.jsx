@@ -4,7 +4,6 @@ import {
   lazy,
   Suspense,
   useEffect,
-  useRef,
 } from 'react';
 import { useSelector } from 'react-redux';
 import {
@@ -23,7 +22,7 @@ import {
   Link2,
   Share2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   useToggleLike,
   useToggleSave,
@@ -32,6 +31,7 @@ import {
 } from '@/hooks/usePostsQuery';
 import UserProfilePreview from '@/components/Common/UserProfilePreview';
 import { formatCount, formatPostTime as formatTime } from '@/utils/postUtils';
+import VideoPlayer from './VideoPlayer';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -46,280 +46,6 @@ const ReportModal = lazy(() =>
 );
 const ModelPost = lazy(() => import('./ModelPost'));
 const VideoModal = lazy(() => import('@/components/Common/VideoModal'));
-
-// Inline Video Player with basic controls
-const VideoPlayer = ({ src, onExpand }) => {
-  const videoRef = useRef(null);
-  const containerRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [volume, setVolume] = useState(1);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  // Auto play/pause when scrolling in/out of view
-  useEffect(() => {
-    const video = videoRef.current;
-    const container = containerRef.current;
-    if (!video || !container) return;
-
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            // Video is in view - auto play
-            video.play().catch(() => {});
-          } else {
-            // Video is out of view - pause
-            video.pause();
-          }
-        });
-      },
-      {
-        threshold: 0.5, // 50% of video must be visible
-      }
-    );
-
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const togglePlay = e => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = e => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-      if (isMuted && volume === 0) {
-        setVolume(1);
-        videoRef.current.volume = 1;
-      }
-    }
-  };
-
-  const handleVolumeChange = e => {
-    e.stopPropagation();
-    const newVolume = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      videoRef.current.muted = newVolume === 0;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setProgress(
-        (videoRef.current.currentTime / videoRef.current.duration) * 100
-      );
-    }
-  };
-
-  const handleSeek = e => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    if (videoRef.current) {
-      videoRef.current.currentTime = percent * videoRef.current.duration;
-    }
-  };
-
-  const formatTime = time => {
-    if (isNaN(time)) return '0:00';
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div ref={containerRef} className="relative w-full h-full group">
-      <video
-        ref={videoRef}
-        src={src}
-        playsInline
-        muted={isMuted}
-        loop
-        className="w-full h-full object-cover"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => {}}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onClick={togglePlay}
-      />
-
-      {/* Play/Pause Overlay (shows when paused) */}
-      {!isPlaying && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
-          onClick={togglePlay}
-        >
-          <div className="w-14 h-14 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform">
-            <svg
-              className="w-7 h-7 text-white ml-1"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Progress Bar */}
-        <div
-          className="h-1 bg-white/30 rounded-full cursor-pointer mb-2"
-          onClick={handleSeek}
-        >
-          <div
-            className="h-full bg-white rounded-full"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            {/* Play/Pause */}
-            <button
-              onClick={togglePlay}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-            >
-              {isPlaying ? (
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              ) : (
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Mute/Unmute with Volume Slider */}
-            <div
-              className="relative flex items-center"
-              onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
-            >
-              <button
-                onClick={toggleMute}
-                className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-              >
-                {isMuted || volume === 0 ? (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                    />
-                  </svg>
-                )}
-              </button>
-
-              {/* Volume Slider */}
-              <div
-                className={`flex items-center overflow-hidden transition-all duration-200 ${
-                  showVolumeSlider ? 'w-16 ml-1' : 'w-0'
-                }`}
-              >
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={isMuted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  onClick={e => e.stopPropagation()}
-                  className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Time */}
-            <span className="text-white text-xs ml-1">
-              {formatTime(videoRef.current?.currentTime || 0)}
-            </span>
-          </div>
-
-          {/* Expand Button */}
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onExpand();
-            }}
-            className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-            title="Expand"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Post = ({ data, onDelete }) => {
   const { user: authUser } = useSelector(state => state.auth);
@@ -383,7 +109,7 @@ const Post = ({ data, onDelete }) => {
         // Revert on failure
         setIsLiked(prevLiked);
         setLikeCount(prevCount);
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       },
     });
   }, [data?._id, isLiked, likeCount, likeLoading, toggleLike]);
@@ -400,12 +126,12 @@ const Post = ({ data, onDelete }) => {
       { postId: data._id, isSaved: prevSaved },
       {
         onSuccess: () => {
-          toast.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
+          notify.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
         },
         onError: error => {
           // Revert on failure
           setIsSaved(prevSaved);
-          toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+          notify.error(error?.response?.data?.message || 'Thao tác thất bại');
         },
       }
     );
@@ -416,13 +142,13 @@ const Post = ({ data, onDelete }) => {
 
     try {
       await deletePostMutation(data._id);
-      toast.success('Đã xóa bài viết');
+      notify.success('Đã xóa bài viết');
       setShowDeleteConfirm(false);
       setShowOptions(false);
       // Notify parent to remove from list
       onDelete?.(data._id);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Xóa bài viết thất bại');
+      notify.error(error?.response?.data?.message || 'Xóa bài viết thất bại');
     }
   }, [deletePending, data?._id, onDelete, deletePostMutation]);
 
@@ -431,17 +157,17 @@ const Post = ({ data, onDelete }) => {
 
     try {
       await sharePostMutation({ postId: data._id });
-      toast.success('Đã chia sẻ bài viết');
+      notify.success('Đã chia sẻ bài viết');
       setShowOptions(false);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Chia sẻ thất bại');
+      notify.error(error?.response?.data?.message || 'Chia sẻ thất bại');
     }
   }, [sharePending, data?._id, sharePostMutation]);
 
   const handleCopyLink = useCallback(() => {
     const url = `${window.location.origin}/post/${data?._id}`;
     navigator.clipboard.writeText(url);
-    toast.success('Đã sao chép link');
+    notify.success('Đã sao chép link');
     setShowOptions(false);
   }, [data?._id]);
 
@@ -831,3 +557,4 @@ const Post = ({ data, onDelete }) => {
 };
 
 export default Post;
+
