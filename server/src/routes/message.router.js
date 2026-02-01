@@ -1,5 +1,6 @@
 import express from 'express';
-import MessageController from '../controllers/message.controller.js';
+import MessageController from '../modules/message/message.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import upload from '../middlewares/multerUpload.js';
 import {

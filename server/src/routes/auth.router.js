@@ -1,5 +1,6 @@
 import express from 'express';
-import AuthController from '../controllers/auth.controller.js';
+import AuthController from '../modules/auth/auth.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import { authRateLimiter } from '../middlewares/security.middleware.js';
 import {
@@ -16,7 +17,9 @@ import {
   updatePasswordBody,
   verifyTwoFactorBody,
   sessionIdParam,
+  disableTwoFactorBody,
 } from '../validations/auth.validation.js';
+
 
 const router = express.Router();
 
@@ -87,10 +90,16 @@ router.post(
   AuthController.VerifyTwoFactor
 );
 /* POST /2fa/disable - Disable two-factor authentication */
-router.post('/2fa/disable', AuthController.DisableTwoFactor);
+router.post(
+  '/2fa/disable',
+  validateBody(disableTwoFactorBody),
+  AuthController.DisableTwoFactor
+);
+
 
 /* GET /sessions - Get all active login sessions */
-router.get('/sessions', AuthController.GetActiveSessions);
+router.get('/sessions', AuthController.GetSessions);
+
 /* DELETE /sessions/:sessionId - Revoke a specific session */
 router.delete(
   '/sessions/:sessionId',

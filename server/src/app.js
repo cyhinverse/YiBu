@@ -5,6 +5,7 @@ import config from './configs/config.js';
 import { morganMiddleware } from './configs/logger.js';
 import errorMiddleware from './middlewares/error.middleware.js';
 import ApiError from './helpers/ApiError.js';
+import { sendOk } from './helpers/apiResponse.js';
 import {
   helmetMiddleware,
   globalRateLimiter,
@@ -106,37 +107,42 @@ app.use(morganMiddleware);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
+  return sendOk(res, {
     message: 'API is running',
-    timestamp: new Date(),
-    env: config.env,
+    data: {
+      status: 'ok',
+      timestamp: new Date(),
+      env: config.env,
+    },
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
 
-app.use('/api/posts', postRoutes);
+// Routes (v2)
+app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/user', userRoutes);
 
-app.use('/api/comments', commentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/reports', reportRoutes); // check filename
-app.use('/api/like', likeRoutes);
+app.use('/api/v2/posts', postRoutes);
 
-app.use('/api/messages', messageRoutes);
-app.use('/api/savepost', savePostRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', userSettingsRoutes);
+app.use('/api/v2/comments', commentRoutes);
+app.use('/api/v2/admin', adminRoutes);
+app.use('/api/v2/reports', reportRoutes); // check filename
+app.use('/api/v2/like', likeRoutes);
+
+app.use('/api/v2/messages', messageRoutes);
+app.use('/api/v2/savepost', savePostRoutes);
+app.use('/api/v2/notifications', notificationRoutes);
+app.use('/api/v2/settings', userSettingsRoutes);
+
 
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({
-    code: 0,
+    success: false,
     message: `Endpoint not found: ${req.method} ${req.path}`,
   });
 });
+
 
 // Global Error Handler
 app.use(errorMiddleware);

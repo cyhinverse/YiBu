@@ -1,5 +1,6 @@
 import express from 'express';
-import NotificationController from '../controllers/notification.controller.js';
+import NotificationController from '../modules/notification/notification.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBody,

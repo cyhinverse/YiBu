@@ -1,5 +1,6 @@
 import express from 'express';
-import ReportController from '../controllers/report.controller.js';
+import ReportController from '../modules/report/report.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBody,

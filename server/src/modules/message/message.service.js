@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
-import Message from '../models/Message.js';
-import User from '../models/User.js';
-import UserSettings from '../models/UserSettings.js';
-import Follow from '../models/Follow.js';
-import logger from '../configs/logger.js';
-import { retryOperation } from '../helpers/retryOperation.js';
-import socketService from './Socket.Service.js';
-import Conversation from '../models/Conversation.js';
-import ApiError from '../helpers/ApiError.js';
+import Message from '../../models/Message.js';
+import User from '../../models/User.js';
+import UserSettings from '../../models/UserSettings.js';
+import Follow from '../../models/Follow.js';
+import logger from '../../configs/logger.js';
+import { retryOperation } from '../../utils/retryOperation.js';
+import socketService from '../shared/socket/socket.service.js';
+import Conversation from '../../models/Conversation.js';
+import ApiError from '../../helpers/ApiError.js';
 
 
 /**
@@ -621,7 +621,7 @@ class MessageService {
    */
   static async uploadAttachments(files, userId) {
     const { uploadToCloudinary } =
-      await import('../middlewares/multerUpload.js');
+      await import('../../middlewares/multerUpload.js');
     const uploadedMedia = [];
     const fileArray = Array.isArray(files) ? files : [files];
 
@@ -974,3 +974,6 @@ class MessageService {
 }
 
 export default MessageService;
+
+
+

@@ -1,9 +1,11 @@
-import { CatchError } from '../configs/CatchError.js';
-import MessageService from '../services/Message.Service.js';
-import UserService from '../services/User.Service.js';
-import { formatResponse } from '../helpers/formatResponse.js';
-import { getPaginationParams } from '../helpers/pagination.js';
-import socketService from '../services/Socket.Service.js';
+import { CatchError } from '../../configs/CatchError.js';
+import MessageService from './message.service.js';
+import UserService from '../user/user.service.js';
+import { sendCreated, sendOk } from '../../helpers/apiResponse.js';
+import { getPaginationParams } from '../../utils/pagination.js';
+import socketService from '../shared/socket/socket.service.js';
+import ApiError from '../../helpers/ApiError.js';
+
 
 /**
  * Message Controller
@@ -37,7 +39,11 @@ const MessageController = {
       page,
       limit,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -58,7 +64,11 @@ const MessageController = {
       conversationId,
       userId
     );
-    return formatResponse(res, 200, 1, 'Success', conversation);
+    return sendOk(res, {
+      message: 'Success',
+      data: conversation,
+    });
+
   }),
 
   /**
@@ -93,7 +103,11 @@ const MessageController = {
         userId,
         resolvedParticipantId
       );
-      return formatResponse(res, 200, 1, 'Success', conversation);
+      return sendOk(res, {
+        message: 'Success',
+        data: conversation,
+      });
+
     }
 
     if (
@@ -110,7 +124,11 @@ const MessageController = {
           userId,
           resolvedIds[0]
         );
-        return formatResponse(res, 200, 1, 'Success', conversation);
+        return sendOk(res, {
+          message: 'Success',
+          data: conversation,
+        });
+
       }
 
       if (isGroup) {
@@ -122,17 +140,16 @@ const MessageController = {
             groupAvatar,
           }
         );
-        return formatResponse(
-          res,
-          201,
-          1,
-          'Group created successfully',
-          conversation
-        );
+      return sendCreated(res, {
+        message: 'Group created successfully',
+        data: conversation,
+      });
+
       }
     }
 
-    return formatResponse(res, 400, 0, 'Participant ID is required');
+    throw ApiError.badRequest('Participant ID is required');
+
   }),
 
   /**
@@ -152,17 +169,13 @@ const MessageController = {
     const { participantIds, groupName, groupAvatar } = req.body;
 
     if (!participantIds || participantIds.length < 2) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'At least 2 participants required for group'
-      );
+      throw ApiError.badRequest('Group requires at least 2 participants');
     }
 
     if (!groupName) {
-      return formatResponse(res, 400, 0, 'Group name is required');
+      throw ApiError.badRequest('Group name is required');
     }
+
 
     const conversation = await MessageService.createGroupConversation(userId, {
       participantIds,
@@ -180,13 +193,11 @@ const MessageController = {
       }
     });
 
-    return formatResponse(
-      res,
-      201,
-      1,
-      'Group created successfully',
-      conversation
-    );
+    return sendCreated(res, {
+      message: 'Group created successfully',
+      data: conversation,
+    });
+
   }),
 
   /**
@@ -216,13 +227,11 @@ const MessageController = {
       }
     );
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Group updated successfully',
-      conversation
-    );
+    return sendOk(res, {
+      message: 'Group updated successfully',
+      data: conversation,
+    });
+
   }),
 
   /**
@@ -240,7 +249,10 @@ const MessageController = {
     const userId = req.user.id;
 
     await MessageService.deleteConversation(conversationId, userId);
-    return formatResponse(res, 200, 1, 'Conversation deleted successfully');
+    return sendOk(res, {
+      message: 'Conversation deleted successfully',
+    });
+
   }),
 
   /**
@@ -261,8 +273,9 @@ const MessageController = {
     const { memberIds } = req.body;
 
     if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
-      return formatResponse(res, 400, 0, 'Member IDs are required');
+      throw ApiError.badRequest('Member IDs are required');
     }
+
 
     const conversation = await MessageService.addGroupMembers(
       conversationId,
@@ -277,13 +290,11 @@ const MessageController = {
       });
     });
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Members added successfully',
-      conversation
-    );
+    return sendOk(res, {
+      message: 'Members added successfully',
+      data: conversation,
+    });
+
   }),
 
   /**
@@ -312,13 +323,11 @@ const MessageController = {
       removedBy: userId,
     });
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Member removed successfully',
-      conversation
-    );
+    return sendOk(res, {
+      message: 'Member removed successfully',
+      data: conversation,
+    });
+
   }),
 
   /**
@@ -336,7 +345,10 @@ const MessageController = {
     const userId = req.user.id;
 
     await MessageService.leaveGroup(conversationId, userId);
-    return formatResponse(res, 200, 1, 'Left group successfully');
+    return sendOk(res, {
+      message: 'Left group successfully',
+    });
+
   }),
 
   /**
@@ -363,7 +375,11 @@ const MessageController = {
       limit: parseInt(limit),
       before,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -390,12 +406,7 @@ const MessageController = {
     }
 
     if (!content && attachments.length === 0) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Message content or attachment is required'
-      );
+      throw ApiError.badRequest('Message content or attachment is required');
     }
 
     const message = await MessageService.sendMessage(conversationId, userId, {
@@ -405,7 +416,11 @@ const MessageController = {
       replyTo,
     });
 
-    return formatResponse(res, 201, 1, 'Message sent', message);
+    return sendCreated(res, {
+      message: 'Message sent',
+      data: message,
+    });
+
   }),
 
   /**
@@ -430,7 +445,11 @@ const MessageController = {
       userId,
       forEveryone
     );
-    return formatResponse(res, 200, 1, 'Message deleted', message);
+    return sendOk(res, {
+      message: 'Message deleted',
+      data: message,
+    });
+
   }),
 
   /**
@@ -448,7 +467,10 @@ const MessageController = {
     const userId = req.user.id;
 
     await MessageService.markConversationAsRead(conversationId, userId);
-    return formatResponse(res, 200, 1, 'Marked as read');
+    return sendOk(res, {
+      message: 'Marked as read',
+    });
+
   }),
 
   /**
@@ -466,7 +488,10 @@ const MessageController = {
     const userId = req.user.id;
 
     await MessageService.markMessageAsRead(messageId, userId);
-    return formatResponse(res, 200, 1, 'Message marked as read');
+    return sendOk(res, {
+      message: 'Message marked as read',
+    });
+
   }),
 
   /* Get total unread message count */
@@ -474,7 +499,11 @@ const MessageController = {
     const userId = req.user.id;
 
     const count = await MessageService.getUnreadCount(userId);
-    return formatResponse(res, 200, 1, 'Success', { unreadCount: count });
+    return sendOk(res, {
+      message: 'Success',
+      data: { unreadCount: count },
+    });
+
   }),
 
   /**
@@ -495,11 +524,15 @@ const MessageController = {
     const { emoji } = req.body;
 
     if (!emoji) {
-      return formatResponse(res, 400, 0, 'Emoji is required');
+      throw ApiError.badRequest('Emoji is required');
     }
 
     const result = await MessageService.addReaction(messageId, userId, emoji);
-    return formatResponse(res, 200, 1, 'Reaction added', result);
+    return sendOk(res, {
+      message: 'Reaction added',
+      data: result,
+    });
+
   }),
 
   /**
@@ -517,7 +550,11 @@ const MessageController = {
     const userId = req.user.id;
 
     const result = await MessageService.removeReaction(messageId, userId);
-    return formatResponse(res, 200, 1, 'Reaction removed', result);
+    return sendOk(res, {
+      message: 'Reaction removed',
+      data: result,
+    });
+
   }),
 
   /**
@@ -538,7 +575,10 @@ const MessageController = {
     const { isTyping = true } = req.body;
 
     socketService.emitTyping(conversationId, userId, isTyping);
-    return formatResponse(res, 200, 1, 'OK');
+    return sendOk(res, {
+      message: 'OK',
+    });
+
   }),
 
   /**
@@ -559,7 +599,7 @@ const MessageController = {
     const { query, conversationId, page = 1, limit = 20 } = req.query;
 
     if (!query || query.trim().length < 2) {
-      return formatResponse(res, 400, 0, 'Query must be at least 2 characters');
+      throw ApiError.badRequest('Query must be at least 2 characters');
     }
 
     const result = await MessageService.searchMessages(userId, query, {
@@ -567,7 +607,11 @@ const MessageController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -591,7 +635,11 @@ const MessageController = {
       limit: parseInt(limit),
       search,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
 };

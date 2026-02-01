@@ -1,8 +1,10 @@
-import { CatchError } from "../configs/CatchError.js";
-import NotificationService from "../services/Notification.service.js";
-import { formatResponse } from "../helpers/formatResponse.js";
-import { getPaginationParams } from "../helpers/pagination.js";
-import socketService from "../services/Socket.Service.js";
+import { CatchError } from "../../configs/CatchError.js";
+import NotificationService from "./notification.service.js";
+import { sendCreated, sendOk } from "../../helpers/apiResponse.js";
+import { getPaginationParams } from "../../utils/pagination.js";
+import socketService from "../shared/socket/socket.service.js";
+import ApiError from "../../helpers/ApiError.js";
+
 
 /**
  * Notification Controller
@@ -47,8 +49,10 @@ const NotificationController = {
     const sender = req.body.sender || req.user.id;
 
     if (!recipient || !type) {
-      return formatResponse(res, 400, 0, "Recipient and type are required");
+      throw ApiError.badRequest("Recipient and type are required");
     }
+
+
 
     const notification = await NotificationService.createNotification({
       recipient,
@@ -65,7 +69,11 @@ const NotificationController = {
       socketService.emitNotification(recipient.toString(), notification);
     }
 
-    return formatResponse(res, 201, 1, "Đã tạo thông báo", notification);
+    return sendCreated(res, {
+      message: "Đã tạo thông báo",
+      data: notification,
+    });
+
   }),
 
   /**
@@ -95,12 +103,16 @@ const NotificationController = {
       unreadOnly: unreadOnly === "true",
     });
 
-    return formatResponse(res, 200, 1, "Success", {
-      notifications: result.notifications,
-      total: result.total,
-      unreadCount: result.unreadCount,
-      hasMore: result.hasMore,
+    return sendOk(res, {
+      message: "Success",
+      data: {
+        notifications: result.notifications,
+        total: result.total,
+        unreadCount: result.unreadCount,
+        hasMore: result.hasMore,
+      },
     });
+
   }),
 
   /**
@@ -123,10 +135,15 @@ const NotificationController = {
     );
 
     if (!notification) {
-      return formatResponse(res, 404, 0, "Thông báo không tồn tại");
+      throw ApiError.notFound("Thông báo không tồn tại");
     }
 
-    return formatResponse(res, 200, 1, "Success", notification);
+ 
+     return sendOk(res, {
+       message: "Success",
+       data: notification,
+     });
+
   }),
 
   /**
@@ -149,10 +166,14 @@ const NotificationController = {
     );
 
     if (!notification) {
-      return formatResponse(res, 404, 0, "Thông báo không tồn tại");
+      throw ApiError.notFound("Thông báo không tồn tại");
     }
 
-    return formatResponse(res, 200, 1, "Đã đánh dấu đã đọc", notification);
+    return sendOk(res, {
+      message: "Đã đánh dấu đã đọc",
+      data: notification,
+    });
+
   }),
 
   /**
@@ -170,7 +191,11 @@ const NotificationController = {
     const { type } = req.body;
 
     const result = await NotificationService.markAllAsRead(userId, type);
-    return formatResponse(res, 200, 1, "Đã đánh dấu tất cả là đã đọc", result);
+    return sendOk(res, {
+      message: "Đã đánh dấu tất cả là đã đọc",
+      data: result,
+    });
+
   }),
 
   /**
@@ -193,10 +218,13 @@ const NotificationController = {
     );
 
     if (!result.success) {
-      return formatResponse(res, 404, 0, "Thông báo không tồn tại");
+      throw ApiError.notFound("Thông báo không tồn tại");
     }
 
-    return formatResponse(res, 200, 1, "Đã xóa thông báo");
+    return sendOk(res, {
+      message: "Đã xóa thông báo",
+    });
+
   }),
 
   /**
@@ -217,13 +245,11 @@ const NotificationController = {
       userId,
       type
     );
-    return formatResponse(
-      res,
-      200,
-      1,
-      `Đã xóa ${result.deletedCount} thông báo`,
-      result
-    );
+    return sendOk(res, {
+      message: `Đã xóa ${result.deletedCount} thông báo`,
+      data: result,
+    });
+
   }),
 
   /**
@@ -238,7 +264,11 @@ const NotificationController = {
     const userId = req.user.id;
 
     const unreadCount = await NotificationService.getUnreadCount(userId);
-    return formatResponse(res, 200, 1, "Success", { unreadCount });
+    return sendOk(res, {
+      message: "Success",
+      data: { unreadCount },
+    });
+
   }),
 
   /**
@@ -253,7 +283,11 @@ const NotificationController = {
     const userId = req.user.id;
 
     const counts = await NotificationService.getUnreadCountByType(userId);
-    return formatResponse(res, 200, 1, "Success", counts);
+    return sendOk(res, {
+      message: "Success",
+      data: counts,
+    });
+
   }),
 
   /**
@@ -270,7 +304,11 @@ const NotificationController = {
     const preferences = await NotificationService.getNotificationPreferences(
       userId
     );
-    return formatResponse(res, 200, 1, "Success", preferences);
+    return sendOk(res, {
+      message: "Success",
+      data: preferences,
+    });
+
   }),
 
   /**
@@ -290,13 +328,11 @@ const NotificationController = {
       userId,
       preferences
     );
-    return formatResponse(
-      res,
-      200,
-      1,
-      "Đã cập nhật cài đặt thông báo",
-      updated
-    );
+    return sendOk(res, {
+      message: "Đã cập nhật cài đặt thông báo",
+      data: updated,
+    });
+
   }),
 };
 

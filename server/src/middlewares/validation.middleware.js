@@ -16,16 +16,12 @@ export const validateBody = schema => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      error.statusCode = 400;
+      error.details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Dữ liệu không hợp lệ',
-        errors,
-      });
+      return next(error);
     }
 
     // Assign validated value to req.body
@@ -33,6 +29,7 @@ export const validateBody = schema => {
     next();
   };
 };
+
 
 /**
  * Validate request params
@@ -46,22 +43,19 @@ export const validateParams = schema => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      error.statusCode = 400;
+      error.details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Tham số không hợp lệ',
-        errors,
-      });
+      return next(error);
     }
 
     req.params = value;
     next();
   };
 };
+
 
 /**
  * Validate request query
@@ -76,22 +70,19 @@ export const validateQuery = schema => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      error.statusCode = 400;
+      error.details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Query parameters không hợp lệ',
-        errors,
-      });
+      return next(error);
     }
 
     req.query = value;
     next();
   };
 };
+
 
 /**
  * Validate multiple parts of request at once
@@ -159,16 +150,16 @@ export const validate = ({ body, params, query }) => {
     }
 
     if (errors.length > 0) {
-      return res.status(400).json({
-        code: 0,
-        message: 'Dữ liệu không hợp lệ',
-        errors,
-      });
+      const error = new Error('Dữ liệu không hợp lệ');
+      error.statusCode = 400;
+      error.details = errors;
+      return next(error);
     }
 
     next();
   };
 };
+
 
 export default {
   validateBody,

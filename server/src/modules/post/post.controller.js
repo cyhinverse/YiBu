@@ -1,10 +1,12 @@
-import { CatchError } from '../configs/CatchError.js';
-import PostService from '../services/Post.Service.js';
-import UserService from '../services/User.Service.js';
-import { formatResponse } from '../helpers/formatResponse.js';
-import { getPaginationParams } from '../helpers/pagination.js';
-import socketService from '../services/Socket.Service.js';
-import logger from '../configs/logger.js';
+import { CatchError } from '../../configs/CatchError.js';
+import PostService from './post.service.js';
+import UserService from '../user/user.service.js';
+import { sendCreated, sendOk } from '../../helpers/apiResponse.js';
+import { getPaginationParams } from '../../utils/pagination.js';
+import socketService from '../shared/socket/socket.service.js';
+import logger from '../../configs/logger.js';
+import ApiError from '../../helpers/ApiError.js';
+
 
 /**
  * Post Controller
@@ -36,7 +38,11 @@ const PostController = {
     const { page = 1, limit = 20 } = getPaginationParams(req.query);
 
     const result = await PostService.getHomeFeed(userId, { page, limit });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -55,7 +61,11 @@ const PostController = {
     const { page = 1, limit = 20 } = getPaginationParams(req.query);
 
     const result = await PostService.getExploreFeed(userId, { page, limit });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -74,7 +84,11 @@ const PostController = {
     const { page = 1, limit = 20 } = getPaginationParams(req.query);
 
     const result = await PostService.getHashtagFeed(userId, { page, limit });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -96,7 +110,11 @@ const PostController = {
       page,
       limit,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -117,7 +135,11 @@ const PostController = {
       limit: parseInt(limit),
       timeframe,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -135,7 +157,11 @@ const PostController = {
     const userId = req.user?.id;
 
     const post = await PostService.getPostById(id, userId);
-    return formatResponse(res, 200, 1, 'Success', post);
+    return sendOk(res, {
+      message: 'Success',
+      data: post,
+    });
+
   }),
 
   /**
@@ -158,20 +184,18 @@ const PostController = {
 
     const resolvedUserId = await UserService.resolveUserIdOrUsername(id);
     if (!resolvedUserId) {
-      return formatResponse(res, 404, 0, 'Người dùng không tồn tại');
+      throw ApiError.notFound('Người dùng không tồn tại');
     }
 
     const result = await PostService.getUserPosts(resolvedUserId, requesterId, {
       page,
       limit,
     });
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Get posts of user successfully!',
-      result
-    );
+    return sendOk(res, {
+      message: 'Get posts of user successfully!',
+      data: result,
+    });
+
   }),
 
   /**
@@ -208,7 +232,11 @@ const PostController = {
       userId
     );
 
-    return formatResponse(res, 201, 1, 'Post created successfully', post);
+    return sendCreated(res, {
+      message: 'Post created successfully',
+      data: post,
+    });
+
   }),
 
   /**
@@ -237,7 +265,11 @@ const PostController = {
     }
 
     const post = await PostService.updatePost(id, userId, req.body);
-    return formatResponse(res, 200, 1, 'Post updated successfully', post);
+    return sendOk(res, {
+      message: 'Post updated successfully',
+      data: post,
+    });
+
   }),
 
   /**
@@ -257,7 +289,10 @@ const PostController = {
     const isAdmin = req.user.isAdmin;
 
     await PostService.deletePost(id, userId, isAdmin);
-    return formatResponse(res, 200, 1, 'Post deleted successfully');
+    return sendOk(res, {
+      message: 'Post deleted successfully',
+    });
+
   }),
 
   /**
@@ -279,14 +314,18 @@ const PostController = {
     const searchQuery = q || query;
 
     if (!searchQuery || searchQuery.trim().length < 2) {
-      return formatResponse(res, 400, 0, 'Query must be at least 2 characters');
+      throw ApiError.badRequest('Query must be at least 2 characters');
     }
 
     const result = await PostService.searchPosts(searchQuery, userId, {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -311,7 +350,11 @@ const PostController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -326,7 +369,11 @@ const PostController = {
     const { limit = 10 } = req.query;
 
     const hashtags = await PostService.getTrendingHashtags(parseInt(limit));
-    return formatResponse(res, 200, 1, 'Success', hashtags);
+    return sendOk(res, {
+      message: 'Success',
+      data: hashtags,
+    });
+
   }),
 
   /**
@@ -345,8 +392,9 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
+
 
     const result = await PostService.likePost(postId, userId);
 
@@ -361,7 +409,11 @@ const PostController = {
       }
     }
 
-    return formatResponse(res, 200, 1, 'Liked successfully', result);
+    return sendOk(res, {
+      message: 'Liked successfully',
+      data: result,
+    });
+
   }),
 
   /**
@@ -379,11 +431,16 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
 
+
     const result = await PostService.unlikePost(postId, userId);
-    return formatResponse(res, 200, 1, 'Unliked successfully', result);
+    return sendOk(res, {
+      message: 'Unliked successfully',
+      data: result,
+    });
+
   }),
 
   /**
@@ -401,14 +458,19 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
 
+
     const post = await PostService.getPostById(postId, userId);
-    return formatResponse(res, 200, 1, 'Success', {
-      isLiked: post.isLiked,
-      count: post.likesCount,
+    return sendOk(res, {
+      message: 'Success',
+      data: {
+        isLiked: post.isLiked,
+        count: post.likesCount,
+      },
     });
+
   }),
 
   /**
@@ -426,15 +488,20 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
+
 
     const result = await PostService.toggleLike(postId, userId);
 
     const message = result.liked
       ? 'Liked successfully'
       : 'Unliked successfully';
-    return formatResponse(res, 200, 1, message, result);
+    return sendOk(res, {
+      message,
+      data: result,
+    });
+
   }),
 
   /**
@@ -456,7 +523,11 @@ const PostController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', users);
+    return sendOk(res, {
+      message: 'Success',
+      data: users,
+    });
+
   }),
 
   /**
@@ -478,7 +549,11 @@ const PostController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -504,7 +579,11 @@ const PostController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -522,8 +601,9 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
-      return formatResponse(res, 400, 0, 'Valid post IDs array is required');
+      throw ApiError.badRequest('Valid post IDs array is required');
     }
+
 
     const results = {};
     for (const postId of postIds) {
@@ -538,7 +618,11 @@ const PostController = {
       }
     }
 
-    return formatResponse(res, 200, 1, 'Success', results);
+    return sendOk(res, {
+      message: 'Success',
+      data: results,
+    });
+
   }),
 
   /**
@@ -559,11 +643,16 @@ const PostController = {
     const { collection } = req.body;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
 
+
     const result = await PostService.savePost(postId, userId, collection);
-    return formatResponse(res, 200, 1, 'Đã lưu bài viết', result);
+    return sendOk(res, {
+      message: 'Đã lưu bài viết',
+      data: result,
+    });
+
   }),
 
   /**
@@ -581,11 +670,15 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
 
+
     await PostService.unsavePost(postId, userId);
-    return formatResponse(res, 200, 1, 'Đã bỏ lưu bài viết');
+    return sendOk(res, {
+      message: 'Đã bỏ lưu bài viết',
+    });
+
   }),
 
   /**
@@ -609,7 +702,11 @@ const PostController = {
       limit: parseInt(limit),
       collection,
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**
@@ -624,7 +721,11 @@ const PostController = {
     const userId = req.user.id;
 
     const collections = await PostService.getSavedCollections(userId);
-    return formatResponse(res, 200, 1, 'Success', collections);
+    return sendOk(res, {
+      message: 'Success',
+      data: collections,
+    });
+
   }),
 
   /**
@@ -642,13 +743,18 @@ const PostController = {
     const userId = req.user.id;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'Post ID is required');
+      throw ApiError.badRequest('Post ID is required');
     }
 
+
     const post = await PostService.getPostById(postId, userId);
-    return formatResponse(res, 200, 1, 'Success', {
-      isSaved: post.isSaved || false,
+    return sendOk(res, {
+      message: 'Success',
+      data: {
+        isSaved: post.isSaved || false,
+      },
     });
+
   }),
 
   /**
@@ -669,17 +775,13 @@ const PostController = {
     const userId = req.user.id;
 
     if (!content || !content.trim()) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Nội dung comment không được để trống'
-      );
+      throw ApiError.badRequest('Nội dung comment không được để trống');
     }
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'ID bài viết là bắt buộc');
+      throw ApiError.badRequest('ID bài viết là bắt buộc');
     }
+
 
     const comment = await PostService.addComment(
       postId,
@@ -706,7 +808,11 @@ const PostController = {
       });
     }
 
-    return formatResponse(res, 201, 1, 'Đã tạo comment thành công', comment);
+    return sendCreated(res, {
+      message: 'Đã tạo comment thành công',
+      data: comment,
+    });
+
   }),
 
   /**
@@ -726,7 +832,7 @@ const PostController = {
     const { page = 1, limit = 20, sort = 'best' } = req.query;
 
     if (!postId) {
-      return formatResponse(res, 400, 0, 'ID bài viết là bắt buộc');
+      throw ApiError.badRequest('ID bài viết là bắt buộc');
     }
 
     const result = await PostService.getComments(postId, {
@@ -734,7 +840,11 @@ const PostController = {
       limit: parseInt(limit),
       sort,
     });
-    return formatResponse(res, 200, 1, 'Lấy comments thành công', result);
+    return sendOk(res, {
+      message: 'Lấy comments thành công',
+      data: result,
+    });
+
   }),
 
   /**
@@ -756,7 +866,11 @@ const PostController = {
       page: parseInt(page),
       limit: parseInt(limit),
     });
-    return formatResponse(res, 200, 1, 'Success', result);
+    return sendOk(res, {
+      message: 'Success',
+      data: result,
+    });
+
   }),
 
   /**

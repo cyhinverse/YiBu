@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import SocketService from "../services/Socket.Service.js";
+import SocketService from "../modules/shared/socket/socket.service.js";
 import { registerConnectionHandlers } from "./handlers/connection.handler.js";
 import { registerChatHandlers } from "./handlers/chat.handler.js";
 import { registerNotificationHandlers } from "./handlers/notification.handler.js";

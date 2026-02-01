@@ -1,7 +1,7 @@
-import { CatchError } from '../configs/CatchError.js';
-import UserService from '../services/User.Service.js';
-import { formatResponse } from '../helpers/formatResponse.js';
-import logger from '../configs/logger.js';
+import { CatchError } from '../../configs/CatchError.js';
+import UserService from './user.service.js';
+import { formatResponse } from '../../helpers/formatResponse.js';
+import logger from '../../configs/logger.js';
 
 /**
  * User Controller
@@ -409,7 +409,7 @@ const UserController = {
    */
   updateProfileSettings: CatchError(async (req, res) => {
     const { uploadToCloudinary } = await import(
-      '../middlewares/multerUpload.js'
+      '../../middlewares/multerUpload.js'
     );
     const userId = req.user.id;
     const profileData = { ...req.body };

@@ -1,17 +1,17 @@
 import mongoose from 'mongoose';
-import Post from '../models/Post.js';
-import User from '../models/User.js';
-import UserSettings from '../models/UserSettings.js';
-import Comment from '../models/Comment.js';
-import Like from '../models/Like.js';
-import SavePost from '../models/SavePost.js';
-import Hashtag from '../models/Hashtag.js';
-import UserInteraction from '../models/UserInteraction.js';
-import Follow from '../models/Follow.js';
-import Notification from '../models/Notification.js';
-import logger from '../configs/logger.js';
-import { retryOperation } from '../helpers/retryOperation.js';
-import ApiError from '../helpers/ApiError.js';
+import Post from '../../models/Post.js';
+import User from '../../models/User.js';
+import UserSettings from '../../models/UserSettings.js';
+import Comment from '../../models/Comment.js';
+import Like from '../../models/Like.js';
+import SavePost from '../../models/SavePost.js';
+import Hashtag from '../../models/Hashtag.js';
+import UserInteraction from '../../models/UserInteraction.js';
+import Follow from '../../models/Follow.js';
+import Notification from '../../models/Notification.js';
+import logger from '../../configs/logger.js';
+import { retryOperation } from '../../utils/retryOperation.js';
+import ApiError from '../../helpers/ApiError.js';
 
 
 /**
@@ -1492,7 +1492,7 @@ class PostService {
    * @throws {Error} If post not found or already reported
    */
   static async reportPost(postId, userId, reason, description = '') {
-    const Report = (await import('../models/Report.js')).default;
+    const Report = (await import('../../models/Report.js')).default;
 
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) {
@@ -1591,3 +1591,6 @@ class PostService {
 }
 
 export default PostService;
+
+
+

@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import Notification from '../models/Notification.js';
-import UserSettings from '../models/UserSettings.js';
-import User from '../models/User.js';
-import logger from '../configs/logger.js';
-import { retryOperation } from '../helpers/retryOperation.js';
-import socketService from './Socket.Service.js';
+import Notification from '../../models/Notification.js';
+import UserSettings from '../../models/UserSettings.js';
+import User from '../../models/User.js';
+import logger from '../../configs/logger.js';
+import { retryOperation } from '../../utils/retryOperation.js';
+import socketService from '../shared/socket/socket.service.js';
 
 /**
  * Notification Service - Refactored for new model structure
@@ -398,7 +398,7 @@ class NotificationService {
    * @returns {Promise<{sentCount: number}>} Number of notifications sent
    */
   static async notifyFollowers(userId, type, content, relatedPost = null) {
-    const Follow = (await import('../models/Follow.js')).default;
+    const Follow = (await import('../../models/Follow.js')).default;
     
     // Get sender info once
     const sender = await User.findById(userId).select('username avatar').lean();
@@ -606,3 +606,6 @@ class NotificationService {
 }
 
 export default NotificationService;
+
+
+

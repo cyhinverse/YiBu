@@ -1,16 +1,16 @@
 import mongoose from 'mongoose';
-import User from '../models/User.js';
-import UserSettings from '../models/UserSettings.js';
-import Follow from '../models/Follow.js';
-import UserInteraction from '../models/UserInteraction.js';
-import Post from '../models/Post.js';
-import Comment from '../models/Comment.js';
-import Like from '../models/Like.js';
-import SavePost from '../models/SavePost.js';
-import Message from '../models/Message.js';
-import Notification from '../models/Notification.js';
-import logger from '../configs/logger.js';
-import ApiError from '../helpers/ApiError.js';
+import User from '../../models/User.js';
+import UserSettings from '../../models/UserSettings.js';
+import Follow from '../../models/Follow.js';
+import UserInteraction from '../../models/UserInteraction.js';
+import Post from '../../models/Post.js';
+import Comment from '../../models/Comment.js';
+import Like from '../../models/Like.js';
+import SavePost from '../../models/SavePost.js';
+import Message from '../../models/Message.js';
+import Notification from '../../models/Notification.js';
+import logger from '../../configs/logger.js';
+import ApiError from '../../helpers/ApiError.js';
 
 
 /**
@@ -1060,7 +1060,7 @@ class UserService {
 
     }
 
-    const cloudinary = (await import('../configs/cloudinaryConfig.js')).default;
+    const cloudinary = (await import('../../configs/cloudinaryConfig.js')).default;
 
     const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
       folder: 'avatars',
@@ -1144,3 +1144,6 @@ class UserService {
 }
 
 export default UserService;
+
+
+

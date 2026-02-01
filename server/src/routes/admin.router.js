@@ -1,6 +1,7 @@
 import express from 'express';
-import { AdminController } from '../controllers/admin.controller.js';
-import ReportController from '../controllers/report.controller.js';
+import { AdminController } from '../modules/admin/admin.controller.js';
+import ReportController from '../modules/report/report.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import { adminMiddleware } from '../middlewares/admin.middleware.js';
 import {

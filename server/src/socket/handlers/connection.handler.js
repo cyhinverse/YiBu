@@ -1,5 +1,5 @@
 import logger from "../../configs/logger.js";
-import socketService from "../../services/Socket.Service.js";
+import socketService from "../../modules/shared/socket/socket.service.js";
 
 export const registerConnectionHandlers = (io, socket) => {
   // Register User (make online)

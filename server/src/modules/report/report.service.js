@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
-import Report from '../models/Report.js';
-import User from '../models/User.js';
-import Post from '../models/Post.js';
-import Comment from '../models/Comment.js';
-import Message from '../models/Message.js';
-import Notification from '../models/Notification.js';
-import logger from '../configs/logger.js';
-import ApiError from '../helpers/ApiError.js';
+import Report from '../../models/Report.js';
+import User from '../../models/User.js';
+import Post from '../../models/Post.js';
+import Comment from '../../models/Comment.js';
+import Message from '../../models/Message.js';
+import Notification from '../../models/Notification.js';
+import logger from '../../configs/logger.js';
+import ApiError from '../../helpers/ApiError.js';
 
 
 /**
@@ -420,7 +420,7 @@ class ReportService {
   }
 
   static async _executeAction(report, action, adminId, session) {
-    const AdminService = (await import('./Admin.Service.js')).default;
+    const AdminService = (await import('../admin/admin.service.js')).default;
 
     switch (action) {
       case 'warn_user':
@@ -589,3 +589,6 @@ class ReportService {
 }
 
 export default ReportService;
+
+
+

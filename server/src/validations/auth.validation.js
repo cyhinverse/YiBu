@@ -138,26 +138,21 @@ export const updatePasswordBody = Joi.object({
     'string.empty': 'Mật khẩu hiện tại không được để trống',
     'any.required': 'Mật khẩu hiện tại là bắt buộc',
   }),
-  newPassword: Joi.string()
-    .min(6)
-    .max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .required()
-    .messages({
-      'string.empty': 'Mật khẩu mới không được để trống',
-      'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
-      'string.pattern.base':
-        'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
-      'any.required': 'Mật khẩu mới là bắt buộc',
-    }),
-  confirmNewPassword: Joi.string()
-    .valid(Joi.ref('newPassword'))
-    .required()
-    .messages({
-      'any.only': 'Xác nhận mật khẩu không khớp',
-      'any.required': 'Xác nhận mật khẩu mới là bắt buộc',
-    }),
+  newPassword: Joi.string().min(6).required().messages({
+    'string.empty': 'Mật khẩu mới không được để trống',
+    'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
+    'any.required': 'Mật khẩu mới là bắt buộc',
+  }),
 });
+
+export const disableTwoFactorBody = Joi.object({
+  password: Joi.string().min(6).required().messages({
+    'string.empty': 'Mật khẩu không được để trống',
+    'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
+    'any.required': 'Mật khẩu là bắt buộc',
+  }),
+});
+
 
 // ======================================
 // POST /2fa/verify

@@ -7,6 +7,8 @@
  * @param {Object} data - Optional data payload
  * @param {Object} extras - Optional extra fields (e.g. pagination)
  */
+import { buildSuccessResponse } from './apiResponse.js';
+
 export const formatResponse = (
   res,
   statusCode = 200,
@@ -15,18 +17,18 @@ export const formatResponse = (
   data = null,
   extras = {}
 ) => {
-  const response = {
-    code,
+  const response = buildSuccessResponse({
     message,
-  };
+    data,
+    meta: Object.keys(extras).length > 0 ? { ...extras } : undefined,
+  });
 
-  if (data !== null) {
-    response.data = data;
-  }
+  response.success = code === 1;
 
-  if (Object.keys(extras).length > 0) {
-    Object.assign(response, extras);
+  if (!response.success && response.data) {
+    delete response.data;
   }
 
   return res.status(statusCode).json(response);
 };
+

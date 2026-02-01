@@ -1,5 +1,5 @@
 import { Schema, Types, model } from 'mongoose';
-import { retryOperation } from '../helpers/retryOperation.js';
+import { retryOperation } from '../utils/retryOperation.js';
 
 /**
  * Follow Model - Separated from User for scalability

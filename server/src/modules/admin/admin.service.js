@@ -1,17 +1,17 @@
 import mongoose from 'mongoose';
-import User from '../models/User.js';
-import Post from '../models/Post.js';
-import Comment from '../models/Comment.js';
-import Report from '../models/Report.js';
-import RefreshToken from '../models/RefreshToken.js';
-import UserSettings from '../models/UserSettings.js';
-import Notification from '../models/Notification.js';
-import logger from '../configs/logger.js';
-import ApiError from '../helpers/ApiError.js';
+import User from '../../models/User.js';
+import Post from '../../models/Post.js';
+import Comment from '../../models/Comment.js';
+import Report from '../../models/Report.js';
+import RefreshToken from '../../models/RefreshToken.js';
+import UserSettings from '../../models/UserSettings.js';
+import Notification from '../../models/Notification.js';
+import logger from '../../configs/logger.js';
+import ApiError from '../../helpers/ApiError.js';
 
-import Like from '../models/Like.js';
-import Follow from '../models/Follow.js';
-import SavePost from '../models/SavePost.js';
+import Like from '../../models/Like.js';
+import Follow from '../../models/Follow.js';
+import SavePost from '../../models/SavePost.js';
 
 /**
  * Admin Service - Refactored for new model structure
@@ -1152,3 +1152,6 @@ class AdminService {
 }
 
 export default AdminService;
+
+
+

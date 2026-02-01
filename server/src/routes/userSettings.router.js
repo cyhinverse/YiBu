@@ -1,5 +1,6 @@
 import express from 'express';
-import UserController from '../controllers/user.controller.js';
+import UserController from '../modules/user/user.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBody,

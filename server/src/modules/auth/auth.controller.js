@@ -1,8 +1,10 @@
-import { CatchError } from '../configs/CatchError.js';
-import AuthService from '../services/Auth.Service.js';
-import { formatResponse } from '../helpers/formatResponse.js';
-import { setAuthCookies, clearAuthCookies } from '../helpers/cookieOptions.js';
-import logger from '../configs/logger.js';
+import { CatchError } from '../../configs/CatchError.js';
+import AuthService from './auth.service.js';
+import { sendCreated, sendOk } from '../../helpers/apiResponse.js';
+import { setAuthCookies, clearAuthCookies } from '../../configs/cookieOptions.js';
+import logger from '../../configs/logger.js';
+import ApiError from '../../helpers/ApiError.js';
+
 
 /**
  * Auth Controller
@@ -33,17 +35,13 @@ const AuthController = {
     const { name, email, password, username } = req.body;
 
     if (!name || !password || !email) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Vui lòng điền đầy đủ thông tin bắt buộc'
-      );
+      throw ApiError.badRequest('Vui lòng điền đầy đủ thông tin bắt buộc');
     }
 
     if (!username) {
-      return formatResponse(res, 400, 0, 'Username là bắt buộc');
+      throw ApiError.badRequest('Username là bắt buộc');
     }
+
 
     const { user, accessToken, refreshToken } = await AuthService.register({
       name,
@@ -54,7 +52,10 @@ const AuthController = {
 
     setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 201, 1, 'Đăng ký tài khoản thành công', user);
+    return sendCreated(res, {
+      message: 'Đăng ký tài khoản thành công',
+      data: user,
+    });
 
   }),
 
@@ -72,8 +73,9 @@ const AuthController = {
     const { email, password, twoFactorToken } = req.body;
 
     if (!email || !password) {
-      return formatResponse(res, 400, 0, 'Vui lòng nhập email và mật khẩu');
+      throw ApiError.badRequest('Vui lòng nhập email và mật khẩu');
     }
+
 
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
@@ -88,8 +90,10 @@ const AuthController = {
 
     setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 200, 1, 'Đăng nhập thành công', user, {
-      twoFactorRequired: false,
+    return sendOk(res, {
+      message: 'Đăng nhập thành công',
+      data: user,
+      meta: { twoFactorRequired: false },
     });
 
   }),
@@ -108,8 +112,9 @@ const AuthController = {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
-      return formatResponse(res, 401, 0, 'Refresh token không hợp lệ');
+      throw ApiError.unauthorized('Refresh token không hợp lệ');
     }
+
 
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
@@ -121,7 +126,10 @@ const AuthController = {
 
     setAuthCookies(res, accessToken, newRefreshToken);
 
-    return formatResponse(res, 200, 1, 'Token refreshed successfully');
+    return sendOk(res, {
+      message: 'Token refreshed successfully',
+    });
+
   }),
 
   /**
@@ -141,7 +149,10 @@ const AuthController = {
 
     clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, 'Đăng xuất thành công');
+    return sendOk(res, {
+      message: 'Đăng xuất thành công',
+    });
+
   }),
 
   /**
@@ -159,7 +170,10 @@ const AuthController = {
 
     clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, 'Đã đăng xuất khỏi tất cả thiết bị');
+    return sendOk(res, {
+      message: 'Đã đăng xuất khỏi tất cả thiết bị',
+    });
+
   }),
 
   /**
@@ -178,33 +192,21 @@ const AuthController = {
     const userId = req.user.id;
 
     if (!currentPassword || !newPassword) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Vui lòng nhập mật khẩu hiện tại và mật khẩu mới'
-      );
+      throw ApiError.badRequest('Vui lòng nhập mật khẩu hiện tại và mật khẩu mới');
     }
 
     if (newPassword.length < 6) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Mật khẩu mới phải có ít nhất 6 ký tự'
-      );
+      throw ApiError.badRequest('Mật khẩu mới phải có ít nhất 6 ký tự');
     }
 
     await AuthService.changePassword(userId, currentPassword, newPassword);
 
     clearAuthCookies(res);
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Đổi mật khẩu thành công. Vui lòng đăng nhập lại'
-    );
+    return sendOk(res, {
+      message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại',
+    });
+
   }),
 
   /**
@@ -219,17 +221,15 @@ const AuthController = {
     const { email } = req.body;
 
     if (!email) {
-      return formatResponse(res, 400, 0, 'Vui lòng nhập email');
+      throw ApiError.badRequest('Vui lòng nhập email');
     }
 
     await AuthService.requestPasswordReset(email);
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu'
-    );
+    return sendOk(res, {
+      message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu',
+    });
+
   }),
 
   /**
@@ -245,21 +245,19 @@ const AuthController = {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      return formatResponse(res, 400, 0, 'Token và mật khẩu mới là bắt buộc');
+      throw ApiError.badRequest('Token và mật khẩu mới là bắt buộc');
     }
 
     if (newPassword.length < 6) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Mật khẩu mới phải có ít nhất 6 ký tự'
-      );
+      throw ApiError.badRequest('Mật khẩu mới phải có ít nhất 6 ký tự');
     }
 
     await AuthService.resetPassword(token, newPassword);
 
-    return formatResponse(res, 200, 1, 'Đặt lại mật khẩu thành công');
+    return sendOk(res, {
+      message: 'Đặt lại mật khẩu thành công',
+    });
+
   }),
 
   /**
@@ -275,12 +273,11 @@ const AuthController = {
 
     const result = await AuthService.requestEmailVerification(userId);
 
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư'
-    );
+    return sendOk(res, {
+      message: 'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư',
+      data: result,
+    });
+
   }),
 
   /**
@@ -295,12 +292,15 @@ const AuthController = {
     const { token } = req.body;
 
     if (!token) {
-      return formatResponse(res, 400, 0, 'Token xác thực là bắt buộc');
+      throw ApiError.badRequest('Token xác thực là bắt buộc');
     }
 
     await AuthService.verifyEmail(token);
 
-    return formatResponse(res, 200, 1, 'Xác thực email thành công');
+    return sendOk(res, {
+      message: 'Xác thực email thành công',
+    });
+
   }),
 
   /**
@@ -316,10 +316,11 @@ const AuthController = {
 
     const { secret, qrCode } = await AuthService.enableTwoFactor(userId);
 
-    return formatResponse(res, 200, 1, 'Quét mã QR để kích hoạt 2FA', {
-      secret,
-      qrCode,
+    return sendOk(res, {
+      message: 'Quét mã QR để kích hoạt 2FA',
+      data: { secret, qrCode },
     });
+
   }),
 
   /**
@@ -337,7 +338,7 @@ const AuthController = {
     const { token } = req.body;
 
     if (!token) {
-      return formatResponse(res, 400, 0, 'Mã xác thực là bắt buộc');
+      throw ApiError.badRequest('Mã xác thực là bắt buộc');
     }
 
     const { backupCodes } = await AuthService.verifyAndEnableTwoFactor(
@@ -345,9 +346,11 @@ const AuthController = {
       token
     );
 
-    return formatResponse(res, 200, 1, 'Đã kích hoạt xác thực 2 lớp', {
-      backupCodes,
+    return sendOk(res, {
+      message: 'Đã kích hoạt xác thực 2 lớp',
+      data: { backupCodes },
     });
+
   }),
 
   /**
@@ -365,12 +368,15 @@ const AuthController = {
     const { password } = req.body;
 
     if (!password) {
-      return formatResponse(res, 400, 0, 'Mật khẩu là bắt buộc');
+      throw ApiError.badRequest('Mật khẩu là bắt buộc');
     }
 
     await AuthService.disableTwoFactor(userId, password);
 
-    return formatResponse(res, 200, 1, 'Đã tắt xác thực 2 lớp');
+    return sendOk(res, {
+      message: 'Đã tắt xác thực 2 lớp',
+    });
+
   }),
 
   /**
@@ -391,7 +397,11 @@ const AuthController = {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
     const sessions = await AuthService.getActiveSessions(userId, refreshToken);
 
-    return formatResponse(res, 200, 1, 'Success', sessions);
+    return sendOk(res, {
+      message: 'Success',
+      data: { sessions },
+    });
+
   }),
 
   /**
@@ -409,12 +419,15 @@ const AuthController = {
     const { sessionId } = req.params;
 
     if (!sessionId) {
-      return formatResponse(res, 400, 0, 'Session ID là bắt buộc');
+      throw ApiError.badRequest('Session ID là bắt buộc');
     }
 
     await AuthService.revokeSession(userId, sessionId);
 
-    return formatResponse(res, 200, 1, 'Đã thu hồi phiên đăng nhập');
+    return sendOk(res, {
+      message: 'Đã thu hồi phiên đăng nhập',
+    });
+
   }),
 
   /**
@@ -429,8 +442,9 @@ const AuthController = {
     const { credential } = req.body;
 
     if (!credential) {
-      return formatResponse(res, 400, 0, 'Google credential is required');
+      throw ApiError.badRequest('Google credential is required');
     }
+
 
     const { OAuth2Client } = await import('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -448,7 +462,11 @@ const AuthController = {
 
     setAuthCookies(res, accessToken, refreshToken);
 
-    return formatResponse(res, 200, 1, 'Đăng nhập Google thành công', user);
+    return sendOk(res, {
+      message: 'Đăng nhập Google thành công',
+      data: user,
+    });
+
   }),
 
   /**
@@ -467,10 +485,13 @@ const AuthController = {
     const userId = req.user.id;
 
     if (!email) {
-      return formatResponse(res, 400, 0, 'Email mới là bắt buộc');
+      throw ApiError.badRequest('Email mới là bắt buộc');
     }
 
-    return formatResponse(res, 200, 1, 'Tính năng đang được phát triển');
+    return sendOk(res, {
+      message: 'Tính năng đang được phát triển',
+    });
+
   }),
 
   /**
@@ -488,21 +509,19 @@ const AuthController = {
     const userId = req.user.id;
 
     if (!password) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Mật khẩu là bắt buộc để xóa tài khoản'
-      );
+      throw ApiError.badRequest('Mật khẩu là bắt buộc để xóa tài khoản');
     }
 
-    const UserService = (await import('../services/User.Service.js')).default;
+    const UserService = (await import('../user/user.service.js')).default;
 
     await UserService.deleteUser(userId);
 
     clearAuthCookies(res);
 
-    return formatResponse(res, 200, 1, 'Tài khoản đã được xóa');
+    return sendOk(res, {
+      message: 'Tài khoản đã được xóa',
+    });
+
   }),
 
   /**
@@ -512,8 +531,11 @@ const AuthController = {
    * @returns {Object} Response with social account connection status (feature in development)
    */
   ConnectSocialAccount: CatchError(async (req, res) => {
-    return formatResponse(res, 200, 1, 'Tính năng đang được phát triển');
+    return sendOk(res, {
+      message: 'Tính năng đang được phát triển',
+    });
   }),
+
 };
 
 export default AuthController;

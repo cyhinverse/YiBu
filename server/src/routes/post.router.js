@@ -1,5 +1,6 @@
 import express from 'express';
-import PostController from '../controllers/post.controller.js';
+import PostController from '../modules/post/post.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import upload from '../middlewares/multerUpload.js';
 import {

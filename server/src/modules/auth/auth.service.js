@@ -1,16 +1,16 @@
-import User from '../models/User.js';
-import RefreshToken from '../models/RefreshToken.js';
-import UserSettings from '../models/UserSettings.js';
-import { hashPassword, comparePassword } from '../helpers/HashPassword.js';
+import User from '../../models/User.js';
+import RefreshToken from '../../models/RefreshToken.js';
+import UserSettings from '../../models/UserSettings.js';
+import { hashPassword, comparePassword } from '../../utils/HashPassword.js';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from '../helpers/GenerateTokens.js';
+} from '../../utils/GenerateTokens.js';
 import crypto from 'crypto';
-import logger from '../configs/logger.js';
-import EmailService from './Email.Service.js';
-import ApiError from '../helpers/ApiError.js';
+import logger from '../../configs/logger.js';
+import EmailService from '../shared/email/email.service.js';
+import ApiError from '../../helpers/ApiError.js';
 
 
 /**
@@ -728,3 +728,6 @@ class AuthService {
 }
 
 export default AuthService;
+
+
+
