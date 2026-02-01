@@ -1,8 +1,8 @@
-import User from '../models/User.js';
-import UserSettings from '../models/UserSettings.js';
-import Message from '../models/Message.js';
-import Notification from '../models/Notification.js';
-import logger from '../configs/logger.js';
+import User from '../../../models/User.js';
+import UserSettings from '../../../models/UserSettings.js';
+import Message from '../../../models/Message.js';
+import Notification from '../../../models/Notification.js';
+import logger from '../../../configs/logger.js';
 
 /**
  * Socket Service - Refactored for new model structure
