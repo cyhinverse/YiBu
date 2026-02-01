@@ -13,7 +13,7 @@ import {
   useMarkAllAsRead,
   useDeleteNotification,
   useDeleteAllNotifications,
-} from '../../../../hooks/useNotificationQuery';
+} from '@/hooks/useNotificationQuery';
 import toast from 'react-hot-toast';
 import { useInView } from 'react-intersection-observer';
 import {

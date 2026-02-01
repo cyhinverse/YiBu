@@ -45,7 +45,7 @@ const ReportModal = lazy(() =>
   }))
 );
 const ModelPost = lazy(() => import('./ModelPost'));
-const VideoModal = lazy(() => import('../../../Common/VideoModal'));
+const VideoModal = lazy(() => import('@/components/Common/VideoModal'));
 
 // Inline Video Player with basic controls
 const VideoPlayer = ({ src, onExpand }) => {

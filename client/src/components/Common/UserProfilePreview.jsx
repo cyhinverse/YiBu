@@ -93,19 +93,7 @@ const UserProfilePreview = ({ userId, children }) => {
             }}
             onMouseLeave={() => setIsOpen(false)}
           >
-            <style>
-              {`
-              @keyframes fadeInSlide {
-                from { opacity: 0; transform: translateY(4px); }
-                to { opacity: 1; transform: translateY(0); }
-              }
-              .minimal-preview-card {
-                animation: fadeInSlide 0.2s ease-out forwards;
-              }
-            `}
-            </style>
-
-            <div className="minimal-preview-card flex w-[500px] bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <div className="animate-slide-up flex w-[500px] bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
               {/* Sidebar */}
               <div className="w-[140px] bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-100 dark:border-neutral-800 flex flex-col items-center pt-6 p-4">
                 <div className="relative mb-4">
