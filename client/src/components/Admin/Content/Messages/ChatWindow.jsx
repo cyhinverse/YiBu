@@ -24,7 +24,7 @@ const ChatWindow = ({
   if (!selectedChat) {
     return (
       <div className="flex-1 hidden md:flex flex-col items-center justify-center text-neutral-500">
-        <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-3">
+        <div className="w-14 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-3">
           <MessageSquare size={28} strokeWidth={1.5} />
         </div>
         <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
@@ -42,10 +42,15 @@ const ChatWindow = ({
       }`}
     >
       {/* Header */}
-      <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 bg-white dark:bg-neutral-900 z-10">
+      <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 bg-white dark:bg-neutral-900 z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSelectedChat(null)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                setSelectedChat(null);
+              }
+            }}
             className="md:hidden p-1.5 -ml-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           >
             <MoreHorizontal size={18} />
@@ -56,7 +61,11 @@ const ChatWindow = ({
               selectedChat.participants?.[0]?.avatar ||
               '/images/default-avatar.png'
             }
-            alt="User"
+            alt={
+              selectedChat.name ||
+              selectedChat.participants?.[0]?.name ||
+              'Chat avatar'
+            }
             className="w-9 h-9 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
           />
           <div>
@@ -143,8 +152,10 @@ const ChatWindow = ({
         <input
           type="text"
           value={messageInput}
+          id="message-input"
           onChange={e => setMessageInput(e.target.value)}
           placeholder="Nhập tin nhắn..."
+          aria-label="Message input"
           className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 transition-all"
         />
         <button

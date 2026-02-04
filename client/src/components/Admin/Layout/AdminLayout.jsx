@@ -41,8 +41,17 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
     }
   };
 
+  const handleOverlayKeyDown = e => {
+    if (e.key === 'Escape') {
+      setMobileMenuOpen(false);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-neutral-950 font-sans text-neutral-900 dark:text-neutral-100 overflow-hidden">
+    <div className="flex h-screen bg-neutral-50 dark:bg-black font-sans text-neutral-900 dark:text-neutral-100 overflow-hidden">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       {/* Desktop Sidebar */}
       <aside
         className={`hidden lg:flex flex-col h-full fixed left-0 top-0 z-30 transition-all duration-300 ${
@@ -59,7 +68,13 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
 
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          onKeyDown={handleOverlayKeyDown}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+        >
           <div
             className="absolute inset-0 bg-black/20 dark:bg-black/40"
             onClick={() => setMobileMenuOpen(false)}
@@ -83,7 +98,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
         }`}
       >
         {/* Header */}
-        <header className="h-14 sticky top-0 z-20 bg-stone-50/90 dark:bg-neutral-950/90 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shadow-sm">
+        <header className="h-12 sticky top-0 z-20 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md flex items-center justify-between px-4 lg:px-5 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -125,8 +140,11 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-x-hidden overflow-y-auto">
-          <div className="max-w-6xl mx-auto">{children}</div>
+        <main
+          id="main-content"
+          className="flex-1 p-4 lg:p-5 overflow-x-hidden overflow-y-auto"
+        >
+          <div className="max-w-5xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

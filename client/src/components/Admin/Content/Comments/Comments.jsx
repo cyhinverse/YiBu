@@ -92,11 +92,11 @@ export default function Comments() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-5 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
+          <h2 className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
             Quản lý bình luận
           </h2>
           <p className="text-sm text-neutral-500 font-medium mt-1">
@@ -106,6 +106,11 @@ export default function Comments() {
         <button
           onClick={handleRefresh}
           disabled={loading}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className="bg-white dark:bg-neutral-900 p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all shadow-sm"
         >
           <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -123,6 +128,7 @@ export default function Comments() {
             type="text"
             placeholder="Tìm kiếm nội dung, tác giả..."
             value={searchTerm}
+            aria-label="Search comments"
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-medium transition-all"
           />
@@ -132,7 +138,7 @@ export default function Comments() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="px-6 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-bold cursor-pointer transition-all min-w-[160px]"
+            className="px-5 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-bold cursor-pointer transition-all min-w-[160px]"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
@@ -143,7 +149,7 @@ export default function Comments() {
       </div>
 
       {/* Comments Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
         <CommentsTable
           comments={comments}
           loading={loading}

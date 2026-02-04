@@ -15,7 +15,7 @@ const StatCard = ({
     neutral:
       'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300',
     primary:
-      'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400',
+      'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900',
     success:
       'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     warning:
@@ -24,14 +24,18 @@ const StatCard = ({
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-      <div className="flex items-start justify-between mb-4">
+    <div
+      className="bg-white dark:bg-neutral-900 rounded-2xl p-4 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+      role="group"
+      aria-label={title}
+    >
+      <div className="flex items-start justify-between mb-3">
         <div
           className={`p-2.5 rounded-xl ${
             iconBgClass ? iconBgClass : colorStyles[color]
           }`}
         >
-          {Icon && <Icon size={20} strokeWidth={1.5} />}
+          {Icon && <Icon size={18} strokeWidth={1.5} />}
         </div>
 
         {!loading && change && (
@@ -62,7 +66,7 @@ const StatCard = ({
             <p className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">
               {title}
             </p>
-            <h3 className="text-2xl font-semibold text-neutral-800 dark:text-white tracking-tight">
+            <h3 className="text-xl font-semibold text-neutral-800 dark:text-white tracking-tight">
               {value}
             </h3>
           </>

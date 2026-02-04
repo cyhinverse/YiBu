@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { FileText, PenSquare, Loader2 } from 'lucide-react';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import Post from './Post';
 import { useHomeFeed } from '@/hooks/useFeedQuery';
 
-const PostLists = ({ activeTab = 'forYou', onOpenComments }) => {
+const PostLists = ({ activeTab = 'forYou', onOpenComments, scrollRef }) => {
   const [activeOptionsPostId, setActiveOptionsPostId] = useState(null);
 
   const handleOptionsToggle = useCallback((postId, isOpen) => {
@@ -31,8 +31,18 @@ const PostLists = ({ activeTab = 'forYou', onOpenComments }) => {
   );
 
   const totalCount = hasNextPage ? displayPosts.length + 1 : displayPosts.length;
-  const rowVirtualizer = useWindowVirtualizer({
+  const rowVirtualizer = useVirtualizer({
     count: totalCount,
+    getScrollElement: () => {
+      if (typeof window === 'undefined') return null;
+      const el = scrollRef?.current;
+      if (!el) return document.scrollingElement || document.documentElement;
+      const style = window.getComputedStyle(el);
+      const canScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      return canScroll
+        ? el
+        : document.scrollingElement || document.documentElement;
+    },
     estimateSize: () => 560,
     overscan: 5,
   });

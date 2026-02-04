@@ -16,6 +16,14 @@ import { useGetPostsByHashtag, useTrendingHashtags } from '@/hooks/usePostsQuery
 import Post from '@/components/features/feed/Posts/Post';
 import { formatNumber } from '@/utils/numberUtils';
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
+};
+
 const HashtagPosts = () => {
   const { hashtag } = useParams();
   const [viewMode, setViewMode] = useState('list'); 
@@ -30,7 +38,7 @@ const HashtagPosts = () => {
   const totalLikes = hashtagPosts.reduce((sum, post) => sum + (post.likesCount || post.likeCount || 0), 0);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto" role="main" aria-label="Hashtag posts">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">
@@ -173,7 +181,13 @@ const HashtagPosts = () => {
             {viewMode === 'grid' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                 {hashtagPosts.map(post => {
-                  const mediaUrl = post.media?.[0]?.url || post.images?.[0] || post.image;
+                  const mediaItem = post.media?.[0];
+                  const mediaUrl =
+                    (typeof mediaItem === 'string' ? mediaItem : mediaItem?.url) ||
+                    post.images?.[0] ||
+                    post.image;
+                  const isVideo =
+                    mediaItem?.type === 'video' || isVideoUrl(mediaUrl);
                   return (
                     <Link
                       key={post._id}
@@ -181,11 +195,22 @@ const HashtagPosts = () => {
                       className="relative aspect-square group overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800"
                     >
                       {mediaUrl ? (
-                        <img
-                          src={mediaUrl}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                        isVideo ? (
+                          <video
+                            src={mediaUrl}
+                            poster={mediaItem?.thumbnail || mediaItem?.poster || mediaItem?.preview}
+                            preload="metadata"
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={mediaUrl}
+                            alt={`Post media for #${hashtag}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        )
                       ) : (
                         <div className="w-full h-full flex items-center justify-center p-2">
                           <p className="text-xs text-neutral-500 line-clamp-4 text-center">

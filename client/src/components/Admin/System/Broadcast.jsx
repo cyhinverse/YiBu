@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Send, Bell, Users, Loader2, Megaphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Send, Bell, Users, Loader2, Megaphone, Sparkles } from 'lucide-react';
 import { useBroadcastNotification } from '@/hooks/useAdminQuery';
 import { NOTIFICATION_TYPES, TARGET_AUDIENCES } from '@/constants/broadcast';
 
@@ -39,6 +39,17 @@ const Broadcast = () => {
     setShowConfirmModal(true);
   };
 
+  useEffect(() => {
+    if (!showConfirmModal) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        setShowConfirmModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showConfirmModal]);
+
   const confirmSend = async () => {
     try {
       await broadcastMutation.mutateAsync({
@@ -68,11 +79,11 @@ const Broadcast = () => {
   const selectedType = NOTIFICATION_TYPES.find(t => t.id === formData.type);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
             <Megaphone className="text-neutral-900 dark:text-white" size={24} />
             Phát sóng thông báo
           </h2>
@@ -83,10 +94,10 @@ const Broadcast = () => {
       </div>
 
       {/* Main Content */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Left Column: Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-8 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-8">
+        <div className="lg:col-span-2 space-y-5">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-6">
             {/* Notification Type Selection */}
             <div className="space-y-3">
               <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
@@ -162,43 +173,58 @@ const Broadcast = () => {
             {/* Inputs */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                <label
+                  htmlFor="broadcast-title"
+                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                >
                   Tiêu đề thông báo
                 </label>
                 <input
+                  id="broadcast-title"
                   type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
                   placeholder="Nhập tiêu đề..."
+                  aria-label="Notification title"
                   className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                <label
+                  htmlFor="broadcast-message"
+                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                >
                   Nội dung chi tiết
                 </label>
                 <textarea
+                  id="broadcast-message"
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
                   placeholder="Nhập nội dung thông báo..."
                   rows={4}
-                  className="w-full px-4 py-3 rounded-3xl bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium resize-none"
+                  aria-label="Notification message"
+                  className="w-full px-4 py-3 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium resize-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+                <label
+                  htmlFor="broadcast-link"
+                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                >
                   Đường dẫn đính kèm (Tùy chọn)
                 </label>
                 <input
+                  id="broadcast-link"
                   type="url"
                   name="link"
                   value={formData.link}
                   onChange={handleInputChange}
                   placeholder="https://example.com/..."
+                  aria-label="Notification link"
                   className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium text-blue-600"
                 />
               </div>
@@ -207,9 +233,9 @@ const Broadcast = () => {
         </div>
 
         {/* Right Column: Preview */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 border border-neutral-200 dark:border-neutral-800 shadow-sm sticky top-6">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="space-y-5">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm sticky top-4">
+            <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
               <Sparkles size={20} className="text-amber-500" />
               Xem trước
             </h3>
@@ -259,7 +285,12 @@ const Broadcast = () => {
                 disabled={
                   loading || !formData.title.trim() || !formData.message.trim()
                 }
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+                onKeyDown={event => {
+                  if (event.key === 'Escape') {
+                    event.currentTarget.blur();
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
               >
                 {loading ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -275,9 +306,19 @@ const Broadcast = () => {
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setShowConfirmModal(false);
+            }
+          }}
+        >
           <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-md mx-4 shadow-xl">
-            <div className="p-6">
+            <div className="p-4">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
                   <Bell
@@ -285,7 +326,7 @@ const Broadcast = () => {
                     className="text-yellow-600 dark:text-yellow-400"
                   />
                 </div>
-                <h3 className="text-lg font-bold text-black dark:text-white">
+                <h3 className="text-base font-semibold text-black dark:text-white">
                   Xác nhận gửi thông báo
                 </h3>
               </div>

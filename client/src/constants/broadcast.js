@@ -44,9 +44,9 @@ export const NOTIFICATION_TYPES = [
     id: 'announcement',
     label: 'Thông báo',
     icon: Sparkles,
-    color: 'purple',
-    bg: 'bg-purple-50 dark:bg-purple-900/20',
-    text: 'text-purple-600 dark:text-purple-400',
+    color: 'neutral',
+    bg: 'bg-neutral-100 dark:bg-neutral-800/60',
+    text: 'text-neutral-700 dark:text-neutral-300',
   },
 ];
 

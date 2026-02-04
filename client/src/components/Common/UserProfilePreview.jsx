@@ -143,7 +143,7 @@ const UserProfilePreview = ({ userId, children, triggerSelector }) => {
                 <div className="relative mb-4">
                   <img
                     src={user?.avatar || '/images/default-avatar.png'}
-                    alt=""
+                    alt={user?.username ? `${user.username} avatar` : 'User avatar'}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover bg-white"
                   />
                   {user?.isOnline && (
@@ -157,10 +157,15 @@ const UserProfilePreview = ({ userId, children, triggerSelector }) => {
                     disabled={
                       followMutation.isPending || unfollowMutation.isPending
                     }
+                    onKeyDown={event => {
+                      if (event.key === 'Escape') {
+                        event.currentTarget.blur();
+                      }
+                    }}
                     className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       followStatus?.isFollowing
                         ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        : 'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200'
                     }`}
                   >
                     {followStatus?.isFollowing ? 'Following' : 'Follow'}
@@ -249,7 +254,7 @@ const UserProfilePreview = ({ userId, children, triggerSelector }) => {
                             }
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="truncate hover:text-indigo-600"
+                            className="truncate hover:text-neutral-900 dark:hover:text-white"
                           >
                             {user.website.replace(/^https?:\/\//, '')}
                           </a>

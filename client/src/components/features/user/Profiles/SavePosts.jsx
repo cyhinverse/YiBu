@@ -5,6 +5,14 @@ import { useSavedPosts, useToggleSave } from '@/hooks/usePostsQuery';
 import { notify } from '@/utils/notify';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
+};
+
 const SavePosts = () => {
   const [viewMode, setViewMode] = useState('list');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -48,7 +56,7 @@ const SavePosts = () => {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md">
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-b-2xl mb-4 ">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Bookmark size={24} className="text-content dark:text-white" />
@@ -120,17 +128,33 @@ const SavePosts = () => {
         <div className="grid grid-cols-3 gap-1 p-1">
           {posts.map(post => {
             const actualPost = post.postId || post;
+            const mediaItem = actualPost.media?.[0];
+            const mediaUrl =
+              typeof mediaItem === 'string' ? mediaItem : mediaItem?.url;
+            const isVideo =
+              mediaItem?.type === 'video' || isVideoUrl(mediaUrl);
             return (
               <div
                 key={actualPost._id}
                 className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 group cursor-pointer overflow-hidden"
               >
-                {actualPost.media?.[0]?.url ? (
-                  <img
-                    src={actualPost.media[0].url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                {mediaUrl ? (
+                  isVideo ? (
+                    <video
+                      src={mediaUrl}
+                      poster={mediaItem?.thumbnail || mediaItem?.poster || mediaItem?.preview}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={mediaUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center p-2">
                     <p className="text-xs text-neutral-500 line-clamp-3 text-center">
@@ -200,4 +224,3 @@ const SavePosts = () => {
 };
 
 export default SavePosts;
-

@@ -24,6 +24,7 @@ const UserLayout = () => {
 
       {/* Main Content Area */}
       <main
+        id="main-content"
         className={`flex-1 w-full min-h-screen pb-20 md:pb-0 transition-all duration-300 ease-in-out ${
           sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-64 xl:ml-72'
         }`}

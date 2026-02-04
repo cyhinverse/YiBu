@@ -17,6 +17,13 @@ const ChatSidebar = ({
     return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
+  const handleConversationKeyDown = (event, chat) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setSelectedChat(chat);
+    }
+  };
+
   return (
     <div
       className={`w-full md:w-80 border-r border-neutral-200 dark:border-neutral-800 flex flex-col ${
@@ -36,6 +43,7 @@ const ChatSidebar = ({
             type="text"
             placeholder="Tìm cuộc trò chuyện..."
             value={searchTerm}
+            aria-label="Search conversations"
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all"
           />
@@ -69,6 +77,9 @@ const ChatSidebar = ({
               <div
                 key={chat._id || chat.id}
                 onClick={() => setSelectedChat(chat)}
+                onKeyDown={event => handleConversationKeyDown(event, chat)}
+                role="button"
+                tabIndex={0}
                 className={`p-3 flex gap-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors ${
                   selectedChat?._id === chat._id
                     ? 'bg-neutral-100 dark:bg-neutral-800'

@@ -94,6 +94,7 @@ const EnterCode = () => {
                       type="text"
                       maxLength={1}
                       value={digit}
+                      aria-label={`Verification code digit ${index + 1}`}
                       onChange={e => handleChange(index, e.target.value)}
                       onKeyDown={e => handleKeyDown(index, e)}
                       className="w-12 h-14 text-center text-xl font-semibold bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"

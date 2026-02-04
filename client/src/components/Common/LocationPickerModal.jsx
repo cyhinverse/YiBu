@@ -120,6 +120,17 @@ const LocationPickerModal = ({
     }
   }, [isOpen, initialLocation]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const fetchAddressByLatLng = useCallback(async latlng => {
     const lat = latlng?.lat;
     const lon = latlng?.lng;
@@ -200,7 +211,15 @@ const LocationPickerModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
       <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-white dark:bg-neutral-900 z-10">
@@ -221,6 +240,7 @@ const LocationPickerModal = ({
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
+              aria-label="Search location"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search city, country..."

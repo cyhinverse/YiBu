@@ -27,7 +27,9 @@ export const getInteractionIcon = type => {
     case 'share':
       return <Share2 size={18} className="text-green-500" />;
     case 'follow':
-      return <UserPlus size={18} className="text-purple-500" />;
+      return (
+        <UserPlus size={18} className="text-neutral-700 dark:text-neutral-300" />
+      );
     case 'save':
       return (
         <Bookmark size={18} className="text-amber-500" fill="currentColor" />

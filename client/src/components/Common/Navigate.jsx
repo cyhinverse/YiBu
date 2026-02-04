@@ -234,14 +234,21 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
         />
 
         {/* Theme Toggle */}
-        <div
+        <button
+          type="button"
           onClick={toggleTheme}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all cursor-pointer text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white ${
             collapsed ? 'justify-center px-2' : ''
           }`}
           title={
             collapsed ? (isDarkMode ? 'Light mode' : 'Dark mode') : undefined
           }
+          aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <div className="flex-shrink-0">
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -251,7 +258,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
               {isDarkMode ? 'Light mode' : 'Dark mode'}
             </span>
           )}
-        </div>
+        </button>
 
         {/* Create Post Button */}
         {collapsed ? (

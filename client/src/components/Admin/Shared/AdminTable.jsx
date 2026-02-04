@@ -66,6 +66,14 @@ export default function AdminTable({
     }));
   };
 
+  const handleRowKeyDown = (event, row) => {
+    if (!onRowClick) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onRowClick(row);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search */}
@@ -80,18 +88,19 @@ export default function AdminTable({
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
+              aria-label={searchPlaceholder}
               onChange={e => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
+              className="w-full pl-10 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
             />
           </div>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -99,14 +108,18 @@ export default function AdminTable({
                 {columns.map(col => (
                   <th
                     key={col.key}
-                    onClick={() => col.sortable && handleSort(col.key)}
-                    className={`text-left px-5 py-3.5 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-800/30 ${
-                      col.sortable
-                        ? 'cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-200'
-                        : ''
-                    }`}
+                    className="text-left px-4 py-3 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-800/30"
                   >
-                    <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => col.sortable && handleSort(col.key)}
+                      className={`flex items-center gap-1.5 text-left ${
+                        col.sortable
+                          ? 'cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-200'
+                          : 'cursor-default'
+                      }`}
+                      aria-label={`Sort by ${col.label}`}
+                    >
                       {col.label}
                       {col.sortable &&
                         sortConfig.key === col.key &&
@@ -115,11 +128,11 @@ export default function AdminTable({
                         ) : (
                           <ChevronDown size={12} />
                         ))}
-                    </div>
+                    </button>
                   </th>
                 ))}
                 {renderActions && (
-                  <th className="px-5 py-3.5 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right bg-neutral-50/50 dark:bg-neutral-800/30">
+                  <th className="px-4 py-3 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right bg-neutral-50/50 dark:bg-neutral-800/30">
                     Thao tác
                   </th>
                 )}
@@ -130,7 +143,7 @@ export default function AdminTable({
                 <tr>
                   <td
                     colSpan={columns.length + (renderActions ? 1 : 0)}
-                    className="px-5 py-12 text-center text-sm text-neutral-500"
+                    className="px-4 py-10 text-center text-sm text-neutral-500"
                   >
                     Không có dữ liệu
                   </td>
@@ -140,6 +153,9 @@ export default function AdminTable({
                   <tr
                     key={row.id || rowIndex}
                     onClick={() => onRowClick && onRowClick(row)}
+                    onKeyDown={event => handleRowKeyDown(event, row)}
+                    role={onRowClick ? 'button' : undefined}
+                    tabIndex={onRowClick ? 0 : undefined}
                     className={`group transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30 ${
                       onRowClick ? 'cursor-pointer' : ''
                     }`}
@@ -147,7 +163,7 @@ export default function AdminTable({
                     {columns.map(col => (
                       <td
                         key={col.key}
-                        className="px-5 py-4 text-sm text-neutral-700 dark:text-neutral-200"
+                        className="px-4 py-3 text-sm text-neutral-700 dark:text-neutral-200"
                       >
                         {col.render
                           ? col.render(row[col.key], row)
@@ -155,7 +171,7 @@ export default function AdminTable({
                       </td>
                     ))}
                     {renderActions && (
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {renderActions(row)}
                         </div>
@@ -181,7 +197,7 @@ export default function AdminTable({
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
+              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
             >
               <ChevronLeft size={16} />
             </button>
@@ -202,7 +218,7 @@ export default function AdminTable({
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
+                  className={`min-w-[32px] h-8 rounded-lg text-[13px] font-medium transition-colors ${
                     currentPage === pageNum
                       ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
                       : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -216,7 +232,7 @@ export default function AdminTable({
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
+              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
             >
               <ChevronRight size={16} />
             </button>

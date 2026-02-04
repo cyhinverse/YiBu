@@ -97,7 +97,7 @@ export default function Posts() {
   const handleToggleStatus = post => {
     setSelectedPost(post);
     setModerateAction({
-      action: post.status === 'active' ? 'hide' : 'approve',
+      action: post.status === 'active' ? 'hide' : 'unhide',
       reason: '',
     });
     setShowModerateModal(true);
@@ -110,23 +110,15 @@ export default function Posts() {
       await moderateMutation.mutateAsync({
         postId: selectedPost._id || selectedPost.id,
         action: moderateAction.action,
-        reason: moderateAction.reason || 'Kiểm duyệt Admin',
+        reason:
+          moderateAction.reason ||
+          (moderateAction.action === 'hide' ? 'Ẩn bởi quản trị' : ''),
       });
       setShowModerateModal(false);
       setSelectedPost(null);
     } catch (error) {
       console.error('Failed to moderate post:', error);
     }
-  };
-
-  const handleApprovePost = post => {
-    setSelectedPost(post);
-    setModerateAction({
-      action: 'approve',
-      reason: '',
-    });
-    setShowModerateModal(true);
-    setActiveDropdown(null);
   };
 
   const handleRefresh = () => {
@@ -138,20 +130,25 @@ export default function Posts() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-5 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Quản lý bài viết
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Kiểm duyệt và quản lý nội dung người dùng
+            Giám sát và xử lý báo cáo nội dung
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleRefresh}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -160,7 +157,7 @@ export default function Posts() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full md:w-auto">
           <Search
             size={18}
@@ -170,6 +167,7 @@ export default function Posts() {
             type="text"
             placeholder="Tìm kiếm bài viết..."
             value={searchTerm}
+            aria-label="Search posts"
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
@@ -205,7 +203,8 @@ export default function Posts() {
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
               <option value="hidden">Đã ẩn</option>
-              <option value="pending">Chờ duyệt</option>
+              <option value="flagged">Bị gắn cờ</option>
+              <option value="deleted">Đã xóa</option>
             </select>
           </div>
         </div>
@@ -218,7 +217,6 @@ export default function Posts() {
         activeDropdown={activeDropdown}
         setActiveDropdown={setActiveDropdown}
         onViewDetails={handleViewDetails}
-        onApprove={handleApprovePost}
         onToggleStatus={handleToggleStatus}
         onDelete={post => {
           setPostToDelete(post);

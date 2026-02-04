@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, AlertTriangle, User, CheckCircle, XCircle } from 'lucide-react';
 import { getTargetIcon, getTargetTypeText } from './ReportsUtils.jsx';
 
@@ -13,15 +13,37 @@ export default function ReportDetailModal({
 
   if (!isOpen || !report) return null;
 
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleKeyDown = event => {
+    if (event.key === 'Escape') {
+      onClose?.();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
       <div
-        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden"
+        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3.5 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
             Chi tiết báo cáo
           </h2>
           <button
@@ -32,12 +54,14 @@ export default function ReportDetailModal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[80vh]">
+        <div className="p-4 overflow-y-auto max-h-[80vh]">
           {/* Reporter Info */}
           <div className="flex items-center gap-4 mb-6 p-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl shadow-sm">
             <img
               src={report.reporter?.avatar || '/images/default-avatar.png'}
-              alt="Reporter"
+              alt={
+                report.reporter?.name || report.reporter?.username || 'Reporter'
+              }
               className="w-12 h-12 rounded-full object-cover"
             />
             <div>
@@ -86,7 +110,7 @@ export default function ReportDetailModal({
                 Nội dung bị báo cáo
               </p>
             </div>
-            <div className="p-5 bg-neutral-100 dark:bg-neutral-800/30 rounded-2xl relative group">
+            <div className="p-4 bg-neutral-100 dark:bg-neutral-800/30 rounded-2xl relative group">
               <div className="absolute top-4 right-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-white dark:bg-neutral-900 px-2 py-1 rounded-md shadow-sm">
                 {getTargetTypeText(report.target?.type)}
               </div>
@@ -121,17 +145,17 @@ export default function ReportDetailModal({
 
         {/* Actions */}
         {(report.status === 'pending' || !report.status) && (
-          <div className="p-6 pt-2 bg-neutral-100/50 dark:bg-neutral-800/40 flex gap-3 rounded-b-3xl">
+          <div className="p-4 pt-2 bg-neutral-100/50 dark:bg-neutral-800/40 flex gap-3 rounded-b-3xl">
             <button
               onClick={() => onReject(report, resolutionNote)}
-              className="px-6 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-1 flex items-center justify-center gap-2"
+              className="px-5 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-1 flex items-center justify-center gap-2"
             >
               <XCircle size={18} />
               Từ chối báo cáo
             </button>
             <button
               onClick={() => onResolve(report, resolutionNote)}
-              className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2"
+              className="px-5 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
               Chấp nhận báo cáo

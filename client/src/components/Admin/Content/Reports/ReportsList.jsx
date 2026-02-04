@@ -62,7 +62,7 @@ export default function ReportsList({
         return (
           <div
             key={report._id || report.id}
-            className="p-5 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 rounded-2xl mb-2 bg-white dark:bg-neutral-900 shadow-sm"
+            className="p-4 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 rounded-2xl mb-2 bg-white dark:bg-neutral-900 shadow-sm"
           >
             <div className="flex items-start gap-4">
               {/* Reporter Avatar */}
@@ -125,18 +125,31 @@ export default function ReportsList({
                               : report._id || report.id
                           )
                         }
+                        onKeyDown={event => {
+                          if (event.key === 'Escape') {
+                            setActiveDropdown(null);
+                          }
+                        }}
+                        aria-haspopup="menu"
+                        aria-expanded={
+                          activeDropdown === (report._id || report.id)
+                        }
                         className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full transition-colors text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
                       >
                         <MoreHorizontal size={18} />
                       </button>
 
                       {activeDropdown === (report._id || report.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in">
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in"
+                        >
                           <button
                             onClick={() => {
                               onViewDetails(report);
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800/50 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-300 transition-colors"
                           >
                             <Eye size={16} />
@@ -150,6 +163,7 @@ export default function ReportsList({
                                   onStartReview(report);
                                   setActiveDropdown(null);
                                 }}
+                                role="menuitem"
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/10 flex items-center gap-2.5 text-amber-600 transition-colors"
                               >
                                 <RefreshCcw size={16} />
@@ -160,6 +174,7 @@ export default function ReportsList({
                                   onOpenStatusModal(report, 'resolved');
                                   setActiveDropdown(null);
                                 }}
+                                role="menuitem"
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/10 flex items-center gap-2.5 text-emerald-600 transition-colors"
                               >
                                 <CheckCircle size={16} />
@@ -170,6 +185,7 @@ export default function ReportsList({
                                   onOpenStatusModal(report, 'rejected');
                                   setActiveDropdown(null);
                                 }}
+                                role="menuitem"
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-2.5 text-rose-600 transition-colors"
                               >
                                 <XCircle size={16} />

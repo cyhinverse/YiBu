@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   X,
   Trash2,
@@ -8,6 +9,19 @@ import {
 } from 'lucide-react';
 import { getStatusStyle, getStatusText } from './CommentsUtils.jsx';
 
+const useEscapeKey = (isOpen, onClose) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+};
+
 export const DeleteCommentModal = ({
   isOpen,
   onClose,
@@ -17,15 +31,25 @@ export const DeleteCommentModal = ({
 }) => {
   if (!isOpen || !comment) return null;
 
+  useEscapeKey(isOpen, onClose);
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md p-6 shadow-2xl rounded-3xl transform animate-scale-in border border-neutral-200 dark:border-neutral-800">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in border border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
             <Trash2 size={24} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
               Xóa bình luận?
             </h3>
             <p className="text-sm text-neutral-500 font-medium">
@@ -39,7 +63,7 @@ export const DeleteCommentModal = ({
             <img
               src={comment.user?.avatar || '/images/default-avatar.png'}
               className="w-5 h-5 rounded-full"
-              alt=""
+              alt={`${comment.user?.username || 'User'} avatar`}
             />
             <span className="text-xs font-bold text-neutral-900 dark:text-white">
               {comment.user?.username}
@@ -80,15 +104,25 @@ export const DeleteCommentModal = ({
 export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
   if (!isOpen || !comment) return null;
 
+  useEscapeKey(isOpen, onClose);
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
       <div
-        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
+        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
             Chi tiết bình luận
           </h2>
           <button
@@ -99,13 +133,13 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 space-y-5">
           {/* User Info */}
           <div className="flex items-center gap-4">
             <img
               src={comment.user?.avatar || '/images/default-avatar.png'}
-              alt=""
-              className="w-14 h-14 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
+              alt={`${comment.user?.username || 'User'} avatar`}
+              className="w-14 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
             />
             <div>
               <h3 className="font-bold text-lg text-neutral-900 dark:text-white tracking-tight">
@@ -118,7 +152,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
           </div>
 
           {/* Comment Content */}
-          <div className="bg-neutral-50 dark:bg-neutral-800/50 p-6 rounded-3xl border border-neutral-100 dark:border-neutral-800 relative group overflow-hidden">
+          <div className="bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 relative group overflow-hidden">
             <MessageCircle
               size={120}
               className="absolute -right-4 -bottom-4 text-neutral-200 dark:text-neutral-700/20 opacity-30 rotate-12 transition-transform group-hover:scale-110"
@@ -141,7 +175,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-1 shadow-sm">
               <Heart size={20} className="text-rose-500 mb-1 fill-rose-500" />
-              <span className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
+              <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
                 {comment.likes?.length || 0}
               </span>
               <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-widest">

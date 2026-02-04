@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Check, AlertTriangle, Ban, Loader2 } from 'lucide-react';
 
 const AdminActionModal = ({
@@ -11,6 +12,16 @@ const AdminActionModal = ({
   loading,
 }) => {
   if (!isOpen) return null;
+
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onCancel?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const getConfig = () => {
     switch (actionType) {
@@ -62,15 +73,23 @@ const AdminActionModal = ({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl p-8 transform animate-in scale-95 duration-200 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onCancel?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
         <div className="flex flex-col items-center text-center mb-8">
           <div
             className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${config.bg} ${config.text}`}
           >
             <Icon size={32} strokeWidth={2.5} />
           </div>
-          <h3 className="text-xl font-bold text-neutral-900 dark:text-white capitalize mb-2 tracking-tight">
+          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white capitalize mb-2 tracking-tight">
             {config.title}
           </h3>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">
@@ -94,6 +113,7 @@ const AdminActionModal = ({
             <textarea
               value={reason}
               onChange={e => onReasonChange(e.target.value)}
+              aria-label="Ly do thuc hien"
               placeholder="Nhập chi tiết tại đây..."
               className="w-full p-4 h-32 resize-none text-sm font-medium bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl focus:ring-2 focus:ring-primary/50 transition-all outline-none"
             />

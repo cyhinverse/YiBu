@@ -24,6 +24,17 @@ const BannedAccounts = () => {
     setCurrentPage(1);
   }, [debouncedSearch]);
 
+  useEffect(() => {
+    if (!showUnbanModal) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        setShowUnbanModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showUnbanModal]);
+
   // Queries
   const {
     data: bannedData,
@@ -70,11 +81,11 @@ const BannedAccounts = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
             Tài khoản bị chặn
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
@@ -86,6 +97,11 @@ const BannedAccounts = () => {
           <button
             onClick={handleRefresh}
             disabled={loading}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors disabled:opacity-50"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -94,7 +110,7 @@ const BannedAccounts = () => {
       </div>
 
       {/* Search */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm">
         <div className="relative max-w-md w-full">
           <Search
             size={18}
@@ -104,6 +120,7 @@ const BannedAccounts = () => {
             type="text"
             placeholder="Tìm kiếm tài khoản bị chặn..."
             value={searchQuery}
+            aria-label="Search banned accounts"
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
@@ -111,7 +128,7 @@ const BannedAccounts = () => {
       </div>
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm overflow-hidden">
         {loading && bannedUsers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
             <Loader2 size={32} className="animate-spin mb-4" />
@@ -128,22 +145,22 @@ const BannedAccounts = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-neutral-50/50 dark:bg-neutral-800/20">
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Người dùng
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Lý do
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Thời hạn
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Ngày chặn
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Người thực thi
                     </th>
-                    <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-right px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Thao tác
                     </th>
                   </tr>
@@ -154,7 +171,7 @@ const BannedAccounts = () => {
                       key={user._id}
                       className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <img
                             src={user.avatar || '/images/default-avatar.png'}
@@ -171,14 +188,14 @@ const BannedAccounts = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 max-w-[200px] block truncate text-ellipsis">
                           {user.banReason ||
                             user.moderationHistory?.[0]?.reason ||
                             'Không có lý do'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span
                           className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
                             user.banDuration === 'Permanent' ||
@@ -192,7 +209,7 @@ const BannedAccounts = () => {
                             : user.banDuration}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-neutral-500">
+                      <td className="px-5 py-3.5 text-sm font-medium text-neutral-500">
                         {user.bannedAt
                           ? new Date(user.bannedAt).toLocaleDateString('vi-VN')
                           : user.moderationHistory?.[0]?.actionDate
@@ -201,14 +218,14 @@ const BannedAccounts = () => {
                             ).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span className="text-sm font-medium text-neutral-900 dark:text-white">
                           {user.bannedBy?.fullName ||
                             user.moderationHistory?.[0]?.adminId?.fullName ||
                             'Hệ thống'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-3.5 text-right">
                         <button
                           onClick={() => handleUnban(user)}
                           disabled={loading}
@@ -226,7 +243,7 @@ const BannedAccounts = () => {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/20">
+              <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-50/50 dark:bg-neutral-800/20">
                 <span className="text-sm text-neutral-500 font-medium">
                   Trang{' '}
                   <span className="text-neutral-900 dark:text-white font-bold">
@@ -258,13 +275,23 @@ const BannedAccounts = () => {
 
       {/* Unban Modal */}
       {showUnbanModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-3xl p-8 transform animate-in scale-95 duration-200 overflow-hidden">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setShowUnbanModal(false);
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
                 <Check size={32} />
               </div>
-              <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
                 Mở chặn người dùng
               </h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">

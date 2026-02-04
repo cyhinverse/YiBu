@@ -1,3 +1,4 @@
+import { useEffect, useId } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
 
 /**
@@ -14,13 +15,38 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     '2xl': 'max-w-2xl',
   };
 
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
       <div
         className={`bg-white dark:bg-neutral-900 rounded-2xl w-full ${sizeClasses[size]} border border-neutral-100 dark:border-neutral-800`}
       >
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100 dark:border-neutral-800">
-          <h2 className="text-base font-semibold text-neutral-800 dark:text-white">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-neutral-800">
+          <h2
+            id={titleId}
+            className="text-[15px] font-semibold text-neutral-800 dark:text-white"
+          >
             {title}
           </h2>
           <button
@@ -30,7 +56,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
             <X size={18} />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   );
@@ -50,6 +76,19 @@ export function ConfirmModal({
   type = 'danger',
 }) {
   if (!isOpen) return null;
+
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const typeConfig = {
     danger: {
@@ -82,40 +121,52 @@ export function ConfirmModal({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-sm p-5 border border-neutral-100 dark:border-neutral-800">
-        <div className="flex items-start gap-3 mb-4">
-          <div className={`p-2.5 rounded-xl ${config.iconBg}`}>
-            <Icon size={20} className={config.iconColor} strokeWidth={1.5} />
+    <div
+      className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-sm p-4 border border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-start gap-3 mb-4">
+            <div className={`p-2.5 rounded-xl ${config.iconBg}`}>
+              <Icon size={18} className={config.iconColor} strokeWidth={1.5} />
+            </div>
+            <div className="flex-1">
+              <h2
+                id={titleId}
+                className="text-[15px] font-semibold text-neutral-800 dark:text-white"
+              >
+                {title}
+              </h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                {message}
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-base font-semibold text-neutral-800 dark:text-white">
-              {title}
-            </h2>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-              {message}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-sm font-medium text-neutral-700 dark:text-neutral-300"
-          >
-            {cancelText}
-          </button>
-          <button
+          <div className="flex gap-2 mt-5">
+            <button
+              onClick={onClose}
+              className="flex-1 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-sm font-medium text-neutral-700 dark:text-neutral-300"
+            >
+              {cancelText}
+            </button>
+            <button
             onClick={() => {
               onConfirm();
               onClose();
             }}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-white transition-colors text-sm font-medium ${config.confirmBg}`}
-          >
-            {confirmText}
-          </button>
+              className={`flex-1 px-3.5 py-2 rounded-lg text-white transition-colors text-sm font-medium ${config.confirmBg}`}
+            >
+              {confirmText}
+            </button>
+          </div>
         </div>
-      </div>
     </div>
   );
 }
@@ -128,7 +179,7 @@ export function Badge({ children, variant = 'default' }) {
     default:
       'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300',
     primary:
-      'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400',
+      'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900',
     success:
       'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     warning:
@@ -172,16 +223,16 @@ export function Button({
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-5 py-2.5 text-sm',
+    sm: 'px-2.5 py-1 text-[11px]',
+    md: 'px-3 py-1.5 text-[13px]',
+    lg: 'px-4 py-2 text-sm',
   };
 
   return (
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {loading ? (
@@ -198,10 +249,15 @@ export function Button({
  * Input Component
  */
 export function Input({ label, error, icon: Icon, className = '', ...props }) {
+  const inputId = props.id || useId();
+  const ariaLabel = props['aria-label'] || label;
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+        <label
+          htmlFor={inputId}
+          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5"
+        >
           {label}
         </label>
       )}
@@ -214,13 +270,15 @@ export function Input({ label, error, icon: Icon, className = '', ...props }) {
           />
         )}
         <input
+          id={inputId}
           className={`w-full ${
             Icon ? 'pl-10' : 'pl-4'
-          } pr-4 py-2.5 rounded-xl border ${
+          } pr-4 py-2 rounded-lg border ${
             error
               ? 'border-rose-400 focus:ring-rose-200'
               : 'border-neutral-200 dark:border-neutral-700 focus:ring-neutral-200 dark:focus:ring-neutral-700'
           } bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 transition-all`}
+          aria-label={ariaLabel}
           {...props}
         />
       </div>
@@ -241,7 +299,7 @@ export function Select({ label, options, className = '', ...props }) {
         </label>
       )}
       <select
-        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 transition-all"
+        className="w-full px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 transition-all"
         {...props}
       >
         {options.map(option => (
@@ -334,7 +392,7 @@ export function Card({ children, className = '', ...props }) {
 export function CardHeader({ children, className = '' }) {
   return (
     <div
-      className={`p-5 border-b border-neutral-200 dark:border-neutral-700 ${className}`}
+      className={`p-4 border-b border-neutral-200 dark:border-neutral-700 ${className}`}
     >
       {children}
     </div>
@@ -345,7 +403,7 @@ export function CardHeader({ children, className = '' }) {
  * Card Content Component
  */
 export function CardContent({ children, className = '' }) {
-  return <div className={`p-5 ${className}`}>{children}</div>;
+  return <div className={`p-4 ${className}`}>{children}</div>;
 }
 
 /**
@@ -380,16 +438,12 @@ export function StatCard({
       iconBg: 'bg-yellow-100 dark:bg-yellow-900/30',
       iconColor: 'text-yellow-600 dark:text-yellow-400',
     },
-    purple: {
-      iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-      iconColor: 'text-purple-600 dark:text-purple-400',
-    },
   };
 
   const colorConfig = colors[color];
 
   return (
-    <Card className="p-5">
+    <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-lg ${colorConfig.iconBg}`}>
           <Icon size={20} className={colorConfig.iconColor} />
@@ -408,7 +462,7 @@ export function StatCard({
         )}
       </div>
       <p className="text-neutral-500 dark:text-neutral-400 text-sm">{title}</p>
-      <p className="text-2xl font-bold text-black dark:text-white mt-1">
+      <p className="text-xl font-bold text-black dark:text-white mt-1">
         {value}
       </p>
     </Card>
@@ -420,13 +474,13 @@ export function StatCard({
  */
 export function EmptyState({ icon: Icon, title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+    <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
       {Icon && (
-        <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-full mb-4">
-          <Icon size={32} className="text-neutral-400" />
+        <div className="p-3.5 bg-neutral-100 dark:bg-neutral-800 rounded-full mb-4">
+          <Icon size={28} className="text-neutral-400" />
         </div>
       )}
-      <h3 className="text-lg font-semibold text-black dark:text-white mb-2">
+      <h3 className="text-base font-semibold text-black dark:text-white mb-2">
         {title}
       </h3>
       {description && (

@@ -95,7 +95,7 @@ const Notifications = () => {
       case 'alert':
         return <AlertCircle size={24} className="text-rose-500" />;
       default:
-        return <Sparkles size={24} className="text-violet-500" />;
+        return <Sparkles size={24} className="text-neutral-600 dark:text-neutral-300" />;
     }
   };
 
@@ -126,11 +126,11 @@ const Notifications = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
             <Bell className="text-neutral-900 dark:text-white" size={24} />
             Thông báo hệ thống
           </h2>
@@ -145,6 +145,11 @@ const Notifications = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={refreshType}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
             className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
             title="Làm mới"
           >
@@ -192,7 +197,7 @@ const Notifications = () => {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-neutral-400 gap-3">
             <Loader2
@@ -219,7 +224,7 @@ const Notifications = () => {
             {notifications.map(notification => (
               <div
                 key={notification._id}
-                className={`p-5 flex gap-5 transition-all group ${
+                className={`p-4 flex gap-4 transition-all group ${
                   !notification.isRead
                     ? 'bg-blue-50/30 dark:bg-blue-900/10'
                     : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
@@ -278,7 +283,7 @@ const Notifications = () => {
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-neutral-100 shadow-sm">
+        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-neutral-100 shadow-sm">
           <div className="text-sm text-neutral-500 px-2">
             Đang hiển thị trang{' '}
             <span className="font-bold text-neutral-900">{currentPage}</span> /{' '}

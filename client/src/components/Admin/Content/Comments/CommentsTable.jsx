@@ -51,22 +51,22 @@ export default function CommentsTable({
       <table className="w-full">
         <thead>
           <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-            <th className="px-6 py-4 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Tác giả
             </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider w-[40%]">
+            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider w-[40%]">
               Nội dung
             </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Trạng thái
             </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Tương tác
             </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Thời gian
             </th>
-            <th className="px-6 py-4 text-right text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3.5 text-right text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Hành động
             </th>
           </tr>
@@ -82,11 +82,11 @@ export default function CommentsTable({
                 key={comment._id || comment.id}
                 className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors group"
               >
-                <td className="px-6 py-4">
+                <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <img
                       src={UserAvatar || '/images/default-avatar.png'}
-                      alt=""
+                      alt={`${UserName} avatar`}
                       className="w-10 h-10 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 shadow-sm"
                     />
                     <div>
@@ -99,7 +99,7 @@ export default function CommentsTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-5 py-3.5">
                   <div className="flex flex-col gap-1.5">
                     <p className="text-sm text-neutral-700 dark:text-neutral-300 font-medium line-clamp-2 leading-relaxed">
                       {comment.content}
@@ -117,7 +117,7 @@ export default function CommentsTable({
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-5 py-3.5">
                   <span
                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusStyle(
                       comment.status || 'active'
@@ -126,7 +126,7 @@ export default function CommentsTable({
                     {getStatusText(comment.status || 'active')}
                   </span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-5 py-3.5">
                   <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
                     <div className="flex items-center gap-1.5" title="Likes">
                       <Heart
@@ -144,7 +144,7 @@ export default function CommentsTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-5 py-3.5">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
                     <Calendar size={12} />
                     {comment.createdAt
@@ -152,7 +152,7 @@ export default function CommentsTable({
                       : 'N/A'}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <div className="relative inline-block">
                     <button
                       onClick={() =>
@@ -162,18 +162,31 @@ export default function CommentsTable({
                             : comment._id || comment.id
                         )
                       }
+                      onKeyDown={event => {
+                        if (event.key === 'Escape') {
+                          setActiveDropdown(null);
+                        }
+                      }}
+                      aria-haspopup="menu"
+                      aria-expanded={
+                        activeDropdown === (comment._id || comment.id)
+                      }
                       className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500"
                     >
                       <MoreHorizontal size={18} />
                     </button>
 
                     {activeDropdown === (comment._id || comment.id) && (
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 animate-scale-in">
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 animate-scale-in"
+                      >
                         <button
                           onClick={() => {
                             onViewDetails(comment);
                             setActiveDropdown(null);
                           }}
+                          role="menuitem"
                           className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-300 transition-colors"
                         >
                           <Eye size={16} />
@@ -186,6 +199,7 @@ export default function CommentsTable({
                               onModerate(comment, 'active');
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-emerald-600 transition-colors"
                           >
                             <CheckCircle size={16} />
@@ -198,6 +212,7 @@ export default function CommentsTable({
                               onModerate(comment, 'hidden');
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-amber-600 transition-colors"
                           >
                             <Flag size={16} />
@@ -210,6 +225,7 @@ export default function CommentsTable({
                             onDelete(comment);
                             setActiveDropdown(null);
                           }}
+                          role="menuitem"
                           className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-rose-600 transition-colors"
                         >
                           <Trash2 size={16} />

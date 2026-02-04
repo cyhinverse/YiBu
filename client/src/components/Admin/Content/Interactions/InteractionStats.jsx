@@ -38,7 +38,7 @@ export default function InteractionStats({ stats }) {
       value: safeStats.follows,
       icon: UserPlus,
       bgClass:
-        'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400',
+        'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300',
     },
     {
       label: 'Lưu bài',
@@ -50,7 +50,11 @@ export default function InteractionStats({ stats }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 h-full">
+    <div
+      className="grid grid-cols-2 lg:grid-cols-5 gap-4 h-full"
+      role="group"
+      aria-label="Interaction stats"
+    >
       {statItems.map((item, index) => (
         <StatCard
           key={index}

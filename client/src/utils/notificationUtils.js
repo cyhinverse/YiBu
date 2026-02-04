@@ -43,7 +43,10 @@ export const getNotificationIcon = type => {
       return React.createElement(UserPlus, { size: 16, className: 'text-green-500' });
     case 'repost':
     case 'share':
-      return React.createElement(Repeat2, { size: 16, className: 'text-purple-500' });
+      return React.createElement(Repeat2, {
+        size: 16,
+        className: 'text-neutral-600 dark:text-neutral-300',
+      });
     case 'mention':
       return React.createElement(AtSign, { size: 16, className: 'text-orange-500' });
     default:

@@ -26,7 +26,7 @@ const UsersTable = ({
   onDeleteUser,
 }) => {
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-sm overflow-hidden flex flex-col h-full">
+    <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
       {loading && users.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24">
           <Loader2 size={40} className="animate-spin text-neutral-500 mb-4" />
@@ -47,22 +47,22 @@ const UsersTable = ({
             <table className="w-full">
               <thead>
                 <tr className="bg-neutral-50/50 dark:bg-neutral-800/30">
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Người dùng
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Vai trò
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Trạng thái
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Hoạt động
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Tham gia
                   </th>
-                  <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-right px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     Thao tác
                   </th>
                 </tr>
@@ -73,7 +73,7 @@ const UsersTable = ({
                     key={user._id}
                     className="group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
@@ -97,21 +97,21 @@ const UsersTable = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'admin'
-                            ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
-                            : 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
-                        }`}
-                      >
+                    <td className="px-5 py-3.5">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin'
+                              ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border border-neutral-900/10 dark:border-white/10'
+                              : 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
+                          }`}
+                        >
                         {user.role || 'thành viên'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <StatusBadge status={user.status || 'active'} />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                           {user.postsCount || 0} bài viết
@@ -122,17 +122,22 @@ const UsersTable = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span className="text-sm text-neutral-600 dark:text-neutral-400">
                         {user.createdAt
                           ? new Date(user.createdAt).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => onViewUser(user)}
+                          onKeyDown={event => {
+                            if (event.key === 'Escape') {
+                              event.currentTarget.blur();
+                            }
+                          }}
                           className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-black dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"
                           title="Xem chi tiết"
                         >
@@ -182,7 +187,7 @@ const UsersTable = ({
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/20">
+          <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-50/50 dark:bg-neutral-800/20">
             <span className="text-sm text-neutral-500">
               Trang {currentPage} / {pagination?.pages || 1}
             </span>

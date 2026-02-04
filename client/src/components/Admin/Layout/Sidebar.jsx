@@ -35,10 +35,15 @@ const SidebarItem = ({ item, collapsed, activePage, setActivePage }) => {
   return (
     <button
       onClick={() => setActivePage(item.id)}
-      className={`group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 ${
+      onKeyDown={event => {
+        if (event.key === 'Escape') {
+          event.currentTarget.blur();
+        }
+      }}
+      className={`group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-full transition-all duration-200 ${
         isActive
-          ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white'
+          ? 'bg-primary text-primary-foreground'
+          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white'
       } ${collapsed ? 'justify-center' : ''}`}
       title={collapsed ? item.label : undefined}
     >
@@ -76,15 +81,15 @@ export default function Sidebar({
   const collapsed = !sidebarOpen && !mobile;
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-neutral-900 shadow-sm">
+    <div className="flex flex-col h-full bg-white dark:bg-neutral-900 shadow-sm rounded-r-2xl">
       {/* Logo */}
       <div
-        className={`flex items-center h-14 px-4 ${
+        className={`flex items-center h-12 px-4 ${
           collapsed ? 'justify-center' : 'justify-between'
         }`}
       >
         <Link to="/admin" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-white flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-white flex items-center justify-center">
             <Zap
               size={16}
               className="text-white dark:text-neutral-900"
@@ -101,7 +106,12 @@ export default function Sidebar({
         {mobile && (
           <button
             onClick={onCloseMobile}
-            className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                onCloseMobile?.();
+              }
+            }}
+            className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
           >
             <X size={18} />
           </button>
@@ -113,7 +123,12 @@ export default function Sidebar({
         <div className="px-3 py-2">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors ${
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors ${
               collapsed ? 'justify-center' : ''
             }`}
           >
@@ -152,7 +167,7 @@ export default function Sidebar({
             collapsed ? 'justify-center' : ''
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
+          <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-white flex items-center justify-center text-white dark:text-neutral-900 text-xs font-semibold">
             A
           </div>
           {!collapsed && (
@@ -166,7 +181,7 @@ export default function Sidebar({
                 </p>
               </div>
               <button
-                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-rose-500 transition-colors"
+                className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-rose-500 transition-colors"
                 title="Đăng xuất"
               >
                 <LogOut size={16} />

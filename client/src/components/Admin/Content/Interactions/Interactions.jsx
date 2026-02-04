@@ -50,11 +50,11 @@ export default function Interactions() {
   const interactionsList = Array.isArray(interactions) ? interactions : [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
             <Activity className="text-neutral-900 dark:text-white" size={24} />
             Hoạt động tương tác
           </h1>
@@ -65,6 +65,11 @@ export default function Interactions() {
         <button
           onClick={handleRefresh}
           disabled={loading}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className="p-3 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
         >
           <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
@@ -75,9 +80,9 @@ export default function Interactions() {
       <InteractionStats stats={interactionStats} />
 
       {/* Filters & Content Container */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         {/* Toolbar */}
-        <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex flex-col md:flex-row gap-4 bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex flex-col md:flex-row gap-4 bg-neutral-50/50 dark:bg-neutral-800/20">
           <div className="relative flex-1">
             <Search
               size={18}
@@ -87,6 +92,7 @@ export default function Interactions() {
               type="text"
               placeholder="Tìm kiếm người dùng..."
               value={searchTerm}
+              aria-label="Search interactions"
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent outline-none transition-all text-sm font-medium"
             />
@@ -119,13 +125,13 @@ export default function Interactions() {
         </div>
 
         {/* Content Area */}
-        <div className="p-6 min-h-[400px]">
+        <div className="p-5 min-h-[400px]">
           <InteractionsList interactions={interactionsList} loading={loading} />
         </div>
 
         {/* Pagination */}
         {interactionsList.length > 0 && (
-          <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm font-medium text-neutral-500">
               Hiển thị{' '}
               <span className="font-bold text-neutral-900 dark:text-white">

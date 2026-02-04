@@ -2,7 +2,7 @@ import { useMemo, useEffect, useRef, useState } from 'react';
 
 const COLORS = [
   '#60A5FA', // Blue
-  '#A78BFA', // Purple
+  '#2DD4BF', // Teal
   '#F472B6', // Pink
   '#34D399', // Green
   '#FBBF24', // Yellow

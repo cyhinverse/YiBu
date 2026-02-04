@@ -16,19 +16,63 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: false,
+    cssCodeSplit: true,
+    target: 'es2018',
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
     rollupOptions: {
       output: {
-        // manualChunks: {
-        //   'react-vendor': [
-        //     'react',
-        //     'react-dom',
-        //     'react-router-dom',
-        //     'react-redux',
-        //     '@reduxjs/toolkit',
-        //   ],
-        //   'leaflet-vendor': ['leaflet', 'react-leaflet'],
-        //   'utils-vendor': ['lodash', 'date-fns', 'axios'],
-        // },
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          if (
+            id.includes('/react-dom') ||
+            id.includes('/react/') ||
+            id.includes('react-router-dom')
+          ) {
+            return 'react-vendor';
+          }
+
+          if (id.includes('@reduxjs/toolkit') || id.includes('react-redux')) {
+            return 'state-vendor';
+          }
+
+          if (
+            id.includes('@tanstack/react-query') ||
+            id.includes('@tanstack/react-virtual')
+          ) {
+            return 'tanstack-vendor';
+          }
+
+          if (id.includes('socket.io-client')) {
+            return 'realtime-vendor';
+          }
+
+          if (id.includes('framer-motion') || id.includes('lucide-react')) {
+            return 'ui-vendor';
+          }
+
+          if (
+            id.includes('leaflet') ||
+            id.includes('react-leaflet')
+          ) {
+            return 'map-vendor';
+          }
+
+          if (id.includes('recharts') || id.includes('@nivo')) {
+            return 'chart-vendor';
+          }
+
+          if (id.includes('emoji-picker-react')) {
+            return 'emoji-vendor';
+          }
+
+          if (id.includes('axios') || id.includes('date-fns')) {
+            return 'utils-vendor';
+          }
+        },
       },
     },
   },

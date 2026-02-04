@@ -125,6 +125,7 @@ const Contents = () => {
           <PostLists
             activeTab={activeTab}
             onOpenComments={handleOpenComments}
+            scrollRef={contentRef}
           />
         </div>
       </div>

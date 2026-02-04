@@ -147,6 +147,11 @@ const Users = () => {
         </div>
         <button
           onClick={() => refetchUsers()}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
         >
           <RefreshCcw
@@ -168,6 +173,7 @@ const Users = () => {
             type="text"
             placeholder="Tìm theo tên, email..."
             value={searchQuery}
+            aria-label="Search users"
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
           />

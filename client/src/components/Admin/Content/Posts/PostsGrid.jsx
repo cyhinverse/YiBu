@@ -12,11 +12,66 @@ import {
   Trash2,
   Loader2,
   Video,
+  FileText,
 } from 'lucide-react';
 import {
   getPostTypeIcon as getTypeIcon,
   getPostStatusStyle as getStatusStyle,
 } from '@/utils/postUtils';
+
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
+};
+
+const getMediaUrl = media => {
+  if (!media) return '';
+  if (typeof media === 'string') return media;
+  return (
+    media.url ||
+    media.secure_url ||
+    media.secureUrl ||
+    media.path ||
+    media.src ||
+    media.location ||
+    media.preview ||
+    media.thumbnail ||
+    ''
+  );
+};
+
+const getMediaType = (media, url) => {
+  const rawType =
+    media?.type ||
+    media?.mediaType ||
+    media?.resource_type ||
+    media?.resourceType ||
+    media?.format;
+  if (typeof rawType === 'string') {
+    const type = rawType.toLowerCase();
+    if (type.startsWith('video')) return 'video';
+    if (type === 'image') return 'image';
+  }
+  const mime = media?.mimetype || media?.mimeType || media?.mime_type;
+  if (typeof mime === 'string' && mime.startsWith('video/')) return 'video';
+  if (typeof media?.duration === 'number' && media.duration > 0) return 'video';
+  if (media?.thumbnail || media?.poster) return 'video';
+  if (isVideoUrl(url)) return 'video';
+  return 'image';
+};
+
+const normalizeMediaItem = media => {
+  const url = getMediaUrl(media);
+  if (!url) return null;
+  return {
+    ...media,
+    url,
+    type: getMediaType(media, url),
+  };
+};
 
 export default function PostsGrid({
   loading,
@@ -24,7 +79,6 @@ export default function PostsGrid({
   activeDropdown,
   setActiveDropdown,
   onViewDetails,
-  onApprove,
   onToggleStatus,
   onDelete,
   onViewReports,
@@ -51,22 +105,21 @@ export default function PostsGrid({
     <div className="grid gap-4">
       {posts.map(post => {
         const author = post.author || post.user || {};
-        const mediaItems = post.media || post.images || [];
+        const rawMediaItems = post.media || post.images || [];
+        const mediaItems = rawMediaItems
+          .map(normalizeMediaItem)
+          .filter(Boolean);
         const hasMedia = mediaItems.length > 0;
         const postType =
           post.type ||
-          (hasMedia
-            ? mediaItems[0]?.type === 'video'
-              ? 'video'
-              : 'image'
-            : 'text');
+          (hasMedia ? (mediaItems[0]?.type === 'video' ? 'video' : 'image') : 'text');
 
         return (
           <div
             key={post._id || post.id}
-            className="bg-white dark:bg-neutral-900 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+            className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300"
           >
-            <div className="flex items-start gap-5">
+            <div className="flex items-start gap-4">
               {/* Author Avatar */}
               <img
                 src={author.avatar || '/images/default-avatar.png'}
@@ -116,12 +169,21 @@ export default function PostsGrid({
                         ? 'Hoạt động'
                         : post.status === 'hidden'
                         ? 'Đã ẩn'
-                        : 'Chờ duyệt'}
+                        : post.status === 'flagged'
+                        ? 'Bị gắn cờ'
+                        : post.status === 'deleted'
+                        ? 'Đã xóa'
+                        : 'Không xác định'}
                     </span>
 
                     {(post.reportsCount || post.reports) > 0 && (
                       <button
                         onClick={() => onViewReports(post)}
+                        onKeyDown={event => {
+                          if (event.key === 'Escape') {
+                            event.currentTarget.blur();
+                          }
+                        }}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
                       >
                         <Flag size={12} />
@@ -139,58 +201,53 @@ export default function PostsGrid({
                               : post._id || post.id
                           )
                         }
+                        onKeyDown={event => {
+                          if (event.key === 'Escape') {
+                            setActiveDropdown(null);
+                          }
+                        }}
+                        aria-haspopup="menu"
+                        aria-expanded={
+                          activeDropdown === (post._id || post.id)
+                        }
                         className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500"
                       >
                         <MoreHorizontal size={20} />
                       </button>
 
                       {activeDropdown === (post._id || post.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-10 overflow-hidden animate-scale-in">
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-10 overflow-hidden animate-scale-in"
+                        >
                           <button
                             onClick={() => {
                               onViewDetails(post);
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
                           >
                             <Eye size={16} />
-                            Chi tiết bài viết
+                            Chi ti?t b?i vi?t
                           </button>
-                          {post.status === 'pending' && (
-                            <button
-                              onClick={() => {
-                                onApprove(post);
-                                setActiveDropdown(null);
-                              }}
-                              className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 transition-colors"
-                            >
-                              <CheckCircle size={16} />
-                              Phê duyệt
-                            </button>
-                          )}
                           <button
                             onClick={() => {
                               onToggleStatus(post);
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
                           >
                             {post.status === 'active' ? (
                               <>
                                 <XCircle size={16} className="text-rose-500" />
-                                <span className="text-rose-500">
-                                  Ẩn bài viết
-                                </span>
+                                <span className="text-rose-500">?n b?i vi?t</span>
                               </>
                             ) : (
                               <>
-                                <CheckCircle
-                                  size={16}
-                                  className="text-emerald-500"
-                                />
-                                <span className="text-emerald-500">
-                                  Hiện bài viết
-                                </span>
+                                <CheckCircle size={16} className="text-emerald-500" />
+                                <span className="text-emerald-500">Hi?n b?i vi?t</span>
                               </>
                             )}
                           </button>
@@ -200,6 +257,7 @@ export default function PostsGrid({
                               onDelete(post);
                               setActiveDropdown(null);
                             }}
+                            role="menuitem"
                             className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 text-rose-500 transition-colors"
                           >
                             <Trash2 size={16} />
@@ -220,22 +278,29 @@ export default function PostsGrid({
                 {mediaItems.length > 0 && (
                   <div className="flex gap-3 overflow-x-auto pb-2 mb-2 hide-scrollbar">
                     {mediaItems.slice(0, 4).map((media, idx) => {
-                      const mediaUrl =
-                        typeof media === 'string' ? media : media.url;
-                      const isVideo =
-                        typeof media === 'object'
-                          ? media.type === 'video'
-                          : postType === 'video';
+                      const mediaUrl = media.url;
+                      const isVideo = media.type === 'video';
                       return (
                         <div
                           key={idx}
                           className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800"
                         >
-                          <img
-                            src={mediaUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
+                          {isVideo ? (
+                            <video
+                              src={mediaUrl}
+                              poster={media.thumbnail || media.poster || media.preview}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={mediaUrl}
+                              alt={`Post media ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                           {isVideo && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                               <Video
@@ -256,7 +321,7 @@ export default function PostsGrid({
                 )}
 
                 {/* Stats */}
-                <div className="flex items-center gap-6 pt-4 bg-neutral-50/10 dark:bg-neutral-800/10 mt-2 px-2 rounded-xl">
+                <div className="flex items-center gap-4 pt-4 bg-neutral-50/10 dark:bg-neutral-800/10 mt-2 px-2 rounded-xl">
                   <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
                     <Heart size={14} className="text-neutral-400" />
                     {post.likesCount || post.likes || 0}

@@ -37,7 +37,7 @@ export default function InteractionsList({ interactions, loading }) {
       {interactions.map(interaction => (
         <div
           key={interaction._id}
-          className="group flex flex-col sm:flex-row gap-4 p-5 rounded-3xl bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-100 dark:border-neutral-800 hover:bg-white dark:hover:bg-neutral-800 hover:shadow-md transition-all duration-300"
+          className="group flex flex-col sm:flex-row gap-4 p-4 rounded-2xl bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-100 dark:border-neutral-800 hover:bg-white dark:hover:bg-neutral-800 hover:shadow-md transition-all duration-300"
         >
           {/* User Avatar with Action Icon */}
           <div className="relative shrink-0">
@@ -130,7 +130,7 @@ export default function InteractionsList({ interactions, loading }) {
 
               {interaction.weight !== undefined && (
                 <div className="ml-auto flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Activity size={12} className="text-indigo-500" />
+                  <Activity size={12} className="text-neutral-500" />
                   <span className="text-neutral-500">
                     AI Score: {interaction.weight}
                   </span>

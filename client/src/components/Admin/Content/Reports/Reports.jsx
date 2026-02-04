@@ -136,11 +136,11 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-5 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
             Trung tâm Báo cáo
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
@@ -154,6 +154,11 @@ export default function Reports() {
         <button
           onClick={handleRefresh}
           disabled={loading}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
           title="Làm mới"
         >
@@ -165,7 +170,7 @@ export default function Reports() {
       <ReportStats reports={reports} />
 
       {/* Filters */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full md:w-auto">
           <Search
             size={18}
@@ -175,6 +180,7 @@ export default function Reports() {
             type="text"
             placeholder="Tìm kiếm báo cáo..."
             value={searchTerm}
+            aria-label="Search reports"
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
           />
@@ -217,7 +223,7 @@ export default function Reports() {
       </div>
 
       {/* Reports List */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden shadow-sm">
         <ReportsList
           loading={loading}
           reports={reports}

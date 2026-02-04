@@ -95,7 +95,7 @@ const SystemHealth = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5" role="region" aria-label="System health">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -114,6 +114,11 @@ const SystemHealth = () => {
           </span>
           <button
             onClick={handleRefresh}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
             className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
           >
             <RefreshCcw
@@ -127,7 +132,7 @@ const SystemHealth = () => {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={18} strokeWidth={1.5} />
@@ -146,7 +151,7 @@ const SystemHealth = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400">
               <Cpu size={18} strokeWidth={1.5} />
@@ -165,9 +170,9 @@ const SystemHealth = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-violet-50 dark:bg-violet-500/10 rounded-xl text-violet-600 dark:text-violet-400">
+            <div className="p-2 bg-neutral-200 dark:bg-neutral-800 rounded-xl text-neutral-700 dark:text-neutral-300">
               <BarChart3 size={18} strokeWidth={1.5} />
             </div>
             <div>
@@ -180,11 +185,11 @@ const SystemHealth = () => {
             </div>
           </div>
           <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
-            <div className="bg-violet-500 h-1.5 rounded-full w-[60%]"></div>
+            <div className="bg-neutral-900 dark:bg-white h-1.5 rounded-full w-[60%]"></div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-xl text-amber-600 dark:text-amber-400">
               <AlertTriangle size={18} strokeWidth={1.5} />
@@ -214,7 +219,7 @@ const SystemHealth = () => {
           {services.map((service, index) => (
             <div
               key={index}
-              className="bg-white dark:bg-neutral-900 rounded-2xl p-5 border border-neutral-100 dark:border-neutral-800 hover:shadow-sm transition-shadow"
+              className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-100 dark:border-neutral-800 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">

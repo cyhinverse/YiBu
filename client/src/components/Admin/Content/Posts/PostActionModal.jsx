@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Trash2,
   Loader2,
@@ -8,18 +8,41 @@ import {
   Shield,
 } from 'lucide-react';
 
+const useEscapeKey = (isOpen, onClose) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+};
+
 export function DeletePostModal({ isOpen, onClose, onConfirm, loading, post }) {
   if (!isOpen || !post) return null;
 
+  useEscapeKey(isOpen, onClose);
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md p-6 shadow-2xl rounded-3xl transform animate-scale-in">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
             <Trash2 size={24} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
               Xóa bài viết?
             </h3>
             <p className="text-sm text-neutral-500 font-medium">
@@ -74,9 +97,19 @@ export function ModeratePostModal({
 
   const isHide = action === 'hide';
 
+  useEscapeKey(isOpen, onClose);
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-lg p-6 shadow-2xl rounded-3xl transform animate-scale-in">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-lg p-4 shadow-2xl rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
           <div
             className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
@@ -88,11 +121,11 @@ export function ModeratePostModal({
             {isHide ? <AlertTriangle size={24} /> : <CheckCircle size={24} />}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
-              {isHide ? 'Ẩn bài viết' : 'Phê duyệt bài viết'}
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
+              {isHide ? 'Ẩn bài viết' : 'Hiện bài viết'}
             </h3>
             <p className="text-sm text-neutral-500 font-medium">
-              Vui lòng nhập lý do (bắt buộc)
+              {isHide ? 'Vui lòng nhập lý do (bắt buộc)' : 'Xác nhận để hiển thị lại bài viết.'}
             </p>
           </div>
         </div>
@@ -100,7 +133,7 @@ export function ModeratePostModal({
           <textarea
             value={reason}
             onChange={e => setReason(e.target.value)}
-            placeholder="Nhập lý do kiểm duyệt..."
+            placeholder={isHide ? 'Nhập lý do ẩn bài viết...' : 'Ghi chú (tuỳ chọn)'}
             className="w-full min-h-[120px] p-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-2xl border-none focus:ring-2 focus:ring-primary/50 outline-none text-sm font-medium resize-none transition-all"
           />
         </div>
@@ -113,7 +146,7 @@ export function ModeratePostModal({
           </button>
           <button
             onClick={onConfirm}
-            disabled={loading || !reason.trim()}
+            disabled={loading || (isHide && !reason.trim())}
             className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 text-sm ${
               isHide
                 ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400'
@@ -121,7 +154,7 @@ export function ModeratePostModal({
             }`}
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
-            {isHide ? 'Xác nhận ẩn' : 'Xác nhận duyệt'}
+            {isHide ? 'Xác nhận ẩn' : 'Xác nhận hiện'}
           </button>
         </div>
       </div>
@@ -132,11 +165,21 @@ export function ModeratePostModal({
 export function PostReportsModal({ isOpen, onClose, reports }) {
   if (!isOpen) return null;
 
+  useEscapeKey(isOpen, onClose);
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden">
-        <div className="p-6 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden">
+        <div className="p-4 bg-neutral-100/50 dark:bg-neutral-800/40 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
             Danh sách báo cáo
           </h2>
           <button
@@ -146,12 +189,12 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="p-4 overflow-y-auto space-y-4">
           {reports?.length > 0 ? (
             reports.map(report => (
               <div
                 key={report._id}
-                className="p-5 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/30"
+                className="p-4 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/30"
               >
                 <div className="flex justify-between items-center mb-3">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400">
@@ -171,7 +214,11 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
                       report.reporter?.avatar || '/images/default-avatar.png'
                     }
                     className="w-6 h-6 rounded-full object-cover"
-                    alt=""
+                    alt={
+                      report.reporter?.username
+                        ? `${report.reporter.username} avatar`
+                        : 'Reporter avatar'
+                    }
                   />
                   <span className="text-xs font-bold text-neutral-500">
                     Báo cáo bởi:{' '}
@@ -193,7 +240,7 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
             </div>
           )}
         </div>
-        <div className="p-6 bg-neutral-100/50 dark:bg-neutral-800/40">
+        <div className="p-4 bg-neutral-100/50 dark:bg-neutral-800/40">
           <button
             onClick={onClose}
             className="w-full py-3 rounded-xl font-bold bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-sm shadow-sm"

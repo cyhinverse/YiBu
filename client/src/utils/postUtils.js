@@ -54,7 +54,7 @@ export const getPostTypeIcon = type => {
 
 /**
  * Get post status style classes
- * @param {string} status - Post status ('active' | 'hidden' | 'pending')
+ * @param {string} status - Post status ('active' | 'hidden' | 'flagged' | 'deleted')
  * @returns {string} Tailwind CSS classes
  */
 export const getPostStatusStyle = status => {
@@ -62,9 +62,11 @@ export const getPostStatusStyle = status => {
     case 'active':
       return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400';
     case 'hidden':
-      return 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400';
-    case 'pending':
+      return 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
+    case 'flagged':
       return 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400';
+    case 'deleted':
+      return 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400';
     default:
       return 'bg-neutral-50 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
   }

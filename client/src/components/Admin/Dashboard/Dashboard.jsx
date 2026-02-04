@@ -89,7 +89,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -112,6 +112,11 @@ const Dashboard = () => {
           </select>
           <button
             onClick={handleRefresh}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
           >
             <RefreshCcw
@@ -142,14 +147,14 @@ const Dashboard = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Growth Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-base font-semibold text-neutral-800 dark:text-white">
                 Tăng trưởng người dùng
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-2xl font-semibold text-neutral-800 dark:text-white">
+                <span className="text-xl font-semibold text-neutral-800 dark:text-white">
                   {growthData?.totalGrowth || 0}
                 </span>
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -157,26 +162,26 @@ const Dashboard = () => {
                 </span>
               </div>
             </div>
-            <div className="p-2 bg-violet-50 dark:bg-violet-500/10 rounded-xl">
+            <div className="p-2 bg-neutral-200 dark:bg-neutral-800 rounded-xl">
               <TrendingUp
                 size={18}
-                className="text-violet-600 dark:text-violet-400"
+                className="text-neutral-700 dark:text-neutral-300"
                 strokeWidth={1.5}
               />
             </div>
           </div>
-          <div className="h-[280px] w-full">
+          <div className="h-[240px] w-full">
             <UserGrowthChart data={growthData?.chartData || []} />
           </div>
         </div>
 
         {/* Top Users */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm flex flex-col">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-neutral-800 dark:text-white">
               Người dùng tích cực
             </h3>
-            <button className="text-xs font-medium text-violet-600 dark:text-violet-400 hover:underline">
+            <button className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:underline">
               Xem tất cả
             </button>
           </div>

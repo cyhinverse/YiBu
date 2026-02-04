@@ -157,6 +157,17 @@ const CommentItem = memo(
       onLike(comment._id, isLiked);
     }, [comment._id, isLiked, onLike]);
 
+    const avatarSeed =
+      comment.user?._id ||
+      comment.user?.id ||
+      comment.user?.username ||
+      'user';
+    const avatarSrc =
+      comment.user?.profile?.avatar ||
+      comment.user?.avatar ||
+      comment.user?.photo ||
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
+
     return (
       <div
         className={`relative group/comment ${depth > 0 ? 'ml-12 mt-3' : ''}`}
@@ -171,11 +182,12 @@ const CommentItem = memo(
           {/* Avatar - using Design System class */}
           <div className="relative">
             <img
-              src={
-                comment.user?.profile?.avatar ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?._id}`
-              }
+              src={avatarSrc}
               alt=""
+              onError={e => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
+              }}
               className={`yb-avatar bg-[var(--color-surface-secondary)] object-cover flex-shrink-0 ${
                 depth > 0 ? 'w-8 h-8' : 'w-10 h-10'
               }`}

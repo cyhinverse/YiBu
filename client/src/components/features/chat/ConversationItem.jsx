@@ -34,9 +34,19 @@ const ConversationItem = ({
       ? 'Đã gửi một tệp đính kèm'
       : 'Bắt đầu trò chuyện');
 
+  const handleKeyDown = event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <div
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       className={`relative flex items-center gap-4 p-4 cursor-pointer group transition-all duration-300 ${
         isActive
           ? 'bg-surface-secondary'

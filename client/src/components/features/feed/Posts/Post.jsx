@@ -8,6 +8,7 @@ import {
   useRef,
   memo,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import {
   MoreHorizontal,
@@ -55,6 +56,109 @@ const DEFAULT_USER = {
   name: 'Unknown User',
   username: 'unknown',
   avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
+};
+
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return (
+    /\/video\/upload\//i.test(url) ||
+    /resource_type=video/i.test(url) ||
+    /\/videos?\//i.test(url)
+  );
+};
+
+const buildCloudinaryUrl = (publicId, type) => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  if (!cloudName || !publicId) return null;
+  const resourceType = type === 'video' ? 'video' : 'image';
+  const cleanId = publicId.replace(/^\/+/, '');
+  return `https://res.cloudinary.com/${cloudName}/${resourceType}/upload/${cleanId}`;
+};
+
+const ensureAbsoluteUrl = (url, type) => {
+  if (!url) return url;
+  if (/^(blob:|data:|https?:)/i.test(url)) return url;
+
+  const cloudinaryUrl = buildCloudinaryUrl(url, type);
+  if (cloudinaryUrl) return cloudinaryUrl;
+
+  const base =
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
+  if (!base) return url;
+  if (url.startsWith('/')) return `${base}${url}`;
+  return `${base}/${url}`;
+};
+
+const getMediaType = item => {
+  const rawType =
+    item?.type ||
+    item?.mediaType ||
+    item?.resource_type ||
+    item?.resourceType ||
+    item?.format;
+  if (typeof rawType === 'string') {
+    const type = rawType.toLowerCase();
+    if (type.startsWith('video')) return 'video';
+    if (type === 'image') return 'image';
+    if (VIDEO_EXTENSIONS.test(`file.${type}`)) return 'video';
+  }
+  if (typeof item?.duration === 'number' && item.duration > 0) {
+    return 'video';
+  }
+  if (item?.thumbnail) {
+    return 'video';
+  }
+  const mime = item?.mimetype || item?.mimeType || item?.mime_type;
+  if (typeof mime === 'string' && mime.startsWith('video/')) {
+    return 'video';
+  }
+  return null;
+};
+
+const normalizeMediaItem = item => {
+  if (!item) return null;
+  if (typeof item === 'string') {
+    const url = item;
+    return { url, type: isVideoUrl(url) ? 'video' : 'image' };
+  }
+
+  const rawUrl =
+    item.url ||
+    item.path ||
+    item.secure_url ||
+    item.secureUrl ||
+    item.secureURL ||
+    item.location ||
+    item.src ||
+    item.fileUrl ||
+    item.fileURL ||
+    item.preview ||
+    item.thumbnail ||
+    item.publicId ||
+    item.public_id;
+
+  const url =
+    typeof rawUrl === 'string'
+      ? rawUrl
+      : rawUrl?.url ||
+        rawUrl?.secure_url ||
+        rawUrl?.secureUrl ||
+        rawUrl?.path ||
+        rawUrl?.src ||
+        rawUrl?.location ||
+        '';
+
+  if (!url || typeof url !== 'string') return null;
+
+  const inferredType = getMediaType(item) || (isVideoUrl(url) ? 'video' : null);
+  const resolvedUrl = ensureAbsoluteUrl(url, inferredType);
+  const type =
+    inferredType || (isVideoUrl(resolvedUrl) ? 'video' : 'image');
+  return { ...item, url: resolvedUrl, type };
 };
 
 const arePostPropsEqual = (prev, next) => {
@@ -143,14 +247,16 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
 
   const user = useMemo(() => data?.user || DEFAULT_USER, [data?.user]);
 
-  const mediaCount = useMemo(
-    () => (Array.isArray(data?.media) ? data.media.length : 0),
-    [data?.media]
-  );
+  const normalizedMedia = useMemo(() => {
+    const rawMedia = Array.isArray(data?.media) ? data.media : [];
+    return rawMedia.map(normalizeMediaItem).filter(Boolean);
+  }, [data?.media]);
+
+  const mediaCount = useMemo(() => normalizedMedia.length, [normalizedMedia]);
 
   const mediaItems = useMemo(
-    () => (Array.isArray(data?.media) ? data.media.slice(0, 4) : []),
-    [data?.media]
+    () => normalizedMedia.slice(0, 4),
+    [normalizedMedia]
   );
 
   const handleLike = useCallback(() => {
@@ -294,6 +400,8 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
                 className="w-11 h-11 rounded-full object-cover"
                 src={user.avatar}
                 alt={user.name}
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -432,13 +540,20 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
             mediaCount >= 3 ? 'grid-cols-2' : ''
           }`}
         >
-          {mediaItems.map((item, index) => (
-            <div
-              key={index}
-              className={`relative overflow-hidden ${
-                mediaCount === 3 && index === 0 ? 'row-span-2' : ''
-              } ${mediaCount === 1 ? 'max-h-[450px]' : 'aspect-square'}`}
-            >
+          {mediaItems.map((item, index) => {
+            const frameClass =
+              mediaCount === 1
+                ? 'max-h-[450px]'
+                : mediaCount === 2
+                  ? 'aspect-video'
+                  : 'aspect-square';
+            return (
+              <div
+                key={index}
+                className={`relative overflow-hidden ${
+                  mediaCount === 3 && index === 0 ? 'row-span-2' : ''
+                } ${frameClass}`}
+              >
               {item.type === 'video' ? (
                 <VideoPlayer
                   src={item.url}
@@ -452,6 +567,8 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
                   }`}
                   src={item.url}
                   alt={`Post media ${index + 1}`}
+                  loading="lazy"
+                  decoding="async"
                   onClick={() => setShowImage(item.url)}
                 />
               )}
@@ -462,8 +579,9 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
                   </span>
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -556,24 +674,28 @@ const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
       </div>
 
       {/* Image Modal */}
-      {showImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-          onClick={() => setShowImage(null)}
-        >
-          <img
-            src={showImage}
-            alt="Full view"
-            className="max-w-[90vw] max-h-[90vh] rounded-xl"
-          />
-          <button
-            className="absolute top-4 right-4 bg-white/10 backdrop-blur-sm text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors"
+      {showImage &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
             onClick={() => setShowImage(null)}
           >
-            <X size={20} />
-          </button>
-        </div>
-      )}
+            <img
+              src={showImage}
+              alt="Full view"
+              className="max-w-[90vw] max-h-[90vh] rounded-xl object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+            <button
+              className="absolute top-4 right-4 bg-white/10 backdrop-blur-sm text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors"
+              onClick={() => setShowImage(null)}
+            >
+              <X size={20} />
+            </button>
+          </div>,
+          document.body
+        )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

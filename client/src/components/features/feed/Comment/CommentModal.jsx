@@ -142,9 +142,19 @@ const CommentModal = memo(({ postId, onClose, variant = 'modal' }) => {
             <img
               src={
                 currentUser?.profile?.avatar ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?._id}`
+                currentUser?.avatar ||
+                currentUser?.photo ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                  currentUser?._id || currentUser?.id || currentUser?.username || 'user'
+                }`
               }
               alt=""
+              onError={e => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                  currentUser?._id || currentUser?.id || currentUser?.username || 'user'
+                }`;
+              }}
               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
             />
             <div className="flex-1">
