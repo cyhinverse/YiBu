@@ -34,52 +34,6 @@ const UserController = {
   }),
 
   /**
-   * Get user profile by ID
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - Route parameters
-   * @param {string} req.params.id - User ID to retrieve profile
-   * @param {Object} [req.user] - Authenticated user object (optional)
-   * @param {string} [req.user.id] - Current user's ID for context
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with user profile data
-   */
-  getUserProfile: CatchError(async (req, res) => {
-    const { id } = req.params;
-    const requesterId = req.user?.id;
-
-    const profile = await UserService.getUserProfile(id, requesterId);
-    return formatResponse(res, 200, 1, 'Get profile successfully!', profile);
-  }),
-
-  /**
-   * Get all users for chat
-   * @param {Object} req - Express request object
-   * @param {Object} req.user - Authenticated user object
-   * @param {string} req.user.id - Current user's ID
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with list of users available for chat
-   */
-  getAllUsers: CatchError(async (req, res) => {
-    const currentUserId = req.user.id;
-    const users = await UserService.getUsersForChat(currentUserId);
-    return formatResponse(res, 200, 1, 'Success', users);
-  }),
-
-  /**
-   * Get top users by engagement/likes
-   * @param {Object} req - Express request object
-   * @param {Object} req.query - Query parameters
-   * @param {number} [req.query.limit=10] - Maximum number of users to return
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with list of top engaged users
-   */
-  GET_TOP_USERS_BY_LIKES: CatchError(async (req, res) => {
-    const { limit = 10 } = req.query;
-    const topUsers = await UserService.getTopUsersByEngagement(parseInt(limit));
-    return formatResponse(res, 200, 1, 'Get top users successfully', topUsers);
-  }),
-
-  /**
    * Get recommended users for current user
    * @param {Object} req - Express request object
    * @param {Object} req.user - Authenticated user object
@@ -751,28 +705,6 @@ const UserController = {
     const userId = req.user.id;
     const mutedUsers = await UserService.getMutedUsers(userId);
     return formatResponse(res, 200, 1, 'Success', mutedUsers);
-  }),
-
-  /**
-   * Add trusted device (deprecated - moved to auth/sessions)
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Object} Response indicating feature has been moved
-   * @deprecated Use auth/sessions endpoints instead
-   */
-  addTrustedDevice: CatchError(async (req, res) => {
-    return formatResponse(res, 200, 1, 'Feature moved to auth/sessions');
-  }),
-
-  /**
-   * Remove trusted device (deprecated - moved to auth/sessions)
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Object} Response indicating feature has been moved
-   * @deprecated Use auth/sessions endpoints instead
-   */
-  removeTrustedDevice: CatchError(async (req, res) => {
-    return formatResponse(res, 200, 1, 'Feature moved to auth/sessions');
   }),
 };
 

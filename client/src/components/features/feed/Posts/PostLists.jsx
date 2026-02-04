@@ -1,10 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { FileText, PenSquare, Loader2 } from 'lucide-react';
-import { useInView } from 'react-intersection-observer';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import Post from './Post';
 import { useHomeFeed } from '@/hooks/useFeedQuery';
 
-const PostLists = ({ activeTab = 'forYou' }) => {
+const PostLists = ({ activeTab = 'forYou', onOpenComments }) => {
+  const [activeOptionsPostId, setActiveOptionsPostId] = useState(null);
+
+  const handleOptionsToggle = useCallback((postId, isOpen) => {
+    if (!postId) return;
+    setActiveOptionsPostId(prev =>
+      isOpen ? postId : prev === postId ? null : prev
+    );
+  }, []);
   // React Query Hook
   const {
     data,
@@ -17,19 +25,35 @@ const PostLists = ({ activeTab = 'forYou' }) => {
   } = useHomeFeed(activeTab);
 
   // Flatten pages to get all posts
-  const displayPosts = data?.pages?.flatMap(page => page.posts || page) || [];
+  const displayPosts = useMemo(
+    () => data?.pages?.flatMap(page => page.posts || page) || [],
+    [data]
+  );
 
-  // Infinite Scroll Observer
-  const { ref, inView } = useInView({
-    threshold: 0,
-    rootMargin: '100px',
+  const totalCount = hasNextPage ? displayPosts.length + 1 : displayPosts.length;
+  const rowVirtualizer = useWindowVirtualizer({
+    count: totalCount,
+    estimateSize: () => 560,
+    overscan: 5,
   });
 
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
+    const lastItem = virtualItems[virtualItems.length - 1];
+    if (!lastItem) return;
+
+    const isAtEnd = lastItem.index >= displayPosts.length - 1;
+    if (isAtEnd && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [
+    virtualItems,
+    displayPosts.length,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   if (isLoading) {
     return (
@@ -83,18 +107,42 @@ const PostLists = ({ activeTab = 'forYou' }) => {
   }
 
   return (
-    <div className="space-y-4">
-      {displayPosts.map(post => (
-        <Post key={post._id} data={post} />
-      ))}
+    <div className="relative">
+      <div
+        className="relative w-full"
+        style={{ height: rowVirtualizer.getTotalSize() }}
+      >
+        {virtualItems.map(virtualRow => {
+          const isLoaderRow = virtualRow.index > displayPosts.length - 1;
+          const post = displayPosts[virtualRow.index];
 
-      {/* Load more trigger */}
-      <div ref={ref} className="h-10">
-        {isFetchingNextPage && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-          </div>
-        )}
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={rowVirtualizer.measureElement}
+              className={`absolute top-0 left-0 w-full pb-4 ${
+                !isLoaderRow && activeOptionsPostId === post?._id
+                  ? 'z-50'
+                  : 'z-0'
+              }`}
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              {isLoaderRow ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+                </div>
+              ) : (
+                <Post
+                  key={post._id}
+                  data={post}
+                  onOpenComments={onOpenComments}
+                  onOptionsToggle={handleOptionsToggle}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {!hasNextPage && displayPosts.length > 0 && (
@@ -107,3 +155,4 @@ const PostLists = ({ activeTab = 'forYou' }) => {
 };
 
 export default PostLists;
+

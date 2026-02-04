@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -12,7 +13,6 @@ import {
   User,
   LogOut,
   Bookmark,
-  Sparkles,
   PenSquare,
   ChevronLeft,
   ChevronRight,
@@ -25,7 +25,7 @@ import { useUnreadMessagesCount } from '@/hooks/useMessageQuery';
 // Custom Nav Item
 const NavItem = ({
   to,
-  icon: Icon, // eslint-disable-line no-unused-vars
+  icon: Icon,
   label,
   onClick,
   badge,
@@ -36,16 +36,29 @@ const NavItem = ({
     <NavLink to={to || '#'} onClick={onClick} className="group w-full">
       {({ isActive }) => {
         const active = forceActive !== undefined ? forceActive : isActive;
+        const baseClass = collapsed
+          ? 'relative flex items-center justify-center w-10 h-10 mx-auto rounded-full transition-all overflow-hidden'
+          : 'relative flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full overflow-hidden';
+        const stateClass = active
+          ? 'text-primary-foreground font-medium'
+          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white';
         return (
           <div
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full ${
-              active
-                ? 'bg-primary text-primary-foreground font-medium'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white'
-            } ${collapsed ? 'justify-center px-2' : ''}`}
+            className={`${baseClass} ${stateClass}`}
             title={collapsed ? label : undefined}
           >
-            <div className="relative flex-shrink-0">
+            {active && (
+              <motion.span
+                layoutId="sidebarActiveItem"
+                className="absolute inset-0 rounded-full bg-primary/90"
+                transition={{
+                  type: 'tween',
+                  duration: 0.18,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              />
+            )}
+            <div className="relative z-10 flex-shrink-0">
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               {badge > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center px-1">
@@ -53,7 +66,9 @@ const NavItem = ({
                 </span>
               )}
             </div>
-            {!collapsed && <span className="text-sm truncate">{label}</span>}
+            {!collapsed && (
+              <span className="relative z-10 text-sm truncate">{label}</span>
+            )}
           </div>
         );
       }}
@@ -166,7 +181,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Desktop Sidebar
   return (
     <div
-      className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 transition-all duration-300 ease-in-out ${
+      className={`h-full flex flex-col py-6 bg-white rounded-r-2xl dark:bg-neutral-900 transition-all duration-300 ease-in-out ${
         collapsed ? 'px-2 w-[72px]' : 'px-4 w-full'
       }`}
     >
@@ -177,9 +192,6 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
           collapsed ? 'justify-center px-0' : 'px-1'
         }`}
       >
-        <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center flex-shrink-0">
-          <Sparkles size={18} className="text-white dark:text-black" />
-        </div>
         {!collapsed && (
           <span className="text-xl font-semibold tracking-tight text-black dark:text-white">
             YiBu
@@ -309,4 +321,3 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
     </div>
   );
 }
-

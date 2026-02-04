@@ -16,6 +16,3 @@ export const comparePassword = async (password, hashedPassword) => {
   const isMatch = await bcrypt.compare(password, hashedPassword);
   return isMatch;
 };
-
-// Default export for backward compatibility
-export default hashPassword;

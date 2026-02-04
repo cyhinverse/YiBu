@@ -33,6 +33,7 @@ import {
 } from '@/hooks/useMessageQuery';
 import { useSocketContext } from '@/contexts/SocketContext';
 import { lazy, Suspense } from 'react';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 // Lazy load modals
 const ReportModal = lazy(() =>
@@ -711,7 +712,7 @@ const MessageDetail = () => {
       </div>
 
       {/* Modals */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {showGroupInfo && (
           <GroupInfoModal
             isOpen={showGroupInfo}

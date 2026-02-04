@@ -171,7 +171,7 @@ const HashtagPosts = () => {
 
             {/* Grid View */}
             {viewMode === 'grid' && (
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                 {hashtagPosts.map(post => {
                   const mediaUrl = post.media?.[0]?.url || post.images?.[0] || post.image;
                   return (

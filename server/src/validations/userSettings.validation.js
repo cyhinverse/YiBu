@@ -1,5 +1,4 @@
 import Joi from 'joi';
-import { objectId } from './common.validation.js';
 
 /**
  * UserSettings Validation Schemas
@@ -112,32 +111,6 @@ export const themeSettingsBody = Joi.object({
     'object.min': 'Cần ít nhất một cài đặt để cập nhật',
   });
 
-// ======================================
-// POST /devices (addTrustedDevice)
-// Body: { deviceName, deviceType, etc. }
-// ======================================
-export const addDeviceBody = Joi.object({
-  deviceName: Joi.string().trim().max(100).required().messages({
-    'string.max': 'Tên thiết bị không được quá 100 ký tự',
-    'any.required': 'Tên thiết bị là bắt buộc',
-  }),
-  deviceType: Joi.string()
-    .valid('desktop', 'mobile', 'tablet', 'other')
-    .default('other'),
-  browser: Joi.string().trim().max(50),
-  os: Joi.string().trim().max(50),
-});
-
-// ======================================
-// DELETE /devices/:deviceId (removeTrustedDevice)
-// Params: { deviceId }
-// ======================================
-export const deviceIdParam = Joi.object({
-  deviceId: objectId.required().messages({
-    'any.required': 'Device ID là bắt buộc',
-    'string.pattern.base': 'Device ID không hợp lệ',
-  }),
-});
 
 export default {
   privacySettingsBody,
@@ -145,6 +118,4 @@ export default {
   securitySettingsBody,
   contentSettingsBody,
   themeSettingsBody,
-  addDeviceBody,
-  deviceIdParam,
 };

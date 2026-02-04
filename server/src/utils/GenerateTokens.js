@@ -16,13 +16,3 @@ export const generateRefreshToken = (payload) => {
 export const verifyRefreshToken = (token) => {
   return jwt.verify(token, config.jwt.refreshSecret);
 };
-
-export const verifyAccessToken = (token) => {
-  return jwt.verify(token, config.jwt.accessSecret);
-};
-
-// Backward compatibility
-export {
-  generateAccessToken as GenerateAccessToken,
-  generateRefreshToken as GenerateRefreshToken,
-};

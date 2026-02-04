@@ -101,6 +101,7 @@
   --color-surface-hover: #1a1a1a;
 
   --color-text-primary: #ffffff;
+  --color-content: #ffffff;
   --color-text-secondary: var(--color-secondary);
   --color-text-tertiary: #525252;
   --color-text-inverse: #18181b;
@@ -125,6 +126,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -134,6 +136,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
 h1,

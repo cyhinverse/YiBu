@@ -138,7 +138,7 @@ function Message() {
   };
 
   return (
-    <div className="flex w-full h-[calc(100vh-4rem)] md:h-screen bg-transparent overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-4rem)] md:h-screen bg-transparent md:overflow-hidden">
       {/* Left Sidebar (Conversation List) */}
       <div
         className={`w-full md:w-[380px] lg:w-[400px] flex-shrink-0 border-r border-border flex flex-col bg-background transition-all ${

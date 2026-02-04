@@ -10,11 +10,14 @@ import {
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 
-const UserProfilePreview = ({ userId, children }) => {
+const UserProfilePreview = ({ userId, children, triggerSelector }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef(null);
+  const anchorRef = useRef(null);
   const timeoutRef = useRef(null);
+  const openTimeoutRef = useRef(null);
+  const hasMovedRef = useRef(false);
   const authUser = useSelector(state => state.auth.user);
   const isMe = authUser?._id === userId;
 
@@ -26,11 +29,22 @@ const UserProfilePreview = ({ userId, children }) => {
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
 
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  const updateAnchorFromEvent = e => {
+    if (!triggerSelector) {
+      anchorRef.current = triggerRef.current;
+      return true;
+    }
 
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
+    const target = e?.target;
+    const anchor = target?.closest?.(triggerSelector);
+    anchorRef.current = anchor || null;
+    return !!anchor;
+  };
+
+  const openPreview = () => {
+    const anchorEl = anchorRef.current || triggerRef.current;
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
 
@@ -43,7 +57,43 @@ const UserProfilePreview = ({ userId, children }) => {
     setIsOpen(true);
   };
 
+  const handleMouseEnter = e => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (openTimeoutRef.current) clearTimeout(openTimeoutRef.current);
+
+    if (!updateAnchorFromEvent(e)) {
+      return;
+    }
+
+    hasMovedRef.current = false;
+    openTimeoutRef.current = setTimeout(() => {
+      if (hasMovedRef.current) {
+        openPreview();
+      }
+    }, 150);
+  };
+
+  const handleMouseMove = e => {
+    if (!updateAnchorFromEvent(e)) {
+      if (isOpen) setIsOpen(false);
+      return;
+    }
+    if (isOpen) return;
+    if (Math.abs(e.movementX) > 0 || Math.abs(e.movementY) > 0) {
+      hasMovedRef.current = true;
+      if (openTimeoutRef.current) {
+        clearTimeout(openTimeoutRef.current);
+        openTimeoutRef.current = null;
+      }
+      openPreview();
+    }
+  };
+
   const handleMouseLeave = () => {
+    if (openTimeoutRef.current) {
+      clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
+    }
     timeoutRef.current = setTimeout(() => {
       setIsOpen(false);
     }, 400); // Delay closing
@@ -67,6 +117,7 @@ const UserProfilePreview = ({ userId, children }) => {
     <div
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       ref={triggerRef}
     >
@@ -86,14 +137,14 @@ const UserProfilePreview = ({ userId, children }) => {
             }}
             onMouseLeave={() => setIsOpen(false)}
           >
-            <div className="animate-slide-up flex w-[500px] bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <div className="animate-slide-up flex w-[90vw] max-w-[500px] bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
               {/* Sidebar */}
-              <div className="w-[140px] bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-100 dark:border-neutral-800 flex flex-col items-center pt-6 p-4">
+              <div className="w-[110px] sm:w-[140px] bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-100 dark:border-neutral-800 flex flex-col items-center pt-6 p-4">
                 <div className="relative mb-4">
                   <img
                     src={user?.avatar || '/images/default-avatar.png'}
                     alt=""
-                    className="w-20 h-20 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover bg-white"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover bg-white"
                   />
                   {user?.isOnline && (
                     <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-neutral-900 rounded-full" />
@@ -147,7 +198,7 @@ const UserProfilePreview = ({ userId, children }) => {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-6 mb-4">
+                    <div className="flex flex-wrap items-center gap-4 mb-4">
                       <div className="text-center">
                         <span className="block text-sm font-bold text-neutral-900 dark:text-white">
                           {user.postsCount || 0}

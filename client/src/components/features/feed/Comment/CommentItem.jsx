@@ -38,8 +38,8 @@ const CommentInput = memo(
           placeholder={placeholder}
           autoFocus={autoFocus}
           disabled={isSubmitting}
-          className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 
-                   text-neutral-900 dark:text-white placeholder:text-neutral-400 
+          className="flex-1 px-4 py-2.5 rounded-full bg-[var(--color-surface-secondary)] 
+                   text-[var(--color-content)] placeholder:text-[var(--color-text-tertiary)] 
                    text-sm focus:outline-none focus:ring-2 focus:ring-primary 
                    disabled:opacity-50"
         />
@@ -48,8 +48,8 @@ const CommentInput = memo(
           disabled={!value.trim() || isSubmitting}
           className={`p-2.5 rounded-full transition-all duration-200 ${
             value.trim() && !isSubmitting
-              ? 'bg-primary text-primary-foreground hover:opacity-80'
-              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
+              ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:opacity-80'
+              : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)] cursor-not-allowed'
           }`}
         >
           <Send size={16} />
@@ -66,7 +66,7 @@ CommentInput.displayName = 'CommentInput';
  */
 const OptionsMenu = memo(({ isOwner, onEdit, onDelete, onClose }) => (
   <div
-    className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-800 
+    className="absolute right-0 top-full mt-1 w-36 bg-[var(--color-surface)] border border-[var(--color-border)]
                   rounded-lg py-1 z-20 animate-in fade-in slide-in-from-top-1 duration-150"
   >
     {isOwner ? (
@@ -76,8 +76,8 @@ const OptionsMenu = memo(({ isOwner, onEdit, onDelete, onClose }) => (
             onEdit();
             onClose();
           }}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700 
-                   dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--color-text-secondary)] 
+                   hover:bg-[var(--color-surface-hover)]"
         >
           <Edit2 size={14} />
           Chỉnh sửa
@@ -87,8 +87,8 @@ const OptionsMenu = memo(({ isOwner, onEdit, onDelete, onClose }) => (
             onDelete();
             onClose();
           }}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 
-                   dark:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--color-error)] 
+                   hover:bg-[var(--color-surface-hover)]"
         >
           <Trash2 size={14} />
           Xóa
@@ -97,8 +97,8 @@ const OptionsMenu = memo(({ isOwner, onEdit, onDelete, onClose }) => (
     ) : (
       <button
         onClick={onClose}
-        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-neutral-700 
-                 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--color-text-secondary)] 
+                 hover:bg-[var(--color-surface-hover)]"
       >
         Báo cáo
       </button>
@@ -176,7 +176,7 @@ const CommentItem = memo(
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?._id}`
               }
               alt=""
-              className={`yb-avatar bg-white dark:bg-neutral-800 object-cover flex-shrink-0 ${
+              className={`yb-avatar bg-[var(--color-surface-secondary)] object-cover flex-shrink-0 ${
                 depth > 0 ? 'w-8 h-8' : 'w-10 h-10'
               }`}
             />

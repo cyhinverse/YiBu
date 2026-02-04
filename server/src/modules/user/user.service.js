@@ -53,44 +53,6 @@ class UserService {
 
     return user ? user._id.toString() : null;
   }
-  
-  /**
-   * Find user by email (for authentication)
-   * @param {string} email - User email
-   * @returns {Promise<Object|null>} User object with password or null
-   * @throws {Error} If email not provided
-   */
-  static async findUserByEmail(email) {
-    if (!email) {
-      throw ApiError.badRequest('Email is required');
-    }
-
-
-    const user = await User.findOne({ email: email.toLowerCase() })
-      .select('+password')
-      .lean();
-
-    return user;
-  }
-
-  /**
-   * Find user by username
-   * @param {string} username - User username
-   * @returns {Promise<Object|null>} User object or null
-   * @throws {Error} If username not provided
-   */
-  static async getUserByUsername(username) {
-    if (!username) {
-      throw ApiError.badRequest('Username is required');
-    }
-
-
-    const user = await User.findOne({ username: username.toLowerCase() })
-      .select('-loginAttempts')
-      .lean();
-
-    return user;
-  }
 
   /**
    * Get user information by ID with full profile data
@@ -449,17 +411,6 @@ class UserService {
    */
   static async getRecommendedUsers(userId, limit = 10) {
     return User.getRecommendedUsers(userId, limit);
-  }
-
-  /**
-   * Get list of users for chat
-   * @param {string} currentUserId - Current user ID
-   * @param {Object} options - Pagination options {page, limit}
-   * @returns {Promise<Object>} List of conversations
-   */
-  static async getUsersForChat(currentUserId, options = {}) {
-    const { page = 1, limit = 20 } = options;
-    return Message.getConversations(currentUserId, { page, limit });
   }
 
   /**
@@ -831,25 +782,6 @@ class UserService {
     return settings.content;
   }
 
-  static async updateProfileSettings(userId, updatedFields, avatarUrl = null) {
-    if (avatarUrl) {
-      updatedFields.avatar = avatarUrl;
-    }
-    return this.updateProfile(userId, updatedFields);
-  }
-
-  static async updatePreferences(userId, preferences) {
-    return this.updateContentSettings(userId, preferences);
-  }
-
-  static async updateThemeSettings(userId, themeSettings) {
-    return this.updateAppearanceSettings(userId, themeSettings);
-  }
-
-  static async updateTwoFactorAuth(userId, twoFactorSettings) {
-    return this.updateSecuritySettings(userId, twoFactorSettings);
-  }
-
   /**
    * Block a user
    * @param {string} userId - User ID performing the block
@@ -1016,31 +948,6 @@ class UserService {
     }
   }
 
-  /**
-   * Get list of top users by engagement rate
-   * @param {number} limit - Maximum number of users
-   * @returns {Promise<Array>} List of top users
-   */
-  static async getTopUsersByEngagement(limit = 10) {
-    return User.find({
-      isActive: true,
-      'moderation.status': 'active',
-    })
-      .sort({ 'metrics.engagementRate': -1 })
-      .limit(limit)
-      .select(
-        'username name avatar verified followersCount metrics.engagementRate'
-      )
-      .lean();
-  }
-
-  static async getTopUsersByLikes() {
-    return this.getTopUsersByEngagement(10);
-  }
-
-  static async getAllUsers(currentUserId) {
-    return this.getUsersForChat(currentUserId);
-  }
 
   /**
    * Upload avatar to Cloudinary and update user
@@ -1095,51 +1002,6 @@ class UserService {
     await UserSettings.create({ user: user._id });
 
     return user;
-  }
-
-  /**
-   * Get user by email (alias for findUserByEmail)
-   * @param {string} email - User email
-   * @returns {Promise<Object|null>} User object or null
-   */
-  static async getUserByEmail(email) {
-    return this.findUserByEmail(email);
-  }
-
-  static async findProfileByUserId(userId) {
-    const user = await User.findById(userId).lean();
-    if (!user) return null;
-    return {
-      userId: user._id,
-      avatar: user.avatar,
-      bio: user.bio,
-      birthday: user.birthday,
-      gender: user.gender,
-      website: user.website,
-      interests: user.interests,
-    };
-  }
-
-  static async getProfileById(userId) {
-    return this.findProfileByUserId(userId);
-  }
-
-  static async createProfile(profileData) {
-    if (!profileData.userId) {
-      throw ApiError.badRequest('UserId required');
-    }
-
-    return this.updateProfile(profileData.userId, profileData);
-  }
-
-  static async deleteProfile(userId) {
-    return this.updateProfile(userId, {
-      bio: '',
-      website: '',
-      interests: [],
-      avatar:
-        'https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1',
-    });
   }
 }
 

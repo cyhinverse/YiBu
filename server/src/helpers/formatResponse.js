@@ -31,4 +31,3 @@ export const formatResponse = (
 
   return res.status(statusCode).json(response);
 };
-

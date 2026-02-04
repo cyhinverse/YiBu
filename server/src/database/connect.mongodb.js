@@ -1,11 +1,10 @@
-import mongoose from "mongoose";
-import logger from "../configs/logger.js";
-import ApiError from "../helpers/ApiError.js";
+import mongoose from 'mongoose';
+import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
 
-
-const ConnectToMongodb = async (uri) => {
+const ConnectToMongodb = async uri => {
   if (!uri) {
-    throw ApiError.internal("MongoDB URI is undefined in configuration");
+    throw ApiError.internal('MongoDB URI is undefined in configuration');
   }
 
   try {
@@ -17,7 +16,7 @@ const ConnectToMongodb = async (uri) => {
       logger.info(`MongoDB connected to: ${connect.connection.host}`);
     }
   } catch (error) {
-    logger.error("MongoDB connection error: ", error);
+    logger.error('MongoDB connection error: ', error);
     process.exit(1);
   }
 };

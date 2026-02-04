@@ -1,8 +1,9 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { useSelector } from 'react-redux';
 import { Image, X, Smile, Sparkles, Send, Video, Hash } from 'lucide-react';
 import { notify } from '@/utils/notify';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 import {
   useCreatePost,
@@ -32,17 +33,49 @@ const ModelPost = ({ closeModal, editPost = null }) => {
   const maxMediaFiles = 5;
   const maxMediaSizeMB = 15;
 
+  const avatarUrl = useMemo(
+    () =>
+      currentUser?.avatar ||
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+        currentUser?.username || 'default'
+      }`,
+    [currentUser?.avatar, currentUser?.username]
+  );
+
+  const currentPrivacy = useMemo(
+    () => PRIVACY_OPTIONS.find(p => p.value === privacy),
+    [privacy]
+  );
+
+  const previewMedia = useMemo(
+    () =>
+      mediaFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith('video/') ? 'video' : 'image',
+        isExisting: false,
+        file,
+      })),
+    [mediaFiles]
+  );
+
+  useEffect(() => {
+    return () => {
+      previewMedia.forEach(item => URL.revokeObjectURL(item.url));
+    };
+  }, [previewMedia]);
+
 
   const onEmojiClick = emojiObject => {
     setCaption(prev => prev + emojiObject.emoji);
   };
 
-  const avatarUrl =
-    currentUser?.avatar ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-      currentUser?.username || 'default'
-    }`;
-  const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === privacy);
+  const allMedia = useMemo(
+    () => [
+      ...existingMedia.map(m => ({ ...m, isExisting: true })),
+      ...previewMedia,
+    ],
+    [existingMedia, previewMedia]
+  );
 
   const handleMediaChange = event => {
     const files = Array.from(event.target.files);
@@ -115,15 +148,7 @@ const ModelPost = ({ closeModal, editPost = null }) => {
     caption.trim() || mediaFiles.length > 0 || existingMedia.length > 0;
 
   // Combine media for preview
-  const allMedia = [
-    ...existingMedia.map(m => ({ ...m, isExisting: true })),
-    ...mediaFiles.map(f => ({
-      url: URL.createObjectURL(f),
-      type: f.type.startsWith('video/') ? 'video' : 'image',
-      isExisting: false,
-      file: f,
-    })),
-  ];
+  
 
   return (
     <div
@@ -151,13 +176,15 @@ const ModelPost = ({ closeModal, editPost = null }) => {
 
         {/* Content */}
         <div className="p-4">
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-start">
             {/* Avatar */}
-            <img
-              src={avatarUrl}
-              alt={currentUser?.fullName || currentUser?.username || 'User'}
-              className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0"
-            />
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-neutral-200 dark:border-neutral-700 flex-shrink-0 self-start">
+              <img
+                src={avatarUrl}
+                alt={currentUser?.fullName || currentUser?.username || 'User'}
+                className="w-full h-full object-cover"
+              />
+            </div>
 
             {/* Editor */}
             <div className="flex-1 min-w-0">
@@ -339,7 +366,9 @@ const ModelPost = ({ closeModal, editPost = null }) => {
                   <div className="relative z-20 shadow-2xl rounded-xl">
                     <Suspense
                       fallback={
-                        <div className="w-[300px] h-[400px] bg-white dark:bg-neutral-800 animate-pulse rounded-xl" />
+                        <div className="w-[300px] h-[400px] bg-white dark:bg-neutral-800 rounded-xl flex items-center justify-center">
+                          <LoadingSpinner size="sm" />
+                        </div>
                       }
                     >
                       <EmojiPicker

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
@@ -98,7 +99,7 @@ const Explore = () => {
   const usersLoading = suggestionsLoading || userSearchLoading;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto min-h-screen flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">
@@ -135,14 +136,21 @@ const Explore = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors overflow-hidden ${
                   activeTab === tab.id
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'text-primary-foreground'
                     : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
               >
-                <tab.icon size={16} />
-                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.span
+                    layoutId="exploreTabIndicator"
+                    className="absolute inset-0 rounded-lg bg-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <tab.icon size={16} className="relative z-10" />
+                <span className="relative z-10">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -150,7 +158,7 @@ const Explore = () => {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 flex-1">
         {/* Trending Tab */}
         {activeTab === 'trending' && (
           <div className="space-y-2">
@@ -297,7 +305,7 @@ const Explore = () => {
 
         {/* Photos Tab */}
         {activeTab === 'photos' && (
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
             {postsLoading && !explorePosts?.length ? (
               <div className="col-span-3 flex justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />

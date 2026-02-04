@@ -314,7 +314,7 @@ const ProfileSettings = () => {
       </div>
 
       {/* Modals */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {isLocationPickerOpen && (
           <LocationPickerModal
             isOpen={isLocationPickerOpen}

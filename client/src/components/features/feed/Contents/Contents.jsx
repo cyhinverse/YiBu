@@ -1,16 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { motion } from 'framer-motion';
 import CreatePost from '@/components/features/feed/Posts/CreatePost';
 import PostLists from '@/components/features/feed/Posts/PostLists';
 import TrendingTopics from '@/components/features/feed/TrendingTopics/TrendingTopics';
 import TopUser from '@/components/features/user/TopUser/TopUser';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 import { Sparkles, TrendingUp, Users, Flame, Zap, Hash } from 'lucide-react';
 import { useTrendingHashtags } from '@/hooks/usePostsQuery';
 import { useSuggestions } from '@/hooks/useUserQuery';
 import { useSearchUsers } from '@/hooks/useSearchQuery';
 import { useDebounce } from '@/hooks/useDebounce';
 
+const CommentModal = lazy(
+  () => import('@/components/features/feed/Comment/CommentModal')
+);
+
 const Contents = () => {
   const [activeTab, setActiveTab] = useState('forYou');
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [searchQuery] = useState('');
   const contentRef = useRef(null);
 
@@ -30,6 +37,15 @@ const Contents = () => {
   const searchResults = searchResultsData?.data || searchResultsData || [];
 
   const loading = debouncedSearch.trim() ? searchLoading : suggestionsLoading;
+
+  const handleOpenComments = useCallback(postId => {
+    if (!postId) return;
+    setActiveCommentPostId(postId);
+  }, []);
+
+  const handleCloseComments = useCallback(() => {
+    setActiveCommentPostId(null);
+  }, []);
 
   const tabs = [
     { id: 'forYou', label: 'For You', icon: Flame },
@@ -55,9 +71,9 @@ const Contents = () => {
   const displayUsers = debouncedSearch.trim() ? searchResults : suggestions;
 
   return (
-    <div className="w-full flex gap-10 min-h-screen max-w-[1600px] mx-auto px-4 lg:px-10">
+    <div className="w-full flex flex-col lg:flex-row gap-6 lg:gap-10 min-h-screen max-w-[1600px] mx-auto px-4 lg:px-10">
       {/* Main Feed */}
-      <div className="flex-1 mx-auto lg:mx-0 h-screen flex flex-col">
+      <div className="flex-1 mx-auto lg:mx-0 min-h-screen lg:h-screen flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 pt-4 pb-2 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-4">
@@ -69,9 +85,6 @@ const Contents = () => {
                 Discover what's happening
               </p>
             </div>
-            <button className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">
-              <Sparkles size={18} className="text-neutral-500" />
-            </button>
           </div>
 
           {/* Tab Bar */}
@@ -82,14 +95,21 @@ const Contents = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  className={`relative flex-1 py-2 px-3 rounded-full text-sm font-medium transition-colors flex items-center justify-center gap-2 overflow-hidden ${
                     activeTab === tab.id
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'text-primary-foreground'
                       : 'text-neutral-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  <Icon size={14} />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <motion.span
+                      layoutId="feedTabIndicator"
+                      className="absolute inset-0 rounded-full bg-primary"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <Icon size={14} className="relative z-10" />
+                  <span className="hidden sm:inline relative z-10">{tab.label}</span>
                 </button>
               );
             })}
@@ -99,10 +119,13 @@ const Contents = () => {
         {/* Scrollable Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto hide-scrollbar pt-4 space-y-4"
+          className="flex-1 overflow-visible lg:overflow-y-auto hide-scrollbar pt-4 space-y-4"
         >
           <CreatePost />
-          <PostLists activeTab={activeTab} />
+          <PostLists
+            activeTab={activeTab}
+            onOpenComments={handleOpenComments}
+          />
         </div>
       </div>
 
@@ -110,43 +133,61 @@ const Contents = () => {
       <div className="hidden lg:flex flex-col flex-1 h-screen sticky top-0 py-4 gap-4">
         {/* Scrollable Sidebar */}
         <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4 flex flex-col">
-          {/* Trending */}
-          <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={16} className="text-neutral-500" />
-                <h2 className="font-medium text-sm text-black dark:text-white">
-                  Trending Now
-                </h2>
-              </div>
-            </div>
-            <TrendingTopics
-              trendingTopics={
-                formattedTrending.length > 0
-                  ? formattedTrending
-                  : [
-                      {
-                        name: '#Trending',
-                        posts: '0',
-                        category: 'Loading...',
-                      },
-                    ]
+          {activeCommentPostId ? (
+            <Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center">
+                  <LoadingSpinner />
+                </div>
               }
-            />
-          </div>
-
-          {/* Suggested Users */}
-          <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-neutral-500" />
-                <h2 className="font-medium text-sm text-black dark:text-white">
-                  {debouncedSearch.trim() ? 'Search Results' : 'Suggested'}
-                </h2>
+            >
+              <CommentModal
+                variant="panel"
+                postId={activeCommentPostId}
+                onClose={handleCloseComments}
+              />
+            </Suspense>
+          ) : (
+            <>
+              {/* Trending */}
+              <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={16} className="text-neutral-500" />
+                    <h2 className="font-medium text-sm text-black dark:text-white">
+                      Trending Now
+                    </h2>
+                  </div>
+                </div>
+                <TrendingTopics
+                  trendingTopics={
+                    formattedTrending.length > 0
+                      ? formattedTrending
+                      : [
+                          {
+                            name: '#Trending',
+                            posts: '0',
+                            category: 'Loading...',
+                          },
+                        ]
+                  }
+                />
               </div>
-            </div>
-            <TopUser users={displayUsers} loading={loading} />
-          </div>
+
+              {/* Suggested Users */}
+              <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} className="text-neutral-500" />
+                    <h2 className="font-medium text-sm text-black dark:text-white">
+                      {debouncedSearch.trim() ? 'Search Results' : 'Suggested'}
+                    </h2>
+                  </div>
+                </div>
+                <TopUser users={displayUsers} loading={loading} />
+              </div>
+            </>
+          )}
 
           {/* Footer */}
           <div className="px-2 text-xs text-neutral-400 space-y-2">
@@ -166,6 +207,17 @@ const Contents = () => {
           </div>
         </div>
       </div>
+
+      {activeCommentPostId && (
+        <div className="lg:hidden">
+          <Suspense fallback={<LoadingSpinner fullScreen />}>
+            <CommentModal
+              postId={activeCommentPostId}
+              onClose={handleCloseComments}
+            />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 };

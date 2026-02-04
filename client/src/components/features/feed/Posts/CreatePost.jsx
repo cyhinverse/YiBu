@@ -1,6 +1,7 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useSelector } from 'react-redux';
 import { Image, Smile, PenSquare } from 'lucide-react';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const ModelPost = lazy(() => import('./ModelPost'));
 
@@ -8,16 +9,19 @@ const CreatePost = () => {
   const [showModal, setShowModal] = useState(false);
   const { user } = useSelector(state => state.auth);
 
-  const avatarUrl =
-    user?.avatar ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-      user?.username || 'default'
-    }`;
+  const avatarUrl = useMemo(
+    () =>
+      user?.avatar ||
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+        user?.username || 'default'
+      }`,
+    [user?.avatar, user?.username]
+  );
 
   return (
     <>
       <div className="rounded-2xl p-4 bg-white dark:bg-neutral-900">
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-start sm:items-center">
           {/* Avatar */}
           <img
             src={avatarUrl}
@@ -26,7 +30,7 @@ const CreatePost = () => {
           />
 
           {/* Input Area */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Placeholder */}
             <div
               onClick={() => setShowModal(true)}
@@ -38,18 +42,18 @@ const CreatePost = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center gap-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-3">
+              <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white whitespace-nowrap"
                 >
                   <Image size={16} />
                   <span className="hidden sm:inline">Media</span>
                 </button>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xs text-neutral-500 hover:text-black dark:hover:text-white whitespace-nowrap"
                 >
                   <Smile size={16} />
                   <span className="hidden sm:inline">Feeling</span>
@@ -58,7 +62,7 @@ const CreatePost = () => {
 
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-full hover:opacity-90 transition-opacity w-full sm:w-auto"
               >
                 <PenSquare size={14} />
                 <span>Post</span>
@@ -69,7 +73,7 @@ const CreatePost = () => {
       </div>
 
       {showModal && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
           <ModelPost closeModal={() => setShowModal(false)} />
         </Suspense>
       )}

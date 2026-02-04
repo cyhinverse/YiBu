@@ -1,4 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
+import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -269,7 +270,7 @@ const Profile = () => {
         </div>
       )}
       {/* Cover Image */}
-      <div className="h-48 bg-neutral-100 dark:bg-neutral-800 relative">
+      <div className="h-40 sm:h-48 bg-neutral-100 dark:bg-neutral-800 relative">
         <img
           src={
             currentProfile?.cover?.trim()
@@ -280,11 +281,11 @@ const Profile = () => {
           className="w-full h-full object-cover"
         />
         {/* Avatar - positioned at bottom of cover */}
-        <div className="absolute -bottom-16 left-4">
+        <div className="absolute -bottom-12 sm:-bottom-16 left-4">
           <img
             src={currentProfile?.avatar}
             alt={currentProfile?.username}
-            className="w-32 h-32 rounded-full object-cover bg-white dark:bg-neutral-900"
+            className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover bg-white dark:bg-neutral-900"
           />
         </div>
       </div>
@@ -293,7 +294,7 @@ const Profile = () => {
       <div className="px-4 pb-4 pt-20">
         {/* Actions */}
         <div className="flex justify-end mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             {isOwnProfile ? (
               <button
                 onClick={() => navigate('/settings/profile')}
@@ -403,7 +404,7 @@ const Profile = () => {
           </div>
 
           {/* Stats */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center flex-wrap gap-4">
             <button
               onClick={() => setShowFollowList('following')}
               className="hover:underline"
@@ -432,16 +433,20 @@ const Profile = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors relative ${
+            className={`relative flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-black dark:text-white'
                 : 'text-neutral-500 hover:text-black dark:hover:text-white'
             }`}
           >
-            <tab.icon size={16} />
-            {tab.label}
+            <tab.icon size={16} className="relative z-10" />
+            <span className="relative z-10">{tab.label}</span>
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
+              <motion.div
+                layoutId="profileTabIndicator"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full"
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
             )}
           </button>
         ))}
@@ -451,7 +456,7 @@ const Profile = () => {
       <div className="p-4 space-y-4 min-h-[400px]">{getTabContent()}</div>
 
       {/* Follow List Modal */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {showFollowList && (
           <FollowList
             userId={profileId}
