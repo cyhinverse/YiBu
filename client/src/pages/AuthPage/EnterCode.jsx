@@ -42,7 +42,7 @@ const EnterCode = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-[100dvh] flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
@@ -64,7 +64,7 @@ const EnterCode = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-white dark:bg-black">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-10">
@@ -86,18 +86,19 @@ const EnterCode = () => {
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Code inputs */}
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-2 sm:gap-3">
                   {code.map((digit, index) => (
                     <input
                       key={index}
                       ref={el => (inputRefs.current[index] = el)}
                       type="text"
+                      inputMode="numeric"
                       maxLength={1}
                       value={digit}
                       aria-label={`Verification code digit ${index + 1}`}
                       onChange={e => handleChange(index, e.target.value)}
                       onKeyDown={e => handleKeyDown(index, e)}
-                      className="w-12 h-14 text-center text-xl font-semibold bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                      className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
                     />
                   ))}
                 </div>

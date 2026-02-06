@@ -71,9 +71,9 @@ const Contents = () => {
   const displayUsers = debouncedSearch.trim() ? searchResults : suggestions;
 
   return (
-    <div className="w-full flex flex-col lg:flex-row gap-6 lg:gap-10 min-h-screen max-w-[1600px] mx-auto px-4 lg:px-10">
+    <div className="w-full flex flex-col xl:flex-row gap-6 xl:gap-10 min-h-[100dvh] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
       {/* Main Feed */}
-      <div className="flex-1 mx-auto lg:mx-0 min-h-screen lg:h-screen flex flex-col">
+      <div className="w-full min-w-0 mx-auto xl:mx-0 min-h-[100dvh] xl:h-[100dvh] flex flex-col xl:flex-1 xl:max-w-[760px]">
         {/* Header */}
         <div className="sticky top-0 z-10 pt-4 pb-2 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-4">
@@ -119,7 +119,7 @@ const Contents = () => {
         {/* Scrollable Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-visible lg:overflow-y-auto hide-scrollbar pt-4 space-y-4"
+          className="flex-1 overflow-visible xl:overflow-y-auto hide-scrollbar pt-4 space-y-4"
         >
           <CreatePost />
           <PostLists
@@ -131,7 +131,7 @@ const Contents = () => {
       </div>
 
       {/* Right Sidebar */}
-      <div className="hidden lg:flex flex-col flex-1 h-screen sticky top-0 py-4 gap-4">
+      <div className="hidden xl:flex flex-col w-full xl:w-[420px] h-[100dvh] sticky top-0 py-4 gap-4">
         {/* Scrollable Sidebar */}
         <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4 flex flex-col">
           {activeCommentPostId ? (
@@ -210,7 +210,7 @@ const Contents = () => {
       </div>
 
       {activeCommentPostId && (
-        <div className="lg:hidden">
+        <div className="xl:hidden">
           <Suspense fallback={<LoadingSpinner fullScreen />}>
             <CommentModal
               postId={activeCommentPostId}

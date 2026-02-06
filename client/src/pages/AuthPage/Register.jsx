@@ -47,39 +47,43 @@ const Register = () => {
   }, [dispatch]);
 
   // Initialize Google Sign-In
-  const initGoogle = useCallback(() => {
-    if (
-      googleInitialized.current ||
-      !window.google?.accounts?.id ||
-      !googleButtonRef.current
-    ) {
-      return;
-    }
-
-    googleInitialized.current = true;
-
-    window.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async response => {
-        if (response.credential) {
-          const result = await dispatch(googleAuth(response.credential));
-          if (googleAuth.fulfilled.match(result)) {
-            notify.success('Đăng ký với Google thành công!');
-          } else {
-            notify.error('Đăng ký với Google thất bại');
-          }
-        }
-      },
-    });
-
+  const renderGoogleButton = useCallback(() => {
+    if (!googleButtonRef.current || !window.google?.accounts?.id) return;
+    const width = Math.min(320, googleButtonRef.current.clientWidth || 320);
     window.google.accounts.id.renderButton(googleButtonRef.current, {
       theme: 'outline',
       size: 'large',
-      width: 320,
+      width,
       text: 'signup_with',
       shape: 'pill',
     });
-  }, [dispatch]);
+  }, []);
+
+  const initGoogle = useCallback(() => {
+    if (!window.google?.accounts?.id || !googleButtonRef.current) {
+      return;
+    }
+
+    if (!googleInitialized.current) {
+      googleInitialized.current = true;
+
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: async response => {
+          if (response.credential) {
+            const result = await dispatch(googleAuth(response.credential));
+            if (googleAuth.fulfilled.match(result)) {
+              notify.success('Đăng ký với Google thành công!');
+            } else {
+              notify.error('Đăng ký với Google thất bại');
+            }
+          }
+        },
+      });
+    }
+
+    renderGoogleButton();
+  }, [dispatch, renderGoogleButton]);
 
   // Setup Google button when ref is available
   useEffect(() => {
@@ -104,6 +108,13 @@ const Register = () => {
       };
     }
   }, [initGoogle]);
+
+
+  useEffect(() => {
+    const onResize = () => renderGoogleButton();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [renderGoogleButton]);
 
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -142,7 +153,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-[100dvh] flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
@@ -166,7 +177,7 @@ const Register = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-white dark:bg-black">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-10">
@@ -186,7 +197,7 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name & Username row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-content dark:text-white">
                   Full Name
@@ -325,7 +336,7 @@ const Register = () => {
 
             {/* Social Login */}
             <div className="flex justify-center">
-              <div ref={googleButtonRef} />
+              <div className="w-full max-w-[320px] mx-auto" ref={googleButtonRef} />
             </div>
           </form>
 

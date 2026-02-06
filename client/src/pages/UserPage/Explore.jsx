@@ -99,7 +99,7 @@ const Explore = () => {
   const usersLoading = suggestionsLoading || userSearchLoading;
 
   return (
-    <div className="max-w-2xl mx-auto min-h-screen flex flex-col">
+    <div className="max-w-2xl mx-auto min-h-[100dvh] flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">

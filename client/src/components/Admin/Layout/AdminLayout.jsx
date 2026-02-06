@@ -90,7 +90,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        className={`flex-1 flex flex-col min-h-[100dvh] transition-all duration-300 ${
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-[76px]'
         }`}
       >

@@ -178,7 +178,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
           </div>
 
           {/* Stats & Status */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1">
               <Heart size={20} className="text-rose-500 mb-1 fill-rose-500" />
               <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">

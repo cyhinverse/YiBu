@@ -144,7 +144,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Mobile Bottom Navigation
   if (mobile) {
     return (
-      <div className="h-[56px] w-full flex justify-around items-center bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl">
+      <div className="w-full flex justify-around items-center bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-t border-neutral-200/60 dark:border-neutral-800/60 px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {navItems.slice(0, 5).map((item, i) => (
           <NavLink
             key={i}

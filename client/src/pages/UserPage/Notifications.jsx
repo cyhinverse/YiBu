@@ -60,7 +60,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto min-h-screen bg-white dark:bg-background">
+    <div className="max-w-2xl mx-auto min-h-[100dvh] bg-white dark:bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">

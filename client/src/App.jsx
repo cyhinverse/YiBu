@@ -95,7 +95,7 @@ const App = () => {
     <>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center min-h-screen bg-white dark:bg-black">
+          <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-black">
             <LoadingSpinner />
           </div>
         }
