@@ -60,14 +60,14 @@ export const getPostTypeIcon = type => {
 export const getPostStatusStyle = status => {
   switch (status) {
     case 'active':
-      return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400';
+      return 'admin-pill-success';
     case 'hidden':
-      return 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
+      return 'admin-pill-muted';
     case 'flagged':
-      return 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400';
+      return 'admin-pill-warning';
     case 'deleted':
-      return 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400';
+      return 'admin-pill-danger';
     default:
-      return 'bg-neutral-50 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-400';
+      return 'admin-pill-muted';
   }
 };

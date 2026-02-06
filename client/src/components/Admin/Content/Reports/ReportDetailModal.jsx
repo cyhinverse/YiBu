@@ -87,7 +87,7 @@ export default function ReportDetailModal({
             <p className="text-xs font-semibold text-[var(--color-content)] mb-2.5">
               Lý do báo cáo
             </p>
-            <div className="admin-pill bg-orange-100 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 text-sm">
+            <div className="admin-pill admin-pill-warning text-sm">
               <AlertTriangle size={16} />
               {report.reason}
             </div>

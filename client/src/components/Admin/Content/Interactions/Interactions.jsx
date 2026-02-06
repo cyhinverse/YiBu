@@ -4,6 +4,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Activity,
   RefreshCcw,
   Filter,
@@ -87,105 +88,103 @@ export default function Interactions() {
       {/* Stats Cards */}
       <InteractionStats stats={interactionStats} />
 
-      {/* Filters & Content Container */}
-      <div className="admin-card overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 flex flex-col md:flex-row gap-4 bg-[var(--color-surface-secondary)]">
-          <div className="relative flex-1">
-            <label htmlFor={interactionsSearchId} className="sr-only">
-              Tìm kiếm tương tác
-            </label>
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-            />
-            <input
-              id={interactionsSearchId}
-              type="text"
-              placeholder="Tìm kiếm người dùng..."
-              value={searchTerm}
-              aria-label="Search interactions"
-              onChange={e => setSearchTerm(e.target.value)}
-              className="admin-input w-full pl-11"
-            />
-          </div>
-
-          <div className="relative w-full md:w-64">
-            <label htmlFor={interactionsTypeId} className="sr-only">
-              Lọc loại tương tác
-            </label>
-            <Filter
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-            />
-            <select
-              id={interactionsTypeId}
-              value={filterType}
-              onChange={e => {
-                setFilterType(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="admin-select w-full pl-11 pr-10 appearance-none cursor-pointer"
-            >
-              <option value="all">Tất cả tương tác</option>
-              <option value="like">Lượt thích</option>
-              <option value="comment">Bình luận</option>
-              <option value="share">Chia sẻ</option>
-              <option value="follow">Theo dõi</option>
-              <option value="save">Lưu bài</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-tertiary)]">
-              <ChevronRight size={14} className="rotate-90" />
-            </div>
-          </div>
+      {/* Filters */}
+      <div className="admin-card p-4 flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="relative flex-1 w-full">
+          <label htmlFor={interactionsSearchId} className="sr-only">
+            Tìm kiếm tương tác
+          </label>
+          <Search
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+          />
+          <input
+            id={interactionsSearchId}
+            type="text"
+            placeholder="Tìm kiếm người dùng..."
+            value={searchTerm}
+            aria-label="Search interactions"
+            onChange={e => setSearchTerm(e.target.value)}
+            className="admin-input w-full pl-10"
+          />
         </div>
 
-        {/* Content Area */}
-        <div className="p-5 min-h-[400px]">
-          <InteractionsList interactions={interactionsList} loading={loading} />
+        <div className="relative min-w-[220px]">
+          <label htmlFor={interactionsTypeId} className="sr-only">
+            Lọc loại tương tác
+          </label>
+          <Filter
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+          />
+          <select
+            id={interactionsTypeId}
+            value={filterType}
+            onChange={e => {
+              setFilterType(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
+          >
+            <option value="all">Tất cả tương tác</option>
+            <option value="like">Lượt thích</option>
+            <option value="comment">Bình luận</option>
+            <option value="share">Chia sẻ</option>
+            <option value="follow">Theo dõi</option>
+            <option value="save">Lưu bài</option>
+          </select>
+          <ChevronDown
+            size={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+          />
         </div>
-
-        {/* Pagination */}
-        {interactionsList.length > 0 && (
-          <div className="p-4 bg-[var(--color-surface-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Hiển thị{' '}
-              <span className="font-semibold text-[var(--color-content)]">
-                {interactionsList.length}
-              </span>{' '}
-              /{' '}
-              <span className="font-semibold text-[var(--color-content)]">
-                {pagination?.total || 0}
-              </span>{' '}
-              tương tác
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={currentPage === 1 || loading}
-                onClick={() => handlePageChange(currentPage - 1)}
-                className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
-              >
-                <ChevronLeft size={20} />
-              </button>
-
-              <div className="h-8 w-8 flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
-                {currentPage}
-              </div>
-
-              <button
-                type="button"
-                disabled={!pagination?.hasMore || loading}
-                onClick={() => handlePageChange(currentPage + 1)}
-                className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Content */}
+      <div className="admin-card p-5 min-h-[400px]">
+        <InteractionsList interactions={interactionsList} loading={loading} />
+      </div>
+
+      {/* Pagination */}
+      {interactionsList.length > 0 && (
+        <div className="admin-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm font-medium text-[var(--color-text-secondary)]">
+            Hiển thị{' '}
+            <span className="font-semibold text-[var(--color-content)]">
+              {interactionsList.length}
+            </span>{' '}
+            /{' '}
+            <span className="font-semibold text-[var(--color-content)]">
+              {pagination?.total || 0}
+            </span>{' '}
+            tương tác
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentPage === 1 || loading}
+              onClick={() => handlePageChange(currentPage - 1)}
+              className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <div className="h-8 w-8 flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
+              {currentPage}
+            </div>
+
+            <button
+              type="button"
+              disabled={!pagination?.hasMore || loading}
+              onClick={() => handlePageChange(currentPage + 1)}
+              className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
 
   );

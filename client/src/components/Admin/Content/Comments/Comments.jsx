@@ -1,6 +1,13 @@
 import { useId, useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  RefreshCcw,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  ChevronDown,
+} from 'lucide-react';
 import {
   useAdminComments,
   useModerateComment,
@@ -126,14 +133,14 @@ export default function Comments() {
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-4 flex flex-col lg:flex-row gap-4">
+      <div className="admin-card p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
         <div className="relative flex-1 group">
           <label htmlFor={commentsSearchId} className="sr-only">
             Tìm kiếm bình luận
           </label>
           <Search
-            size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] group-focus-within:text-[var(--color-text-secondary)] transition-colors"
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] group-focus-within:text-[var(--color-text-secondary)] transition-colors"
           />
           <input
             id={commentsSearchId}
@@ -142,25 +149,33 @@ export default function Comments() {
             value={searchTerm}
             aria-label="Search comments"
             onChange={e => setSearchTerm(e.target.value)}
-            className="admin-input w-full pl-12"
+            className="admin-input w-full pl-10"
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="relative min-w-[180px]">
           <label htmlFor={commentsStatusId} className="sr-only">
             Lọc trạng thái bình luận
           </label>
+          <Filter
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+          />
           <select
             id={commentsStatusId}
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="admin-select min-w-[160px]"
+            className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
             <option value="hidden">Đã ẩn</option>
             <option value="flagged">Bị báo cáo</option>
           </select>
+          <ChevronDown
+            size={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+          />
         </div>
       </div>
 

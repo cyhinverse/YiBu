@@ -162,7 +162,7 @@ const Dashboard = () => {
                 <span className="text-2xl font-semibold text-[var(--color-content)]">
                   {growthData?.totalGrowth || 0}
                 </span>
-                <span className="admin-pill bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span className="admin-pill admin-pill-success">
                   +{growthData?.percentage || 0}%
                 </span>
               </div>

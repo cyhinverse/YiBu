@@ -386,8 +386,8 @@ h6 {
 
 /* ===== Admin UI Utilities ===== */
 .admin-shell {
-  /* Slightly tinted base so "cards" can be subtle without borders/shadows. */
-  background-color: var(--color-surface-secondary);
+  /* Flat base: cards should not feel like separate elevated blocks. */
+  background-color: var(--color-surface);
   color: var(--color-content);
 }
 
@@ -398,6 +398,7 @@ h6 {
 }
 
 .admin-card {
+  /* Keep same as shell to avoid "floating blocks". Use spacing and typography for structure. */
   background-color: var(--color-surface);
   border-radius: var(--radius-2xl);
   box-shadow: none;
@@ -405,6 +406,7 @@ h6 {
 }
 
 .admin-card-muted {
+  /* Secondary surface for subtle emphasis (still borderless/shadowless). */
   background-color: var(--color-surface-secondary);
   border-radius: var(--radius-2xl);
 }
@@ -415,7 +417,7 @@ h6 {
 }
 
 .admin-header {
-  background-color: var(--color-surface-secondary);
+  background-color: var(--color-surface);
   border-bottom: none;
 }
 
@@ -434,7 +436,7 @@ h6 {
 
 .admin-input,
 .admin-select {
-  min-height: 40px;
+  min-height: 44px;
   line-height: 1.2;
 }
 
@@ -451,7 +453,9 @@ h6 {
 .admin-select:focus,
 .admin-textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.06);
+  /* Flat focus treatment: no shadow, just a subtle outline. */
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 .admin-chip {
@@ -477,6 +481,56 @@ h6 {
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+.admin-pill-muted {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+}
+
+.admin-pill-inverse {
+  background-color: var(--color-content);
+  color: var(--color-text-inverse);
+}
+
+.admin-pill-success {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-success) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-success);
+}
+
+.admin-pill-warning {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-warning) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-warning);
+}
+
+.admin-pill-danger {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-error) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-error);
+}
+
+.admin-pill-info {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-info) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-info);
 }
 
 .admin-muted {

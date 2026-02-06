@@ -5,6 +5,7 @@ import {
   RefreshCcw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Filter,
 } from 'lucide-react';
 import {
@@ -179,14 +180,14 @@ export default function Reports() {
       <ReportStats reports={reports} />
 
       {/* Filters */}
-      <div className="admin-card p-4 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full md:w-auto">
+      <div className="admin-card p-4 flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="relative flex-1 w-full">
           <label htmlFor={reportsSearchId} className="sr-only">
             Tìm kiếm báo cáo
           </label>
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
             id={reportsSearchId}
@@ -195,50 +196,58 @@ export default function Reports() {
             value={searchTerm}
             aria-label="Search reports"
             onChange={e => setSearchTerm(e.target.value)}
-            className="admin-input w-full pl-11"
+            className="admin-input w-full pl-10"
           />
         </div>
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <div className="relative min-w-[140px]">
+          <div className="relative min-w-[160px]">
             <label htmlFor={reportsTypeId} className="sr-only">
               Lọc loại báo cáo
             </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
               id={reportsTypeId}
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              className="admin-select w-full pl-9 pr-8 appearance-none cursor-pointer"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả loại</option>
               <option value="post">Bài viết</option>
               <option value="comment">Bình luận</option>
               <option value="user">Người dùng</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
 
-          <div className="relative min-w-[150px]">
+          <div className="relative min-w-[180px]">
             <label htmlFor={reportsStatusId} className="sr-only">
               Lọc trạng thái báo cáo
             </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
               id={reportsStatusId}
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="admin-select w-full pl-9 pr-8 appearance-none cursor-pointer"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ xử lý</option>
               <option value="resolved">Đã giải quyết</option>
               <option value="rejected">Đã từ chối</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
         </div>
       </div>

@@ -49,22 +49,22 @@ const UsersTable = ({
             <table className="w-full">
               <thead>
                 <tr className="bg-[var(--color-surface-secondary)]">
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Người dùng
                   </th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Vai trò
                   </th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Trạng thái
                   </th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Hoạt động
                   </th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Tham gia
                   </th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Thao tác
                   </th>
                 </tr>
@@ -77,7 +77,7 @@ const UsersTable = ({
                     className="group hover:bg-[var(--color-surface-hover)] transition-colors"
                   >
 
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
@@ -90,7 +90,7 @@ const UsersTable = ({
                             className="w-10 h-10 rounded-full object-cover"
                           />
                           {user.isVerified && (
-                            <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white p-0.5 rounded-full">
+                            <div className="absolute -bottom-0.5 -right-0.5 bg-[var(--color-info)] text-white p-0.5 rounded-full">
                               <Check size={8} strokeWidth={3} />
                             </div>
                           )}
@@ -105,7 +105,7 @@ const UsersTable = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                         <span
                           className={`admin-pill ${
                             user.role === 'admin'
@@ -117,10 +117,10 @@ const UsersTable = ({
                         </span>
 
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <StatusBadge status={user.status || 'active'} />
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-medium text-[var(--color-text-secondary)]">
                           {user.postsCount || 0} bài viết
@@ -131,14 +131,14 @@ const UsersTable = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <span className="text-sm text-[var(--color-text-secondary)]">
                         {user.createdAt
                           ? new Date(user.createdAt).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
@@ -159,7 +159,7 @@ const UsersTable = ({
                           <button
                             type="button"
                             onClick={() => onUnbanUser(user)}
-                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                            className="p-1.5 rounded-lg text-[var(--color-success)] hover:bg-[var(--color-surface-hover)] transition-colors"
                             title="Gỡ chặn"
                             aria-label="Gỡ chặn người dùng"
                           >
@@ -170,7 +170,7 @@ const UsersTable = ({
                             <button
                               type="button"
                               onClick={() => onWarnUser(user)}
-                              className="p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                              className="p-1.5 rounded-lg text-[var(--color-warning)] hover:bg-[var(--color-surface-hover)] transition-colors"
                               title="Cảnh báo"
                               aria-label="Cảnh báo người dùng"
                             >
@@ -179,7 +179,7 @@ const UsersTable = ({
                             <button
                               type="button"
                               onClick={() => onBanUser(user)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                              className="p-1.5 rounded-lg text-[var(--color-error)] hover:bg-[var(--color-surface-hover)] transition-colors"
                               title="Chặn người dùng"
                               aria-label="Chặn người dùng"
                             >
@@ -191,7 +191,7 @@ const UsersTable = ({
                         <button
                           type="button"
                           onClick={() => onDeleteUser(user)}
-                          className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                          className="p-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[var(--color-error)] hover:bg-[var(--color-surface-hover)] transition-colors"
                           title="Xóa người dùng"
                           aria-label="Xóa người dùng"
                         >
@@ -207,7 +207,7 @@ const UsersTable = ({
           </div>
 
           {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface-secondary)]">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-secondary)]">
               <span className="text-sm text-[var(--color-text-secondary)]">
                 Trang {currentPage} / {pagination?.pages || 1}
               </span>

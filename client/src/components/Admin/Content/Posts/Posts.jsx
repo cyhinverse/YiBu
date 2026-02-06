@@ -5,6 +5,7 @@ import {
   RefreshCcw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Filter,
 } from 'lucide-react';
 import {
@@ -166,14 +167,14 @@ export default function Posts() {
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-4 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full md:w-auto">
+      <div className="admin-card p-4 flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="relative flex-1 w-full">
           <label htmlFor={postsSearchId} className="sr-only">
             Tìm kiếm bài viết
           </label>
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
             id={postsSearchId}
@@ -182,44 +183,48 @@ export default function Posts() {
             value={searchTerm}
             aria-label="Search posts"
             onChange={e => setSearchTerm(e.target.value)}
-            className="admin-input w-full pl-11 leading-none"
+            className="admin-input w-full pl-10"
           />
         </div>
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <div className="relative min-w-[140px]">
+          <div className="relative min-w-[160px]">
             <label htmlFor={postsTypeId} className="sr-only">
               Lọc loại bài viết
             </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
               id={postsTypeId}
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              className="admin-select w-full pl-9 pr-8 appearance-none cursor-pointer leading-none"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả loại</option>
               <option value="text">Văn bản</option>
               <option value="image">Hình ảnh</option>
               <option value="video">Video</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
 
-          <div className="relative min-w-[150px]">
+          <div className="relative min-w-[180px]">
             <label htmlFor={postsStatusId} className="sr-only">
               Lọc trạng thái bài viết
             </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
               id={postsStatusId}
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="admin-select w-full pl-9 pr-8 appearance-none cursor-pointer leading-none"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -227,6 +232,10 @@ export default function Posts() {
               <option value="flagged">Bị gắn cờ</option>
               <option value="deleted">Đã xóa</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
         </div>
       </div>

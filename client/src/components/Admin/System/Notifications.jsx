@@ -87,15 +87,20 @@ const Notifications = () => {
   const getIcon = type => {
     switch (type) {
       case 'info':
-        return <Info size={24} className="text-blue-500" />;
+        return <Info size={24} className="text-[var(--color-info)]" />;
       case 'success':
-        return <CheckCircle size={24} className="text-emerald-500" />;
+        return <CheckCircle size={24} className="text-[var(--color-success)]" />;
       case 'warning':
-        return <AlertTriangle size={24} className="text-amber-500" />;
+        return <AlertTriangle size={24} className="text-[var(--color-warning)]" />;
       case 'alert':
-        return <AlertCircle size={24} className="text-rose-500" />;
+        return <AlertCircle size={24} className="text-[var(--color-error)]" />;
       default:
-        return <Sparkles size={24} className="text-neutral-600 dark:text-neutral-300" />;
+        return (
+          <Sparkles
+            size={24}
+            className="text-[var(--color-text-secondary)]"
+          />
+        );
     }
   };
 
@@ -108,21 +113,6 @@ const Notifications = () => {
       alert: 'Lỗi',
     };
     return labels[type] || type;
-  };
-
-  const getTypeColor = type => {
-    switch (type) {
-      case 'info':
-        return 'bg-blue-50 text-blue-600';
-      case 'success':
-        return 'bg-emerald-50 text-emerald-600';
-      case 'warning':
-        return 'bg-amber-50 text-amber-600';
-      case 'alert':
-        return 'bg-rose-50 text-rose-600';
-      default:
-        return 'bg-neutral-100 text-neutral-600';
-    }
   };
 
   return (
@@ -139,7 +129,7 @@ const Notifications = () => {
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 flex items-center gap-2">
             Bạn có{' '}
-            <span className="admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400">
+            <span className="admin-pill admin-pill-danger">
               {unreadCount}
             </span>{' '}
             thông báo chưa đọc
@@ -173,7 +163,7 @@ const Notifications = () => {
             type="button"
             onClick={handleDeleteAll}
             disabled={notifications.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface)] text-[var(--color-error)] rounded-full hover:bg-[var(--color-surface-hover)] transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={16} />
             <span className="hidden sm:inline">Xóa tất cả</span>
@@ -208,22 +198,22 @@ const Notifications = () => {
       <div className="admin-card overflow-hidden min-h-[400px] flex flex-col">
 
         {isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-neutral-400 gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-[var(--color-text-secondary)] gap-3">
             <Loader2
               size={32}
-              className="animate-spin text-neutral-900 dark:text-white"
+              className="animate-spin text-[var(--color-text-tertiary)]"
             />
             <span className="font-medium">Đang tải thông báo...</span>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-neutral-500 gap-4">
-            <div className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-full">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-[var(--color-text-secondary)] gap-4">
+            <div className="p-4 bg-[var(--color-surface-secondary)] rounded-full">
               <Bell
                 size={32}
-                className="text-neutral-300 dark:text-neutral-600"
+                className="text-[var(--color-text-tertiary)]"
               />
             </div>
-            <p className="text-lg font-medium text-neutral-900 dark:text-white">
+            <p className="text-lg font-medium text-[var(--color-content)]">
               Không có thông báo nào
             </p>
             <p className="text-sm">Hiện tại bạn không có thông báo mới nào.</p>
@@ -235,14 +225,12 @@ const Notifications = () => {
                   key={notification._id}
                   className={`p-4 flex gap-4 transition-all group ${
                     !notification.isRead
-                      ? 'bg-blue-50/30 dark:bg-blue-900/10'
+                      ? 'bg-[var(--color-surface-secondary)]'
                       : 'hover:bg-[var(--color-surface-hover)]'
                   }`}
                 >
                   <div
-                    className={`mt-1 flex-shrink-0 p-2.5 rounded-2xl ${getTypeColor(
-                      notification.type
-                    )} bg-opacity-50`}
+                    className="mt-1 flex-shrink-0 p-2.5 rounded-2xl bg-[var(--color-surface-secondary)]"
                   >
                     {getIcon(notification.type)}
                   </div>
@@ -271,7 +259,7 @@ const Notifications = () => {
                       <button
                         type="button"
                         onClick={() => handleMarkAsRead(notification._id)}
-                        className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-colors bg-[var(--color-surface)]"
+                        className="p-2 text-[var(--color-info)] hover:bg-[var(--color-surface-hover)] rounded-xl transition-colors bg-[var(--color-surface)]"
                         title="Đánh dấu đã đọc"
                         aria-label="Đánh dấu đã đọc"
                       >
@@ -281,7 +269,7 @@ const Notifications = () => {
                     <button
                       type="button"
                       onClick={() => handleDelete(notification._id)}
-                      className="p-2 text-[var(--color-text-tertiary)] hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors bg-[var(--color-surface)]"
+                      className="p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-error)] hover:bg-[var(--color-surface-hover)] rounded-xl transition-colors bg-[var(--color-surface)]"
                       title="Xóa"
                       aria-label="Xóa"
                     >

@@ -184,7 +184,7 @@ export default function PostsGrid({
                             event.currentTarget.blur();
                           }
                         }}
-                        className="admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+                        className="admin-pill admin-pill-danger hover:bg-[var(--color-surface-hover)] transition-colors"
                       >
                         <Flag size={12} />
                         {post.reportsCount || post.reports}
@@ -246,13 +246,23 @@ export default function PostsGrid({
                           >
                             {post.status === 'active' ? (
                               <>
-                                <XCircle size={16} className="text-rose-500" />
-                                <span className="text-rose-500">Ẩn bài viết</span>
+                                <XCircle
+                                  size={16}
+                                  className="text-[var(--color-error)]"
+                                />
+                                <span className="text-[var(--color-error)]">
+                                  Ẩn bài viết
+                                </span>
                               </>
                             ) : (
                               <>
-                                <CheckCircle size={16} className="text-emerald-500" />
-                                <span className="text-emerald-500">Hiện bài viết</span>
+                                <CheckCircle
+                                  size={16}
+                                  className="text-[var(--color-success)]"
+                                />
+                                <span className="text-[var(--color-success)]">
+                                  Hiện bài viết
+                                </span>
                               </>
                             )}
                           </button>
@@ -264,7 +274,7 @@ export default function PostsGrid({
                               setActiveDropdown(null);
                             }}
                             role="menuitem"
-                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 text-rose-500 transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-error)] transition-colors"
                           >
                             <Trash2 size={16} />
                             Xóa bài viết

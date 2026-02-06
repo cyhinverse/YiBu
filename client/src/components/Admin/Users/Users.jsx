@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, RefreshCcw, Filter } from 'lucide-react';
+import { Search, RefreshCcw, Filter, ChevronDown } from 'lucide-react';
 import {
   useAdminUsers,
   useDeleteUser,
@@ -171,7 +171,7 @@ const Users = () => {
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-4 flex flex-col sm:flex-row gap-3 items-center">
+      <div className="admin-card p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="relative flex-1 w-full">
           <label htmlFor={usersSearchId} className="sr-only">
             Tìm theo tên, email
@@ -192,19 +192,19 @@ const Users = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative flex-1 sm:flex-none min-w-[160px]">
             <label htmlFor={statusFilterId} className="sr-only">
               Lọc trạng thái người dùng
             </label>
             <Filter
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
               id={statusFilterId}
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="admin-select w-full sm:w-auto pl-8 pr-8 appearance-none cursor-pointer"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả</option>
               <option value="active">Hoạt động</option>
@@ -212,6 +212,10 @@ const Users = () => {
               <option value="suspended">Tạm ngưng</option>
               <option value="banned">Bị chặn</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
         </div>
       </div>

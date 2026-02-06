@@ -27,19 +27,24 @@ export default function ReportsList({
   if (loading && reports.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 size={40} className="animate-spin text-neutral-400 mb-4" />
-        <p className="text-neutral-500 font-medium">Đang tải báo cáo...</p>
+        <Loader2
+          size={40}
+          className="animate-spin text-[var(--color-text-tertiary)] mb-4"
+        />
+        <p className="text-[var(--color-text-secondary)] font-medium">
+          Đang tải báo cáo...
+        </p>
       </div>
     );
   }
 
   if (reports.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
-        <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4 text-neutral-400">
+      <div className="flex flex-col items-center justify-center py-24 text-[var(--color-text-secondary)]">
+        <div className="w-20 h-20 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center mb-4 text-[var(--color-text-tertiary)]">
           <CheckCircle size={40} />
         </div>
-        <p className="font-bold text-lg text-neutral-900 dark:text-white">
+        <p className="font-bold text-lg text-[var(--color-content)]">
           Không tìm thấy báo cáo nào
         </p>
         <p className="text-sm">Hệ thống an toàn.</p>
@@ -83,16 +88,18 @@ export default function ReportsList({
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-neutral-900 dark:text-white text-sm">
+                      <h3 className="font-bold text-[var(--color-content)] text-sm">
                         {reporter.name || reporter.username || 'Ẩn danh'}
                       </h3>
-                      <span className="text-neutral-500 text-sm">báo cáo</span>
+                      <span className="text-[var(--color-text-secondary)] text-sm">
+                        báo cáo
+                      </span>
                       <span className="admin-chip">
                         {getTargetTypeText(targetType)}
                       </span>
 
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400 font-medium">
+                    <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-tertiary)] font-medium">
                       <span className="flex items-center gap-1">
                         <Calendar size={12} />
                         {report.createdAt
@@ -101,7 +108,7 @@ export default function ReportsList({
                             )
                           : 'N/A'}
                       </span>
-                      <span className="text-neutral-300 dark:text-neutral-700">
+                      <span className="text-[var(--color-text-tertiary)] opacity-60">
                         •
                       </span>
                       <span>ID: {report._id?.slice(-6) || '...'}</span>
@@ -171,7 +178,7 @@ export default function ReportsList({
                                   setActiveDropdown(null);
                                 }}
                                 role="menuitem"
-                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/10 flex items-center gap-2.5 text-amber-600 transition-colors"
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-warning)] transition-colors"
                               >
                                 <RefreshCcw size={16} />
                                 Xem xét
@@ -183,7 +190,7 @@ export default function ReportsList({
                                   setActiveDropdown(null);
                                 }}
                                 role="menuitem"
-                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/10 flex items-center gap-2.5 text-emerald-600 transition-colors"
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-success)] transition-colors"
                               >
                                 <CheckCircle size={16} />
                                 Chấp nhận
@@ -195,7 +202,7 @@ export default function ReportsList({
                                   setActiveDropdown(null);
                                 }}
                                 role="menuitem"
-                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-2.5 text-rose-600 transition-colors"
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-error)] transition-colors"
                               >
                                 <XCircle size={16} />
                                 Từ chối
@@ -211,7 +218,7 @@ export default function ReportsList({
 
                 {/* Reason Badge */}
                 <div className="mb-2">
-                  <span className="admin-pill bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-semibold">
+                  <span className="admin-pill admin-pill-muted text-xs font-semibold">
                     <span className="font-semibold">Lý do:</span>{' '}
                     {report.reason || report.type || 'Vi phạm'}
                   </span>
@@ -220,20 +227,20 @@ export default function ReportsList({
 
                 {/* Description */}
                 {report.description && (
-                  <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-3 pl-3 bg-neutral-50/50 dark:bg-neutral-800/30 py-2 rounded-lg italic">
+                  <p className="text-[var(--color-text-secondary)] text-sm mb-3 pl-3 bg-[var(--color-surface-secondary)] py-2 rounded-lg italic">
                     "{report.description}"
                   </p>
                 )}
 
                 {/* Target Content Preview */}
-                <div className="flex items-center gap-3 pt-3 bg-neutral-50/20 dark:bg-neutral-800/10 rounded-xl px-2 py-1 mt-3">
+                <div className="flex items-center gap-3 pt-3 bg-[var(--color-surface-secondary)] rounded-xl px-3 py-2 mt-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                    <p className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest mb-1">
                       Nội dung bị báo cáo
                     </p>
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-[var(--color-content)] truncate">
                       {targetContent || (
-                        <span className="text-neutral-400 italic">
+                        <span className="text-[var(--color-text-tertiary)] italic">
                           Nội dung không khả dụng
                         </span>
                       )}
@@ -241,10 +248,10 @@ export default function ReportsList({
                   </div>
                   {targetAuthor && (
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                      <p className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest mb-1">
                         Tác giả
                       </p>
-                      <p className="text-sm font-medium text-neutral-900 dark:text-white">
+                      <p className="text-sm font-medium text-[var(--color-content)]">
                         {targetAuthor}
                       </p>
                     </div>

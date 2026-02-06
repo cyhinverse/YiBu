@@ -1,13 +1,9 @@
 const StatusBadge = ({ status }) => {
   const styles = {
-    active:
-      'admin-pill bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
-    pending:
-      'admin-pill bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
-    suspended:
-      'admin-pill bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300',
-    banned:
-      'admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+    active: 'admin-pill admin-pill-success',
+    pending: 'admin-pill admin-pill-warning',
+    suspended: 'admin-pill admin-pill-muted',
+    banned: 'admin-pill admin-pill-danger',
   };
 
 

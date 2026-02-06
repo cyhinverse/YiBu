@@ -37,7 +37,7 @@ const ChatSidebar = ({
         <div className="relative">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
             type="text"
@@ -45,7 +45,7 @@ const ChatSidebar = ({
             value={searchTerm}
             aria-label="Search conversations"
             onChange={e => setSearchTerm(e.target.value)}
-            className="admin-input w-full pl-9"
+            className="admin-input w-full pl-10"
           />
         </div>
       </div>

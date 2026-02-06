@@ -205,7 +205,7 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
                 className="admin-card-muted p-4 rounded-2xl"
               >
                 <div className="flex justify-between items-center mb-3">
-                  <span className="admin-pill bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 text-xs font-semibold">
+                  <span className="admin-pill admin-pill-danger text-xs font-semibold">
                     <Shield size={12} className="mr-1.5" />
                     {report.reason}
                   </span>
