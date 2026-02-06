@@ -79,15 +79,18 @@ const Broadcast = () => {
   const selectedType = NOTIFICATION_TYPES.find(t => t.id === formData.type);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="admin-page pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
-            <Megaphone className="text-neutral-900 dark:text-white" size={24} />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Thông báo
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)] flex items-center gap-3">
+            <Megaphone className="text-[var(--color-content)]" size={22} />
             Phát sóng thông báo
           </h2>
-          <p className="text-neutral-500 font-medium mt-2">
+          <p className="text-[var(--color-text-secondary)] text-sm mt-1">
             Gửi thông báo đến người dùng hệ thống
           </p>
         </div>
@@ -97,21 +100,22 @@ const Broadcast = () => {
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Left Column: Form */}
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-6">
+          <div className="admin-card p-4 space-y-6">
             {/* Notification Type Selection */}
             <div className="space-y-3">
-              <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+              <label className="text-sm font-semibold text-[var(--color-content)] ml-1">
                 Loại thông báo
               </label>
               <div className="flex flex-wrap gap-2">
                 {NOTIFICATION_TYPES.map(type => (
                   <button
+                    type="button"
                     key={type.id}
                     onClick={() => handleTypeSelect(type.id)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 ${
                       formData.type === type.id
-                        ? `${type.bg} ${type.text} border-${type.color}-200 dark:border-${type.color}-800 ring-1 ring-${type.color}-500 dark:ring-${type.color}-400`
-                        : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 text-neutral-500'
+                        ? `${type.bg} ${type.text} ${type.border} ${type.ring}`
+                        : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
                     }`}
                   >
                     <type.icon
@@ -119,11 +123,11 @@ const Broadcast = () => {
                       className={
                         formData.type === type.id
                           ? 'current-color'
-                          : 'text-neutral-400'
+                          : 'text-[var(--color-text-tertiary)]'
                       }
                       strokeWidth={2.5}
                     />
-                    <span className="text-sm font-bold">{type.label}</span>
+                    <span className="text-sm font-semibold">{type.label}</span>
                   </button>
                 ))}
               </div>
@@ -131,18 +135,18 @@ const Broadcast = () => {
 
             {/* Target Audience */}
             <div className="space-y-3">
-              <label className="text-sm font-bold text-neutral-900 dark:text-white ml-1">
+              <label className="text-sm font-semibold text-[var(--color-content)] ml-1">
                 Đối tượng nhận
               </label>
               <div className="relative">
                 <Users
                   size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
                 />
                 <select
                   value={formData.targetAudience}
                   onChange={e => handleAudienceSelect(e.target.value)}
-                  className="w-full pl-11 pr-10 py-3 appearance-none rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                  className="admin-select w-full pl-11 pr-10 appearance-none cursor-pointer"
                 >
                   {TARGET_AUDIENCES.map(audience => (
                     <option key={audience.id} value={audience.id}>
@@ -150,7 +154,7 @@ const Broadcast = () => {
                     </option>
                   ))}
                 </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-tertiary)]">
                   <svg
                     width="12"
                     height="12"
@@ -175,7 +179,7 @@ const Broadcast = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="broadcast-title"
-                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                  className="text-sm font-semibold text-[var(--color-content)] ml-1"
                 >
                   Tiêu đề thông báo
                 </label>
@@ -187,14 +191,14 @@ const Broadcast = () => {
                   onChange={handleInputChange}
                   placeholder="Nhập tiêu đề..."
                   aria-label="Notification title"
-                  className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium"
+                  className="admin-input w-full"
                 />
               </div>
 
               <div className="space-y-2">
                 <label
                   htmlFor="broadcast-message"
-                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                  className="text-sm font-semibold text-[var(--color-content)] ml-1"
                 >
                   Nội dung chi tiết
                 </label>
@@ -206,14 +210,14 @@ const Broadcast = () => {
                   placeholder="Nhập nội dung thông báo..."
                   rows={4}
                   aria-label="Notification message"
-                  className="w-full px-4 py-3 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium resize-none"
+                  className="admin-textarea w-full min-h-[140px]"
                 />
               </div>
 
               <div className="space-y-2">
                 <label
                   htmlFor="broadcast-link"
-                  className="text-sm font-bold text-neutral-900 dark:text-white ml-1"
+                  className="text-sm font-semibold text-[var(--color-content)] ml-1"
                 >
                   Đường dẫn đính kèm (Tùy chọn)
                 </label>
@@ -225,7 +229,7 @@ const Broadcast = () => {
                   onChange={handleInputChange}
                   placeholder="https://example.com/..."
                   aria-label="Notification link"
-                  className="w-full px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all font-medium text-blue-600"
+                  className="admin-input w-full text-blue-600"
                 />
               </div>
             </div>
@@ -234,32 +238,32 @@ const Broadcast = () => {
 
         {/* Right Column: Preview */}
         <div className="space-y-5">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm sticky top-4">
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+          <div className="admin-card p-4 sticky top-4">
+            <h3 className="text-base font-semibold text-[var(--color-content)] mb-4 flex items-center gap-2">
               <Sparkles size={20} className="text-amber-500" />
               Xem trước
             </h3>
 
-            <div
-              className={`p-4 rounded-2xl border transition-all ${selectedType?.bg} border-${selectedType?.color}-200 dark:border-${selectedType?.color}-800`}
+              <div
+              className={`p-4 rounded-2xl border transition-all ${selectedType?.bg} ${selectedType?.border}`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`p-2 rounded-xl bg-white dark:bg-neutral-900 shadow-sm ${selectedType?.text}`}
+                  className={`p-2 rounded-xl bg-[var(--color-surface)] shadow-sm ${selectedType?.text}`}
                 >
                   {selectedType && <selectedType.icon size={20} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4
-                    className={`font-bold text-base mb-1 ${selectedType?.text}`}
+                    className={`font-semibold text-base mb-1 ${selectedType?.text}`}
                   >
                     {formData.title || 'Tiêu đề thông báo'}
                   </h4>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-2">
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-2">
                     {formData.message ||
                       'Nội dung thông báo sẽ hiển thị ở đây...'}
                   </p>
-                  <span className="text-xs font-medium text-neutral-400 flex items-center gap-1">
+                  <span className="text-xs font-medium text-[var(--color-text-tertiary)] flex items-center gap-1">
                     <Users size={12} />
                     Gửi đến:{' '}
                     {
@@ -269,8 +273,8 @@ const Broadcast = () => {
                     }
                   </span>
                   {formData.link && (
-                    <div className="mt-3 pt-3 border-t border-neutral-200/50 dark:border-neutral-700/50">
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full block w-fit truncate max-w-full">
+                    <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full block w-fit truncate max-w-full">
                         🔗 {formData.link}
                       </span>
                     </div>
@@ -281,6 +285,7 @@ const Broadcast = () => {
 
             <div className="mt-6 flex justify-end">
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={
                   loading || !formData.title.trim() || !formData.message.trim()
@@ -290,7 +295,7 @@ const Broadcast = () => {
                     event.currentTarget.blur();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
               >
                 {loading ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -303,6 +308,7 @@ const Broadcast = () => {
           </div>
         </div>
       </div>
+
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
@@ -346,22 +352,24 @@ const Broadcast = () => {
                   {formData.message}
                 </p>
               </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowConfirmModal(false)}
-                  className="px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  onClick={confirmSend}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black hover:opacity-90 disabled:opacity-50"
-                >
-                  {loading && <Loader2 size={16} className="animate-spin" />}
-                  Tiến hành gửi
-                </button>
-              </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-content)] hover:bg-[var(--color-surface-hover)]"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSend}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:opacity-90 disabled:opacity-50"
+                  >
+                    {loading && <Loader2 size={16} className="animate-spin" />}
+                    Tiến hành gửi
+                  </button>
+                </div>
             </div>
           </div>
         </div>

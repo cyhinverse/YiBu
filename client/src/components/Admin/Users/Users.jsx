@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Search, RefreshCcw, Filter } from 'lucide-react';
 import {
@@ -17,6 +17,9 @@ import UserDetailModal from './UserDetailModal';
 import AdminActionModal from './AdminActionModal';
 
 const Users = () => {
+  const usersSearchId = useId();
+  const statusFilterId = useId();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRole] = useState('all');
@@ -134,25 +137,30 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-neutral-800 dark:text-white">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Người dùng
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)]">
             Quản lý người dùng
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Quản lý tài khoản và phân quyền
           </p>
         </div>
         <button
+          type="button"
           onClick={() => refetchUsers()}
           onKeyDown={event => {
             if (event.key === 'Escape') {
               event.currentTarget.blur();
             }
           }}
-          className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
+          className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          aria-label="Làm mới danh sách người dùng"
         >
           <RefreshCcw
             size={18}
@@ -163,32 +171,40 @@ const Users = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
+      <div className="admin-card p-4 flex flex-col sm:flex-row gap-3 items-center">
         <div className="relative flex-1 w-full">
+          <label htmlFor={usersSearchId} className="sr-only">
+            Tìm theo tên, email
+          </label>
           <Search
             size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
+            id={usersSearchId}
             type="text"
             placeholder="Tìm theo tên, email..."
             value={searchQuery}
             aria-label="Search users"
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
+            className="admin-input w-full pl-10"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none">
+            <label htmlFor={statusFilterId} className="sr-only">
+              Lọc trạng thái người dùng
+            </label>
             <Filter
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
+              id={statusFilterId}
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full sm:w-auto pl-8 pr-8 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-sm font-medium text-neutral-600 dark:text-neutral-300 focus:outline-none appearance-none cursor-pointer"
+              className="admin-select w-full sm:w-auto pl-8 pr-8 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả</option>
               <option value="active">Hoạt động</option>
@@ -200,19 +216,23 @@ const Users = () => {
         </div>
       </div>
 
+
       {/* Table */}
-      <UsersTable
-        users={users}
-        loading={usersLoading}
-        currentPage={currentPage}
-        pagination={pagination}
-        onPageChange={newPage => setCurrentPage(newPage)}
-        onViewUser={handleViewUser}
-        onBanUser={handleBanUser}
-        onUnbanUser={handleUnbanUser}
-        onWarnUser={handleWarnUser}
-        onDeleteUser={handleDeleteUser}
-      />
+      <div className="admin-card overflow-hidden">
+        <UsersTable
+          users={users}
+          loading={usersLoading}
+          currentPage={currentPage}
+          pagination={pagination}
+          onPageChange={newPage => setCurrentPage(newPage)}
+          onViewUser={handleViewUser}
+          onBanUser={handleBanUser}
+          onUnbanUser={handleUnbanUser}
+          onWarnUser={handleWarnUser}
+          onDeleteUser={handleDeleteUser}
+        />
+      </div>
+
 
       {/* User Detail Modal */}
       {showDetailModal && selectedUser && (

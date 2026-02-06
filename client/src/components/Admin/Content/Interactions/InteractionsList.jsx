@@ -10,8 +10,10 @@ export default function InteractionsList({ interactions, loading }) {
   if (loading && interactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 size={32} className="animate-spin text-neutral-400 mb-4" />
-        <p className="text-neutral-500 font-medium">Đang tải dữ liệu...</p>
+        <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)] mb-4" />
+        <p className="text-[var(--color-text-secondary)] font-medium">
+          Đang tải dữ liệu...
+        </p>
       </div>
     );
   }
@@ -19,13 +21,13 @@ export default function InteractionsList({ interactions, loading }) {
   if (interactions.length === 0) {
     return (
       <div className="text-center py-20">
-        <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Activity size={32} className="text-neutral-400" />
+        <div className="w-16 h-16 bg-[var(--color-surface-secondary)] rounded-full flex items-center justify-center mx-auto mb-6">
+          <Activity size={32} className="text-[var(--color-text-tertiary)]" />
         </div>
-        <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
+        <h3 className="text-lg font-semibold text-[var(--color-content)] mb-2">
           Chưa có tương tác nào
         </h3>
-        <p className="text-neutral-500 max-w-xs mx-auto text-sm">
+        <p className="text-[var(--color-text-secondary)] max-w-xs mx-auto text-sm">
           Không tìm thấy hoạt động tương tác nào phù hợp với bộ lọc hiện tại.
         </p>
       </div>
@@ -34,11 +36,13 @@ export default function InteractionsList({ interactions, loading }) {
 
   return (
     <div className="space-y-3">
+
       {interactions.map(interaction => (
         <div
           key={interaction._id}
-          className="group flex flex-col sm:flex-row gap-4 p-4 rounded-2xl bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-100 dark:border-neutral-800 hover:bg-white dark:hover:bg-neutral-800 hover:shadow-md transition-all duration-300"
+          className="group flex flex-col sm:flex-row gap-4 p-4 rounded-2xl bg-[var(--color-surface-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] hover:shadow-md transition-all duration-300"
         >
+
           {/* User Avatar with Action Icon */}
           <div className="relative shrink-0">
             <img

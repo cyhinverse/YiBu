@@ -29,8 +29,8 @@ const UserGrowthChart = ({ data }) => {
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="#e5e5e5"
-              opacity={0.5}
+              stroke="#cbd5f5"
+              opacity={0.35}
             />
             <XAxis
               dataKey="name"
@@ -38,32 +38,32 @@ const UserGrowthChart = ({ data }) => {
               tickLine={false}
               tick={{
                 fontSize: 11,
-                fill: '#737373',
-                fontWeight: 600,
+                fill: '#9aa3b2',
+                fontWeight: 500,
               }}
-              dy={10}
+              dy={8}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
               tick={{
                 fontSize: 11,
-                fill: '#737373',
-                fontWeight: 600,
+                fill: '#9aa3b2',
+                fontWeight: 500,
               }}
-              dx={-10}
+              dx={-8}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: '#ffffff',
                 borderRadius: '12px',
-                border: 'none',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                padding: '12px 16px',
+                border: '1px solid rgba(226, 232, 240, 0.6)',
+                boxShadow: '0 8px 20px -8px rgba(15, 23, 42, 0.25)',
+                padding: '10px 14px',
               }}
               itemStyle={{
                 color: '#10b981',
-                fontWeight: 700,
+                fontWeight: 600,
               }}
               cursor={{
                 stroke: '#10b981',
@@ -75,11 +75,12 @@ const UserGrowthChart = ({ data }) => {
               type="monotone"
               dataKey="users"
               stroke="#10b981"
-              strokeWidth={3}
+              strokeWidth={2.5}
               fillOpacity={1}
               fill="url(#colorUsers)"
               animationDuration={1500}
             />
+
           </AreaChart>
         </ResponsiveContainer>
       ) : (

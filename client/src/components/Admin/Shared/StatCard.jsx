@@ -25,11 +25,11 @@ const StatCard = ({
 
   return (
     <div
-      className="bg-white dark:bg-neutral-900 rounded-2xl p-4 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+      className="admin-card p-4 transition-all hover:shadow-sm"
       role="group"
       aria-label={title}
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-4">
         <div
           className={`p-2.5 rounded-xl ${
             iconBgClass ? iconBgClass : colorStyles[color]
@@ -40,7 +40,7 @@ const StatCard = ({
 
         {!loading && change && (
           <div
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
               trend === 'up'
                 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                 : trend === 'down'
@@ -63,10 +63,10 @@ const StatCard = ({
           </>
         ) : (
           <>
-            <p className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-neutral-400 mb-1">
               {title}
             </p>
-            <h3 className="text-xl font-semibold text-neutral-800 dark:text-white tracking-tight">
+            <h3 className="text-2xl font-semibold text-neutral-800 dark:text-white tracking-tight">
               {value}
             </h3>
           </>
@@ -75,5 +75,6 @@ const StatCard = ({
     </div>
   );
 };
+
 
 export default StatCard;

@@ -100,9 +100,6 @@ const App = () => {
           </div>
         }
       >
-        <a href="#main-content" className="sr-only" aria-label="Skip to content">
-          Skip to content
-        </a>
         <Routes>
           <Route element={<ProtectedRoute />}>
             <Route

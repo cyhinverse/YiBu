@@ -5,8 +5,6 @@ import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
  * Modal Component
  */
 export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
-  if (!isOpen) return null;
-
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md',
@@ -28,6 +26,8 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  if (!isOpen) return null;
+
   return (
     <div
       className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-center justify-center z-50 p-4"
@@ -40,24 +40,27 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
       }}
     >
       <div
-        className={`bg-white dark:bg-neutral-900 rounded-2xl w-full ${sizeClasses[size]} border border-neutral-100 dark:border-neutral-800`}
+        className={`admin-card w-full ${sizeClasses[size]} overflow-hidden`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-secondary)]">
           <h2
             id={titleId}
-            className="text-[15px] font-semibold text-neutral-800 dark:text-white"
+            className="text-[15px] font-semibold text-[var(--color-content)]"
           >
             {title}
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500"
+            className="p-1.5 hover:bg-[var(--color-surface-hover)] rounded-lg transition-colors text-[var(--color-text-secondary)]"
+            aria-label="Đóng"
           >
             <X size={18} />
           </button>
         </div>
         <div className="p-4">{children}</div>
       </div>
+
     </div>
   );
 }
@@ -75,8 +78,6 @@ export function ConfirmModal({
   cancelText = 'Hủy',
   type = 'danger',
 }) {
-  if (!isOpen) return null;
-
   const titleId = useId();
 
   useEffect(() => {
@@ -89,6 +90,8 @@ export function ConfirmModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const typeConfig = {
     danger: {
@@ -131,7 +134,7 @@ export function ConfirmModal({
         if (event.key === 'Escape') onClose?.();
       }}
     >
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-sm p-4 border border-neutral-100 dark:border-neutral-800">
+        <div className="admin-card w-full max-w-sm p-4">
           <div className="flex items-start gap-3 mb-4">
             <div className={`p-2.5 rounded-xl ${config.iconBg}`}>
               <Icon size={18} className={config.iconColor} strokeWidth={1.5} />
@@ -139,11 +142,11 @@ export function ConfirmModal({
             <div className="flex-1">
               <h2
                 id={titleId}
-                className="text-[15px] font-semibold text-neutral-800 dark:text-white"
+                className="text-[15px] font-semibold text-[var(--color-content)]"
               >
                 {title}
               </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                 {message}
               </p>
             </div>
@@ -151,22 +154,25 @@ export function ConfirmModal({
 
           <div className="flex gap-2 mt-5">
             <button
+              type="button"
               onClick={onClose}
-              className="flex-1 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              className="flex-1 px-3.5 py-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm font-medium text-[var(--color-text-secondary)]"
             >
               {cancelText}
             </button>
             <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+              type="button"
+              onClick={() => {
+                onConfirm();
+                onClose();
+              }}
               className={`flex-1 px-3.5 py-2 rounded-lg text-white transition-colors text-sm font-medium ${config.confirmBg}`}
             >
               {confirmText}
             </button>
           </div>
         </div>
+
     </div>
   );
 }
@@ -209,6 +215,7 @@ export function Button({
   icon: Icon,
   onClick,
   className = '',
+  type = 'button',
   ...props
 }) {
   const variants = {
@@ -230,11 +237,13 @@ export function Button({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`yb-btn inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
+
       {loading ? (
         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
       ) : (
@@ -249,7 +258,8 @@ export function Button({
  * Input Component
  */
 export function Input({ label, error, icon: Icon, className = '', ...props }) {
-  const inputId = props.id || useId();
+  const generatedId = useId();
+  const inputId = props.id ?? generatedId;
   const ariaLabel = props['aria-label'] || label;
   return (
     <div className={className}>
@@ -271,16 +281,17 @@ export function Input({ label, error, icon: Icon, className = '', ...props }) {
         )}
         <input
           id={inputId}
-          className={`w-full ${
+          className={`admin-input w-full ${
             Icon ? 'pl-10' : 'pl-4'
-          } pr-4 py-2 rounded-lg border ${
+          } pr-4 ${
             error
               ? 'border-rose-400 focus:ring-rose-200'
-              : 'border-neutral-200 dark:border-neutral-700 focus:ring-neutral-200 dark:focus:ring-neutral-700'
-          } bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 transition-all`}
+              : ''
+          }`}
           aria-label={ariaLabel}
           {...props}
         />
+
       </div>
       {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
     </div>
@@ -299,9 +310,10 @@ export function Select({ label, options, className = '', ...props }) {
         </label>
       )}
       <select
-        className="w-full px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 transition-all"
+        className="admin-select w-full"
         {...props}
       >
+
         {options.map(option => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -329,6 +341,7 @@ export function Toggle({ checked, onChange, label, description }) {
         )}
       </div>
       <button
+        type="button"
         onClick={() => onChange(!checked)}
         className={`relative w-12 h-6 rounded-full transition-colors ${
           checked
@@ -412,7 +425,7 @@ export function CardContent({ children, className = '' }) {
 export function StatCard({
   title,
   value,
-  icon: Icon, // eslint-disable-line no-unused-vars
+  icon: Icon,
   trend,
   trendValue,
   color = 'neutral',

@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import AdminLayout from '@/components/Admin/Layout/AdminLayout';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
@@ -29,36 +29,19 @@ const Broadcast = lazy(() => import('../../components/Admin/System/Broadcast'));
 const AdminPage = () => {
   const [activePage, setActivePage] = useState('dashboard');
 
-  const renderContent = () => {
-    switch (activePage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'users':
-        return <Users />;
-      case 'posts':
-        return <Posts />;
-      case 'comments':
-        return <Comments />;
-      case 'reports':
-        return <Reports />;
-      case 'interactions':
-        return <Interactions />;
-      case 'banned':
-        return <BannedAccounts />;
-      case 'revenue':
-        return <Revenue />;
-      case 'broadcast':
-        return <Broadcast />;
-      case 'systemhealth':
-        return <SystemHealth />;
-      case 'settings':
-        return <Settings />;
-      case 'adminlogs':
-        return <Logs />;
-      default:
-        return <Dashboard />;
-    }
+  const pages = {
+    dashboard: Dashboard,
+    users: Users,
+    posts: Posts,
+    comments: Comments,
+    reports: Reports,
+    interactions: Interactions,
+    banned: BannedAccounts,
+    broadcast: Broadcast,
+    systemhealth: SystemHealth,
   };
+
+  const ActivePage = pages[activePage] ?? Dashboard;
 
   return (
     <AdminLayout activePage={activePage} setActivePage={setActivePage}>
@@ -69,7 +52,7 @@ const AdminPage = () => {
           </div>
         }
       >
-        {renderContent()}
+        <ActivePage />
       </Suspense>
     </AdminLayout>
   );

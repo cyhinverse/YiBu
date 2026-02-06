@@ -384,6 +384,113 @@ h6 {
   background-color: var(--color-border);
 }
 
+/* ===== Admin UI Utilities ===== */
+.admin-shell {
+  background-color: var(--color-background);
+  color: var(--color-content);
+}
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+}
+
+.admin-card-muted {
+  background-color: var(--color-surface-secondary);
+  border-radius: var(--radius-2xl);
+}
+
+.admin-panel {
+  background-color: var(--color-surface-secondary);
+  border-radius: var(--radius-2xl);
+}
+
+.admin-header {
+  background-color: var(--color-surface);
+  border-bottom: none;
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+  background-color: var(--color-surface-secondary);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+  font-family: var(--font-family-sans);
+  color: var(--color-content);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-input,
+.admin-select {
+  min-height: 40px;
+  line-height: 1.2;
+}
+
+.admin-textarea {
+  line-height: 1.4;
+}
+
+.admin-input::placeholder,
+.admin-textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.06);
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-muted {
+  color: var(--color-text-secondary);
+}
+
+.admin-subtle {
+  color: var(--color-text-tertiary);
+}
+
+.admin-divider {
+  height: 1px;
+  background-color: transparent;
+}
+
+
 /* Hover lift effect */
 .hover-lift {
   transition: transform 0.15s ease;

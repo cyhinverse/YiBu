@@ -25,31 +25,33 @@ const menuItems = [
   { id: 'reports', icon: Flag, label: 'Báo cáo', badge: 5 },
   { id: 'interactions', icon: Activity, label: 'Tương tác' },
   { id: 'banned', icon: UserX, label: 'Bị chặn' },
-  { id: 'broadcast', icon: Send, label: 'Thông báo' },
+  { id: 'broadcast', icon: Send, label: 'Phát sóng' },
   { id: 'systemhealth', icon: HeartPulse, label: 'Hệ thống' },
 ];
+
 
 const SidebarItem = ({ item, collapsed, activePage, setActivePage }) => {
   const isActive = activePage === item.id;
 
   return (
     <button
+      type="button"
       onClick={() => setActivePage(item.id)}
       onKeyDown={event => {
         if (event.key === 'Escape') {
           event.currentTarget.blur();
         }
       }}
-      className={`group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-full transition-all duration-200 ${
+      className={`group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 ${
         isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+          ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-sm'
+          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-content)]'
       } ${collapsed ? 'justify-center' : ''}`}
       title={collapsed ? item.label : undefined}
     >
       <item.icon
         size={18}
-        strokeWidth={isActive ? 2 : 1.5}
+        strokeWidth={isActive ? 1.8 : 1.5}
         className="flex-shrink-0"
       />
 
@@ -70,6 +72,7 @@ const SidebarItem = ({ item, collapsed, activePage, setActivePage }) => {
   );
 };
 
+
 export default function Sidebar({
   activePage,
   setActivePage,
@@ -81,37 +84,41 @@ export default function Sidebar({
   const collapsed = !sidebarOpen && !mobile;
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-neutral-900 shadow-sm rounded-r-2xl">
+    <div className="flex flex-col h-full admin-card rounded-none lg:rounded-r-3xl shadow-none">
       {/* Logo */}
       <div
-        className={`flex items-center h-12 px-4 ${
+        className={`flex items-center h-14 px-4 ${
           collapsed ? 'justify-center' : 'justify-between'
         }`}
       >
-        <Link to="/admin" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-white flex items-center justify-center">
-            <Zap
-              size={16}
-              className="text-white dark:text-neutral-900"
-              strokeWidth={2}
-            />
+        <Link to="/admin" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center">
+            <Zap size={18} strokeWidth={1.6} />
           </div>
           {!collapsed && (
-            <span className="font-semibold text-[15px] text-neutral-800 dark:text-white">
-              Admin
-            </span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-[15px] text-[var(--color-content)]">
+                YiBu Admin
+              </span>
+              <span className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                Workspace
+              </span>
+            </div>
           )}
         </Link>
 
+
         {mobile && (
           <button
+            type="button"
             onClick={onCloseMobile}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 onCloseMobile?.();
               }
             }}
-            className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+            className="p-1.5 rounded-full hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]"
+            aria-label="Đóng menu"
           >
             <X size={18} />
           </button>
@@ -120,15 +127,16 @@ export default function Sidebar({
 
       {/* Collapse Button - Desktop */}
       {!mobile && (
-        <div className="px-3 py-2">
+        <div className="px-3 pb-2">
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.currentTarget.blur();
               }
             }}
-            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] rounded-xl hover:bg-[var(--color-surface-hover)] transition-colors ${
               collapsed ? 'justify-center' : ''
             }`}
           >
@@ -145,7 +153,7 @@ export default function Sidebar({
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
         {menuItems.map(item => (
           <SidebarItem
             key={item.id}
@@ -167,24 +175,26 @@ export default function Sidebar({
             collapsed ? 'justify-center' : ''
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-white flex items-center justify-center text-white dark:text-neutral-900 text-xs font-semibold">
+          <div className="w-9 h-9 rounded-2xl bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">
             A
           </div>
           {!collapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-neutral-800 dark:text-white truncate">
+                <p className="text-sm font-semibold text-[var(--color-content)] truncate">
                   Admin
                 </p>
-                <p className="text-[11px] text-neutral-500 truncate">
+                <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
                   Super Admin
                 </p>
               </div>
               <button
-                className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-rose-500 transition-colors"
+                type="button"
+                className="p-1.5 rounded-full hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-rose-500 transition-colors"
                 title="Đăng xuất"
+                aria-label="Đăng xuất"
               >
-                <LogOut size={16} />
+                <LogOut size={16} strokeWidth={1.6} />
               </button>
             </>
           )}

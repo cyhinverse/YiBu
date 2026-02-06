@@ -26,59 +26,67 @@ const UsersTable = ({
   onDeleteUser,
 }) => {
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+    <div className="flex flex-col h-full">
+
       {loading && users.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 size={40} className="animate-spin text-neutral-500 mb-4" />
-          <p className="text-neutral-500 font-medium">
-            Đang tải danh sách người dùng...
-          </p>
-        </div>
-      ) : users.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-neutral-400">
-          <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
-            <UserPlus size={40} className="opacity-50" />
-          </div>
-          <p className="font-medium">Không tìm thấy người dùng phù hợp</p>
-        </div>
-      ) : (
+                <div className="flex flex-col items-center justify-center py-24">
+                  <Loader2 size={40} className="animate-spin text-[var(--color-text-secondary)] mb-4" />
+                  <p className="text-[var(--color-text-secondary)] font-medium">
+                    Đang tải danh sách người dùng...
+                  </p>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-[var(--color-text-secondary)]">
+                  <div className="w-20 h-20 bg-[var(--color-surface-secondary)] rounded-full flex items-center justify-center mb-4">
+                    <UserPlus size={40} className="opacity-50" />
+                  </div>
+                  <p className="font-medium">Không tìm thấy người dùng phù hợp</p>
+                </div>
+              ) : (
+
         <>
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full">
               <thead>
-                <tr className="bg-neutral-50/50 dark:bg-neutral-800/30">
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                <tr className="bg-[var(--color-surface-secondary)]">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Người dùng
                   </th>
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Vai trò
                   </th>
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Trạng thái
                   </th>
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Hoạt động
                   </th>
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Tham gia
                   </th>
-                  <th className="text-right px-5 py-3.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <th className="text-right px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                     Thao tác
                   </th>
                 </tr>
+
               </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              <tbody className="divide-y divide-[var(--color-border)]">
                 {users.map(user => (
                   <tr
                     key={user._id}
-                    className="group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                    className="group hover:bg-[var(--color-surface-hover)] transition-colors"
                   >
+
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
                             src={user.avatar || '/images/default-avatar.png'}
-                            alt={user.name}
+                            alt={
+                              user.name || user.username
+                                ? `${user.name || user.username} avatar`
+                                : 'User avatar'
+                            }
                             className="w-10 h-10 rounded-full object-cover"
                           />
                           {user.isVerified && (
@@ -88,10 +96,10 @@ const UsersTable = ({
                           )}
                         </div>
                         <div>
-                          <div className="font-semibold text-neutral-900 dark:text-white text-sm">
+                          <div className="font-semibold text-[var(--color-content)] text-sm">
                             {user.name || 'Người dùng YiBu'}
                           </div>
-                          <div className="text-xs text-neutral-500">
+                          <div className="text-xs text-[var(--color-text-tertiary)]">
                             @{user.username || 'username'}
                           </div>
                         </div>
@@ -99,31 +107,32 @@ const UsersTable = ({
                     </td>
                     <td className="px-5 py-3.5">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          className={`admin-pill ${
                             user.role === 'admin'
-                              ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border border-neutral-900/10 dark:border-white/10'
-                              : 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
+                              ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                              : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'
                           }`}
                         >
-                        {user.role || 'thành viên'}
-                      </span>
+                          {user.role || 'thành viên'}
+                        </span>
+
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge status={user.status || 'active'} />
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                        <span className="text-sm font-medium text-[var(--color-text-secondary)]">
                           {user.postsCount || 0} bài viết
                         </span>
-                        <span className="text-xs text-neutral-500">
+                        <span className="text-xs text-[var(--color-text-tertiary)]">
                           {(user.followersCount || 0).toLocaleString()}{' '}
                           followers
                         </span>
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                      <span className="text-sm text-[var(--color-text-secondary)]">
                         {user.createdAt
                           ? new Date(user.createdAt).toLocaleDateString('vi-VN')
                           : 'N/A'}
@@ -132,52 +141,63 @@ const UsersTable = ({
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
+                          type="button"
                           onClick={() => onViewUser(user)}
                           onKeyDown={event => {
                             if (event.key === 'Escape') {
                               event.currentTarget.blur();
                             }
                           }}
-                          className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-black dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-content)] transition-colors"
                           title="Xem chi tiết"
+                          aria-label="Xem chi tiết người dùng"
                         >
-                          <Eye size={18} />
+                          <Eye size={18} strokeWidth={1.6} />
                         </button>
 
                         {user.status === 'banned' ? (
                           <button
+                            type="button"
                             onClick={() => onUnbanUser(user)}
                             className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                             title="Gỡ chặn"
+                            aria-label="Gỡ chặn người dùng"
                           >
-                            <ShieldOff size={18} />
+                            <ShieldOff size={18} strokeWidth={1.6} />
                           </button>
                         ) : (
                           <>
                             <button
+                              type="button"
                               onClick={() => onWarnUser(user)}
                               className="p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                               title="Cảnh báo"
+                              aria-label="Cảnh báo người dùng"
                             >
-                              <AlertTriangle size={18} />
+                              <AlertTriangle size={18} strokeWidth={1.6} />
                             </button>
                             <button
+                              type="button"
                               onClick={() => onBanUser(user)}
                               className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                               title="Chặn người dùng"
+                              aria-label="Chặn người dùng"
                             >
-                              <Ban size={18} />
+                              <Ban size={18} strokeWidth={1.6} />
                             </button>
                           </>
                         )}
 
                         <button
+                          type="button"
                           onClick={() => onDeleteUser(user)}
                           className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                           title="Xóa người dùng"
+                          aria-label="Xóa người dùng"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={18} strokeWidth={1.6} />
                         </button>
+
                       </div>
                     </td>
                   </tr>
@@ -187,30 +207,33 @@ const UsersTable = ({
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-50/50 dark:bg-neutral-800/20">
-            <span className="text-sm text-neutral-500">
-              Trang {currentPage} / {pagination?.pages || 1}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="px-3 py-1 bg-black text-white dark:bg-white dark:text-black rounded-lg text-sm font-bold shadow-sm">
-                {currentPage}
+            <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface-secondary)]">
+              <span className="text-sm text-[var(--color-text-secondary)]">
+                Trang {currentPage} / {pagination?.pages || 1}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="px-3 py-1 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg text-sm font-semibold shadow-sm">
+                  {currentPage}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage >= (pagination?.pages || 1)}
+                  className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
-              <button
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage >= (pagination?.pages || 1)}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                <ChevronRight size={18} />
-              </button>
             </div>
-          </div>
+
         </>
       )}
     </div>

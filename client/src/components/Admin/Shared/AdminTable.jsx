@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +16,7 @@ export default function AdminTable({
   renderActions,
   pageSize = 10,
 }) {
+  const searchInputId = useId();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,12 +80,16 @@ export default function AdminTable({
       {/* Search */}
       {searchable && (
         <div className="max-w-sm">
+          <label htmlFor={searchInputId} className="sr-only">
+            {searchPlaceholder}
+          </label>
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
             />
             <input
+              id={searchInputId}
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -93,29 +98,29 @@ export default function AdminTable({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none placeholder:text-neutral-400"
+              className="admin-input w-full pl-10"
             />
           </div>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+      <div className="admin-card overflow-hidden border border-[var(--color-border)]">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-800/50">
+              <tr className="bg-[var(--color-surface-secondary)]">
                 {columns.map(col => (
                   <th
                     key={col.key}
-                    className="text-left px-4 py-3 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-800/30"
+                    className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]"
                   >
                     <button
                       type="button"
                       onClick={() => col.sortable && handleSort(col.key)}
                       className={`flex items-center gap-1.5 text-left ${
                         col.sortable
-                          ? 'cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-200'
+                          ? 'cursor-pointer hover:text-[var(--color-content)]'
                           : 'cursor-default'
                       }`}
                       aria-label={`Sort by ${col.label}`}
@@ -132,18 +137,18 @@ export default function AdminTable({
                   </th>
                 ))}
                 {renderActions && (
-                  <th className="px-4 py-3 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right bg-neutral-50/50 dark:bg-neutral-800/30">
+                  <th className="px-4 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] text-right">
                     Thao tác
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
+            <tbody className="divide-y divide-[var(--color-border)]">
               {paginatedData.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length + (renderActions ? 1 : 0)}
-                    className="px-4 py-10 text-center text-sm text-neutral-500"
+                    className="px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]"
                   >
                     Không có dữ liệu
                   </td>
@@ -156,14 +161,14 @@ export default function AdminTable({
                     onKeyDown={event => handleRowKeyDown(event, row)}
                     role={onRowClick ? 'button' : undefined}
                     tabIndex={onRowClick ? 0 : undefined}
-                    className={`group transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30 ${
+                    className={`group transition-colors hover:bg-[var(--color-surface-hover)] ${
                       onRowClick ? 'cursor-pointer' : ''
                     }`}
                   >
                     {columns.map(col => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-sm text-neutral-700 dark:text-neutral-200"
+                        className="px-4 py-3 text-sm text-[var(--color-text-secondary)]"
                       >
                         {col.render
                           ? col.render(row[col.key], row)
@@ -188,16 +193,17 @@ export default function AdminTable({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Hiển thị {(currentPage - 1) * pageSize + 1} -{' '}
             {Math.min(currentPage * pageSize, sortedData.length)} /{' '}
             {sortedData.length}
           </p>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
-              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
+              className="p-1.5 rounded-lg bg-[var(--color-surface-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40 transition-colors text-[var(--color-text-secondary)]"
             >
               <ChevronLeft size={16} />
             </button>
@@ -216,12 +222,13 @@ export default function AdminTable({
 
               return (
                 <button
+                  type="button"
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`min-w-[32px] h-8 rounded-lg text-[13px] font-medium transition-colors ${
                     currentPage === pageNum
-                      ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-                      : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                      ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                      : 'hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
                   }`}
                 >
                   {pageNum}
@@ -230,9 +237,10 @@ export default function AdminTable({
             })}
 
             <button
+              type="button"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(p => p + 1)}
-              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors text-neutral-600 dark:text-neutral-400"
+              className="p-1.5 rounded-lg bg-[var(--color-surface-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40 transition-colors text-[var(--color-text-secondary)]"
             >
               <ChevronRight size={16} />
             </button>

@@ -31,7 +31,7 @@ import {
   useRemoveGroupMember,
   useLeaveGroup,
 } from '@/hooks/useMessageQuery';
-import { useSocketContext } from '@/contexts/SocketContext';
+import { useSocketContext } from '@/contexts/useSocketContext';
 import { lazy, Suspense } from 'react';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
@@ -221,8 +221,10 @@ const MessageDetail = () => {
 
   // Queries
   const { data: conversationsData } = useConversations();
-  const conversationsList =
-    conversationsData?.conversations || conversationsData || [];
+  const conversationsList = useMemo(
+    () => conversationsData?.conversations ?? conversationsData ?? [],
+    [conversationsData]
+  );
 
   const { data: conversationData, isLoading: conversationLoading } =
     useConversationById(conversationId);
@@ -232,10 +234,13 @@ const MessageDetail = () => {
     page: 1,
     limit: 50,
   });
-  const messagesList = messagesData?.messages || messagesData || [];
+  const messages = useMemo(
+    () => messagesData?.messages ?? messagesData ?? [],
+    [messagesData]
+  );
 
   // Mutations
-  const markAsReadMutation = useMarkAsRead();
+  const { mutate: markAsRead } = useMarkAsRead();
   const sendMessageMutation = useSendMessage();
   const deleteMessageMutation = useDeleteMessage();
   const updateGroupMutation = useUpdateGroup();
@@ -269,8 +274,6 @@ const MessageDetail = () => {
     );
   }, [conversationData, conversationsList, conversationId]);
 
-  const messages = messagesList;
-
   const otherUser = useMemo(() => {
     if (!conversation || conversation.isGroup) return null;
 
@@ -303,16 +306,16 @@ const MessageDetail = () => {
   useEffect(() => {
     if (conversationId) {
       if (joinRoom) joinRoom(conversationId);
-      markAsReadMutation.mutate(conversationId);
+      markAsRead(conversationId);
     }
     return () => {
       if (conversationId && leaveRoom) leaveRoom(conversationId);
     };
-  }, [conversationId, joinRoom, leaveRoom]);
+  }, [conversationId, joinRoom, leaveRoom, markAsRead]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOtherUserTyping]);
+  }, [messages.length, isOtherUserTyping]);
 
   // Socket listeners
   useEffect(() => {

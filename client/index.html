@@ -13,14 +13,33 @@
         var root = document.documentElement;
         
         // Apply dark/light mode
-        var theme = localStorage.getItem("theme");
-        if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        // Preference order:
+        // 1) localStorage.theme (new)
+        // 2) localStorage.appearance (legacy admin)
+        // 3) redux-persist user.settings.theme.appearance (fallback)
+        // 4) system preference
+        var theme = localStorage.getItem("theme") || localStorage.getItem("appearance");
+        if (!theme) {
+          try {
+            var persistedRoot = localStorage.getItem("persist:root");
+            if (persistedRoot) {
+              var parsedRoot = JSON.parse(persistedRoot);
+              if (parsedRoot && parsedRoot.user) {
+                var userData = JSON.parse(parsedRoot.user);
+                theme = userData && userData.settings && userData.settings.theme && userData.settings.theme.appearance;
+              }
+            }
+          } catch (e) {
+            // Ignore and fall back to system preference
+          }
+        }
+
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var isDark = theme === "dark" || ((theme === "system" || !theme) && prefersDark);
+        if (isDark) {
           root.classList.add("dark");
-        } else if (theme === "light") {
-          root.classList.add("light");
         } else {
-          // System preference
-          root.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          root.classList.remove("dark");
         }
         
         // Apply custom colors

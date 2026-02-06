@@ -89,14 +89,17 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-neutral-800 dark:text-white">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Tổng quan
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)]">
             Xin chào! 👋
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Tổng quan hoạt động hôm nay
           </p>
         </div>
@@ -104,20 +107,22 @@ const Dashboard = () => {
           <select
             value={period}
             onChange={e => setPeriod(Number(e.target.value))}
-            className="px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="admin-select"
           >
             <option value={7}>7 ngày</option>
             <option value={30}>30 ngày</option>
             <option value={90}>90 ngày</option>
           </select>
           <button
+            type="button"
             onClick={handleRefresh}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.currentTarget.blur();
               }
             }}
-            className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+            aria-label="Tải lại"
           >
             <RefreshCcw
               size={18}
@@ -129,7 +134,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
           <StatCard
             key={index}
@@ -147,27 +152,23 @@ const Dashboard = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Growth Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm">
+        <div className="lg:col-span-2 admin-card p-4">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-semibold text-neutral-800 dark:text-white">
+              <h3 className="text-base font-semibold text-[var(--color-content)]">
                 Tăng trưởng người dùng
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xl font-semibold text-neutral-800 dark:text-white">
+                <span className="text-2xl font-semibold text-[var(--color-content)]">
                   {growthData?.totalGrowth || 0}
                 </span>
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <span className="admin-pill bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   +{growthData?.percentage || 0}%
                 </span>
               </div>
             </div>
-            <div className="p-2 bg-neutral-200 dark:bg-neutral-800 rounded-xl">
-              <TrendingUp
-                size={18}
-                className="text-neutral-700 dark:text-neutral-300"
-                strokeWidth={1.5}
-              />
+            <div className="p-2 bg-[var(--color-surface-secondary)] rounded-xl text-[var(--color-text-secondary)]">
+              <TrendingUp size={18} strokeWidth={1.6} />
             </div>
           </div>
           <div className="h-[240px] w-full">
@@ -176,12 +177,15 @@ const Dashboard = () => {
         </div>
 
         {/* Top Users */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm flex flex-col">
+        <div className="admin-card p-4 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-neutral-800 dark:text-white">
+            <h3 className="text-base font-semibold text-[var(--color-content)]">
               Người dùng tích cực
             </h3>
-            <button className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:underline">
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-content)]"
+            >
               Xem tất cả
             </button>
           </div>
@@ -204,7 +208,7 @@ const Dashboard = () => {
               : topUsers.map((user, index) => (
                   <div
                     key={user._id}
-                    className="flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
                   >
                     <div className="relative">
                       <img
@@ -212,39 +216,43 @@ const Dashboard = () => {
                         alt={user.username}
                         className="w-9 h-9 rounded-full object-cover"
                       />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white dark:bg-neutral-900 rounded-full text-[9px] font-bold flex items-center justify-center shadow-sm text-neutral-600 dark:text-neutral-300">
+                      <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[var(--color-surface)] rounded-full text-[9px] font-bold flex items-center justify-center shadow-sm text-[var(--color-text-secondary)]">
                         {index + 1}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-neutral-800 dark:text-white truncate">
+                      <h4 className="text-sm font-medium text-[var(--color-content)] truncate">
                         {user.username}
                       </h4>
-                      <p className="text-xs text-neutral-500 truncate">
+                      <p className="text-xs text-[var(--color-text-secondary)] truncate">
                         {user.email}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-neutral-500">
+                    <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
                       <span className="flex items-center gap-1">
-                        <FileText size={12} />
+                        <FileText size={12} strokeWidth={1.6} />
                         {user.postCount || 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Heart size={12} />
+                        <Heart size={12} strokeWidth={1.6} />
                         {user.totalLikes || 0}
                       </span>
                     </div>
                   </div>
                 ))}
           </div>
-          <button className="w-full mt-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center gap-2">
+          <button
+            type="button"
+            className="w-full mt-4 py-2.5 rounded-xl bg-[var(--color-surface-secondary)] text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors flex items-center justify-center gap-2"
+          >
             Xem chi tiết
-            <ArrowUpRight size={14} />
+            <ArrowUpRight size={14} strokeWidth={1.5} />
           </button>
         </div>
       </div>
     </div>
   );
+
 };
 
 export default Dashboard;

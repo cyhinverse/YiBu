@@ -11,9 +11,8 @@ const AdminActionModal = ({
   onCancel,
   loading,
 }) => {
-  if (!isOpen) return null;
-
   useEffect(() => {
+    if (!isOpen) return undefined;
     const handleKeyDown = event => {
       if (event.key === 'Escape') {
         onCancel?.();
@@ -21,7 +20,9 @@ const AdminActionModal = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen) return null;
 
   const getConfig = () => {
     switch (actionType) {
@@ -82,17 +83,17 @@ const AdminActionModal = ({
         if (event.key === 'Escape') onCancel?.();
       }}
     >
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
+      <div className="admin-card w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
         <div className="flex flex-col items-center text-center mb-8">
           <div
             className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${config.bg} ${config.text}`}
           >
             <Icon size={32} strokeWidth={2.5} />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white capitalize mb-2 tracking-tight">
+          <h3 className="text-lg font-semibold text-[var(--color-content)] capitalize mb-2 tracking-tight">
             {config.title}
           </h3>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">
+          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed px-4">
             {actionType === 'ban' &&
               `Bạn có chắc chắn muốn chặn ${targetName}? Quyền truy cập sẽ bị thu hồi ngay lập tức.`}
             {actionType === 'unban' &&
@@ -107,7 +108,7 @@ const AdminActionModal = ({
         </div>
         {['ban', 'suspend', 'warn'].includes(actionType) && (
           <div className="mb-8">
-            <label className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wide block mb-2.5 ml-1">
+            <label className="text-xs font-semibold text-[var(--color-content)] uppercase tracking-wide block mb-2.5 ml-1">
               {actionType === 'warn' ? 'Nội dung cảnh báo' : 'Lý do thực hiện'}
             </label>
             <textarea
@@ -115,27 +116,30 @@ const AdminActionModal = ({
               onChange={e => onReasonChange(e.target.value)}
               aria-label="Ly do thuc hien"
               placeholder="Nhập chi tiết tại đây..."
-              className="w-full p-4 h-32 resize-none text-sm font-medium bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl focus:ring-2 focus:ring-primary/50 transition-all outline-none"
+              className="admin-textarea w-full h-32"
             />
           </div>
         )}
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+            className="flex-1 px-4 py-3 rounded-xl font-semibold text-[var(--color-text-secondary)] bg-[var(--color-surface-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
           >
             Hủy bỏ
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`flex-1 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${config.btn}`}
+            className={`flex-1 px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${config.btn}`}
           >
             {loading && <Loader2 size={18} className="animate-spin" />}
             Xác nhận
           </button>
         </div>
       </div>
+
     </div>
   );
 };

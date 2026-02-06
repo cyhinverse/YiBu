@@ -29,9 +29,9 @@ export const DeleteCommentModal = ({
   loading,
   comment,
 }) => {
-  if (!isOpen || !comment) return null;
-
   useEscapeKey(isOpen, onClose);
+
+  if (!isOpen || !comment) return null;
 
   return (
     <div
@@ -43,48 +43,50 @@ export const DeleteCommentModal = ({
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="bg-white dark:bg-neutral-900 w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in border border-neutral-200 dark:border-neutral-800">
+      <div className="admin-card w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-error)]/15 flex items-center justify-center text-[var(--color-error)] shrink-0">
             <Trash2 size={24} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
+            <h3 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">
               Xóa bình luận?
             </h3>
-            <p className="text-sm text-neutral-500 font-medium">
+            <p className="text-sm text-[var(--color-text-secondary)] font-medium">
               Hành động này không thể hoàn tác.
             </p>
           </div>
         </div>
 
-        <div className="bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 mb-6">
+        <div className="admin-card-muted p-4 rounded-2xl mb-6">
           <div className="flex items-center gap-2 mb-2">
             <img
               src={comment.user?.avatar || '/images/default-avatar.png'}
-              className="w-5 h-5 rounded-full"
+              className="w-5 h-5 yb-avatar"
               alt={`${comment.user?.username || 'User'} avatar`}
             />
-            <span className="text-xs font-bold text-neutral-900 dark:text-white">
+            <span className="text-xs font-bold text-[var(--color-content)]">
               {comment.user?.username}
             </span>
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-300 line-clamp-3 italic">
+          <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3 italic">
             "{comment.content}"
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-sm"
+            className="yb-btn yb-btn-secondary flex-1 py-3 rounded-xl font-bold text-sm"
           >
             Hủy bỏ
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 py-3 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-2 text-sm"
+            className="yb-btn flex-1 py-3 rounded-xl font-bold bg-[var(--color-error)] text-[var(--color-text-inverse)] hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm"
           >
             {loading ? (
               <Loader2 size={16} className="animate-spin" />
@@ -97,14 +99,15 @@ export const DeleteCommentModal = ({
           </button>
         </div>
       </div>
+
     </div>
   );
 };
 
 export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
-  if (!isOpen || !comment) return null;
-
   useEscapeKey(isOpen, onClose);
+
+  if (!isOpen || !comment) return null;
 
   return (
     <div
@@ -117,21 +120,24 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
       }}
     >
       <div
-        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
+        className="yb-card w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3.5 bg-[var(--color-surface-secondary)] border-b border-[var(--color-border)] flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">
             Chi tiết bình luận
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500 dark:text-neutral-400"
+            className="p-2 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
+            aria-label="Đóng"
           >
             <X size={20} />
           </button>
         </div>
+
 
         <div className="p-4 space-y-5">
           {/* User Info */}

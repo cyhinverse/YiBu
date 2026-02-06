@@ -86,7 +86,7 @@ const NotificationSettings = () => {
   );
 
   const NotificationItem = (
-    { icon: Icon, label, description, settingKey } // eslint-disable-line no-unused-vars
+    { icon: Icon, label, description, settingKey }
   ) => (
     <div className="flex items-center justify-between py-4 last:border-0">
       <div className="flex items-center gap-3">

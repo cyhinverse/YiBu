@@ -18,8 +18,10 @@ function Message() {
 
   const { data: conversationsData, isLoading: conversationsLoading } =
     useConversations();
-  const conversations =
-    conversationsData?.conversations || conversationsData || [];
+  const conversations = useMemo(
+    () => conversationsData?.conversations ?? conversationsData ?? [],
+    [conversationsData]
+  );
 
   const { user } = useSelector(state => state.auth);
 

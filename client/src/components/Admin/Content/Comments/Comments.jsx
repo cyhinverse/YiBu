@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Search, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -12,6 +12,9 @@ import CommentsTable from './CommentsTable';
 import { DeleteCommentModal, CommentDetailModal } from './CommentActionModal';
 
 export default function Comments() {
+  const commentsSearchId = useId();
+  const commentsStatusId = useId();
+
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [filterStatus, setFilterStatus] = useState('');
@@ -92,18 +95,22 @@ export default function Comments() {
   };
 
   return (
-    <div className="space-y-5 font-sans">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Bình luận
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)]">
             Quản lý bình luận
           </h2>
-          <p className="text-sm text-neutral-500 font-medium mt-1">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Kiểm duyệt và quản lý tương tác người dùng
           </p>
         </div>
         <button
+          type="button"
           onClick={handleRefresh}
           disabled={loading}
           onKeyDown={event => {
@@ -111,34 +118,43 @@ export default function Comments() {
               event.currentTarget.blur();
             }
           }}
-          className="bg-white dark:bg-neutral-900 p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all shadow-sm"
+          className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          aria-label="Làm mới bình luận"
         >
           <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="admin-card p-4 flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1 group">
+          <label htmlFor={commentsSearchId} className="sr-only">
+            Tìm kiếm bình luận
+          </label>
           <Search
             size={20}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-neutral-600 dark:group-focus-within:text-neutral-300 transition-colors"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] group-focus-within:text-[var(--color-text-secondary)] transition-colors"
           />
           <input
+            id={commentsSearchId}
             type="text"
             placeholder="Tìm kiếm nội dung, tác giả..."
             value={searchTerm}
             aria-label="Search comments"
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-medium transition-all"
+            className="admin-input w-full pl-12"
           />
         </div>
 
         <div className="flex gap-3">
+          <label htmlFor={commentsStatusId} className="sr-only">
+            Lọc trạng thái bình luận
+          </label>
           <select
+            id={commentsStatusId}
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="px-5 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-full border-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 text-sm font-bold cursor-pointer transition-all min-w-[160px]"
+            className="admin-select min-w-[160px]"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
@@ -149,7 +165,7 @@ export default function Comments() {
       </div>
 
       {/* Comments Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+      <div className="admin-card overflow-hidden">
         <CommentsTable
           comments={comments}
           loading={loading}
@@ -165,30 +181,33 @@ export default function Comments() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <span className="text-sm font-medium text-neutral-500">
+      <div className="admin-card p-3 flex items-center justify-between">
+        <span className="text-sm font-medium text-[var(--color-text-secondary)]">
           Trang {currentPage} / {totalPages}
         </span>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             disabled={currentPage <= 1 || loading}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
-          <div className="w-8 h-8 flex items-center justify-center bg-black text-white dark:bg-white dark:text-black rounded-full text-sm font-bold">
+          <div className="w-9 h-9 flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
             {currentPage}
           </div>
           <button
+            type="button"
             disabled={currentPage >= totalPages || loading}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <ChevronRight size={20} />
           </button>
         </div>
       </div>
+
 
       {/* Modals */}
       <CommentDetailModal

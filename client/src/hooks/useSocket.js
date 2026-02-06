@@ -40,6 +40,7 @@ const useSocket = userId => {
     });
 
     socketRef.current = socket;
+    const rooms = activeRooms.current;
 
     socket.on('connect', () => {
       reconnectAttempts.current = 0;
@@ -47,8 +48,8 @@ const useSocket = userId => {
 
       socket.emit('register_user', { userId });
       socket.emit('join_room', userId);
-      activeRooms.current.add(userId);
-      activeRooms.current.forEach(room => {
+      rooms.add(userId);
+      rooms.forEach(room => {
         if (room !== userId) socket.emit('join_room', room);
       });
 
@@ -83,7 +84,7 @@ const useSocket = userId => {
         socket.disconnect();
         socketRef.current = null;
         setIsConnected(false);
-        activeRooms.current.clear();
+        rooms.clear();
       }
     };
   }, [userId, queryClient]);

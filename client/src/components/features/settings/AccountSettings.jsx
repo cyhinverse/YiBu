@@ -88,7 +88,7 @@ const AccountSettings = () => {
   };
 
   const InputField = ({
-    icon: Icon, // eslint-disable-line no-unused-vars
+    icon: Icon,
     label,
     type = 'text',
     value,

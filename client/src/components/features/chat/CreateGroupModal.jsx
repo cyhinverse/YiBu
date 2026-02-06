@@ -14,8 +14,6 @@ const CreateGroupModal = ({
   isSearching,
   onSubmit,
 }) => {
-  if (!isOpen) return null;
-
   useEffect(() => {
     if (!isOpen) return undefined;
     const handleKeyDown = event => {
@@ -26,6 +24,8 @@ const CreateGroupModal = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const handleUserKeyDown = (event, user) => {
     if (event.key === 'Enter' || event.key === ' ') {

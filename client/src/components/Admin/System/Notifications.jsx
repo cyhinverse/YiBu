@@ -126,17 +126,20 @@ const Notifications = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="admin-page">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-3">
-            <Bell className="text-neutral-900 dark:text-white" size={24} />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Thông báo
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)] flex items-center gap-3">
+            <Bell className="text-[var(--color-content)]" size={22} />
             Thông báo hệ thống
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 flex items-center gap-2">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1 flex items-center gap-2">
             Bạn có{' '}
-            <span className="font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded-full border border-rose-100 dark:border-rose-800">
+            <span className="admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 border border-rose-100 dark:border-rose-800">
               {unreadCount}
             </span>{' '}
             thông báo chưa đọc
@@ -144,29 +147,33 @@ const Notifications = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={refreshType}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.currentTarget.blur();
               }
             }}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
             title="Làm mới"
+            aria-label="Làm mới"
           >
             <RefreshCcw size={20} />
           </button>
           <button
+            type="button"
             onClick={handleMarkAllAsRead}
             disabled={unreadCount === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-full hover:bg-[var(--color-surface-hover)] transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check size={16} />
             <span className="hidden sm:inline">Đánh dấu tất cả</span>
-          </button>
+            </button>
           <button
+            type="button"
             onClick={handleDeleteAll}
             disabled={notifications.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={16} />
             <span className="hidden sm:inline">Xóa tất cả</span>
@@ -175,19 +182,20 @@ const Notifications = () => {
       </div>
 
       {/* Filters */}
-      <div className="overflow-x-auto pb-2 -mx-2 px-2">
-        <div className="flex gap-2">
+      <div className="admin-card p-3">
+        <div className="flex gap-2 flex-wrap">
           {['all', 'info', 'success', 'warning', 'alert'].map(type => (
             <button
               key={type}
+              type="button"
               onClick={() => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${
                 filterType === type
-                  ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white'
-                  : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                  ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]'
+                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
               {getTypeLabel(type)}
@@ -197,7 +205,8 @@ const Notifications = () => {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div className="admin-card overflow-hidden min-h-[400px] flex flex-col">
+
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-neutral-400 gap-3">
             <Loader2
@@ -220,85 +229,94 @@ const Notifications = () => {
             <p className="text-sm">Hiện tại bạn không có thông báo mới nào.</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {notifications.map(notification => (
-              <div
-                key={notification._id}
-                className={`p-4 flex gap-4 transition-all group ${
-                  !notification.isRead
-                    ? 'bg-blue-50/30 dark:bg-blue-900/10'
-                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
-                }`}
-              >
+            <div className="divide-y divide-[var(--color-border)]">
+              {notifications.map(notification => (
                 <div
-                  className={`mt-1 flex-shrink-0 p-2.5 rounded-2xl ${getTypeColor(
-                    notification.type
-                  )} bg-opacity-50`}
+                  key={notification._id}
+                  className={`p-4 flex gap-4 transition-all group ${
+                    !notification.isRead
+                      ? 'bg-blue-50/30 dark:bg-blue-900/10'
+                      : 'hover:bg-[var(--color-surface-hover)]'
+                  }`}
                 >
-                  {getIcon(notification.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p
-                      className={`text-base leading-snug ${
-                        !notification.isRead
-                          ? 'font-bold text-neutral-900'
-                          : 'font-medium text-neutral-700'
-                      }`}
-                    >
-                      {notification.title}
-                    </p>
-                    <span className="text-xs font-medium text-neutral-400 whitespace-nowrap flex items-center gap-1.5 bg-neutral-50 px-2 py-1 rounded-full border border-neutral-100">
-                      <Clock size={12} />
-                      {new Date(notification.createdAt).toLocaleString('vi-VN')}
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed">
-                    {notification.message}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!notification.isRead && (
-                    <button
-                      onClick={() => handleMarkAsRead(notification._id)}
-                      className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-colors bg-white border border-neutral-100 shadow-sm"
-                      title="Đánh dấu đã đọc"
-                    >
-                      <CheckCircle size={18} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(notification._id)}
-                    className="p-2 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors bg-white border border-neutral-100 shadow-sm"
-                    title="Xóa"
+                  <div
+                    className={`mt-1 flex-shrink-0 p-2.5 rounded-2xl ${getTypeColor(
+                      notification.type
+                    )} bg-opacity-50`}
                   >
-                    <Trash2 size={18} />
-                  </button>
+                    {getIcon(notification.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p
+                        className={`text-base leading-snug ${
+                          !notification.isRead
+                            ? 'font-semibold text-[var(--color-content)]'
+                            : 'font-medium text-[var(--color-text-secondary)]'
+                        }`}
+                      >
+                        {notification.title}
+                      </p>
+                      <span className="text-xs font-medium text-[var(--color-text-tertiary)] whitespace-nowrap flex items-center gap-1.5 bg-[var(--color-surface-secondary)] px-2 py-1 rounded-full border border-[var(--color-border)]">
+                        <Clock size={12} />
+                        {new Date(notification.createdAt).toLocaleString('vi-VN')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[var(--color-text-secondary)] mt-1.5 leading-relaxed">
+                      {notification.message}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {!notification.isRead && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkAsRead(notification._id)}
+                        className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm"
+                        title="Đánh dấu đã đọc"
+                        aria-label="Đánh dấu đã đọc"
+                      >
+                        <CheckCircle size={18} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(notification._id)}
+                      className="p-2 text-[var(--color-text-tertiary)] hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm"
+                      title="Xóa"
+                      aria-label="Xóa"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
         )}
       </div>
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-neutral-100 shadow-sm">
-          <div className="text-sm text-neutral-500 px-2">
+        <div className="admin-card p-4 flex items-center justify-between">
+          <div className="text-sm text-[var(--color-text-secondary)] px-2">
             Đang hiển thị trang{' '}
-            <span className="font-bold text-neutral-900">{currentPage}</span> /{' '}
-            {pagination.pages}
+            <span className="font-semibold text-[var(--color-content)]">
+              {currentPage}
+            </span>{' '}
+            / {pagination.pages}
           </div>
           <div className="flex gap-2">
-            <button
+           <button
+              type="button"
               disabled={currentPage === 1 || isLoading}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-4 py-2 rounded-full border border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
+              className="px-4 py-2 rounded-full border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
             >
               <ChevronLeft size={16} />
               Trước
             </button>
             <button
+              type="button"
               disabled={
                 currentPage >= pagination.pages || isLoading || isPreviousData
               }
@@ -307,13 +325,14 @@ const Notifications = () => {
                   setCurrentPage(p => p + 1);
                 }
               }}
-              className="px-4 py-2 rounded-full border border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
+              className="px-4 py-2 rounded-full border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
             >
               Tiếp
               <ChevronRight size={16} />
             </button>
           </div>
         </div>
+
       )}
     </div>
   );

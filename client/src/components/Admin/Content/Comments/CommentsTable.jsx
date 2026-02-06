@@ -25,8 +25,8 @@ export default function CommentsTable({
   if (loading && comments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 size={32} className="animate-spin text-neutral-400 mb-4" />
-        <p className="text-neutral-500 font-medium text-sm">
+        <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)] mb-4" />
+        <p className="text-[var(--color-text-secondary)] font-medium text-sm">
           Đang tải bình luận...
         </p>
       </div>
@@ -35,43 +35,45 @@ export default function CommentsTable({
 
   if (comments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-neutral-400">
-        <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
+      <div className="flex flex-col items-center justify-center py-32 text-[var(--color-text-secondary)]">
+        <div className="w-16 h-16 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center mb-4">
           <MessageCircle size={32} />
         </div>
-        <p className="font-bold text-lg text-neutral-600 dark:text-neutral-300">
+        <p className="font-semibold text-lg text-[var(--color-text-secondary)]">
           Không tìm thấy bình luận nào
         </p>
       </div>
     );
   }
 
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-secondary)]">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Tác giả
             </th>
-            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider w-[40%]">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] w-[40%]">
               Nội dung
             </th>
-            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Trạng thái
             </th>
-            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Tương tác
             </th>
-            <th className="px-5 py-3.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Thời gian
             </th>
-            <th className="px-5 py-3.5 text-right text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <th className="px-5 py-3 text-right text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Hành động
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+        <tbody className="divide-y divide-[var(--color-border)]">
+
           {comments.map(comment => {
             const UserAvatar = comment.user?.avatar;
             const UserName = comment.user?.username || 'Người dùng';
@@ -80,8 +82,9 @@ export default function CommentsTable({
             return (
               <tr
                 key={comment._id || comment.id}
-                className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors group"
+                className="hover:bg-[var(--color-surface-hover)] transition-colors group"
               >
+
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <img
@@ -118,13 +121,14 @@ export default function CommentsTable({
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusStyle(
-                      comment.status || 'active'
-                    )}`}
-                  >
-                    {getStatusText(comment.status || 'active')}
-                  </span>
+                    <span
+                      className={`admin-pill uppercase tracking-wide border ${getStatusStyle(
+                        comment.status || 'active'
+                      )}`}
+                    >
+                      {getStatusText(comment.status || 'active')}
+                    </span>
+
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
@@ -155,6 +159,7 @@ export default function CommentsTable({
                 <td className="px-5 py-3.5 text-right">
                   <div className="relative inline-block">
                     <button
+                      type="button"
                       onClick={() =>
                         setActiveDropdown(
                           activeDropdown === (comment._id || comment.id)
@@ -171,23 +176,25 @@ export default function CommentsTable({
                       aria-expanded={
                         activeDropdown === (comment._id || comment.id)
                       }
-                      className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500"
+                      aria-label="Tùy chọn"
+                      className="p-2 hover:bg-[var(--color-surface-hover)] rounded-lg transition-colors text-[var(--color-text-secondary)]"
                     >
-                      <MoreHorizontal size={18} />
+                      <MoreHorizontal size={18} strokeWidth={1.6} />
                     </button>
 
                     {activeDropdown === (comment._id || comment.id) && (
                       <div
                         role="menu"
-                        className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 animate-scale-in"
+                        className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl shadow-xl border border-[var(--color-border)] py-1.5 z-10 animate-scale-in"
                       >
                         <button
+                          type="button"
                           onClick={() => {
                             onViewDetails(comment);
                             setActiveDropdown(null);
                           }}
                           role="menuitem"
-                          className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-300 transition-colors"
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-text-secondary)] transition-colors"
                         >
                           <Eye size={16} />
                           Xem chi tiết
@@ -195,12 +202,13 @@ export default function CommentsTable({
                         {(comment.status === 'hidden' ||
                           comment.status === 'flagged') && (
                           <button
+                            type="button"
                             onClick={() => {
                               onModerate(comment, 'active');
                               setActiveDropdown(null);
                             }}
                             role="menuitem"
-                            className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-emerald-600 transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-emerald-600 transition-colors"
                           >
                             <CheckCircle size={16} />
                             Khôi phục
@@ -208,25 +216,27 @@ export default function CommentsTable({
                         )}
                         {comment.status !== 'hidden' && (
                           <button
+                            type="button"
                             onClick={() => {
                               onModerate(comment, 'hidden');
                               setActiveDropdown(null);
                             }}
                             role="menuitem"
-                            className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-amber-600 transition-colors"
+                            className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-amber-600 transition-colors"
                           >
                             <Flag size={16} />
                             Ẩn bình luận
                           </button>
                         )}
-                        <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1 mx-2" />
+                        <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
                         <button
+                          type="button"
                           onClick={() => {
                             onDelete(comment);
                             setActiveDropdown(null);
                           }}
                           role="menuitem"
-                          className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-rose-600 transition-colors"
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 text-rose-600 transition-colors"
                         >
                           <Trash2 size={16} />
                           Xóa vĩnh viễn
@@ -234,6 +244,7 @@ export default function CommentsTable({
                       </div>
                     )}
                   </div>
+
                 </td>
               </tr>
             );

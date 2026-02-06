@@ -95,31 +95,36 @@ const SystemHealth = () => {
   ];
 
   return (
-    <div className="space-y-5" role="region" aria-label="System health">
+    <div className="admin-page" role="region" aria-label="System health">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-neutral-800 dark:text-white flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Hệ thống
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)] flex items-center gap-2">
             <Activity size={20} strokeWidth={1.5} />
             Sức khỏe hệ thống
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Trạng thái và hiệu suất máy chủ
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-neutral-500 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] bg-[var(--color-surface-secondary)] px-3 py-1.5 rounded-lg border border-[var(--color-border)] flex items-center gap-1.5">
             <Clock size={12} />
             {lastRefresh.toLocaleTimeString()}
           </span>
           <button
+            type="button"
             onClick={handleRefresh}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.currentTarget.blur();
               }
             }}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+            aria-label="Làm mới trạng thái hệ thống"
           >
             <RefreshCcw
               size={18}
@@ -132,78 +137,78 @@ const SystemHealth = () => {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="admin-card p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-neutral-500 uppercase">
+              <p className="text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                 Trạng thái
               </p>
-              <p className="text-base font-semibold text-neutral-800 dark:text-white">
+              <p className="text-base font-semibold text-[var(--color-content)]">
                 Ổn định
               </p>
             </div>
           </div>
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
+          <div className="w-full bg-[var(--color-surface-secondary)] rounded-full h-1.5">
             <div className="bg-emerald-500 h-1.5 rounded-full w-[95%]"></div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="admin-card p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400">
               <Cpu size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-neutral-500 uppercase">
+              <p className="text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                 CPU
               </p>
-              <p className="text-base font-semibold text-neutral-800 dark:text-white">
+              <p className="text-base font-semibold text-[var(--color-content)]">
                 45%
               </p>
             </div>
           </div>
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
+          <div className="w-full bg-[var(--color-surface-secondary)] rounded-full h-1.5">
             <div className="bg-blue-500 h-1.5 rounded-full w-[45%]"></div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="admin-card p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-neutral-200 dark:bg-neutral-800 rounded-xl text-neutral-700 dark:text-neutral-300">
               <BarChart3 size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-neutral-500 uppercase">
+              <p className="text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                 Memory
               </p>
-              <p className="text-base font-semibold text-neutral-800 dark:text-white">
+              <p className="text-base font-semibold text-[var(--color-content)]">
                 2.4 GB
               </p>
             </div>
           </div>
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
+          <div className="w-full bg-[var(--color-surface-secondary)] rounded-full h-1.5">
             <div className="bg-neutral-900 dark:bg-white h-1.5 rounded-full w-[60%]"></div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+        <div className="admin-card p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-xl text-amber-600 dark:text-amber-400">
               <AlertTriangle size={18} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-neutral-500 uppercase">
+              <p className="text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                 Errors
               </p>
-              <p className="text-base font-semibold text-neutral-800 dark:text-white">
+              <p className="text-base font-semibold text-[var(--color-content)]">
                 0
               </p>
             </div>
           </div>
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
+          <div className="w-full bg-[var(--color-surface-secondary)] rounded-full h-1.5">
             <div className="bg-amber-500 h-1.5 rounded-full w-[0%]"></div>
           </div>
         </div>
@@ -211,7 +216,7 @@ const SystemHealth = () => {
 
       {/* Services */}
       <div>
-        <h3 className="text-base font-semibold text-neutral-800 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-base font-semibold text-[var(--color-content)] mb-4 flex items-center gap-2">
           <Server size={18} strokeWidth={1.5} />
           Dịch vụ
         </h3>
@@ -219,14 +224,14 @@ const SystemHealth = () => {
           {services.map((service, index) => (
             <div
               key={index}
-              className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-100 dark:border-neutral-800 hover:shadow-sm transition-shadow"
+              className="admin-card p-4 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300">
+                  <div className="p-2 bg-[var(--color-surface-secondary)] rounded-xl text-[var(--color-text-secondary)]">
                     <service.icon size={18} strokeWidth={1.5} />
                   </div>
-                  <span className="font-medium text-neutral-800 dark:text-white">
+                  <span className="font-medium text-[var(--color-content)]">
                     {service.name}
                   </span>
                 </div>
@@ -242,16 +247,16 @@ const SystemHealth = () => {
               <div className="space-y-2 text-sm">
                 {service.uptime && (
                   <div className="flex justify-between">
-                    <span className="text-neutral-500">Uptime</span>
-                    <span className="font-medium text-neutral-700 dark:text-neutral-200">
+                    <span className="text-[var(--color-text-secondary)]">Uptime</span>
+                    <span className="font-medium text-[var(--color-content)]">
                       {formatUptime(service.uptime)}
                     </span>
                   </div>
                 )}
                 {service.latency && (
                   <div className="flex justify-between">
-                    <span className="text-neutral-500">Latency</span>
-                    <span className="font-medium text-neutral-700 dark:text-neutral-200">
+                    <span className="text-[var(--color-text-secondary)]">Latency</span>
+                    <span className="font-medium text-[var(--color-content)]">
                       {service.latency}
                     </span>
                   </div>
@@ -262,6 +267,7 @@ const SystemHealth = () => {
         </div>
       </div>
     </div>
+
   );
 };
 

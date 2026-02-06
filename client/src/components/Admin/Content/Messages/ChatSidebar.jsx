@@ -30,14 +30,14 @@ const ChatSidebar = ({
         selectedChat ? 'hidden md:flex' : 'flex'
       }`}
     >
-      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
-        <h2 className="text-lg font-bold text-neutral-900 dark:text-white mb-3">
+      <div className="p-4 border-b border-[var(--color-border)]">
+        <h2 className="text-lg font-semibold text-[var(--color-content)] mb-3">
           Tin nhắn
         </h2>
         <div className="relative">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
             type="text"
@@ -45,21 +45,23 @@ const ChatSidebar = ({
             value={searchTerm}
             aria-label="Search conversations"
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none text-sm focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all"
+            className="admin-input w-full pl-9"
           />
         </div>
       </div>
 
+
       <div className="flex-1 overflow-y-auto">
         {loading && !conversations ? (
           <div className="flex justify-center p-4">
-            <Loader2 className="animate-spin" />
+            <Loader2 className="animate-spin text-[var(--color-text-tertiary)]" />
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="p-4 text-center text-neutral-500 text-sm">
+          <div className="p-4 text-center text-[var(--color-text-secondary)] text-sm">
             Không tìm thấy cuộc trò chuyện
           </div>
         ) : (
+
           filteredConversations.map(chat => {
             const participant =
               chat.participants?.find(p => p._id !== currentUser?._id) ||
@@ -80,12 +82,13 @@ const ChatSidebar = ({
                 onKeyDown={event => handleConversationKeyDown(event, chat)}
                 role="button"
                 tabIndex={0}
-                className={`p-3 flex gap-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors ${
+                className={`p-3 flex gap-3 cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors ${
                   selectedChat?._id === chat._id
-                    ? 'bg-neutral-100 dark:bg-neutral-800'
+                    ? 'bg-[var(--color-surface-secondary)]'
                     : ''
                 }`}
               >
+
                 <img
                   src={avatar}
                   alt={name}

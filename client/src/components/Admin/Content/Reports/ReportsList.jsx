@@ -48,7 +48,7 @@ export default function ReportsList({
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900">
+    <div className="space-y-3">
       {reports.map(report => {
         const reporter = report.reporter || report.reportedBy || {};
         const targetType = report.targetType || report.target?.type || 'post';
@@ -62,8 +62,9 @@ export default function ReportsList({
         return (
           <div
             key={report._id || report.id}
-            className="p-4 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 rounded-2xl mb-2 bg-white dark:bg-neutral-900 shadow-sm"
+            className="admin-card p-4 hover:bg-[var(--color-surface-hover)] transition-colors duration-200"
           >
+
             <div className="flex items-start gap-4">
               {/* Reporter Avatar */}
               <div className="relative flex-shrink-0">
@@ -86,9 +87,10 @@ export default function ReportsList({
                         {reporter.name || reporter.username || 'Ẩn danh'}
                       </h3>
                       <span className="text-neutral-500 text-sm">báo cáo</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs font-medium">
+                      <span className="admin-chip">
                         {getTargetTypeText(targetType)}
                       </span>
+
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400 font-medium">
                       <span className="flex items-center gap-1">
@@ -108,16 +110,18 @@ export default function ReportsList({
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(
+                      className={`admin-pill ${getStatusStyle(
                         report.status || 'pending'
                       )}`}
                     >
                       {getStatusText(report.status || 'pending')}
                     </span>
 
+
                     {/* Actions Dropdown */}
                     <div className="relative">
                       <button
+                        type="button"
                         onClick={() =>
                           setActiveDropdown(
                             activeDropdown === (report._id || report.id)
@@ -134,31 +138,34 @@ export default function ReportsList({
                         aria-expanded={
                           activeDropdown === (report._id || report.id)
                         }
-                        className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full transition-colors text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                        aria-label="Tùy chọn"
+                        className="p-1.5 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-tertiary)]"
                       >
-                        <MoreHorizontal size={18} />
+                        <MoreHorizontal size={18} strokeWidth={1.6} />
                       </button>
 
                       {activeDropdown === (report._id || report.id) && (
                         <div
                           role="menu"
-                          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in"
+                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in border border-[var(--color-border)]"
                         >
                           <button
+                            type="button"
                             onClick={() => {
                               onViewDetails(report);
                               setActiveDropdown(null);
                             }}
                             role="menuitem"
-                            className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800/50 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-300 transition-colors"
+                            className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-text-secondary)] transition-colors"
                           >
                             <Eye size={16} />
                             Xem chi tiết
                           </button>
                           {(report.status === 'pending' || !report.status) && (
                             <>
-                              <div className="h-px bg-neutral-100/50 dark:bg-neutral-800/20 my-1 mx-2" />
+                              <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
                               <button
+                                type="button"
                                 onClick={() => {
                                   onStartReview(report);
                                   setActiveDropdown(null);
@@ -170,6 +177,7 @@ export default function ReportsList({
                                 Xem xét
                               </button>
                               <button
+                                type="button"
                                 onClick={() => {
                                   onOpenStatusModal(report, 'resolved');
                                   setActiveDropdown(null);
@@ -181,6 +189,7 @@ export default function ReportsList({
                                 Chấp nhận
                               </button>
                               <button
+                                type="button"
                                 onClick={() => {
                                   onOpenStatusModal(report, 'rejected');
                                   setActiveDropdown(null);
@@ -196,16 +205,18 @@ export default function ReportsList({
                         </div>
                       )}
                     </div>
+
                   </div>
                 </div>
 
                 {/* Reason Badge */}
                 <div className="mb-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-medium">
+                  <span className="admin-pill bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-semibold">
                     <span className="font-semibold">Lý do:</span>{' '}
                     {report.reason || report.type || 'Vi phạm'}
                   </span>
                 </div>
+
 
                 {/* Description */}
                 {report.description && (
