@@ -3,8 +3,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   RefreshCcw,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Filter,
 } from 'lucide-react';
@@ -19,6 +17,7 @@ import ReportStats from './ReportStats';
 import ReportsList from './ReportsList';
 import ReportDetailModal from './ReportDetailModal';
 import ReportStatusModal from './ReportStatusModal';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 export default function Reports() {
   const reportsSearchId = useId();
@@ -266,32 +265,14 @@ export default function Reports() {
       </div>
 
       {/* Pagination */}
-      <div className="admin-card p-3 flex items-center justify-between">
-        <span className="text-sm text-[var(--color-text-secondary)]">
-          Trang {currentPage} / {pagination?.pages || 1}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={currentPage <= 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="px-4 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
-            {currentPage}
-          </div>
-          <button
-            type="button"
-            disabled={currentPage >= (pagination?.pages || 1)}
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={pagination?.pages || 1}
+        canPrev={currentPage > 1}
+        canNext={currentPage < (pagination?.pages || 1)}
+        onPrev={() => handlePageChange(currentPage - 1)}
+        onNext={() => handlePageChange(currentPage + 1)}
+      />
 
 
       {/* View Report Modal */}

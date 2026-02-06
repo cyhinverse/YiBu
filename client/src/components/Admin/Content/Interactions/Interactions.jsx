@@ -2,14 +2,13 @@ import { useId, useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Activity,
   RefreshCcw,
   Filter,
 } from 'lucide-react';
 import { useAdminInteractions } from '@/hooks/useAdminQuery';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 import InteractionStats from './InteractionStats';
 import InteractionsList from './InteractionsList';
@@ -147,43 +146,26 @@ export default function Interactions() {
 
       {/* Pagination */}
       {interactionsList.length > 0 && (
-        <div className="admin-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm font-medium text-[var(--color-text-secondary)]">
-            Hiển thị{' '}
-            <span className="font-semibold text-[var(--color-content)]">
-              {interactionsList.length}
-            </span>{' '}
-            /{' '}
-            <span className="font-semibold text-[var(--color-content)]">
-              {pagination?.total || 0}
-            </span>{' '}
-            tương tác
-          </p>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={currentPage === 1 || loading}
-              onClick={() => handlePageChange(currentPage - 1)}
-              className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            <div className="h-8 w-8 flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
-              {currentPage}
-            </div>
-
-            <button
-              type="button"
-              disabled={!pagination?.hasMore || loading}
-              onClick={() => handlePageChange(currentPage + 1)}
-              className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-secondary)]"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
+        <AdminPagination
+          currentPage={currentPage}
+          label={
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              Hiển thị{' '}
+              <span className="font-semibold text-[var(--color-content)]">
+                {interactionsList.length}
+              </span>{' '}
+              /{' '}
+              <span className="font-semibold text-[var(--color-content)]">
+                {pagination?.total || 0}
+              </span>{' '}
+              tương tác
+            </span>
+          }
+          canPrev={currentPage > 1 && !loading}
+          canNext={!!pagination?.hasMore && !loading}
+          onPrev={() => handlePageChange(currentPage - 1)}
+          onNext={() => handlePageChange(currentPage + 1)}
+        />
       )}
     </div>
 

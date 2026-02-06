@@ -3,8 +3,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   RefreshCcw,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Filter,
 } from 'lucide-react';
@@ -21,6 +19,7 @@ import {
   ModeratePostModal,
   PostReportsModal,
 } from './PostActionModal';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 export default function Posts() {
   const postsSearchId = useId();
@@ -261,32 +260,14 @@ export default function Posts() {
       </div>
 
       {/* Pagination */}
-      <div className="admin-card p-3 flex items-center justify-between">
-        <span className="text-sm text-[var(--color-text-secondary)]">
-          Trang {currentPage} / {pagination?.pages || 1}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={currentPage <= 1 || loading}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="px-4 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
-            {currentPage}
-          </div>
-          <button
-            type="button"
-            disabled={currentPage >= (pagination?.pages || 1) || loading}
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={pagination?.pages || 1}
+        canPrev={currentPage > 1 && !loading}
+        canNext={currentPage < (pagination?.pages || 1) && !loading}
+        onPrev={() => handlePageChange(currentPage - 1)}
+        onNext={() => handlePageChange(currentPage + 1)}
+      />
 
 
       {/* Modals */}

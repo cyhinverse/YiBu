@@ -11,8 +11,6 @@ import {
   AlertCircle,
   Sparkles,
   Bell,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import {
   useNotificationsPage,
@@ -23,6 +21,7 @@ import {
   useDeleteAllNotifications,
 } from '@/hooks/useNotificationQuery';
 import { notify } from '@/utils/notify';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 const Notifications = () => {
   const [filterType, setFilterType] = useState('all');
@@ -285,41 +284,19 @@ const Notifications = () => {
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <div className="admin-card p-4 flex items-center justify-between">
-          <div className="text-sm text-[var(--color-text-secondary)] px-2">
-            Đang hiển thị trang{' '}
-            <span className="font-semibold text-[var(--color-content)]">
-              {currentPage}
-            </span>{' '}
-            / {pagination.pages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={currentPage === 1 || isLoading}
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-4 py-2 rounded-full bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-colors"
-            >
-              <ChevronLeft size={16} />
-              Trước
-            </button>
-            <button
-              type="button"
-              disabled={
-                currentPage >= pagination.pages || isLoading || isPreviousData
-              }
-              onClick={() => {
-                if (!isPreviousData && currentPage < pagination.pages) {
-                  setCurrentPage(p => p + 1);
-                }
-              }}
-              className="px-4 py-2 rounded-full bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-colors"
-            >
-              Tiếp
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          label={`Trang ${currentPage} / ${pagination.pages}`}
+          canPrev={currentPage > 1 && !isLoading}
+          canNext={!isPreviousData && currentPage < pagination.pages && !isLoading}
+          onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
+          onNext={() => {
+            if (!isPreviousData && currentPage < pagination.pages) {
+              setCurrentPage(p => p + 1);
+            }
+          }}
+        />
 
       )}
     </div>

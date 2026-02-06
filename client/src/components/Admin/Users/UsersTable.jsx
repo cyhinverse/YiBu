@@ -7,8 +7,6 @@ import {
   Check,
   UserPlus,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   MoreVertical,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
@@ -16,9 +14,6 @@ import StatusBadge from './StatusBadge';
 const UsersTable = ({
   users,
   loading,
-  currentPage,
-  pagination,
-  onPageChange,
   onViewUser,
   onBanUser,
   onUnbanUser,
@@ -205,34 +200,6 @@ const UsersTable = ({
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-secondary)]">
-              <span className="text-sm text-[var(--color-text-secondary)]">
-                Trang {currentPage} / {pagination?.pages || 1}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage <= 1}
-                  className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="px-3 py-1 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg text-sm font-semibold">
-                  {currentPage}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage >= (pagination?.pages || 1)}
-                  className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
 
         </>
       )}

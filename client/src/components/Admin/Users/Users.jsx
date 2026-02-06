@@ -15,6 +15,7 @@ import {
 import UsersTable from './UsersTable';
 import UserDetailModal from './UserDetailModal';
 import AdminActionModal from './AdminActionModal';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 const Users = () => {
   const usersSearchId = useId();
@@ -226,9 +227,6 @@ const Users = () => {
         <UsersTable
           users={users}
           loading={usersLoading}
-          currentPage={currentPage}
-          pagination={pagination}
-          onPageChange={newPage => setCurrentPage(newPage)}
           onViewUser={handleViewUser}
           onBanUser={handleBanUser}
           onUnbanUser={handleUnbanUser}
@@ -236,6 +234,15 @@ const Users = () => {
           onDeleteUser={handleDeleteUser}
         />
       </div>
+
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={pagination?.pages || 1}
+        canPrev={currentPage > 1 && !usersLoading}
+        canNext={currentPage < (pagination?.pages || 1) && !usersLoading}
+        onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
+        onNext={() => setCurrentPage(p => p + 1)}
+      />
 
 
       {/* User Detail Modal */}

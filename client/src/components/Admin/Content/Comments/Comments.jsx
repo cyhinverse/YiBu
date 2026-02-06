@@ -3,8 +3,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   RefreshCcw,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   ChevronDown,
 } from 'lucide-react';
@@ -17,6 +15,7 @@ import { notify } from '@/utils/notify';
 
 import CommentsTable from './CommentsTable';
 import { DeleteCommentModal, CommentDetailModal } from './CommentActionModal';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 export default function Comments() {
   const commentsSearchId = useId();
@@ -196,32 +195,14 @@ export default function Comments() {
       </div>
 
       {/* Pagination */}
-      <div className="admin-card p-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-          Trang {currentPage} / {totalPages}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={currentPage <= 1 || loading}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="w-9 h-9 flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
-            {currentPage}
-          </div>
-          <button
-            type="button"
-            disabled={currentPage >= totalPages || loading}
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        canPrev={currentPage > 1 && !loading}
+        canNext={currentPage < totalPages && !loading}
+        onPrev={() => handlePageChange(currentPage - 1)}
+        onNext={() => handlePageChange(currentPage + 1)}
+      />
 
 
       {/* Modals */}

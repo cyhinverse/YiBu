@@ -4,12 +4,11 @@ import {
   Search,
   UserX,
   Check,
-  ChevronLeft,
-  ChevronRight,
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
 import { useBannedUsers, useUnbanUser } from '@/hooks/useAdminQuery';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 const BannedAccounts = () => {
   const bannedSearchId = useId();
@@ -258,40 +257,20 @@ const BannedAccounts = () => {
               </table>
             </div>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface-secondary)]">
-                <span className="text-sm text-[var(--color-text-secondary)] font-medium">
-                  Trang{' '}
-                  <span className="text-[var(--color-content)] font-semibold">
-                    {currentPage}
-                  </span>{' '}
-                  / {pagination.totalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1 || loading}
-                    className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 text-[var(--color-text-secondary)] transition-colors"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= pagination.totalPages || loading}
-                    className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] disabled:opacity-30 text-[var(--color-text-secondary)] transition-colors"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-            )}
-
           </>
         )}
       </div>
+
+      {bannedUsers.length > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={pagination.totalPages}
+          canPrev={currentPage > 1 && !loading}
+          canNext={currentPage < pagination.totalPages && !loading}
+          onPrev={() => handlePageChange(currentPage - 1)}
+          onNext={() => handlePageChange(currentPage + 1)}
+        />
+      )}
 
       {/* Unban Modal */}
       {showUnbanModal && selectedUser && (
