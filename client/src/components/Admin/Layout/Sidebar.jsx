@@ -44,7 +44,7 @@ const SidebarItem = ({ item, collapsed, activePage, setActivePage }) => {
       }}
       className={`group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 ${
         isActive
-          ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-sm'
+          ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
           : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-content)]'
       } ${collapsed ? 'justify-center' : ''}`}
       title={collapsed ? item.label : undefined}

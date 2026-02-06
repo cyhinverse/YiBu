@@ -40,7 +40,7 @@ export default function InteractionsList({ interactions, loading }) {
       {interactions.map(interaction => (
         <div
           key={interaction._id}
-          className="group flex flex-col sm:flex-row gap-4 p-4 rounded-2xl bg-[var(--color-surface-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] hover:shadow-md transition-all duration-300"
+          className="group flex flex-col sm:flex-row gap-4 p-4 rounded-2xl hover:bg-[var(--color-surface)] transition-colors"
         >
 
           {/* User Avatar with Action Icon */}
@@ -53,9 +53,9 @@ export default function InteractionsList({ interactions, loading }) {
                 )}&background=random`
               }
               alt={interaction.user?.name || 'User'}
-              className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 shadow-sm"
+              className="w-12 h-12 rounded-full object-cover bg-[var(--color-surface-secondary)]"
             />
-            <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-neutral-100 dark:border-neutral-800">
+            <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-[var(--color-surface-secondary)]">
               {getInteractionIcon(interaction.type)}
             </div>
           </div>
@@ -64,28 +64,28 @@ export default function InteractionsList({ interactions, loading }) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-col gap-1 mb-2">
               <div className="flex items-center flex-wrap gap-1.5 text-sm">
-                <span className="font-bold text-neutral-900 dark:text-white cursor-pointer hover:underline">
+                <span className="font-bold text-[var(--color-content)] cursor-pointer hover:underline">
                   {interaction.user?.name || 'Người dùng'}
                 </span>
-                <span className="text-neutral-500 text-xs font-medium">
+                <span className="text-[var(--color-text-tertiary)] text-xs font-medium">
                   @{interaction.user?.username || 'unknown'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                 <span>{getInteractionText(interaction.type)}</span>
                 {interaction.target?.type === 'user' ? (
                   <>
-                    <ArrowRight size={12} className="text-neutral-400" />
-                    <span className="font-bold text-neutral-900 dark:text-white">
+                    <ArrowRight size={12} className="text-[var(--color-text-tertiary)]" />
+                    <span className="font-bold text-[var(--color-content)]">
                       {interaction.target.name}
                     </span>
                   </>
                 ) : interaction.target ? (
                   <>
-                    <ArrowRight size={12} className="text-neutral-400" />
+                    <ArrowRight size={12} className="text-[var(--color-text-tertiary)]" />
                     <span>bài viết của</span>
-                    <span className="font-bold text-neutral-900 dark:text-white">
+                    <span className="font-bold text-[var(--color-content)]">
                       {interaction.target.author}
                     </span>
                   </>
@@ -95,20 +95,20 @@ export default function InteractionsList({ interactions, loading }) {
 
             {/* Content Preview */}
             {(interaction.content || interaction.target?.preview) && (
-              <div className="p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 mb-3 group-hover:border-neutral-300 dark:group-hover:border-neutral-700 transition-colors">
+              <div className="p-4 bg-[var(--color-surface-secondary)] rounded-2xl mb-3">
                 {interaction.target?.preview && (
-                  <div className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-bold px-2 py-0.5 rounded-full inline-block mb-2">
+                  <div className="text-[10px] bg-[var(--color-surface)] text-[var(--color-text-tertiary)] font-bold px-2 py-0.5 rounded-full inline-block mb-2">
                     PREVIEW
                   </div>
                 )}
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 italic font-medium line-clamp-2">
+                <p className="text-sm text-[var(--color-text-secondary)] italic font-medium line-clamp-2">
                   "{interaction.content || interaction.target?.preview}"
                 </p>
               </div>
             )}
 
             {/* Footer: Meta Info */}
-            <div className="flex items-center gap-4 text-xs font-bold text-neutral-400 mt-2">
+            <div className="flex items-center gap-4 text-xs font-bold text-[var(--color-text-tertiary)] mt-2">
               <div className="flex items-center gap-1.5">
                 <Calendar size={12} />
                 <span>{formatTime(interaction.createdAt)}</span>
@@ -116,12 +116,12 @@ export default function InteractionsList({ interactions, loading }) {
 
               {interaction.sentiment && (
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider border ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider ${
                     interaction.sentiment === 'positive'
-                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                       : interaction.sentiment === 'negative'
-                      ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800'
-                      : 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
+                      ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]'
                   }`}
                 >
                   {interaction.sentiment === 'positive'
@@ -134,8 +134,8 @@ export default function InteractionsList({ interactions, loading }) {
 
               {interaction.weight !== undefined && (
                 <div className="ml-auto flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Activity size={12} className="text-neutral-500" />
-                  <span className="text-neutral-500">
+                  <Activity size={12} className="text-[var(--color-text-tertiary)]" />
+                  <span className="text-[var(--color-text-tertiary)]">
                     AI Score: {interaction.weight}
                   </span>
                 </div>

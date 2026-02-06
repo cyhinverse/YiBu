@@ -57,8 +57,8 @@ const UserGrowthChart = ({ data }) => {
               contentStyle={{
                 backgroundColor: '#ffffff',
                 borderRadius: '12px',
-                border: '1px solid rgba(226, 232, 240, 0.6)',
-                boxShadow: '0 8px 20px -8px rgba(15, 23, 42, 0.25)',
+                border: 'none',
+                boxShadow: 'none',
                 padding: '10px 14px',
               }}
               itemStyle={{

@@ -76,7 +76,7 @@ const AdminLayout = ({ children, activePage, setActivePage }) => {
             className="absolute inset-0 bg-black/25"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 admin-card shadow-2xl">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 admin-card">
             <Sidebar
               activePage={activePage}
               setActivePage={setActivePage}

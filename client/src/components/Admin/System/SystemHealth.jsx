@@ -111,7 +111,7 @@ const SystemHealth = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)] bg-[var(--color-surface-secondary)] px-3 py-1.5 rounded-lg border border-[var(--color-border)] flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] bg-[var(--color-surface-secondary)] px-3 py-1.5 rounded-lg flex items-center gap-1.5">
             <Clock size={12} />
             {lastRefresh.toLocaleTimeString()}
           </span>
@@ -224,7 +224,7 @@ const SystemHealth = () => {
           {services.map((service, index) => (
             <div
               key={index}
-              className="admin-card p-4 hover:shadow-sm transition-shadow"
+              className="admin-card p-4"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">

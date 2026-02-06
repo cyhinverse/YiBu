@@ -43,7 +43,7 @@ const ChatWindow = ({
       }`}
     >
       {/* Header */}
-      <div className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 bg-[var(--color-surface)] z-10">
+      <div className="h-12 flex items-center justify-between px-4 bg-[var(--color-surface)] z-10">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -69,7 +69,7 @@ const ChatWindow = ({
               selectedChat.participants?.[0]?.name ||
               'Chat avatar'
             }
-            className="w-9 h-9 rounded-full object-cover border border-[var(--color-border)]"
+            className="w-9 h-9 rounded-full object-cover bg-[var(--color-surface-secondary)]"
           />
           <div>
             <h3 className="font-semibold text-sm text-[var(--color-content)]">
@@ -129,7 +129,7 @@ const ChatWindow = ({
                 className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                   isMe
                     ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-tr-none'
-                    : 'bg-[var(--color-surface)] text-[var(--color-content)] rounded-tl-none border border-[var(--color-border)]'
+                    : 'bg-[var(--color-surface)] text-[var(--color-content)] rounded-tl-none'
                 }`}
               >
                 <p>{msg.content}</p>
@@ -155,7 +155,7 @@ const ChatWindow = ({
       {/* Input */}
       <form
         onSubmit={handleSend}
-        className="p-3 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center gap-2"
+        className="p-3 bg-[var(--color-surface)] flex items-center gap-2"
       >
         <button
           type="button"

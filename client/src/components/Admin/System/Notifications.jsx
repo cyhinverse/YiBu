@@ -113,15 +113,15 @@ const Notifications = () => {
   const getTypeColor = type => {
     switch (type) {
       case 'info':
-        return 'bg-blue-50 text-blue-600 border-blue-100';
+        return 'bg-blue-50 text-blue-600';
       case 'success':
-        return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        return 'bg-emerald-50 text-emerald-600';
       case 'warning':
-        return 'bg-amber-50 text-amber-600 border-amber-100';
+        return 'bg-amber-50 text-amber-600';
       case 'alert':
-        return 'bg-rose-50 text-rose-600 border-rose-100';
+        return 'bg-rose-50 text-rose-600';
       default:
-        return 'bg-neutral-100 text-neutral-600 border-neutral-200';
+        return 'bg-neutral-100 text-neutral-600';
     }
   };
 
@@ -139,7 +139,7 @@ const Notifications = () => {
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 flex items-center gap-2">
             Bạn có{' '}
-            <span className="admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 border border-rose-100 dark:border-rose-800">
+            <span className="admin-pill bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400">
               {unreadCount}
             </span>{' '}
             thông báo chưa đọc
@@ -164,16 +164,16 @@ const Notifications = () => {
             type="button"
             onClick={handleMarkAllAsRead}
             disabled={unreadCount === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-full hover:bg-[var(--color-surface-hover)] transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface)] text-[var(--color-text-secondary)] rounded-full hover:bg-[var(--color-surface-hover)] transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check size={16} />
             <span className="hidden sm:inline">Đánh dấu tất cả</span>
-            </button>
+          </button>
           <button
             type="button"
             onClick={handleDeleteAll}
             disabled={notifications.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={16} />
             <span className="hidden sm:inline">Xóa tất cả</span>
@@ -192,10 +192,10 @@ const Notifications = () => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                 filterType === type
-                  ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]'
-                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
+                  ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
               {getTypeLabel(type)}
@@ -229,7 +229,7 @@ const Notifications = () => {
             <p className="text-sm">Hiện tại bạn không có thông báo mới nào.</p>
           </div>
         ) : (
-            <div className="divide-y divide-[var(--color-border)]">
+            <div>
               {notifications.map(notification => (
                 <div
                   key={notification._id}
@@ -257,7 +257,7 @@ const Notifications = () => {
                       >
                         {notification.title}
                       </p>
-                      <span className="text-xs font-medium text-[var(--color-text-tertiary)] whitespace-nowrap flex items-center gap-1.5 bg-[var(--color-surface-secondary)] px-2 py-1 rounded-full border border-[var(--color-border)]">
+                      <span className="text-xs font-medium text-[var(--color-text-tertiary)] whitespace-nowrap flex items-center gap-1.5 bg-[var(--color-surface-secondary)] px-2 py-1 rounded-full">
                         <Clock size={12} />
                         {new Date(notification.createdAt).toLocaleString('vi-VN')}
                       </span>
@@ -271,7 +271,7 @@ const Notifications = () => {
                       <button
                         type="button"
                         onClick={() => handleMarkAsRead(notification._id)}
-                        className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm"
+                        className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-colors bg-[var(--color-surface)]"
                         title="Đánh dấu đã đọc"
                         aria-label="Đánh dấu đã đọc"
                       >
@@ -281,7 +281,7 @@ const Notifications = () => {
                     <button
                       type="button"
                       onClick={() => handleDelete(notification._id)}
-                      className="p-2 text-[var(--color-text-tertiary)] hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm"
+                      className="p-2 text-[var(--color-text-tertiary)] hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors bg-[var(--color-surface)]"
                       title="Xóa"
                       aria-label="Xóa"
                     >
@@ -306,11 +306,11 @@ const Notifications = () => {
             / {pagination.pages}
           </div>
           <div className="flex gap-2">
-           <button
+            <button
               type="button"
               disabled={currentPage === 1 || isLoading}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-4 py-2 rounded-full border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
+              className="px-4 py-2 rounded-full bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-colors"
             >
               <ChevronLeft size={16} />
               Trước
@@ -325,7 +325,7 @@ const Notifications = () => {
                   setCurrentPage(p => p + 1);
                 }
               }}
-              className="px-4 py-2 rounded-full border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-all"
+              className="px-4 py-2 rounded-full bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 font-medium text-sm transition-colors"
             >
               Tiếp
               <ChevronRight size={16} />

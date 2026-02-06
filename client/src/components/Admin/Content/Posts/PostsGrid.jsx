@@ -117,10 +117,7 @@ export default function PostsGrid({
           (hasMedia ? (mediaItems[0]?.type === 'video' ? 'video' : 'image') : 'text');
 
         return (
-          <div
-            key={post._id || post.id}
-            className="admin-card p-4 hover:shadow-md transition-all duration-300"
-          >
+          <div key={post._id || post.id} className="admin-card p-4">
             <div className="flex items-start gap-4">
               {/* Author Avatar */}
               <img
@@ -224,7 +221,7 @@ export default function PostsGrid({
                       {activeDropdown === (post._id || post.id) && (
                         <div
                           role="menu"
-                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl shadow-xl py-1.5 z-10 overflow-hidden animate-scale-in border border-[var(--color-border)]"
+                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl py-1.5 z-10 overflow-hidden animate-scale-in"
                         >
                           <button
                             type="button"
@@ -259,7 +256,7 @@ export default function PostsGrid({
                               </>
                             )}
                           </button>
-                          <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                          <div className="my-1 mx-2" />
                           <button
                             type="button"
                             onClick={() => {

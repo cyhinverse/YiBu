@@ -179,7 +179,7 @@ const BannedAccounts = () => {
                   </tr>
 
                 </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
+                <tbody>
                   {bannedUsers.map(user => (
                     <tr
                       key={user._id}
@@ -306,7 +306,7 @@ const BannedAccounts = () => {
             }
           }}
         >
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
+          <div className="admin-card w-full max-w-md rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
                 <Check size={32} />

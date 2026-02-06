@@ -216,7 +216,7 @@ const Dashboard = () => {
                         alt={user.username}
                         className="w-9 h-9 rounded-full object-cover"
                       />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[var(--color-surface)] rounded-full text-[9px] font-bold flex items-center justify-center shadow-sm text-[var(--color-text-secondary)]">
+                      <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[var(--color-surface)] rounded-full text-[9px] font-bold flex items-center justify-center text-[var(--color-text-secondary)]">
                         {index + 1}
                       </span>
                     </div>

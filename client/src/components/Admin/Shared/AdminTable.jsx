@@ -105,7 +105,7 @@ export default function AdminTable({
       )}
 
       {/* Table */}
-      <div className="admin-card overflow-hidden border border-[var(--color-border)]">
+      <div className="admin-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -143,7 +143,7 @@ export default function AdminTable({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
+            <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
                   <td

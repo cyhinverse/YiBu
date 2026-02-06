@@ -103,7 +103,7 @@ export default function PostDetailModal({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="yb-card w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden"
+        className="admin-card w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -132,10 +132,10 @@ export default function PostDetailModal({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 ${
+              className={`flex items-center gap-2 px-4 py-2.5 my-2 text-sm font-semibold rounded-xl transition-colors ${
                 activeTab === tab.id
-                  ? 'border-[var(--color-content)] text-[var(--color-content)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-content)]'
+                  ? 'bg-[var(--color-surface-secondary)] text-[var(--color-content)]'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-content)]'
               }`}
             >
               <tab.icon size={16} />
@@ -161,7 +161,7 @@ export default function PostDetailModal({
                       <img
                         src={author.avatar || '/images/default-avatar.png'}
                         alt={author.name || author.username || 'Author avatar'}
-                        className="w-12 h-12 yb-avatar shadow-sm"
+                        className="w-12 h-12 rounded-full object-cover bg-[var(--color-surface-secondary)]"
                       />
                       <div>
                         <h3 className="font-bold text-lg text-[var(--color-content)] tracking-tight">
@@ -176,7 +176,7 @@ export default function PostDetailModal({
                       </div>
                     </div>
 
-                    <div className="yb-card p-4 bg-[var(--color-surface-secondary)]">
+                    <div className="admin-card-muted p-4">
                       <p className="text-[var(--color-content)] font-medium text-base leading-relaxed whitespace-pre-wrap">
                         {post.content || post.caption || 'Không có nội dung'}
                       </p>
@@ -191,7 +191,7 @@ export default function PostDetailModal({
                         {mediaItems.map((media, idx) => (
                           <div
                             key={idx}
-                            className="relative group rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm"
+                            className="relative group rounded-2xl overflow-hidden bg-[var(--color-surface)]"
                           >
                             {media.type === 'video' ? (
                               <video
@@ -210,7 +210,7 @@ export default function PostDetailModal({
                               />
                             )}
                             {media.type === 'video' && (
-                              <div className="absolute top-3 left-3 yb-badge bg-[var(--color-surface)]/90 text-[var(--color-content)] shadow">
+                              <div className="absolute top-3 left-3 yb-badge bg-[var(--color-surface)]/90 text-[var(--color-content)]">
                                 <Video size={12} />
                                 Video
                               </div>
@@ -221,7 +221,7 @@ export default function PostDetailModal({
                     )}
 
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="yb-card flex flex-col items-center justify-center p-4 bg-[var(--color-surface-secondary)] shadow-sm">
+                      <div className="admin-card-muted flex flex-col items-center justify-center p-4">
                         <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                           <Heart size={12} /> Thích
                         </span>
@@ -229,7 +229,7 @@ export default function PostDetailModal({
                           {post.likesCount || 0}
                         </span>
                       </div>
-                      <div className="yb-card flex flex-col items-center justify-center p-4 bg-[var(--color-surface-secondary)] shadow-sm">
+                      <div className="admin-card-muted flex flex-col items-center justify-center p-4">
                         <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                           <MessageCircle size={12} /> Bình luận
                         </span>
@@ -237,7 +237,7 @@ export default function PostDetailModal({
                           {post.commentsCount || 0}
                         </span>
                       </div>
-                      <div className="yb-card flex flex-col items-center justify-center p-4 bg-[var(--color-surface-secondary)] shadow-sm">
+                      <div className="admin-card-muted flex flex-col items-center justify-center p-4">
                         <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                           <Share2 size={12} /> Chia sẻ
                         </span>
@@ -258,7 +258,7 @@ export default function PostDetailModal({
                 reports.map(report => (
                   <div
                     key={report._id}
-                    className="yb-card p-4 bg-[var(--color-surface-secondary)]"
+                    className="admin-card-muted p-4"
                   >
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center gap-2.5">
@@ -271,7 +271,7 @@ export default function PostDetailModal({
                         {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
-                    <p className="text-[var(--color-text-secondary)] font-medium text-sm leading-relaxed mb-4 italic p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
+                    <p className="text-[var(--color-text-secondary)] font-medium text-sm leading-relaxed mb-4 italic p-3 bg-[var(--color-surface)] rounded-xl">
                       "{report.description || 'Không có chi tiết bổ sung.'}"
                     </p>
                     <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export default function PostDetailModal({
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl shadow-sm border border-dashed border-[var(--color-border)]">
+                <div className="flex flex-col items-center justify-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl">
                   <div className="w-16 h-16 rounded-full bg-[var(--color-success)]/15 flex items-center justify-center mb-4 text-[var(--color-success)]">
                     <CheckCircle size={32} />
                   </div>
@@ -318,7 +318,7 @@ export default function PostDetailModal({
             onClick={() => {
               onToggleStatus(post);
             }}
-            className={`yb-btn flex-1 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
+            className={`yb-btn flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
               post.status === 'active'
                 ? 'bg-[var(--color-warning)] text-[var(--color-text-inverse)] hover:opacity-90'
                 : 'bg-[var(--color-success)] text-[var(--color-text-inverse)] hover:opacity-90'
@@ -338,7 +338,7 @@ export default function PostDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="yb-btn yb-btn-secondary px-8 py-3 rounded-xl font-bold text-sm shadow-sm"
+            className="yb-btn yb-btn-secondary px-8 py-3 rounded-xl font-bold text-sm"
           >
             Đóng
           </button>

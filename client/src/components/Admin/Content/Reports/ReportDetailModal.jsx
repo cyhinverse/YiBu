@@ -39,7 +39,7 @@ export default function ReportDetailModal({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="admin-card w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden"
+        className="admin-card w-full max-w-lg rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -59,7 +59,7 @@ export default function ReportDetailModal({
 
         <div className="p-4 overflow-y-auto max-h-[80vh]">
           {/* Reporter Info */}
-          <div className="flex items-center gap-4 mb-6 p-4 bg-[var(--color-surface-secondary)] rounded-2xl shadow-sm">
+          <div className="flex items-center gap-4 mb-6 p-4 bg-[var(--color-surface-secondary)] rounded-2xl">
             <img
               src={report.reporter?.avatar || '/images/default-avatar.png'}
               alt={
@@ -114,7 +114,7 @@ export default function ReportDetailModal({
               </p>
             </div>
             <div className="p-4 bg-[var(--color-surface-secondary)] rounded-2xl relative group">
-              <div className="absolute top-4 right-4 text-[10px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] bg-[var(--color-surface)] px-2 py-1 rounded-md shadow-sm">
+              <div className="absolute top-4 right-4 text-[10px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] bg-[var(--color-surface)] px-2 py-1 rounded-md">
                 {getTargetTypeText(report.target?.type)}
               </div>
               <p className="text-xs font-semibold text-[var(--color-text-tertiary)] mb-2 flex items-center gap-1.5">

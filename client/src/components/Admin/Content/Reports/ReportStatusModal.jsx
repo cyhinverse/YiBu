@@ -42,7 +42,7 @@ export default function ReportStatusModal({
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="admin-card w-full max-w-md shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden">
+      <div className="admin-card w-full max-w-md rounded-2xl transform animate-scale-in overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3.5 bg-[var(--color-surface-secondary)] flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">

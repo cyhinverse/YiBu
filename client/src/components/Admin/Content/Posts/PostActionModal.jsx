@@ -36,7 +36,7 @@ export function DeletePostModal({ isOpen, onClose, onConfirm, loading, post }) {
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="admin-card w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in">
+      <div className="admin-card w-full max-w-md p-4 rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
             <Trash2 size={24} />
@@ -112,7 +112,7 @@ export function ModeratePostModal({
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="admin-card w-full max-w-lg p-4 shadow-2xl rounded-2xl transform animate-scale-in">
+      <div className="admin-card w-full max-w-lg p-4 rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
           <div
             className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
@@ -152,7 +152,7 @@ export function ModeratePostModal({
             type="button"
             onClick={onConfirm}
             disabled={loading || (isHide && !reason.trim())}
-            className={`flex-1 py-3 rounded-xl font-semibold text-white shadow-lg transition-all flex items-center justify-center gap-2 text-sm ${
+            className={`flex-1 py-3 rounded-xl font-semibold text-white transition-colors flex items-center justify-center gap-2 text-sm ${
               isHide
                 ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400'
                 : 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400'
@@ -183,7 +183,7 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="admin-card w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden">
+      <div className="admin-card w-full max-w-2xl max-h-[80vh] flex flex-col rounded-2xl transform animate-scale-in overflow-hidden">
         <div className="p-4 bg-[var(--color-surface-secondary)] flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">
             Danh sách báo cáo
@@ -252,7 +252,7 @@ export function PostReportsModal({ isOpen, onClose, reports }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 rounded-xl font-semibold bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm shadow-sm"
+            className="w-full py-3 rounded-xl font-semibold bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm"
           >
             Đóng danh sách
           </button>

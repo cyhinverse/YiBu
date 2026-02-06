@@ -265,7 +265,7 @@ export default function Posts() {
           >
             <ChevronLeft size={20} />
           </button>
-          <div className="px-4 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold shadow-sm">
+          <div className="px-4 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-full text-sm font-semibold">
             {currentPage}
           </div>
           <button

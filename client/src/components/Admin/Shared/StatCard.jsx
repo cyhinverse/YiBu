@@ -25,7 +25,7 @@ const StatCard = ({
 
   return (
     <div
-      className="admin-card p-4 transition-all hover:shadow-sm"
+      className="admin-card p-4"
       role="group"
       aria-label={title}
     >

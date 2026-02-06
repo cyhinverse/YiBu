@@ -73,7 +73,7 @@ export default function ReportsList({
                   alt={reporter.name || reporter.username || 'Reporter'}
                   className="w-10 h-10 rounded-full object-cover"
                 />
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center text-neutral-500 shadow-sm">
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center text-[var(--color-text-tertiary)]">
                   {getTargetIcon(targetType)}
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function ReportsList({
                       {activeDropdown === (report._id || report.id) && (
                         <div
                           role="menu"
-                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl shadow-xl py-1.5 z-20 overflow-hidden animate-scale-in border border-[var(--color-border)]"
+                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl py-1.5 z-20 overflow-hidden animate-scale-in"
                         >
                           <button
                             type="button"
@@ -163,7 +163,7 @@ export default function ReportsList({
                           </button>
                           {(report.status === 'pending' || !report.status) && (
                             <>
-                              <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                              <div className="my-1 mx-2" />
                               <button
                                 type="button"
                                 onClick={() => {

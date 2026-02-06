@@ -51,7 +51,7 @@ export default function CommentsTable({
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-secondary)]">
+          <tr className="bg-[var(--color-surface-secondary)]">
             <th className="px-5 py-3 text-left text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
               Tác giả
             </th>
@@ -72,7 +72,7 @@ export default function CommentsTable({
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--color-border)]">
+        <tbody>
 
           {comments.map(comment => {
             const UserAvatar = comment.user?.avatar;
@@ -90,13 +90,13 @@ export default function CommentsTable({
                     <img
                       src={UserAvatar || '/images/default-avatar.png'}
                       alt={`${UserName} avatar`}
-                      className="w-10 h-10 rounded-full object-cover border border-neutral-200 dark:border-neutral-700 shadow-sm"
+                      className="w-10 h-10 rounded-full object-cover bg-[var(--color-surface-secondary)]"
                     />
                     <div>
-                      <div className="font-bold text-sm text-neutral-900 dark:text-white">
+                      <div className="font-bold text-sm text-[var(--color-content)]">
                         {UserName}
                       </div>
-                      <div className="text-xs text-neutral-500 font-medium">
+                      <div className="text-xs text-[var(--color-text-secondary)] font-medium">
                         {UserEmail}
                       </div>
                     </div>
@@ -104,7 +104,7 @@ export default function CommentsTable({
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex flex-col gap-1.5">
-                    <p className="text-sm text-neutral-700 dark:text-neutral-300 font-medium line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-[var(--color-text-secondary)] font-medium line-clamp-2 leading-relaxed">
                       {comment.content}
                     </p>
                     {comment.postId && (
@@ -121,13 +121,13 @@ export default function CommentsTable({
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
-                    <span
-                      className={`admin-pill uppercase tracking-wide border ${getStatusStyle(
-                        comment.status || 'active'
-                      )}`}
-                    >
-                      {getStatusText(comment.status || 'active')}
-                    </span>
+                      <span
+                        className={`admin-pill uppercase tracking-wide ${getStatusStyle(
+                          comment.status || 'active'
+                        )}`}
+                      >
+                        {getStatusText(comment.status || 'active')}
+                      </span>
 
                 </td>
                 <td className="px-5 py-3.5">
@@ -185,7 +185,7 @@ export default function CommentsTable({
                     {activeDropdown === (comment._id || comment.id) && (
                       <div
                         role="menu"
-                        className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl shadow-xl border border-[var(--color-border)] py-1.5 z-10 animate-scale-in"
+                        className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl py-1.5 z-10 animate-scale-in"
                       >
                         <button
                           type="button"
@@ -228,7 +228,7 @@ export default function CommentsTable({
                             Ẩn bình luận
                           </button>
                         )}
-                        <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                        <div className="my-1 mx-2" />
                         <button
                           type="button"
                           onClick={() => {

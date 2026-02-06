@@ -90,7 +90,7 @@ export default function Interactions() {
       {/* Filters & Content Container */}
       <div className="admin-card overflow-hidden">
         {/* Toolbar */}
-        <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 bg-[var(--color-surface-secondary)]">
+        <div className="p-4 flex flex-col md:flex-row gap-4 bg-[var(--color-surface-secondary)]">
           <div className="relative flex-1">
             <label htmlFor={interactionsSearchId} className="sr-only">
               Tìm kiếm tương tác
@@ -147,7 +147,7 @@ export default function Interactions() {
 
         {/* Pagination */}
         {interactionsList.length > 0 && (
-          <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-4 bg-[var(--color-surface-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm font-medium text-[var(--color-text-secondary)]">
               Hiển thị{' '}
               <span className="font-semibold text-[var(--color-content)]">

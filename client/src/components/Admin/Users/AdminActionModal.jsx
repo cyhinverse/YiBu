@@ -83,7 +83,7 @@ const AdminActionModal = ({
         if (event.key === 'Escape') onCancel?.();
       }}
     >
-      <div className="admin-card w-full max-w-md shadow-2xl rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
+      <div className="admin-card w-full max-w-md rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
         <div className="flex flex-col items-center text-center mb-8">
           <div
             className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${config.bg} ${config.text}`}

@@ -70,7 +70,7 @@ const UsersTable = ({
                 </tr>
 
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
+              <tbody>
                 {users.map(user => (
                   <tr
                     key={user._id}
@@ -90,7 +90,7 @@ const UsersTable = ({
                             className="w-10 h-10 rounded-full object-cover"
                           />
                           {user.isVerified && (
-                            <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white p-0.5 rounded-full border-2 border-white dark:border-neutral-900">
+                            <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white p-0.5 rounded-full">
                               <Check size={8} strokeWidth={3} />
                             </div>
                           )}
@@ -220,7 +220,7 @@ const UsersTable = ({
                 >
                   <ChevronLeft size={18} />
                 </button>
-                <div className="px-3 py-1 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg text-sm font-semibold shadow-sm">
+                <div className="px-3 py-1 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg text-sm font-semibold">
                   {currentPage}
                 </div>
                 <button

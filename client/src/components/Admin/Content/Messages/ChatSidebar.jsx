@@ -26,11 +26,11 @@ const ChatSidebar = ({
 
   return (
     <div
-      className={`w-full md:w-80 border-r border-neutral-200 dark:border-neutral-800 flex flex-col ${
+      className={`w-full md:w-80 bg-[var(--color-surface)] flex flex-col ${
         selectedChat ? 'hidden md:flex' : 'flex'
       }`}
     >
-      <div className="p-4 border-b border-[var(--color-border)]">
+      <div className="p-4">
         <h2 className="text-lg font-semibold text-[var(--color-content)] mb-3">
           Tin nhắn
         </h2>
@@ -92,16 +92,16 @@ const ChatSidebar = ({
                 <img
                   src={avatar}
                   alt={name}
-                  className="w-11 h-11 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                  className="w-11 h-11 rounded-full object-cover bg-[var(--color-surface-secondary)]"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-semibold text-sm text-neutral-900 dark:text-white truncate">
+                    <h3 className="font-semibold text-sm text-[var(--color-content)] truncate">
                       {name}
                     </h3>
-                    <span className="text-xs text-neutral-400">{time}</span>
+                    <span className="text-xs text-[var(--color-text-tertiary)]">{time}</span>
                   </div>
-                  <p className="text-xs text-neutral-500 truncate dark:text-neutral-400 mt-0.5">
+                  <p className="text-xs text-[var(--color-text-secondary)] truncate mt-0.5">
                     {chat.lastMessage?.sender === 'me' ? 'Bạn: ' : ''}
                     {lastMsg}
                   </p>

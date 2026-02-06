@@ -90,7 +90,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="yb-card w-full max-w-3xl shadow-2xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden">
+      <div className="admin-card w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="p-4 shrink-0 bg-[var(--color-surface-secondary)]">
           <div className="flex items-start justify-between">
@@ -140,10 +140,10 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
               type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 ${
+              className={`flex items-center gap-2 px-4 py-2.5 my-2 text-sm font-semibold rounded-xl transition-colors ${
                 activeTab === tab.id
-                  ? 'border-[var(--color-content)] text-[var(--color-content)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-content)]'
+                  ? 'bg-[var(--color-surface-secondary)] text-[var(--color-content)]'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-content)]'
               }`}
             >
               <tab.icon size={18} />
@@ -212,13 +212,13 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                           preload="metadata"
                           muted
                           playsInline
-                          className="w-20 h-20 rounded-xl object-cover shadow-sm bg-[var(--color-surface-secondary)]"
+                          className="w-20 h-20 rounded-xl object-cover bg-[var(--color-surface-secondary)]"
                         />
                       ) : (
                         <img
                           src={media.url}
                           alt="Post"
-                          className="w-20 h-20 rounded-xl object-cover shadow-sm bg-[var(--color-surface-secondary)]"
+                          className="w-20 h-20 rounded-xl object-cover bg-[var(--color-surface-secondary)]"
                         />
                       );
                     })()}
@@ -237,7 +237,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                <div className="text-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl">
                   <FileText
                     size={40}
                     className="mx-auto text-[var(--color-text-tertiary)] mb-3"
@@ -256,7 +256,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                 reports.map(report => (
                   <div
                     key={report._id}
-                    className="yb-card p-4 border border-[var(--color-error)]/20 bg-[var(--color-error)]/10"
+                    className="admin-card-muted p-4 bg-[var(--color-error)]/10"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <span className="yb-badge inline-flex items-center gap-2 bg-[var(--color-error)]/15 text-[var(--color-error)] text-[10px] font-bold uppercase tracking-wider">
@@ -275,7 +275,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                         {report.reporter?.username || 'Ẩn danh'}
                       </span>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center justify-between">
+                    <div className="mt-4 pt-4 flex items-center justify-between">
                       <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider">
                         Trạng thái
                       </span>
@@ -286,7 +286,7 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                <div className="text-center py-16 bg-[var(--color-surface-secondary)] rounded-2xl">
                   <ShieldOff
                     size={40}
                     className="mx-auto text-[var(--color-success)] mb-3"

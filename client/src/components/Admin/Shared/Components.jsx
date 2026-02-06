@@ -42,7 +42,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
       <div
         className={`admin-card w-full ${sizeClasses[size]} overflow-hidden`}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-secondary)]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-secondary)]">
           <h2
             id={titleId}
             className="text-[15px] font-semibold text-[var(--color-content)]"
@@ -156,7 +156,7 @@ export function ConfirmModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-3.5 py-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm font-medium text-[var(--color-text-secondary)]"
+              className="flex-1 px-3.5 py-2 rounded-lg bg-[var(--color-surface-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm font-medium text-[var(--color-text-secondary)]"
             >
               {cancelText}
             </button>
@@ -217,12 +217,12 @@ export function Button({
   className = '',
   type = 'button',
   ...props
-}) {
+  }) {
   const variants = {
     primary:
       'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100',
     secondary:
-      'border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800',
+      'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]',
     danger: 'bg-rose-600 text-white hover:bg-rose-700',
     success: 'bg-emerald-600 text-white hover:bg-emerald-700',
     ghost:
@@ -372,7 +372,7 @@ export function Avatar({ src, alt, size = 'md', fallback }) {
 
   return (
     <div
-      className={`${sizes[size]} rounded-full border-2 border-neutral-200 dark:border-neutral-700 overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center`}
+      className={`${sizes[size]} rounded-full overflow-hidden bg-[var(--color-surface-secondary)] flex items-center justify-center`}
     >
       {src ? (
         <img src={src} alt={alt} className="w-full h-full object-cover" />
@@ -391,7 +391,7 @@ export function Avatar({ src, alt, size = 'md', fallback }) {
 export function Card({ children, className = '', ...props }) {
   return (
     <div
-      className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 ${className}`}
+      className={`admin-card ${className}`}
       {...props}
     >
       {children}
@@ -405,7 +405,7 @@ export function Card({ children, className = '', ...props }) {
 export function CardHeader({ children, className = '' }) {
   return (
     <div
-      className={`p-4 border-b border-neutral-200 dark:border-neutral-700 ${className}`}
+      className={`p-4 ${className}`}
     >
       {children}
     </div>

@@ -43,7 +43,7 @@ export const DeleteCommentModal = ({
         if (event.key === 'Escape') onClose?.();
       }}
     >
-      <div className="admin-card w-full max-w-md p-4 shadow-2xl rounded-2xl transform animate-scale-in">
+      <div className="admin-card w-full max-w-md p-4 rounded-2xl transform animate-scale-in">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-full bg-[var(--color-error)]/15 flex items-center justify-center text-[var(--color-error)] shrink-0">
             <Trash2 size={24} />
@@ -110,9 +110,9 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
   if (!isOpen || !comment) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-      role="dialog"
+      <div
+        className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+        role="dialog"
       aria-modal="true"
       tabIndex={-1}
       onKeyDown={event => {
@@ -120,11 +120,11 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
       }}
     >
       <div
-        className="yb-card w-full max-w-lg shadow-2xl rounded-2xl transform animate-scale-in overflow-hidden"
+        className="admin-card w-full max-w-lg rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3.5 bg-[var(--color-surface-secondary)] border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="px-4 py-3.5 bg-[var(--color-surface-secondary)] flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">
             Chi tiết bình luận
           </h2>
@@ -145,20 +145,20 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
             <img
               src={comment.user?.avatar || '/images/default-avatar.png'}
               alt={`${comment.user?.username || 'User'} avatar`}
-              className="w-14 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
+              className="w-14 h-12 rounded-full object-cover bg-[var(--color-surface-secondary)]"
             />
             <div>
-              <h3 className="font-bold text-lg text-neutral-900 dark:text-white tracking-tight">
+              <h3 className="font-bold text-lg text-[var(--color-content)] tracking-tight">
                 {comment.user?.username || 'Người dùng'}
               </h3>
-              <p className="text-sm text-neutral-400 font-medium">
+              <p className="text-sm text-[var(--color-text-tertiary)] font-medium">
                 {comment.user?.email}
               </p>
             </div>
           </div>
 
           {/* Comment Content */}
-          <div className="bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 relative group overflow-hidden">
+          <div className="bg-[var(--color-surface-secondary)] p-4 rounded-2xl relative group overflow-hidden">
             <MessageCircle
               size={120}
               className="absolute -right-4 -bottom-4 text-neutral-200 dark:text-neutral-700/20 opacity-30 rotate-12 transition-transform group-hover:scale-110"
@@ -166,7 +166,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
             <p className="text-base text-neutral-700 dark:text-neutral-200 leading-relaxed relative z-10 font-medium">
               "{comment.content}"
             </p>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700 relative z-10">
+            <div className="flex items-center gap-2 mt-4 pt-4 relative z-10">
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                 Đăng vào:
               </span>
@@ -179,7 +179,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
 
           {/* Stats & Status */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-1 shadow-sm">
+            <div className="p-4 rounded-2xl bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1">
               <Heart size={20} className="text-rose-500 mb-1 fill-rose-500" />
               <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
                 {comment.likes?.length || 0}
@@ -188,9 +188,9 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
                 Lượt thích
               </span>
             </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-1 shadow-sm">
+            <div className="p-4 rounded-2xl bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1">
               <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border mb-1 ${getStatusStyle(
+                className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-1 ${getStatusStyle(
                   comment.status || 'active'
                 )}`}
               >

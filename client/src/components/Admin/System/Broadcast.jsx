@@ -112,10 +112,10 @@ const Broadcast = () => {
                     type="button"
                     key={type.id}
                     onClick={() => handleTypeSelect(type.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-colors duration-200 ${
                       formData.type === type.id
-                        ? `${type.bg} ${type.text} ${type.border} ${type.ring}`
-                        : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
+                        ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                        : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
                     }`}
                   >
                     <type.icon
@@ -244,12 +244,10 @@ const Broadcast = () => {
               Xem trước
             </h3>
 
-              <div
-              className={`p-4 rounded-2xl border transition-all ${selectedType?.bg} ${selectedType?.border}`}
-            >
+            <div className={`p-4 rounded-2xl transition-colors ${selectedType?.bg}`}>
               <div className="flex items-start gap-3">
                 <div
-                  className={`p-2 rounded-xl bg-[var(--color-surface)] shadow-sm ${selectedType?.text}`}
+                  className={`p-2 rounded-xl bg-[var(--color-surface)] ${selectedType?.text}`}
                 >
                   {selectedType && <selectedType.icon size={20} />}
                 </div>
@@ -273,7 +271,7 @@ const Broadcast = () => {
                     }
                   </span>
                   {formData.link && (
-                    <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+                    <div className="mt-3 pt-3">
                       <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full block w-fit truncate max-w-full">
                         🔗 {formData.link}
                       </span>
@@ -295,7 +293,7 @@ const Broadcast = () => {
                     event.currentTarget.blur();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -323,7 +321,7 @@ const Broadcast = () => {
             }
           }}
         >
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-md mx-4 shadow-xl">
+          <div className="admin-card rounded-2xl w-full max-w-md mx-4">
             <div className="p-4">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
@@ -332,23 +330,23 @@ const Broadcast = () => {
                     className="text-yellow-600 dark:text-yellow-400"
                   />
                 </div>
-                <h3 className="text-base font-semibold text-black dark:text-white">
+                <h3 className="text-base font-semibold text-[var(--color-content)]">
                   Xác nhận gửi thông báo
                 </h3>
               </div>
-              <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+              <p className="text-[var(--color-text-secondary)] mb-6">
                 Bạn sắp gửi thông báo đến{' '}
-                <span className="font-medium text-black dark:text-white">
+                <span className="font-medium text-[var(--color-content)]">
                   {TARGET_AUDIENCES.find(a => a.id === formData.targetAudience)
                     ?.label || 'tất cả người dùng'}
                 </span>
                 . Hành động này không thể hoàn tác.
               </p>
-              <div className="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-4 mb-6">
-                <p className="font-medium text-black dark:text-white">
+              <div className="bg-[var(--color-surface-secondary)] rounded-lg p-4 mb-6">
+                <p className="font-medium text-[var(--color-content)]">
                   {formData.title}
                 </p>
-                <p className="text-sm text-neutral-500 mt-1 line-clamp-2">
+                <p className="text-sm text-[var(--color-text-secondary)] mt-1 line-clamp-2">
                   {formData.message}
                 </p>
               </div>
@@ -356,7 +354,7 @@ const Broadcast = () => {
                   <button
                     type="button"
                     onClick={() => setShowConfirmModal(false)}
-                    className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-content)] hover:bg-[var(--color-surface-hover)]"
+                    className="px-4 py-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                   >
                     Hủy bỏ
                   </button>
