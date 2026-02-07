@@ -6,13 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
-    "production": "cross-env NODE_ENV=production node src/server.js"
+    "production": "cross-env NODE_ENV=production node src/server.js",
+    "seed": "cross-env NODE_ENV=development node scripts/seed.js",
+    "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop"
   },
   "keywords": [],
   "author": "Making by Cyhin",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
@@ -33,7 +36,6 @@
     "nodemailer": "^7.0.12",
     "nodemon": "^3.1.9",
     "qrcode": "^1.5.4",
-    "react-redux": "^9.2.0",
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",

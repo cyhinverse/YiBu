@@ -8,15 +8,15 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - PORT=${PORT}
-      - CLIENT_URL=http://localhost:3000
-      - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      - ACCESS_TOKEN_SECRET=your_access_token_secret_here_change_in_production
-      - REFRESH_TOKEN_SECRET=your_refresh_token_secret_here_change_in_production
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
-      - EMAIL_USER=cyhin2508@gmail.com
-      - EMAIL_PASS=ontbbfoaapatkuhu
+      - PORT=${PORT:-5000}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/socialmedia}
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
     depends_on:
       - mongo
       - redis
@@ -37,7 +37,9 @@ services:
     image: mongo:latest
     container_name: social_mongo
     ports:
-      - "27017:27017"
+      # Use 27018 by default to avoid conflicts with local MongoDB on 27017.
+      # Override via `MONGO_HOST_PORT=27017` if you want the default port.
+      - "${MONGO_HOST_PORT:-27018}:27017"
     volumes:
       - mongo_data:/data/db
     networks:
@@ -54,6 +56,19 @@ services:
     container_name: social_redis
     ports:
       - "6379:6379"
+    networks:
+      - social_network
+
+  # One-off: docker compose run --rm seed --drop
+  seed:
+    build: ./server
+    container_name: social_seed
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/socialmedia}
+    depends_on:
+      - mongo
+    entrypoint: ["node", "scripts/seed.js"]
     networks:
       - social_network
 

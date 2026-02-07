@@ -101,35 +101,32 @@ class PostService {
     
     // Checking if Hashtag model has incrementMany (based on my read it does)
     if (Hashtag.incrementMany) {
-        await Hashtag.incrementMany(tags);
-        
-        // Fetch IDs to return
-        const hashtags = await Hashtag.find({ name: { $in: tags } }).select('_id name').session(session);
-        return hashtags.map(h => ({ tag: h.name, hashtagId: h._id }));
+      await Hashtag.incrementMany(tags);
+      return tags;
     }
 
     // Fallback if bulk method not available (or if we strictly need session which bulkWrite supports but method might not expose)
-    const processedTags = [];
     const operations = tags.slice(0, 30).map(tag => 
       retryOperation(() =>
         Hashtag.findOneAndUpdate(
           { name: tag },
           {
-            $inc: { postsCount: 1 },
-            $set: { lastUsedAt: new Date() },
+            $inc: {
+              totalUsage: 1,
+              'recentUsage.lastHour': 1,
+              'recentUsage.last24Hours': 1,
+              'recentUsage.last7Days': 1,
+            },
+            $set: { 'recentUsage.updatedAt': new Date() },
+            $setOnInsert: { firstUsedAt: new Date() },
           },
           { upsert: true, new: true, session }
         )
       )
     );
 
-    const results = await Promise.all(operations);
-    
-    results.forEach(hashtag => {
-        processedTags.push({ tag: hashtag.name, hashtagId: hashtag._id });
-    });
-
-    return processedTags;
+    await Promise.all(operations);
+    return tags;
   }
 
   /**
@@ -261,22 +258,30 @@ class PostService {
     if (caption !== undefined) {
       allowedUpdates.caption = caption;
 
-      const oldTags = post.hashtags.map(h => h.tag);
+      const oldTags = (post.hashtags || []).map(t => String(t).toLowerCase());
       const newTags = await this._processHashtags(caption, null);
 
       const removedTags = oldTags.filter(
-        t => !newTags.map(n => n.tag).includes(t)
+        t => !newTags.includes(t)
       );
-      const addedTags = newTags.filter(n => !oldTags.includes(n.tag));
 
       if (removedTags.length > 0) {
         await Hashtag.updateMany(
           { name: { $in: removedTags } },
-          { $inc: { postsCount: -1 } }
+          {
+            $inc: {
+              totalUsage: -1,
+              'recentUsage.lastHour': -1,
+              'recentUsage.last24Hours': -1,
+              'recentUsage.last7Days': -1,
+            },
+            $set: { 'recentUsage.updatedAt': new Date() },
+          }
         );
       }
 
-      allowedUpdates.hashtags = newTags.map(t => t.tag);
+      // Persist as string[] (Post model stores hashtags as plain strings)
+      allowedUpdates.hashtags = newTags;
     }
 
     if (visibility !== undefined) allowedUpdates.visibility = visibility;
@@ -321,10 +326,18 @@ class PostService {
       }).session(session);
 
       if (post.hashtags && post.hashtags.length > 0) {
-        const tags = post.hashtags.map(h => h.tag);
+        const tags = post.hashtags.map(t => String(t).toLowerCase());
         await Hashtag.updateMany(
           { name: { $in: tags } },
-          { $inc: { postsCount: -1 } }
+          {
+            $inc: {
+              totalUsage: -1,
+              'recentUsage.lastHour': -1,
+              'recentUsage.last24Hours': -1,
+              'recentUsage.last7Days': -1,
+            },
+            $set: { 'recentUsage.updatedAt': new Date() },
+          }
         ).session(session);
       }
 
@@ -625,7 +638,7 @@ class PostService {
 
     const interestTags = new Set();
     interactedPosts.forEach(post => {
-      post.hashtags?.forEach(h => interestTags.add(h.tag));
+      post.hashtags?.forEach(h => interestTags.add(String(h).toLowerCase()));
     });
     user?.interests?.forEach(interest =>
       interestTags.add(interest.toLowerCase())
@@ -649,7 +662,7 @@ class PostService {
     };
 
     if (interestTags.size > 0) {
-      query['hashtags.tag'] = { $in: [...interestTags] };
+      query.hashtags = { $in: [...interestTags] };
     }
 
     const posts = await Post.find(query)
@@ -729,7 +742,7 @@ class PostService {
       user: { $nin: excludeUsers },
       $or: [
         { caption: { $regex: query, $options: 'i' } },
-        { 'hashtags.tag': { $regex: query.replace('#', ''), $options: 'i' } },
+        { hashtags: { $regex: query.replace('#', ''), $options: 'i' } },
       ],
     };
 
@@ -779,7 +792,7 @@ class PostService {
     }
 
     const query = {
-      'hashtags.tag': tag,
+      hashtags: tag,
       isDeleted: false,
       visibility: 'public',
       'moderation.status': 'approved',
@@ -961,15 +974,15 @@ class PostService {
         post: postId,
       }).session(session);
       if (existingSave) {
-        if (existingSave.collection !== collection) {
-          existingSave.collection = collection;
+        if (existingSave.folder !== collection) {
+          existingSave.folder = collection;
           await existingSave.save({ session });
         }
         await session.commitTransaction();
         return { success: true, alreadySaved: true };
       }
 
-      await SavePost.create([{ user: userId, post: postId, collection }], {
+      await SavePost.create([{ user: userId, post: postId, folder: collection }], {
         session,
       });
 
@@ -1040,7 +1053,7 @@ class PostService {
 
     const query = { user: userId };
     if (collection) {
-      query.collection = collection;
+      query.$or = [{ folder: collection }, { collection }];
     }
 
     const saved = await SavePost.find(query)
@@ -1059,7 +1072,7 @@ class PostService {
       .map(s => ({
         ...s.post,
         savedAt: s.createdAt,
-        collection: s.collection,
+        collection: s.folder ?? s.collection,
       }));
 
     return {
