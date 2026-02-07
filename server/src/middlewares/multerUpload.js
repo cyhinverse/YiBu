@@ -47,6 +47,22 @@ const upload = multer({
  */
 export const uploadToCloudinary = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
+    const missing = [
+      'CLOUDINARY_CLOUD_NAME',
+      'CLOUDINARY_API_KEY',
+      'CLOUDINARY_API_SECRET',
+    ].filter(k => !process.env[k]);
+
+    if (missing.length > 0) {
+      reject(
+        ApiError.internal('Cloudinary is not configured', {
+          errorCode: 'CONFIG_MISSING',
+          details: { missing },
+        })
+      );
+      return;
+    }
+
     const uploadOptions = {
       folder: options.folder || 'user_uploads',
       resource_type: options.resourceType || 'auto',
