@@ -72,6 +72,19 @@ services:
     networks:
       - social_network
 
+  # One-off: docker compose run --rm hashtags-sync [--prune]
+  hashtags-sync:
+    build: ./server
+    container_name: social_hashtags_sync
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/socialmedia}
+    depends_on:
+      - mongo
+    entrypoint: ["node", "scripts/sync-hashtags.js"]
+    networks:
+      - social_network
+
 networks:
   social_network:
     driver: bridge

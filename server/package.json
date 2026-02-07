@@ -8,7 +8,9 @@
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "production": "cross-env NODE_ENV=production node src/server.js",
     "seed": "cross-env NODE_ENV=development node scripts/seed.js",
-    "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop"
+    "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop",
+    "hashtags:sync": "cross-env NODE_ENV=development node scripts/sync-hashtags.js",
+    "hashtags:sync:prune": "cross-env NODE_ENV=development node scripts/sync-hashtags.js --prune"
   },
   "keywords": [],
   "author": "Making by Cyhin",
