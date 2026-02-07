@@ -15,7 +15,7 @@ import { Suspense, lazy } from 'react';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const LocationPickerModal = lazy(() =>
-  import('@/components/common/LocationPickerModal')
+  import('@/components/Common/LocationPickerModal')
 );
 
 const InputField = ({
