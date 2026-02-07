@@ -3,6 +3,7 @@ import config from '../configs/config.js';
 import logger from '../configs/logger.js';
 import ApiError from '../helpers/ApiError.js';
 import { CatchError } from '../configs/CatchError.js';
+import { clearAuthCookies } from '../configs/cookieOptions.js';
 
 const getAccessTokenFromRequest = req => {
   const cookieToken = req.cookies?.accessToken;
@@ -36,6 +37,11 @@ export const verifyToken = CatchError(async (req, res, next) => {
     payload = jwt.verify(accessToken, config.jwt.accessSecret);
   } catch (err) {
     logger.warn('JWT verification failed', { message: err?.message });
+
+    // If the token is invalid (e.g. after changing secrets / switching DB env),
+    // clear auth cookies to avoid repeated failing requests in the client.
+    clearAuthCookies(res);
+
     throw ApiError.unauthorized('Token is not valid', {
       errorCode: err?.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
     });
@@ -80,4 +86,3 @@ export const verifyToken = CatchError(async (req, res, next) => {
 });
 
 export default { verifyToken };
-

@@ -4,33 +4,48 @@
  */
 
 const isProduction = process.env.NODE_ENV === 'production';
-const cookieSameSite = isProduction
-  ? 'strict'
-  : process.env.COOKIE_SAMESITE || 'lax';
+
+// Allow explicit overrides (useful for local Docker over plain HTTP).
+const cookieSecure =
+  typeof process.env.COOKIE_SECURE === 'string'
+    ? process.env.COOKIE_SECURE === 'true'
+    : isProduction;
+
+const cookieSameSite =
+  process.env.COOKIE_SAMESITE || (isProduction ? 'strict' : 'lax');
+
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+const withCommonCookieOptions = options => {
+  const base = {
+    httpOnly: true,
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
+    path: '/',
+  };
+  if (cookieDomain) base.domain = cookieDomain;
+  return { ...base, ...options };
+};
 
 
 /**
  * Get cookie options for access token
  * @returns {Object} Cookie options for access token
  */
-export const getAccessTokenCookieOptions = () => ({
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: cookieSameSite, // configurable for cross-origin in development
-  maxAge: 60 * 60 * 1000, // 1 hour
-});
+export const getAccessTokenCookieOptions = () =>
+  withCommonCookieOptions({
+    maxAge: 60 * 60 * 1000, // 1 hour
+  });
 
 
 /**
  * Get cookie options for refresh token
  * @returns {Object} Cookie options for refresh token
  */
-export const getRefreshTokenCookieOptions = () => ({
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: cookieSameSite, // configurable for cross-origin in development
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
+export const getRefreshTokenCookieOptions = () =>
+  withCommonCookieOptions({
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
 
 
 /**
@@ -52,15 +67,6 @@ export const setAuthCookies = (res, accessToken, refreshToken = null) => {
  * @param {Object} res - Express response object
  */
 export const clearAuthCookies = res => {
-  res.clearCookie('accessToken', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: cookieSameSite,
-  });
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: cookieSameSite,
-  });
+  res.clearCookie('accessToken', withCommonCookieOptions({}));
+  res.clearCookie('refreshToken', withCommonCookieOptions({}));
 };
-

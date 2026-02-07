@@ -27,7 +27,13 @@ export const registerBody = Joi.object({
       'string.max': 'Username không được quá 30 ký tự',
       'any.required': 'Username là bắt buộc',
     }),
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    // Allow custom/local TLDs (e.g. ".local") for dev and seeded accounts.
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
@@ -52,7 +58,12 @@ export const registerBody = Joi.object({
 // Body: { email, password, rememberMe? }
 // ======================================
 export const loginBody = Joi.object({
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
@@ -85,7 +96,12 @@ export const googleAuthBody = Joi.object({
 // Body: { email }
 // ======================================
 export const forgotPasswordBody = Joi.object({
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
