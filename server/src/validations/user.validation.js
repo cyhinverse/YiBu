@@ -54,6 +54,16 @@ export const profileIdParam = Joi.object({
 // Body: { name?, bio?, location?, website?, dateOfBirth? }
 // ======================================
 export const updateProfileBody = Joi.object({
+  username: Joi.string()
+    .trim()
+    .min(3)
+    .max(30)
+    .pattern(/^[a-zA-Z0-9_]+$/)
+    .messages({
+      'string.min': 'Username phải có ít nhất 3 ký tự',
+      'string.max': 'Username không được quá 30 ký tự',
+      'string.pattern.base': 'Username chỉ được chứa chữ, số và dấu gạch dưới',
+    }),
   name: Joi.string().trim().min(2).max(50).messages({
     'string.min': 'Tên phải có ít nhất 2 ký tự',
     'string.max': 'Tên không được quá 50 ký tự',
@@ -67,12 +77,18 @@ export const updateProfileBody = Joi.object({
   website: Joi.string().trim().allow('').messages({
     'string.uri': 'Website không hợp lệ',
   }),
+  // Prefer "birthday" as model field; keep "dateOfBirth" for backwards compatibility.
+  birthday: Joi.date().max('now').allow(null).messages({
+    'date.max': 'Ngày sinh không hợp lệ',
+  }),
   dateOfBirth: Joi.date().max('now').allow(null).messages({
     'date.max': 'Ngày sinh không hợp lệ',
   }),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer_not_to_say'),
   cover: Joi.string().allow(''),
-});
+})
+  // Map legacy client key to model field.
+  .rename('dateOfBirth', 'birthday', { ignoreUndefined: true, override: false });
 
 // ======================================
 // GET /check-follow/:targetUserId
