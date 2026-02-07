@@ -56,6 +56,63 @@ async function main() {
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+    const normalizeTagExpr = {
+      $let: {
+        vars: { h: '$hashtags' },
+        in: {
+          $toLower: {
+            $trim: {
+              input: {
+                $cond: [
+                  { $eq: [{ $type: '$$h' }, 'string'] },
+                  '$$h',
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: [{ $type: '$$h' }, 'object'] },
+                          { $ne: ['$$h.tag', null] },
+                        ],
+                      },
+                      '$$h.tag',
+                      {
+                        $cond: [
+                          {
+                            $and: [
+                              { $eq: [{ $type: '$$h' }, 'object'] },
+                              { $ne: ['$$h.name', null] },
+                            ],
+                          },
+                          '$$h.name',
+                          '',
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    // Tags that exist in any non-deleted post (regardless of visibility).
+    // Used for pruning only (delete hashtags with no posts at all).
+    const allTagRows = await Post.aggregate([
+      {
+        $match: {
+          isDeleted: false,
+          hashtags: { $exists: true, $ne: [] },
+        },
+      },
+      { $unwind: '$hashtags' },
+      { $project: { tag: normalizeTagExpr } },
+      { $match: { tag: { $ne: '' } } },
+      { $group: { _id: '$tag' } },
+    ]);
+    const allNames = allTagRows.map(r => r._id);
+
     // Normalize hashtags:
     // - current schema: string[]
     // - legacy data: [{ tag, hashtagId }] or similar objects
@@ -72,46 +129,7 @@ async function main() {
       {
         $project: {
           createdAt: 1,
-          tag: {
-            $let: {
-              vars: { h: '$hashtags' },
-              in: {
-                $toLower: {
-                  $trim: {
-                    input: {
-                      $cond: [
-                        { $eq: [{ $type: '$$h' }, 'string'] },
-                        '$$h',
-                        {
-                          $cond: [
-                            {
-                              $and: [
-                                { $eq: [{ $type: '$$h' }, 'object'] },
-                                { $ne: ['$$h.tag', null] },
-                              ],
-                            },
-                            '$$h.tag',
-                            {
-                              $cond: [
-                                {
-                                  $and: [
-                                    { $eq: [{ $type: '$$h' }, 'object'] },
-                                    { $ne: ['$$h.name', null] },
-                                  ],
-                                },
-                                '$$h.name',
-                                '',
-                              ],
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            },
-          },
+          tag: normalizeTagExpr,
         },
       },
       { $match: { tag: { $ne: '' } } },
@@ -138,9 +156,9 @@ async function main() {
     const names = rows.map(r => r._id);
 
     if (prune) {
-      // Keep featured/banned tags even if they have no posts, unless explicitly pruned by user.
+      // Keep featured/banned tags even if they have no posts.
       await Hashtag.deleteMany({
-        name: { $nin: names },
+        name: { $nin: allNames },
         isFeatured: { $ne: true },
         isBanned: { $ne: true },
       });
@@ -207,4 +225,3 @@ main().catch(err => {
   console.error('Hashtag sync failed:', err);
   mongoose.disconnect().finally(() => process.exit(1));
 });
-

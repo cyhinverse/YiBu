@@ -27,16 +27,17 @@ const getArgValue = (name, fallback = null) => {
 };
 
 const drop = args.has('--drop');
-const usersCount = Number.parseInt(getArgValue('users', '12'), 10);
-const postsPerUser = Number.parseInt(getArgValue('postsPerUser', '3'), 10);
-const commentsPerPost = Number.parseInt(getArgValue('commentsPerPost', '4'), 10);
+// Defaults tuned for "feels real" (still safe to run locally).
+const usersCount = Number.parseInt(getArgValue('users', '30'), 10);
+const postsPerUser = Number.parseInt(getArgValue('postsPerUser', '4'), 10);
+const commentsPerPost = Number.parseInt(getArgValue('commentsPerPost', '6'), 10);
 const repliesPerCommentMax = Number.parseInt(
   getArgValue('repliesPerCommentMax', '2'),
   10
 );
-const likesPerPost = Number.parseInt(getArgValue('likesPerPost', '8'), 10);
-const savesPerPost = Number.parseInt(getArgValue('savesPerPost', '3'), 10);
-const followsPerUser = Number.parseInt(getArgValue('followsPerUser', '5'), 10);
+const likesPerPost = Number.parseInt(getArgValue('likesPerPost', '18'), 10);
+const savesPerPost = Number.parseInt(getArgValue('savesPerPost', '6'), 10);
+const followsPerUser = Number.parseInt(getArgValue('followsPerUser', '12'), 10);
 const seedValue = Number.parseInt(
   getArgValue('seed', String(Date.now() % 2147483647)),
   10
@@ -78,6 +79,44 @@ const TAG_POOL = [
   'tech',
   'fashion',
 ];
+
+// A smaller "popular" set makes trending look more realistic (head + long tail).
+const POPULAR_TAGS = [
+  'yibu',
+  'vietnam',
+  'saigon',
+  'hanoi',
+  'food',
+  'travel',
+  'music',
+  'tech',
+  'life',
+  'photography',
+];
+
+const pickHashtagsForPost = ({ userInterests = [] }) => {
+  const roll = faker.number.int({ min: 1, max: 100 });
+  const count =
+    roll <= 42 ? 0 : roll <= 78 ? 1 : roll <= 94 ? 2 : 3;
+  if (count === 0) return [];
+
+  const interests = (userInterests || [])
+    .map(t => String(t).toLowerCase())
+    .filter(Boolean);
+
+  const tags = new Set();
+  for (let i = 0; i < count; i += 1) {
+    const pickRoll = faker.number.int({ min: 1, max: 100 });
+    let pool = TAG_POOL;
+    if (pickRoll <= 60 && interests.length > 0) pool = interests;
+    else if (pickRoll <= 92) pool = POPULAR_TAGS;
+
+    const t = faker.helpers.arrayElement(pool);
+    if (t) tags.add(String(t).toLowerCase());
+  }
+
+  return [...tags];
+};
 
 const buildCaption = (tags) => {
   const base = faker.lorem.sentences(faker.number.int({ min: 1, max: 3 }));
@@ -152,6 +191,24 @@ async function recalcHashtagScores(tagNames) {
   });
   if (ops.length > 0) await Hashtag.bulkWrite(ops);
 }
+
+const computeTrending = (lastHour, last24Hours, last7Days) => {
+  const hourWeight = 10;
+  const dayWeight = 3;
+  const weekWeight = 1;
+
+  const weightedUsage =
+    lastHour * hourWeight + last24Hours * dayWeight + last7Days * weekWeight;
+
+  const avgDaily = last7Days / 7;
+  const velocity = avgDaily > 0 ? (last24Hours - avgDaily) / avgDaily : 0;
+  const velocityBoost = velocity > 0 ? 1 + Math.min(velocity, 2) : 1;
+
+  return {
+    trendingScore: Math.round(weightedUsage * velocityBoost),
+    velocity,
+  };
+};
 
 async function main() {
   const uri = getArgValue('uri', null) || config.mongodb.uri;
@@ -235,13 +292,15 @@ async function main() {
     // Create posts
     const postIds = [];
     const usedTags = new Set();
+    const hashtagStats = new Map(); // tag -> {total,lastHour,last24,last7,first,last}
+    const now = new Date();
+    const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     for (const u of users) {
       for (let i = 0; i < postsPerUser; i += 1) {
-        const tags = faker.helpers.arrayElements(
-          TAG_POOL,
-          faker.number.int({ min: 0, max: 4 })
-        );
+        const tags = pickHashtagsForPost({ userInterests: u.interests });
         tags.forEach(t => usedTags.add(t));
 
         const createdAt = faker.date.recent({ days: 14 });
@@ -258,9 +317,70 @@ async function main() {
         postIds.push(post._id);
 
         if (tags.length > 0) {
-          // eslint-disable-next-line no-await-in-loop
-          await Hashtag.incrementMany(tags);
+          for (const t of tags) {
+            const tag = String(t).toLowerCase();
+            const s = hashtagStats.get(tag) || {
+              total: 0,
+              lastHour: 0,
+              last24: 0,
+              last7: 0,
+              first: createdAt,
+              last: createdAt,
+            };
+            s.total += 1;
+            if (createdAt >= hourAgo) s.lastHour += 1;
+            if (createdAt >= dayAgo) s.last24 += 1;
+            if (createdAt >= weekAgo) s.last7 += 1;
+            if (createdAt < s.first) s.first = createdAt;
+            if (createdAt > s.last) s.last = createdAt;
+            hashtagStats.set(tag, s);
+          }
         }
+      }
+    }
+
+    // Upsert Hashtags based on Posts (single source of truth)
+    if (hashtagStats.size > 0) {
+      const ops = [];
+      for (const [name, s] of hashtagStats.entries()) {
+        const totalUsage = clamp(s.total, 0, Number.MAX_SAFE_INTEGER);
+        const lastHour = clamp(s.lastHour, 0, Number.MAX_SAFE_INTEGER);
+        const last24Hours = clamp(s.last24, 0, Number.MAX_SAFE_INTEGER);
+        const last7Days = clamp(s.last7, 0, Number.MAX_SAFE_INTEGER);
+        const { trendingScore, velocity } = computeTrending(
+          lastHour,
+          last24Hours,
+          last7Days
+        );
+
+        ops.push({
+          updateOne: {
+            filter: { name },
+            update: {
+              $setOnInsert: {
+                name,
+                firstUsedAt: s.first || now,
+              },
+              $set: {
+                totalUsage,
+                recentUsage: {
+                  lastHour,
+                  last24Hours,
+                  last7Days,
+                  updatedAt: now,
+                },
+                trendingScore,
+                velocity,
+                peakUsage: { count: last24Hours, date: now },
+              },
+            },
+            upsert: true,
+          },
+        });
+      }
+
+      if (ops.length > 0) {
+        await Hashtag.bulkWrite(ops, { ordered: false });
       }
     }
 
@@ -340,7 +460,7 @@ async function main() {
     }
 
     await recalcPostScores(postIds);
-    await recalcHashtagScores([...usedTags]);
+    // Hashtag docs already computed from Post.createdAt above.
 
     // Update user metrics (engagementRate/activityScore, etc.)
     for (const u of users) {
