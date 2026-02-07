@@ -25,6 +25,14 @@ import { useSearchUsers, useSearchPosts } from '@/hooks/useSearchQuery';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatNumber } from '@/utils/numberUtils';
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
+};
+
 const Explore = () => {
   const { user: currentUser } = useSelector(state => state.auth);
 
@@ -90,6 +98,21 @@ const Explore = () => {
   const hashtagsArray = Array.isArray(trendingHashtags)
     ? trendingHashtags
     : trendingHashtags?.data || [];
+
+  const getHashtagName = item =>
+    String(item?.name || item?.tag || item?.hashtag || '')
+      .replace(/^#/, '')
+      .trim();
+
+  const getHashtagPostCount = item => {
+    const n =
+      item?.totalUsage ??
+      item?.recentUsage?.last24Hours ??
+      item?.postsCount ??
+      item?.count ??
+      item?.posts;
+    return Number.isFinite(Number(n)) ? Number(n) : 0;
+  };
 
   const explorePosts = isSearching
     ? postSearchResults?.posts || postSearchResults || []
@@ -172,10 +195,13 @@ const Explore = () => {
                 <p>Không có hashtag nổi bật</p>
               </div>
             ) : (
-              hashtagsArray.map((item, index) => (
+              hashtagsArray.map((item, index) => {
+                const tagName = getHashtagName(item);
+                const postsCount = getHashtagPostCount(item);
+                return (
                 <Link
-                  key={item._id || item.tag}
-                  to={`/explore/tag/${item.tag?.replace('#', '')}`}
+                  key={item._id || tagName || index}
+                  to={`/explore/tag/${encodeURIComponent(tagName)}`}
                   className="flex items-center gap-4 p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <span className="text-lg font-bold text-neutral-300 dark:text-neutral-600 w-6">
@@ -185,18 +211,19 @@ const Explore = () => {
                     <div className="flex items-center gap-2">
                       <Hash size={16} className="text-neutral-400" />
                       <span className="font-semibold text-content dark:text-white">
-                        {item.tag?.replace('#', '')}
+                        {tagName || '#'}
                       </span>
                       {index < 3 && (
                         <Flame size={14} className="text-orange-500" />
                       )}
                     </div>
                     <p className="text-sm text-neutral-500">
-                      {formatNumber(item.count || item.posts)} posts
+                      {formatNumber(postsCount)} posts
                     </p>
                   </div>
                 </Link>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -317,26 +344,60 @@ const Explore = () => {
               </div>
             ) : (
               (explorePosts || []).map(post => (
+                (() => {
+                  const mediaItem = post?.media?.[0];
+                  const raw =
+                    mediaItem ||
+                    post?.images?.[0] ||
+                    post?.image ||
+                    post?.thumbnail ||
+                    post?.cover;
+                  const mediaUrl =
+                    typeof raw === 'string' ? raw : raw?.url || raw?.thumbnail;
+                  const isVideo =
+                    mediaItem?.type === 'video' || isVideoUrl(mediaUrl);
+
+                  return (
                 <Link
                   key={post._id}
                   to={`/post/${post._id}`}
-                  className="relative aspect-square group overflow-hidden rounded-lg"
+                  className="relative aspect-square group overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800"
                 >
-                  <img
-                    src={
-                      post.images?.[0] ||
-                      post.image ||
-                      'https://via.placeholder.com/400'
-                    }
-                    alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  {mediaUrl ? (
+                    isVideo ? (
+                      <video
+                        src={mediaUrl}
+                        poster={mediaItem?.thumbnail}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={mediaUrl}
+                        alt={post.caption ? `Post: ${post.caption}` : 'Post'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={e => {
+                          e.currentTarget.src = 'https://via.placeholder.com/400';
+                        }}
+                      />
+                    )
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                      <p className="text-xs text-neutral-500 line-clamp-4 text-center">
+                        {post.caption || 'No media'}
+                      </p>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-white font-medium">
                       ♥ {formatNumber(post.likesCount || post.likes || 0)}
                     </span>
                   </div>
                 </Link>
+                  );
+                })()
               ))
             )}
           </div>

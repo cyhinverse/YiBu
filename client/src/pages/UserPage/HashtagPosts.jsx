@@ -24,6 +24,11 @@ const isVideoUrl = url => {
   return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
 };
 
+const getHashtagName = tag =>
+  String(tag?.name || tag?.tag || tag?.hashtag || '')
+    .replace(/^#/, '')
+    .trim();
+
 const HashtagPosts = () => {
   const { hashtag } = useParams();
   const [viewMode, setViewMode] = useState('list'); 
@@ -141,17 +146,17 @@ const HashtagPosts = () => {
             <h3 className="text-sm font-semibold text-neutral-500 mb-3">Related Hashtags</h3>
             <div className="flex flex-wrap gap-2">
               {relatedHashtags
-                .filter(tag => tag.tag?.replace('#', '') !== hashtag)
+                .filter(tag => getHashtagName(tag) !== String(hashtag).replace(/^#/, ''))
                 .slice(0, 4)
                 .map((tag, index) => (
                   <Link
-                    key={tag._id || tag.tag}
-                    to={`/explore/tag/${tag.tag?.replace('#', '')}`}
+                    key={tag._id || getHashtagName(tag) || index}
+                    to={`/explore/tag/${encodeURIComponent(getHashtagName(tag))}`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                   >
                     <Hash size={12} className="text-neutral-400" />
                     <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                      {tag.tag?.replace('#', '')}
+                      {getHashtagName(tag) || '#'}
                     </span>
                     {index === 0 && <Flame size={12} className="text-orange-500" />}
                   </Link>
