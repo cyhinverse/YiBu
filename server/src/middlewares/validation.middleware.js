@@ -3,6 +3,8 @@
  * Create middleware to validate request body/params/query with Joi schema
  */
 
+import ApiError from '../helpers/ApiError.js';
+
 /**
  * Validate request body
  * @param {Joi.Schema} schema - Joi schema for validation
@@ -16,12 +18,16 @@ export const validateBody = schema => {
     });
 
     if (error) {
-      error.statusCode = 400;
-      error.details = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-      return next(error);
+      return next(
+        ApiError.badRequest('Invalid request body', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
     // Assign validated value to req.body
@@ -43,12 +49,16 @@ export const validateParams = schema => {
     });
 
     if (error) {
-      error.statusCode = 400;
-      error.details = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-      return next(error);
+      return next(
+        ApiError.badRequest('Invalid request params', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
     req.params = value;
@@ -70,12 +80,16 @@ export const validateQuery = schema => {
     });
 
     if (error) {
-      error.statusCode = 400;
-      error.details = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-      return next(error);
+      return next(
+        ApiError.badRequest('Invalid request query', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
     req.query = value;
@@ -151,9 +165,12 @@ export const validate = ({ body, params, query }) => {
 
     if (errors.length > 0) {
       const error = new Error('Dữ liệu không hợp lệ');
-      error.statusCode = 400;
-      error.details = errors;
-      return next(error);
+      return next(
+        ApiError.badRequest('Invalid request data', {
+          errorCode: 'VALIDATION_ERROR',
+          details: errors,
+        })
+      );
     }
 
     next();

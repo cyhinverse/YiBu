@@ -3,13 +3,14 @@ import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import sanitizeHtml from 'sanitize-html';
+import logger from '../configs/logger.js';
+import config from '../configs/config.js';
 
 /**
  * Security Middleware Configuration
- * Bao gồm: Helmet, Rate Limiting, Data Sanitization, HPP
+ * Includes: Helmet, Rate Limiting, Data Sanitization, HPP, basic XSS sanitize
  */
 
-// Helmet - Thiết lập HTTP headers bảo mật
 export const helmetMiddleware = helmet({
   contentSecurityPolicy: {
     directives: {
@@ -24,48 +25,53 @@ export const helmetMiddleware = helmet({
       frameSrc: ["'none'"],
     },
   },
-  crossOriginEmbedderPolicy: false, // Cho phép load resources từ origin khác
+
+  // Prevent COOP from breaking OAuth popup flows / DevTools postMessage in dev.
+  crossOriginOpenerPolicy:
+    config.env === 'production'
+      ? { policy: 'same-origin-allow-popups' }
+      : false,
+
+  crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 });
 
-// Rate Limiter - Chống DDoS và spam request
-// Global rate limit cho tất cả requests
 export const globalRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 1000, // 1000 requests per 15 min (production-ready)
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   message: {
+    success: false,
     code: 0,
-    message: 'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
-  },
-  standardHeaders: true, // Return rate limit info trong headers `RateLimit-*`
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  handler: (req, res, next, options) => {
-    res.status(options.statusCode).json(options.message);
-  },
-  skip: (req) => {
-    // Skip rate limiting for health check
-    return req.path === '/api/health';
-  },
-});
-
-// Strict rate limit cho auth routes (login, register, password reset)
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 10, // 10 attempts per 15 min
-  message: {
-    code: 0,
-    message: 'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút.',
+    message:
+      'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Không đếm request thành công
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  },
+  skip: req => req.path === '/api/health',
 });
 
-// Rate limit cho API cần protect (upload, create post, etc.)
-export const apiRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 phút
-  max: 100, // Increased from 30 to 100 requests per minute
+export const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   message: {
+    success: false,
+    code: 0,
+    message:
+      'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+export const apiRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: {
+    success: false,
     code: 0,
     message: 'Quá nhiều request, vui lòng chậm lại.',
   },
@@ -73,23 +79,17 @@ export const apiRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Data Sanitization - Chống NoSQL Injection
 export const mongoSanitizeMiddleware = mongoSanitize({
   replaceWith: '_',
   onSanitize: ({ req, key }) => {
-    console.warn(`NoSQL Injection attempt detected: ${key}`);
+    logger.warn('NoSQL Injection attempt detected', { key, path: req?.path });
   },
 });
 
-// HPP - Chống HTTP Parameter Pollution
 export const hppMiddleware = hpp({
   whitelist: ['sort', 'fields', 'page', 'limit', 'tags'],
 });
 
-/**
- * XSS Clean - Sanitize user input
- * Thay vì dùng xss-clean (deprecated), ta tự viết middleware đơn giản
- */
 const SANITIZE_SKIP_FIELDS = new Set([
   'password',
   'newPassword',
@@ -103,47 +103,36 @@ const SANITIZE_SKIP_FIELDS = new Set([
 ]);
 
 export const xssClean = (req, res, next) => {
-  if (req.body) {
-    req.body = sanitizeObject(req.body);
-  }
-  if (req.query) {
-    req.query = sanitizeObject(req.query);
-  }
-  if (req.params) {
-    req.params = sanitizeObject(req.params);
-  }
+  if (req.body) req.body = sanitizeObject(req.body);
+  if (req.query) req.query = sanitizeObject(req.query);
+  if (req.params) req.params = sanitizeObject(req.params);
   next();
 };
 
-
-// Helper function để sanitize object
 const sanitizeObject = obj => {
-  if (typeof obj !== 'object' || obj === null) {
-    return sanitizeString(obj);
-  }
+  if (typeof obj !== 'object' || obj === null) return sanitizeString(obj);
 
   const sanitized = Array.isArray(obj) ? [] : {};
-
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const value = obj[key];
-      if (typeof value === 'string') {
-        sanitized[key] = SANITIZE_SKIP_FIELDS.has(key)
-          ? value
-          : sanitizeString(value);
-      } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = sanitizeObject(value);
-      } else {
-        sanitized[key] = value;
-      }
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+
+    const value = obj[key];
+    if (typeof value === 'string') {
+      sanitized[key] = SANITIZE_SKIP_FIELDS.has(key) ? value : sanitizeString(value);
+      continue;
     }
+
+    if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value);
+      continue;
+    }
+
+    sanitized[key] = value;
   }
+
   return sanitized;
 };
 
-
-// Sanitize string - escape HTML entities
-// Sanitize string - use sanitize-html
 const sanitizeString = str => {
   if (typeof str !== 'string') return str;
 
@@ -166,3 +155,4 @@ export default {
   hppMiddleware,
   xssClean,
 };
+

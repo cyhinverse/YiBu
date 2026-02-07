@@ -1,81 +1,83 @@
-import jwt from "jsonwebtoken";
-import config from "../configs/config.js";
-import logger from "../configs/logger.js";
+import jwt from 'jsonwebtoken';
+import config from '../configs/config.js';
+import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
+import { CatchError } from '../configs/CatchError.js';
 
-const VerifyToken = {
-  VerifyAccessToken: (req, res, next) => {
-    try {
-      // Try to get token from cookie first, then fallback to Authorization header
-      let accessToken = req.cookies?.accessToken;
-      
-      // Fallback to Authorization header for backward compatibility
-      if (!accessToken) {
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-          accessToken = authHeader.split(" ")[1];
-        }
-      }
+const getAccessTokenFromRequest = req => {
+  const cookieToken = req.cookies?.accessToken;
+  if (cookieToken) return cookieToken;
 
-      if (!accessToken) {
-        return res
-          .status(401)
-          .json({ code: 0, message: "You are not authenticated" });
-      }
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
 
-      jwt.verify(accessToken, config.jwt.accessSecret, async (err, user) => {
-        if (err) {
-          logger.error("JWT Verify Error:", err.message);
-          return res
-            .status(401)
-            .json({ code: 0, message: "Token is not valid" });
-        }
-
-        const User = (await import('../models/User.js')).default;
-        const userRecord = await User.findById(user.id).select(
-          'isAdmin moderation.status moderation.suspendedUntil isActive'
-        );
-
-        if (!userRecord || userRecord.isActive === false) {
-          return res
-            .status(401)
-            .json({ code: 0, message: "User not found or inactive" });
-        }
-
-        if (userRecord.moderation?.status === 'banned') {
-          return res.status(403).json({
-            code: 0,
-            message: "Tài khoản đã bị khóa vĩnh viễn",
-          });
-        }
-
-        if (userRecord.moderation?.status === 'suspended') {
-          const suspendedUntil = userRecord.moderation?.suspendedUntil;
-          if (suspendedUntil && suspendedUntil > new Date()) {
-            const remainingDays = Math.ceil(
-              (suspendedUntil - new Date()) / (1000 * 60 * 60 * 24)
-            );
-            return res.status(403).json({
-              code: 0,
-              message: `Tài khoản bị tạm khóa, còn ${remainingDays} ngày`,
-            });
-          }
-        }
-
-        req.user = {
-          ...user,
-          isAdmin: userRecord.isAdmin,
-        };
-        next();
-      });
-
-    } catch (error) {
-      logger.error("Unexpected error in token verification:", error);
-      return res
-        .status(500)
-        .json({ code: 0, message: "Internal Server Error" });
-    }
-  },
+  return null;
 };
 
-export const verifyToken = VerifyToken.VerifyAccessToken;
-export default VerifyToken;
+export const verifyToken = CatchError(async (req, res, next) => {
+  const accessToken = getAccessTokenFromRequest(req);
+  if (!accessToken) {
+    throw ApiError.unauthorized('You are not authenticated', {
+      errorCode: 'AUTH_REQUIRED',
+    });
+  }
+
+  if (!config.jwt.accessSecret) {
+    throw ApiError.internal('ACCESS_TOKEN_SECRET is not configured', {
+      errorCode: 'CONFIG_MISSING',
+      details: { key: 'ACCESS_TOKEN_SECRET' },
+    });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(accessToken, config.jwt.accessSecret);
+  } catch (err) {
+    logger.warn('JWT verification failed', { message: err?.message });
+    throw ApiError.unauthorized('Token is not valid', {
+      errorCode: err?.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
+    });
+  }
+
+  const User = (await import('../models/User.js')).default;
+  const userRecord = await User.findById(payload.id).select(
+    'isAdmin moderation.status moderation.suspendedUntil isActive'
+  );
+
+  if (!userRecord || userRecord.isActive === false) {
+    throw ApiError.unauthorized('User not found or inactive', {
+      errorCode: 'USER_INACTIVE',
+    });
+  }
+
+  if (userRecord.moderation?.status === 'banned') {
+    throw ApiError.forbidden('Account is banned', {
+      errorCode: 'ACCOUNT_BANNED',
+    });
+  }
+
+  if (userRecord.moderation?.status === 'suspended') {
+    const suspendedUntil = userRecord.moderation?.suspendedUntil;
+    if (suspendedUntil && suspendedUntil > new Date()) {
+      const remainingDays = Math.ceil(
+        (suspendedUntil - new Date()) / (1000 * 60 * 60 * 24)
+      );
+      throw ApiError.forbidden(`Account is suspended (${remainingDays} days remaining)`, {
+        errorCode: 'ACCOUNT_SUSPENDED',
+        details: { suspendedUntil, remainingDays },
+      });
+    }
+  }
+
+  req.user = {
+    ...payload,
+    isAdmin: userRecord.isAdmin,
+  };
+
+  return next();
+});
+
+export default { verifyToken };
+

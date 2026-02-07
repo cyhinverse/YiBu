@@ -3,9 +3,10 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import config from './configs/config.js';
 import { morganMiddleware } from './configs/logger.js';
+import logger from './configs/logger.js';
 import errorMiddleware from './middlewares/error.middleware.js';
-import ApiError from './helpers/ApiError.js';
 import { sendOk } from './helpers/apiResponse.js';
+import { buildErrorResponse } from './helpers/apiResponse.js';
 import {
   helmetMiddleware,
   globalRateLimiter,
@@ -34,21 +35,17 @@ const app = express();
 const corsOptions = {
   origin: function (origin, callback) {
     // Cho phép requests không có origin (mobile apps, Postman, etc.)
-    const allowedOrigins = [
-      process.env.CLIENT_URL || 'http://localhost:3000',
-      'http://localhost:9258',
-      'http://localhost:9259',
-      'http://localhost:5173',
-      'http://127.0.0.1:9258',
-      'http://127.0.0.1:9259',
-    ];
+    const allowedOrigins = config.cors?.origins || [config.CLIENT_URL];
 
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn('CORS blocked origin:', origin);
-      callback(ApiError.forbidden('Not allowed by CORS'));
-
+      logger.warn('CORS blocked origin', { origin });
+      const err = new Error('Not allowed by CORS');
+      err.statusCode = 403;
+      err.errorCode = 'CORS_BLOCKED';
+      err.details = { origin };
+      callback(err);
     }
   },
   credentials: true,
@@ -137,10 +134,13 @@ app.use('/api/v2/settings', userSettingsRoutes);
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Endpoint not found: ${req.method} ${req.path}`,
-  });
+  return res.status(404).json(
+    buildErrorResponse({
+      message: `Endpoint not found: ${req.method} ${req.path}`,
+      errorCode: 'NOT_FOUND',
+      details: { method: req.method, path: req.path },
+    })
+  );
 });
 
 

@@ -1,10 +1,12 @@
 export const buildSuccessResponse = ({
+  code = 1,
   message = 'Success',
   data = null,
   meta = {},
 } = {}) => {
   const response = {
     success: true,
+    code,
     message,
   };
 
@@ -20,12 +22,14 @@ export const buildSuccessResponse = ({
 };
 
 export const buildErrorResponse = ({
+  code = 0,
   message = 'Internal Server Error',
   errorCode = null,
   details = null,
 } = {}) => {
   const response = {
     success: false,
+    code,
     message,
   };
 
