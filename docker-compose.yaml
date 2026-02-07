@@ -27,6 +27,9 @@ services:
     container_name: social_client
     ports:
       - "3000:9258"
+    environment:
+      # Vite dev proxy inside container must hit the server container, not localhost.
+      - VITE_PROXY_TARGET=http://server:5000
     depends_on:
       - server
     networks:

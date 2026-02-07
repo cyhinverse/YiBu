@@ -8,7 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(() => {
+  // In Docker, `localhost` is the client container, not the server container.
+  // Configure via `VITE_PROXY_TARGET` (e.g. http://server:5000).
+  const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:5000';
+
+  return {
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -85,14 +90,15 @@ export default defineConfig({
     // Proxy API + Socket.IO in dev so HttpOnly cookies work without SameSite=None.
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: proxyTarget,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: proxyTarget,
         changeOrigin: true,
         ws: true,
       },
     },
   },
+  };
 });
