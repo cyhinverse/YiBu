@@ -44,6 +44,17 @@ const GroupInfoModal = ({
     }
   }, [conversation]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !conversation) return null;
 
   const isAdmin =
@@ -57,10 +68,27 @@ const GroupInfoModal = ({
     }
   };
 
+  const handleUserKeyDown = (event, user) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onAddMember(user._id);
+      setSearchQuery('');
+      setShowAddMember(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-neutral-200 dark:border-neutral-800">
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={event => {
+        if (event.key === 'Escape') onClose?.();
+      }}
+    >
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] shadow-xl">
+        <div className="p-5 flex justify-between items-center bg-neutral-50 dark:bg-neutral-800/50">
           <h2 className="text-xl font-bold text-black dark:text-white">
             Thông tin nhóm
           </h2>
@@ -75,7 +103,7 @@ const GroupInfoModal = ({
         <div className="p-6 overflow-y-auto custom-scrollbar space-y-8">
           {/* Group Branding */}
           <div className="flex flex-col items-center gap-4">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+            <div className="w-24 h-24 rounded-3xl bg-neutral-900 dark:bg-white flex items-center justify-center text-white dark:text-neutral-900 text-4xl font-bold shadow-lg">
               {conversation.name
                 ? conversation.name.charAt(0).toUpperCase()
                 : 'G'}
@@ -86,13 +114,15 @@ const GroupInfoModal = ({
                   <input
                     type="text"
                     value={newName}
+                    id="group-name-edit"
                     onChange={e => setNewName(e.target.value)}
-                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label="Group name"
+                    className="flex-1 px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     autoFocus
                   />
                   <button
                     onClick={handleRename}
-                    className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                    className="p-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
                   >
                     <Check size={18} />
                   </button>
@@ -114,7 +144,7 @@ const GroupInfoModal = ({
                         setIsEditingName(true);
                         setNewName(conversation.name || '');
                       }}
-                      className="p-2 text-neutral-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-full transition-all"
+                      className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
                     >
                       <Edit size={18} />
                     </button>
@@ -133,7 +163,7 @@ const GroupInfoModal = ({
               {isAdmin && (
                 <button
                   onClick={() => setShowAddMember(!showAddMember)}
-                  className="text-blue-600 text-sm font-bold hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                  className="text-neutral-700 dark:text-neutral-200 text-sm font-bold hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <UserPlus size={16} /> Thêm mới
                 </button>
@@ -142,7 +172,7 @@ const GroupInfoModal = ({
 
             {/* Add Member Search Area */}
             {showAddMember && (
-              <div className="bg-neutral-50 dark:bg-neutral-800/40 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 animate-in fade-in slide-in-from-top-2">
+              <div className="bg-neutral-100 dark:bg-neutral-800/40 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
                 <div className="relative mb-3">
                   <Search
                     size={16}
@@ -151,14 +181,19 @@ const GroupInfoModal = ({
                   <input
                     type="text"
                     value={searchQuery}
+                    id="group-member-search"
                     onChange={e => setSearchQuery(e.target.value)}
+                    aria-label="Search members"
                     placeholder="Tìm tên bạn bè..."
-                    className="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-black dark:text-white"
+                    className="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-black dark:text-white"
                   />
                 </div>
                 {isSearching ? (
                   <div className="flex justify-center p-4">
-                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                    <Loader2
+                      size={20}
+                      className="animate-spin text-neutral-700 dark:text-neutral-200"
+                    />
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="max-h-52 overflow-y-auto space-y-2 custom-scrollbar">
@@ -169,15 +204,23 @@ const GroupInfoModal = ({
                       return (
                         <div
                           key={user._id}
-                          className="flex items-center justify-between p-2.5 hover:bg-white dark:hover:bg-neutral-800 rounded-xl transition-colors border border-transparent hover:border-neutral-100 dark:hover:border-neutral-700"
+                          onClick={() => {
+                            onAddMember(user._id);
+                            setSearchQuery('');
+                            setShowAddMember(false);
+                          }}
+                          onKeyDown={event => handleUserKeyDown(event, user)}
+                          role="button"
+                          tabIndex={0}
+                          className="flex items-center justify-between p-2.5 hover:bg-white dark:hover:bg-neutral-800 rounded-xl transition-colors"
                         >
                           <div className="flex items-center gap-3">
                             <img
                               src={
                                 user.avatar || 'https://via.placeholder.com/150'
                               }
-                              className="w-9 h-9 rounded-full object-cover border border-neutral-100"
-                              alt=""
+                              className="w-9 h-9 rounded-full object-cover"
+                              alt={user.name || 'User avatar'}
                             />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-black dark:text-white truncate">
@@ -199,7 +242,7 @@ const GroupInfoModal = ({
                                 setSearchQuery('');
                                 setShowAddMember(false);
                               }}
-                              className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                              className="px-3 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs rounded-xl font-bold hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
                             >
                               Thêm
                             </button>
@@ -228,7 +271,7 @@ const GroupInfoModal = ({
                     <img
                       src={member.avatar || 'https://via.placeholder.com/150'}
                       alt={member.name}
-                      className="w-11 h-11 rounded-full object-cover border-2 border-neutral-100 dark:border-neutral-800 shadow-sm"
+                      className="w-11 h-11 rounded-full object-cover"
                     />
                     <div className="min-w-0">
                       <p className="font-bold text-black dark:text-white text-sm truncate">
@@ -237,7 +280,7 @@ const GroupInfoModal = ({
                       <p className="text-xs text-neutral-500 truncate">
                         @{member.username}
                         {conversation.admin === member._id && (
-                          <span className="ml-2 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase font-bold">
+                          <span className="ml-2 text-[10px] bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full uppercase font-bold">
                             Trưởng nhóm
                           </span>
                         )}
@@ -264,10 +307,10 @@ const GroupInfoModal = ({
           </div>
         </div>
 
-        <div className="p-5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/30">
+        <div className="p-5 bg-neutral-50 dark:bg-neutral-800/50">
           <button
             onClick={onLeaveGroup}
-            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-all border border-red-100 dark:border-red-900/20"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-all"
           >
             <LogOut size={20} />
             Rời khỏi nhóm này

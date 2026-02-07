@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import SocketService from "../services/Socket.Service.js";
+import SocketService from "../modules/shared/socket/socket.service.js";
 import { registerConnectionHandlers } from "./handlers/connection.handler.js";
 import { registerChatHandlers } from "./handlers/chat.handler.js";
 import { registerNotificationHandlers } from "./handlers/notification.handler.js";
@@ -11,12 +11,7 @@ let io;
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: [
-        "http://localhost:9258",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        config.CLIENT_URL || "http://localhost:9258",
-      ],
+      origin: config.cors?.origins || [config.CLIENT_URL],
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization"],

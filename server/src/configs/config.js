@@ -1,19 +1,51 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || 'development';
 const envFile =
   nodeEnv === 'production' ? '.env.production' : '.env.development';
 
-// Load .env file (if it exists) and then specific env file
-dotenv.config();
-dotenv.config({ path: envFile });
+const serverRootDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..'
+);
+
+// Load base .env (if present) then overlay env-specific file.
+dotenv.config({ path: path.join(serverRootDir, '.env') });
+dotenv.config({ path: path.join(serverRootDir, envFile) });
+
+const parseCsv = (value, fallback = []) => {
+  if (!value) return fallback;
+  return value
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+};
+
+const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
 
 const config = {
   env: nodeEnv,
-  port: process.env.PORT || 5000,
+  isProduction: nodeEnv === 'production',
+  port: Number.parseInt(process.env.PORT, 10) || 5000,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
+  debugMode: process.env.DEBUG_MODE === 'true',
+  cors: {
+    // Comma-separated list, e.g. "http://localhost:3000,http://localhost:5173"
+    origins: uniq(
+      parseCsv(process.env.CORS_ORIGINS, [
+        process.env.CLIENT_URL || 'http://localhost:3000',
+        'http://localhost:9258',
+        'http://localhost:9259',
+        'http://localhost:5173',
+        'http://127.0.0.1:9258',
+        'http://127.0.0.1:9259',
+      ])
+    ),
+  },
   mongodb: {
     uri: process.env.MONGODB_URI || process.env.MONGO_URI, // Handle both naming conventions found in code
   },
@@ -28,7 +60,7 @@ const config = {
   },
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: process.env.EMAIL_PORT || 587,
+    port: Number.parseInt(process.env.EMAIL_PORT, 10) || 587,
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },

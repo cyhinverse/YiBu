@@ -1,5 +1,6 @@
 import express from 'express';
-import PostController from '../controllers/post.controller.js';
+import PostController from '../modules/post/post.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateParams,
@@ -17,26 +18,32 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Saved Posts
-// ======================================
+/* GET / - Get saved posts for current user */
 router.get(
   '/',
   validateQuery(getSavedPostsQuery),
   PostController.getSavedPosts
 );
+/* GET /collections - Get saved post collections */
 router.get(
   '/collections',
   validateQuery(getCollectionsQuery),
   PostController.getSavedCollections
 );
+/* GET /:postId/status - Check if post is saved */
 router.get(
   '/:postId/status',
   validateParams(postIdParam),
   PostController.checkSavedStatus
 );
 
-router.post('/:postId', validateParams(savePostParam), PostController.savePost);
+/* POST /:postId - Save a post */
+router.post(
+  '/:postId',
+  validateParams(savePostParam),
+  PostController.savePost
+);
+/* DELETE /:postId - Unsave a post */
 router.delete(
   '/:postId',
   validateParams(unsavePostParam),

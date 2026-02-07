@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
@@ -13,7 +14,7 @@ import {
   Image,
   Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useTrendingHashtags, useExploreFeed } from '@/hooks/usePostsQuery';
 import {
   useSuggestions,
@@ -22,11 +23,14 @@ import {
 } from '@/hooks/useUserQuery';
 import { useSearchUsers, useSearchPosts } from '@/hooks/useSearchQuery';
 import { useDebounce } from '@/hooks/useDebounce';
+import { formatNumber } from '@/utils/numberUtils';
 
-const formatNumber = num => {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num?.toString() || '0';
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
 };
 
 const Explore = () => {
@@ -70,13 +74,13 @@ const Explore = () => {
     try {
       if (isFollowed) {
         await unfollowMutation.mutateAsync(user._id);
-        toast.success('Đã bỏ theo dõi');
+        notify.success('Đã bỏ theo dõi');
       } else {
         await followMutation.mutateAsync(user._id);
-        toast.success('Đã theo dõi');
+        notify.success('Đã theo dõi');
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+      notify.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
   };
 
@@ -95,6 +99,21 @@ const Explore = () => {
     ? trendingHashtags
     : trendingHashtags?.data || [];
 
+  const getHashtagName = item =>
+    String(item?.name || item?.tag || item?.hashtag || '')
+      .replace(/^#/, '')
+      .trim();
+
+  const getHashtagPostCount = item => {
+    const n =
+      item?.totalUsage ??
+      item?.recentUsage?.last24Hours ??
+      item?.postsCount ??
+      item?.count ??
+      item?.posts;
+    return Number.isFinite(Number(n)) ? Number(n) : 0;
+  };
+
   const explorePosts = isSearching
     ? postSearchResults?.posts || postSearchResults || []
     : exploreFeed?.posts || exploreFeed || [];
@@ -103,7 +122,7 @@ const Explore = () => {
   const usersLoading = suggestionsLoading || userSearchLoading;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto min-h-[100dvh] flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3">
@@ -140,14 +159,21 @@ const Explore = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors overflow-hidden ${
                   activeTab === tab.id
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'text-primary-foreground'
                     : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
               >
-                <tab.icon size={16} />
-                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.span
+                    layoutId="exploreTabIndicator"
+                    className="absolute inset-0 rounded-lg bg-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <tab.icon size={16} className="relative z-10" />
+                <span className="relative z-10">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -155,7 +181,7 @@ const Explore = () => {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 flex-1">
         {/* Trending Tab */}
         {activeTab === 'trending' && (
           <div className="space-y-2">
@@ -169,10 +195,13 @@ const Explore = () => {
                 <p>Không có hashtag nổi bật</p>
               </div>
             ) : (
-              hashtagsArray.map((item, index) => (
+              hashtagsArray.map((item, index) => {
+                const tagName = getHashtagName(item);
+                const postsCount = getHashtagPostCount(item);
+                return (
                 <Link
-                  key={item._id || item.tag}
-                  to={`/explore/tag/${item.tag?.replace('#', '')}`}
+                  key={item._id || tagName || index}
+                  to={`/explore/tag/${encodeURIComponent(tagName)}`}
                   className="flex items-center gap-4 p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <span className="text-lg font-bold text-neutral-300 dark:text-neutral-600 w-6">
@@ -182,18 +211,19 @@ const Explore = () => {
                     <div className="flex items-center gap-2">
                       <Hash size={16} className="text-neutral-400" />
                       <span className="font-semibold text-content dark:text-white">
-                        {item.tag?.replace('#', '')}
+                        {tagName || '#'}
                       </span>
                       {index < 3 && (
                         <Flame size={14} className="text-orange-500" />
                       )}
                     </div>
                     <p className="text-sm text-neutral-500">
-                      {formatNumber(item.count || item.posts)} posts
+                      {formatNumber(postsCount)} posts
                     </p>
                   </div>
                 </Link>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -240,7 +270,7 @@ const Explore = () => {
                         alt={user.name}
                         className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                       />
-                      {user.isVerified && (
+                      {(user.verified || user.isVerified) && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center border-2 border-white dark:border-neutral-900">
                           <Check
                             size={8}
@@ -302,7 +332,7 @@ const Explore = () => {
 
         {/* Photos Tab */}
         {activeTab === 'photos' && (
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
             {postsLoading && !explorePosts?.length ? (
               <div className="col-span-3 flex justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -314,26 +344,60 @@ const Explore = () => {
               </div>
             ) : (
               (explorePosts || []).map(post => (
+                (() => {
+                  const mediaItem = post?.media?.[0];
+                  const raw =
+                    mediaItem ||
+                    post?.images?.[0] ||
+                    post?.image ||
+                    post?.thumbnail ||
+                    post?.cover;
+                  const mediaUrl =
+                    typeof raw === 'string' ? raw : raw?.url || raw?.thumbnail;
+                  const isVideo =
+                    mediaItem?.type === 'video' || isVideoUrl(mediaUrl);
+
+                  return (
                 <Link
                   key={post._id}
                   to={`/post/${post._id}`}
-                  className="relative aspect-square group overflow-hidden rounded-lg"
+                  className="relative aspect-square group overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800"
                 >
-                  <img
-                    src={
-                      post.images?.[0] ||
-                      post.image ||
-                      'https://via.placeholder.com/400'
-                    }
-                    alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  {mediaUrl ? (
+                    isVideo ? (
+                      <video
+                        src={mediaUrl}
+                        poster={mediaItem?.thumbnail}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={mediaUrl}
+                        alt={post.caption ? `Post: ${post.caption}` : 'Post'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={e => {
+                          e.currentTarget.src = 'https://via.placeholder.com/400';
+                        }}
+                      />
+                    )
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                      <p className="text-xs text-neutral-500 line-clamp-4 text-center">
+                        {post.caption || 'No media'}
+                      </p>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-white font-medium">
                       ♥ {formatNumber(post.likesCount || post.likes || 0)}
                     </span>
                   </div>
                 </Link>
+                  );
+                })()
               ))
             )}
           </div>
@@ -344,3 +408,4 @@ const Explore = () => {
 };
 
 export default Explore;
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, AlertTriangle, User, CheckCircle, XCircle } from 'lucide-react';
 import { getTargetIcon, getTargetTypeText } from './ReportsUtils.jsx';
 
@@ -11,44 +11,71 @@ export default function ReportDetailModal({
 }) {
   const [resolutionNote, setResolutionNote] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !report) return null;
 
+  const handleKeyDown = event => {
+    if (event.key === 'Escape') {
+      onClose?.();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-neutral-900/20 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div
+      className="fixed inset-0 bg-black/45 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
       <div
-        className="bg-white dark:bg-neutral-900 w-full max-w-lg shadow-2xl rounded-3xl transform animate-scale-in overflow-hidden border border-neutral-200 dark:border-neutral-800"
+        className="admin-card w-full max-w-lg rounded-2xl transform animate-scale-in overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3.5 bg-[var(--color-surface-secondary)] flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--color-content)] tracking-tight">
             Chi tiết báo cáo
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500 dark:text-neutral-400"
+            className="p-2 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
+            aria-label="Đóng"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[80vh]">
+        <div className="p-4 overflow-y-auto max-h-[80vh]">
           {/* Reporter Info */}
-          <div className="flex items-center gap-4 mb-6 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-4 mb-6 p-4 bg-[var(--color-surface-secondary)] rounded-2xl">
             <img
               src={report.reporter?.avatar || '/images/default-avatar.png'}
-              alt="Reporter"
-              className="w-12 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm"
+              alt={
+                report.reporter?.name || report.reporter?.username || 'Reporter'
+              }
+              className="w-12 h-12 rounded-full object-cover"
             />
             <div>
-              <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-0.5">
+              <p className="text-[10px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] mb-0.5">
                 Người báo cáo
               </p>
               <div className="flex items-center gap-2">
-                <p className="font-bold text-neutral-900 dark:text-white text-base">
+                <p className="font-semibold text-[var(--color-content)] text-base">
                   {report.reporter?.name || 'Ẩn danh'}
                 </p>
-                <p className="text-xs text-neutral-400 font-medium">
+                <p className="text-xs text-[var(--color-text-tertiary)] font-medium">
                   @{report.reporter?.username || 'unknown'}
                 </p>
               </div>
@@ -57,10 +84,10 @@ export default function ReportDetailModal({
 
           {/* Report Reason */}
           <div className="mb-6">
-            <p className="text-xs font-bold text-neutral-900 dark:text-white mb-2.5">
+            <p className="text-xs font-semibold text-[var(--color-content)] mb-2.5">
               Lý do báo cáo
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30 font-bold text-sm">
+            <div className="admin-pill admin-pill-warning text-sm">
               <AlertTriangle size={16} />
               {report.reason}
             </div>
@@ -68,10 +95,10 @@ export default function ReportDetailModal({
 
           {/* Description */}
           <div className="mb-6">
-            <p className="text-xs font-bold text-neutral-900 dark:text-white mb-2.5">
+            <p className="text-xs font-semibold text-[var(--color-content)] mb-2.5">
               Mô tả chi tiết
             </p>
-            <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 italic text-sm">
+            <p className="text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-surface-secondary)] p-4 rounded-2xl italic text-sm">
               "{report.description || 'Không có mô tả bổ sung.'}"
             </p>
           </div>
@@ -79,26 +106,25 @@ export default function ReportDetailModal({
           {/* Target Content */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2.5">
-              <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+              <div className="p-1 rounded-md bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]">
                 {getTargetIcon(report.target?.type)}
               </div>
-              <p className="text-xs font-bold text-neutral-900 dark:text-white">
+              <p className="text-xs font-semibold text-[var(--color-content)]">
                 Nội dung bị báo cáo
               </p>
             </div>
-            <div className="p-5 bg-neutral-50 dark:bg-neutral-800/30 rounded-2xl border border-neutral-200 dark:border-neutral-800 relative group">
-              <div className="absolute top-4 right-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-white dark:bg-neutral-900 px-2 py-1 rounded-md border border-neutral-100 dark:border-neutral-800">
+            <div className="p-4 bg-[var(--color-surface-secondary)] rounded-2xl relative group">
+              <div className="absolute top-4 right-4 text-[10px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] bg-[var(--color-surface)] px-2 py-1 rounded-md">
                 {getTargetTypeText(report.target?.type)}
               </div>
-
-              <p className="text-xs font-bold text-neutral-500 mb-2 flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-[var(--color-text-tertiary)] mb-2 flex items-center gap-1.5">
                 <User size={12} />
                 Tác giả:{' '}
-                <span className="text-neutral-900 dark:text-white">
+                <span className="text-[var(--color-content)]">
                   {report.target?.author}
                 </span>
               </p>
-              <p className="text-neutral-900 dark:text-white font-medium leading-relaxed pr-16 text-sm">
+              <p className="text-[var(--color-content)] font-medium leading-relaxed pr-16 text-sm">
                 "{report.target?.content}"
               </p>
             </div>
@@ -107,14 +133,14 @@ export default function ReportDetailModal({
           {/* Resolution Note Input */}
           {report.status === 'pending' && (
             <div className="mb-2">
-              <p className="text-xs font-bold text-neutral-900 dark:text-white mb-2.5">
+              <p className="text-xs font-semibold text-[var(--color-content)] mb-2.5">
                 Ghi chú giải quyết
               </p>
               <textarea
                 value={resolutionNote}
                 onChange={e => setResolutionNote(e.target.value)}
                 placeholder="Nhập ghi chú cho quyết định của bạn..."
-                className="w-full min-h-[100px] p-4 text-sm bg-neutral-50 dark:bg-neutral-800 border-none rounded-2xl placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none resize-none transition-all"
+                className="admin-textarea w-full min-h-[100px]"
               />
             </div>
           )}
@@ -122,17 +148,19 @@ export default function ReportDetailModal({
 
         {/* Actions */}
         {(report.status === 'pending' || !report.status) && (
-          <div className="p-6 pt-2 border-t border-neutral-50 dark:border-neutral-800/50 flex gap-3 bg-white dark:bg-neutral-900 rounded-b-3xl">
+          <div className="p-4 pt-2 bg-[var(--color-surface-secondary)] flex gap-3 rounded-b-3xl">
             <button
+              type="button"
               onClick={() => onReject(report, resolutionNote)}
-              className="px-6 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-1 flex items-center justify-center gap-2"
+              className="px-5 py-3 rounded-xl bg-[var(--color-surface)] text-[var(--color-text-secondary)] font-semibold text-sm hover:bg-[var(--color-surface-hover)] transition-colors flex-1 flex items-center justify-center gap-2"
             >
               <XCircle size={18} />
               Từ chối báo cáo
             </button>
             <button
+              type="button"
               onClick={() => onResolve(report, resolutionNote)}
-              className="px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2 shadow-lg shadow-neutral-500/10"
+              className="px-5 py-3 rounded-xl bg-[var(--color-primary)] text-[var(--color-primary-foreground)] font-semibold text-sm hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
               Chấp nhận báo cáo
@@ -140,6 +168,7 @@ export default function ReportDetailModal({
           </div>
         )}
       </div>
+
     </div>
   );
 }

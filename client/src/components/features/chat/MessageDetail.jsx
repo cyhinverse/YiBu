@@ -18,7 +18,7 @@ import {
   Video,
   Info,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   useConversations,
   useConversationById,
@@ -31,8 +31,9 @@ import {
   useRemoveGroupMember,
   useLeaveGroup,
 } from '@/hooks/useMessageQuery';
-import { useSocketContext } from '@/contexts/SocketContext';
+import { useSocketContext } from '@/contexts/useSocketContext';
 import { lazy, Suspense } from 'react';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 // Lazy load modals
 const ReportModal = lazy(() =>
@@ -44,7 +45,7 @@ const GroupInfoModal = lazy(() => import('./GroupInfoModal'));
 
 const TypingIndicator = ({ username }) => (
   <div className="flex items-center gap-3 px-4 py-3 animate-fade-in transition-all">
-    <div className="flex gap-1.5 bg-surface-secondary px-3 py-2 rounded-2xl rounded-bl-none border border-border">
+    <div className="flex gap-1.5 bg-surface-secondary px-3 py-2 rounded-2xl rounded-bl-none">
       <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce [animation-delay:-0.3s]" />
       <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce [animation-delay:-0.15s]" />
       <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" />
@@ -67,7 +68,7 @@ const MessageBubble = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
-    toast.success('Đã sao chép tin nhắn');
+    notify.success('Đã sao chép tin nhắn');
     setShowMenu(false);
   };
 
@@ -87,7 +88,7 @@ const MessageBubble = ({
               <img
                 src={avatar || 'https://via.placeholder.com/150'}
                 alt=""
-                className="w-8 h-8 rounded-full object-cover border border-border shadow-sm"
+                className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
               <div className="w-8" />
@@ -100,8 +101,8 @@ const MessageBubble = ({
           <div
             className={`relative px-4 py-2.5 text-sm transition-all duration-200 ${
               isOwn
-                ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-none shadow-sm'
-                : 'bg-surface-secondary text-content rounded-2xl rounded-bl-none border border-border'
+                ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-none'
+                : 'bg-surface-secondary text-content rounded-2xl rounded-bl-none'
             }`}
             onContextMenu={e => {
               e.preventDefault();
@@ -121,7 +122,7 @@ const MessageBubble = ({
                     key={i}
                     src={item.url}
                     alt=""
-                    className="rounded-xl max-w-full h-auto object-cover border border-border"
+                    className="rounded-xl max-w-full h-auto object-cover"
                   />
                 ))}
               </div>
@@ -171,7 +172,7 @@ const MessageBubble = ({
             <div
               className={`absolute ${
                 isOwn ? 'right-full mr-2' : 'left-full ml-2'
-              } bottom-2 z-[70] bg-surface rounded-xl shadow-lg border border-border py-1.5 min-w-[150px] animate-scale-in`}
+              } bottom-2 z-[70] bg-surface rounded-xl py-1.5 min-w-[150px] animate-scale-in`}
             >
               <button
                 onClick={handleCopy}
@@ -220,8 +221,10 @@ const MessageDetail = () => {
 
   // Queries
   const { data: conversationsData } = useConversations();
-  const conversationsList =
-    conversationsData?.conversations || conversationsData || [];
+  const conversationsList = useMemo(
+    () => conversationsData?.conversations ?? conversationsData ?? [],
+    [conversationsData]
+  );
 
   const { data: conversationData, isLoading: conversationLoading } =
     useConversationById(conversationId);
@@ -231,10 +234,13 @@ const MessageDetail = () => {
     page: 1,
     limit: 50,
   });
-  const messagesList = messagesData?.messages || messagesData || [];
+  const messages = useMemo(
+    () => messagesData?.messages ?? messagesData ?? [],
+    [messagesData]
+  );
 
   // Mutations
-  const markAsReadMutation = useMarkAsRead();
+  const { mutate: markAsRead } = useMarkAsRead();
   const sendMessageMutation = useSendMessage();
   const deleteMessageMutation = useDeleteMessage();
   const updateGroupMutation = useUpdateGroup();
@@ -251,6 +257,9 @@ const MessageDetail = () => {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const maxMessageFiles = 3;
+  const maxMessageSizeMB = 15;
+
   const typingTimeoutRef = useRef(null);
 
   // Derive conversation
@@ -264,8 +273,6 @@ const MessageDetail = () => {
         c.directId === conversationId
     );
   }, [conversationData, conversationsList, conversationId]);
-
-  const messages = messagesList;
 
   const otherUser = useMemo(() => {
     if (!conversation || conversation.isGroup) return null;
@@ -299,16 +306,16 @@ const MessageDetail = () => {
   useEffect(() => {
     if (conversationId) {
       if (joinRoom) joinRoom(conversationId);
-      markAsReadMutation.mutate(conversationId);
+      markAsRead(conversationId);
     }
     return () => {
       if (conversationId && leaveRoom) leaveRoom(conversationId);
     };
-  }, [conversationId, joinRoom, leaveRoom]);
+  }, [conversationId, joinRoom, leaveRoom, markAsRead]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOtherUserTyping]);
+  }, [messages.length, isOtherUserTyping]);
 
   // Socket listeners
   useEffect(() => {
@@ -380,7 +387,7 @@ const MessageDetail = () => {
       setMessageText('');
       setSelectedImages([]);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
+      notify.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
     }
   };
 
@@ -390,9 +397,9 @@ const MessageDetail = () => {
         conversationId,
         messageId: mid,
       });
-      toast.success('Đã xóa tin nhắn');
+      notify.success('Đã xóa tin nhắn');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể xóa tin nhắn');
+      notify.error(err?.response?.data?.message || 'Không thể xóa tin nhắn');
     }
   };
 
@@ -403,9 +410,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         data: { name },
       });
-      toast.success('Đã đổi tên nhóm');
+      notify.success('Đã đổi tên nhóm');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+      notify.error(err?.response?.data?.message || 'Cập nhật thất bại');
     } finally {
       setIsUpdatingGroup(false);
     }
@@ -417,9 +424,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         memberIds: [uid],
       });
-      toast.success('Đã thêm thành viên');
+      notify.success('Đã thêm thành viên');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Thêm thành viên thất bại');
+      notify.error(err?.response?.data?.message || 'Thêm thành viên thất bại');
     }
   };
 
@@ -429,9 +436,9 @@ const MessageDetail = () => {
         groupId: conversationId,
         userId: uid,
       });
-      toast.success('Đã mời thành viên rời nhóm');
+      notify.success('Đã mời thành viên rời nhóm');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Thực hiện thất bại');
+      notify.error(err?.response?.data?.message || 'Thực hiện thất bại');
     }
   };
 
@@ -441,7 +448,7 @@ const MessageDetail = () => {
         await leaveGroupMutation.mutateAsync(conversationId);
         navigate('/messages');
       } catch (err) {
-        toast.error(err?.response?.data?.message || 'Rời nhóm thất bại');
+        notify.error(err?.response?.data?.message || 'Rời nhóm thất bại');
       }
     }
   };
@@ -462,7 +469,7 @@ const MessageDetail = () => {
   return (
     <div className="h-full flex flex-col bg-background animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 px-6 border-b border-border bg-surface/80 backdrop-blur-xl z-20">
+      <div className="flex items-center justify-between p-4 px-6 bg-surface/80 backdrop-blur-xl z-20 shadow-sm">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/messages')}
@@ -478,10 +485,10 @@ const MessageDetail = () => {
             <img
               src={chatAvatar}
               alt=""
-              className="w-11 h-11 rounded-full object-cover border border-border shadow-sm group-hover:scale-105 transition-transform"
+              className="w-11 h-11 rounded-full object-cover group-hover:scale-105 transition-transform ring-2 ring-transparent group-hover:ring-primary/20"
             />
             {!conversation?.isGroup && isOnline && (
-              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-success rounded-full border-[3px] border-surface shadow-sm" />
+              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-success rounded-full" />
             )}
           </div>
 
@@ -539,7 +546,7 @@ const MessageDetail = () => {
 
         {messages.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-6">
-            <div className="w-20 h-20 rounded-full bg-surface-secondary flex items-center justify-center border border-border">
+            <div className="w-20 h-20 rounded-full bg-surface-hover flex items-center justify-center">
               <MessageCircle size={32} className="text-text-tertiary" />
             </div>
             <div className="text-center">
@@ -598,7 +605,7 @@ const MessageDetail = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 px-6 border-t border-border bg-surface">
+      <div className="p-4 px-6 bg-surface">
         {selectedImages.length > 0 && (
           <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
             {selectedImages.map((file, i) => (
@@ -609,7 +616,7 @@ const MessageDetail = () => {
                 <img
                   src={URL.createObjectURL(file)}
                   alt=""
-                  className="w-20 h-20 rounded-xl object-cover border border-border shadow-md"
+                  className="w-20 h-20 rounded-xl object-cover"
                 />
                 <button
                   onClick={() =>
@@ -617,7 +624,7 @@ const MessageDetail = () => {
                       prev.filter((_, idx) => idx !== i)
                     )
                   }
-                  className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-1 border border-border shadow-sm hover:bg-error transition-colors"
+                  className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-1 hover:bg-error transition-colors"
                 >
                   <X size={12} />
                 </button>
@@ -633,14 +640,35 @@ const MessageDetail = () => {
             multiple
             accept="image/*"
             className="hidden"
-            onChange={e =>
-              setSelectedImages(prev => [
-                ...prev,
-                ...Array.from(e.target.files),
-              ])
-            }
+            onChange={e => {
+              const files = Array.from(e.target.files);
+              if (files.length === 0) return;
+
+              const remainingSlots = maxMessageFiles - selectedImages.length;
+              if (remainingSlots <= 0) {
+                notify.error(`Chỉ được chọn tối đa ${maxMessageFiles} tệp`);
+                e.target.value = '';
+                return;
+              }
+
+              const acceptedFiles = files.slice(0, remainingSlots).filter(file => {
+                const isValidSize = file.size <= maxMessageSizeMB * 1024 * 1024;
+                if (!isValidSize) {
+                  notify.error(`Tệp ${file.name} vượt quá ${maxMessageSizeMB}MB`);
+                }
+                return isValidSize;
+              });
+
+              if (acceptedFiles.length < files.length) {
+                notify.error('Một số tệp đã bị bỏ qua');
+              }
+
+              setSelectedImages(prev => [...prev, ...acceptedFiles]);
+              e.target.value = '';
+            }}
+
           />
-          <div className="flex items-center bg-surface-secondary rounded-2xl flex-1 px-1 border border-border focus-within:border-border-focus focus-within:bg-white transition-all duration-300">
+          <div className="flex items-center bg-surface-secondary rounded-2xl flex-1 px-1 focus-within:bg-white transition-all duration-300">
             <button
               onClick={() => fileInputRef.current?.click()}
               className="yb-btn-ghost p-3 text-secondary hover:text-primary rounded-full transition-all"
@@ -665,7 +693,7 @@ const MessageDetail = () => {
               (!messageText.trim() && selectedImages.length === 0) ||
               sendMessageMutation.isPending
             }
-            className={`yb-btn p-4 rounded-full transition-all duration-300 shadow-md ${
+            className={`yb-btn p-4 rounded-full transition-all duration-300 ${
               (messageText.trim() || selectedImages.length > 0) &&
               !sendMessageMutation.isPending
                 ? 'yb-btn-primary hover:scale-105 active:scale-95'
@@ -687,7 +715,7 @@ const MessageDetail = () => {
       </div>
 
       {/* Modals */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {showGroupInfo && (
           <GroupInfoModal
             isOpen={showGroupInfo}
@@ -715,3 +743,4 @@ const MessageDetail = () => {
 };
 
 export default MessageDetail;
+

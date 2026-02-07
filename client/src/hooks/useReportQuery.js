@@ -2,10 +2,28 @@ import { useMutation } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { REPORT_API } from '@/axios/apiEndpoint';
 
-// Submit a report
+/**
+ * Hook to submit a violation report
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to submit report
+ * @example
+ * const { mutate } = useSubmitReport();
+ * mutate({
+ *   targetId: 'post123',
+ *   targetType: 'post',
+ *   category: 'spam',
+ *   reason: 'Spam content',
+ *   description: 'Details...'
+ * });
+ */
 export const useSubmitReport = () => {
   return useMutation({
-    mutationFn: async ({ targetId, targetType, reason, description }) => {
+    mutationFn: async ({
+      targetId,
+      targetType,
+      category,
+      reason,
+      description,
+    }) => {
       let endpoint;
       switch (targetType) {
         case 'post':
@@ -24,13 +42,12 @@ export const useSubmitReport = () => {
           throw new Error('Invalid target type');
       }
 
-      const response = await api.post(endpoint, { reason, description });
+      const response = await api.post(endpoint, {
+        category,
+        reason,
+        description,
+      });
       return response.data;
-    },
-    onSuccess: _ => {
-      // Potentially invalidate admin report queries if needed?
-      // For user side, usually just success message is enough
-      // But if we have a list of "my reports" (REPORT_API.GET_MY_REPORTS), we should invalidate it
     },
   });
 };

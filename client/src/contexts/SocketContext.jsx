@@ -1,10 +1,6 @@
-import { createContext, useContext } from 'react';
+import { SocketContext } from './socketContextBase';
 import { useSelector } from 'react-redux';
 import useSocket from '@/hooks/useSocket';
-
-const SocketContext = createContext(null);
-
-export const useSocketContext = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const { user } = useSelector(state => state.auth);

@@ -10,11 +10,12 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { useProfile, useUpdateProfile } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { Suspense, lazy } from 'react';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const LocationPickerModal = lazy(() =>
-  import('@/components/common/LocationPickerModal')
+  import('@/components/Common/LocationPickerModal')
 );
 
 const InputField = ({
@@ -46,7 +47,7 @@ const InputField = ({
             onChange={onChange}
             placeholder={placeholder}
             rows={3}
-            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full px-4 py-2.5 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/40 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
           />
         ) : (
           <input
@@ -56,7 +57,7 @@ const InputField = ({
             placeholder={placeholder}
             className={`w-full pl-10 ${
               rightElement ? 'pr-12' : 'pr-4'
-            } py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
+            } py-2.5 rounded-2xl bg-neutral-100/50 dark:bg-neutral-800/40 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40`}
           />
         )}
         {rightElement && (
@@ -145,7 +146,7 @@ const ProfileSettings = () => {
 
       updateProfileMutation(data, {
         onSuccess: () => {
-          toast.success('Cập nhật thành công!');
+          notify.success('Cập nhật thành công!');
           setAvatarFile(null);
           setCoverFile(null);
           setAvatarPreview(null);
@@ -153,13 +154,13 @@ const ProfileSettings = () => {
           setIsSaving(false);
         },
         onError: err => {
-          toast.error(err?.message || 'Cập nhật thất bại');
+          notify.error(err?.message || 'Cập nhật thất bại');
           setIsSaving(false);
         },
       });
     } catch (error) {
       console.error(error);
-      toast.error('Có lỗi xảy ra');
+      notify.error('Có lỗi xảy ra');
       setIsSaving(false);
     }
   };
@@ -175,7 +176,7 @@ const ProfileSettings = () => {
   if (profileLoading && !currentProfile) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -194,7 +195,7 @@ const ProfileSettings = () => {
       {/* Cover & Avatar */}
       <div className="space-y-4">
         {/* Cover */}
-        <div className="relative h-32 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+        <div className="relative h-32 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <img
             src={
               coverPreview ||
@@ -225,7 +226,7 @@ const ProfileSettings = () => {
             <img
               src={avatarPreview || currentProfile?.avatar}
               alt={currentProfile?.username}
-              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-900"
+              className="w-24 h-24 rounded-full object-cover"
             />
             <input
               ref={fileInputRef}
@@ -313,7 +314,7 @@ const ProfileSettings = () => {
       </div>
 
       {/* Modals */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {isLocationPickerOpen && (
           <LocationPickerModal
             isOpen={isLocationPickerOpen}
@@ -328,3 +329,4 @@ const ProfileSettings = () => {
 };
 
 export default ProfileSettings;
+

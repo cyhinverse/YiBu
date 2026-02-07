@@ -1,68 +1,84 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
-import { login, googleAuth } from "@/redux/actions/authActions";
-import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { login, googleAuth } from '@/redux/actions/authActions';
+import { notify } from '@/utils/notify';
 
 const Login = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const googleButtonRef = useRef(null);
   const googleInitialized = useRef(false);
   const { loading, error, isAuthenticated, user } = useSelector(
-    (state) => state.auth
+    state => state.auth
   );
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+
+
+  // Redirect if already authenticated AND user data is loaded
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  useEffect(() => {
+    if (!error?.errorCode || error.errorCode === '2FA_REQUIRED') {
+      return;
+    }
+    setRequiresTwoFactor(false);
+    setTwoFactorToken('');
+  }, [error]);
+
 
   // Clear error on unmount
-  useEffect(() => {
-    return () => {
-      dispatch(clearError());
-    };
-  }, [dispatch]);
 
   // Initialize Google Sign-In
+  const renderGoogleButton = useCallback(() => {
+    if (!googleButtonRef.current || !window.google?.accounts?.id) return;
+    const width = Math.min(320, googleButtonRef.current.clientWidth || 320);
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: 'outline',
+      size: 'large',
+      width,
+      text: 'continue_with',
+      shape: 'pill',
+    });
+  }, []);
+
   const initGoogle = useCallback(() => {
-    if (
-      googleInitialized.current ||
-      !window.google?.accounts?.id ||
-      !googleButtonRef.current
-    ) {
+    if (!window.google?.accounts?.id || !googleButtonRef.current) {
       return;
     }
 
-    googleInitialized.current = true;
+    if (!googleInitialized.current) {
+      googleInitialized.current = true;
 
-    window.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        if (response.credential) {
-          const result = await dispatch(
-            googleAuth({ credential: response.credential })
-          );
-          if (googleAuth.fulfilled.match(result)) {
-            toast.success("Đăng nhập Google thành công!");
-          } else {
-            toast.error("Đăng nhập Google thất bại");
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: async response => {
+          if (response.credential) {
+            const result = await dispatch(googleAuth(response.credential));
+            if (googleAuth.fulfilled.match(result)) {
+              notify.success('Đăng nhập Google thành công!');
+            } else {
+              notify.error('Đăng nhập Google thất bại');
+            }
           }
-        }
-      },
-    });
+        },
+      });
+    }
 
-    window.google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: "outline",
-      size: "large",
-      width: 320,
-      text: "continue_with",
-      shape: "pill",
-    });
-  }, [dispatch]);
+    renderGoogleButton();
+  }, [dispatch, renderGoogleButton]);
 
   // Setup Google button when ref is available
   useEffect(() => {
@@ -88,29 +104,56 @@ const Login = () => {
     }
   }, [initGoogle]);
 
-  const handleChange = (e) => {
+
+  useEffect(() => {
+    const onResize = () => renderGoogleButton();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [renderGoogleButton]);
+
+  const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+      notify.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
-    const result = await dispatch(login(formData));
+
+    const payload = {
+      ...formData,
+      twoFactorToken: requiresTwoFactor ? twoFactorToken : undefined,
+    };
+
+    const result = await dispatch(login(payload));
     if (login.fulfilled.match(result)) {
-      toast.success("Đăng nhập thành công!");
+      notify.success('Đăng nhập thành công!');
+      return;
+    }
+
+    const errorPayload = result.payload || {};
+    if (errorPayload?.errorCode === '2FA_REQUIRED') {
+      setRequiresTwoFactor(true);
+      notify('Vui lòng nhập mã 2FA');
+      return;
+    }
+
+    if (errorPayload?.errorCode === '2FA_INVALID') {
+      notify.error('Mã 2FA không hợp lệ');
+      return;
     }
   };
 
-  // Redirect if already authenticated AND user data is loaded
-  if (isAuthenticated && user) {
-    return <Navigate to="/" replace />;
-  }
+
+  // No longer needed due to useEffect redirect above
+  // if (isAuthenticated && user) {
+  //   return <Navigate to="/" replace />;
+  // }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-[100dvh] flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
@@ -133,7 +176,7 @@ const Login = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-white dark:bg-black">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-10">
@@ -190,7 +233,7 @@ const Login = () => {
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
                 />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
@@ -207,13 +250,31 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
-                <AlertCircle size={16} />
-                {error}
+            {requiresTwoFactor && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-content dark:text-white">
+                  Mã xác thực 2FA
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={twoFactorToken}
+                  onChange={e => setTwoFactorToken(e.target.value)}
+                  placeholder="Nhập mã 6 số"
+                  className="w-full px-4 py-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-content dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-primary transition-colors"
+                />
               </div>
             )}
+
+            {/* Error Message */}
+            {error?.message && (
+              <div className="flex items-center gap-2 text-red-500 text-sm">
+                <AlertCircle size={16} />
+                <span>{error.message}</span>
+              </div>
+            )}
+
 
             {/* Submit */}
             <button
@@ -224,7 +285,7 @@ const Login = () => {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
-                "Sign In"
+                'Sign In'
               )}
             </button>
 
@@ -237,13 +298,13 @@ const Login = () => {
 
             {/* Google Sign-In Button */}
             <div className="flex justify-center">
-              <div ref={googleButtonRef} />
+              <div className="w-full max-w-[320px] mx-auto" ref={googleButtonRef} />
             </div>
           </form>
 
           {/* Footer */}
           <p className="mt-10 text-center text-neutral-500">
-            Don't have an account?{" "}
+            Don't have an account?{' '}
             <Link
               to="/auth/register"
               className="font-medium text-primary hover:underline"
@@ -258,3 +319,4 @@ const Login = () => {
 };
 
 export default Login;
+

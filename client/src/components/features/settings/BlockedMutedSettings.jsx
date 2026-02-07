@@ -1,20 +1,13 @@
 import { useState } from 'react';
-import {
-  UserX,
-  VolumeX,
-  Search,
-  MoreHorizontal,
-  Loader2,
-  Ban,
-  Volume2,
-} from 'lucide-react';
-import toast from 'react-hot-toast';
+import { UserX, VolumeX, Search, Ban } from 'lucide-react';
+import { notify } from '@/utils/notify';
 import {
   useBlockedUsers,
   useMutedUsers,
   useUnblockUser,
   useUnmuteUser,
 } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const BlockedMutedSettings = () => {
   const { data: blockedUsers, isLoading: blockedLoading } = useBlockedUsers();
@@ -32,9 +25,9 @@ const BlockedMutedSettings = () => {
 
     try {
       await unblockMutation.mutateAsync(userId);
-      toast.success('Đã bỏ chặn người dùng');
+      notify.success('Đã bỏ chặn người dùng');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Không thể bỏ chặn');
+      notify.error(error?.response?.data?.message || 'Không thể bỏ chặn');
     }
   };
 
@@ -43,9 +36,9 @@ const BlockedMutedSettings = () => {
 
     try {
       await unmuteMutation.mutateAsync(userId);
-      toast.success('Đã bỏ ẩn người dùng');
+      notify.success('Đã bỏ ẩn người dùng');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Không thể bỏ ẩn');
+      notify.error(error?.response?.data?.message || 'Không thể bỏ ẩn');
     }
   };
 
@@ -64,7 +57,7 @@ const BlockedMutedSettings = () => {
     ) || [];
 
   const UserItem = ({ user, type }) => (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 transition-colors">
+    <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-100/50 dark:bg-neutral-800/40 hover:bg-neutral-200/50 dark:hover:bg-neutral-700/60 transition-colors">
       <div className="flex items-center gap-3">
         <img
           src={user.avatar || '/images/default-avatar.png'}
@@ -98,7 +91,7 @@ const BlockedMutedSettings = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -115,13 +108,13 @@ const BlockedMutedSettings = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="flex gap-2 bg-neutral-100/40 dark:bg-neutral-800/40 p-1 rounded-xl">
         <button
           onClick={() => setActiveTab('blocked')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === 'blocked'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-neutral-500 hover:text-content dark:hover:text-white'
+              ? 'bg-white dark:bg-neutral-900 shadow-sm text-primary rounded-lg'
+              : 'text-neutral-500 hover:text-content dark:hover:text-white'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -131,10 +124,10 @@ const BlockedMutedSettings = () => {
         </button>
         <button
           onClick={() => setActiveTab('muted')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === 'muted'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-neutral-500 hover:text-content dark:hover:text-white'
+              ? 'bg-white dark:bg-neutral-900 shadow-sm text-primary rounded-lg'
+              : 'text-neutral-500 hover:text-content dark:hover:text-white'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -155,7 +148,7 @@ const BlockedMutedSettings = () => {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm người dùng..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
 
@@ -193,7 +186,7 @@ const BlockedMutedSettings = () => {
       </div>
 
       {/* Info Section */}
-      <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700">
+      <div className="p-4 rounded-2xl bg-neutral-100/30 dark:bg-neutral-800/20">
         <h4 className="text-sm font-medium text-content dark:text-white mb-2">
           Sự khác biệt giữa Chặn và Ẩn
         </h4>
@@ -225,3 +218,4 @@ const BlockedMutedSettings = () => {
 };
 
 export default BlockedMutedSettings;
+

@@ -1,20 +1,21 @@
-import { Outlet, Route, Routes } from 'react-router-dom';
-import { Suspense, lazy, useMemo } from 'react';
-import { Toaster } from 'react-hot-toast';
-import { useSelector } from 'react-redux';
+import { Route, Routes } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useSettings } from './hooks/useUserQuery';
-import { useTheme } from './hooks/useTheme';
 import { SocketProvider } from './contexts/SocketContext';
-import { ROUTES } from './constants/routes';
+import { ROUTES } from './constants/route';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './pages/AuthPage/ProtectedRoute';
 import AdminRoute from './pages/AuthPage/AdminRoute';
+import { resetAuthState } from './redux/slices/AuthSlice';
+import AppToaster from './components/Common/AppToaster';
 
 // Lazy Load Pages & Components
 const UserLayout = lazy(() => import('./pages/UserPage/UserLayout'));
 const Home = lazy(() => import('./pages/UserPage/Home'));
 const Message = lazy(() => import('./pages/UserPage/Message'));
 const Explore = lazy(() => import('./pages/UserPage/Explore'));
+const HashtagPosts = lazy(() => import('./pages/UserPage/HashtagPosts'));
 const Notifications = lazy(() => import('./pages/UserPage/Notifications'));
 const FollowingUser = lazy(() =>
   import('./components/features/user/Profiles/FollowingUser')
@@ -54,9 +55,6 @@ const ProfileSettings = lazy(() =>
 const SettingsLayout = lazy(() =>
   import('./components/features/settings/SettingsLayout')
 );
-const ThemeSettings = lazy(() =>
-  import('./components/features/settings/ThemeSettings')
-);
 const SecuritySettings = lazy(() =>
   import('./components/features/settings/SecuritySettings')
 );
@@ -75,28 +73,29 @@ const AdminPage = lazy(() => import('./pages/AdminPage/AdminPage'));
 const AccessDenied = lazy(() => import('./pages/ErrorPages/AccessDenied'));
 
 const App = () => {
+  const dispatch = useDispatch();
   const authUser = useSelector(state => state.auth?.user);
-  const { data: settingsData } = useSettings({ enabled: !!authUser });
+  useSettings({ enabled: !!authUser });
 
-  // Apply theme settings
-  const themeSettings = useMemo(() => {
-    if (settingsData?.theme) return settingsData.theme;
-    return {
-      appearance: localStorage.getItem('theme') || 'system',
-      fontSize: localStorage.getItem('fontSize') || 'medium',
-      primaryColor: localStorage.getItem('primaryColor') || '',
-      secondaryColor: localStorage.getItem('secondaryColor') || '',
-      textColor: localStorage.getItem('textColor') || '',
+  // Listen for auth logout events from axios interceptor
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      dispatch(resetAuthState());
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/auth/login')) {
+        window.location.href = '/auth/login';
+      }
     };
-  }, [settingsData]);
 
-  useTheme(themeSettings);
+    window.addEventListener('auth-logout', handleAuthLogout);
+    return () => window.removeEventListener('auth-logout', handleAuthLogout);
+  }, [dispatch]);
 
   return (
     <>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center min-h-screen bg-white dark:bg-black">
+          <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-black">
             <LoadingSpinner />
           </div>
         }
@@ -115,6 +114,7 @@ const App = () => {
 
               {/* Explore & Notifications */}
               <Route path="explore" element={<Explore />} />
+              <Route path="explore/tag/:hashtag" element={<HashtagPosts />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="saved" element={<SavePosts />} />
 
@@ -137,7 +137,7 @@ const App = () => {
                   path="follow-requests"
                   element={<FollowRequestsSettings />}
                 />
-                <Route path="theme" element={<ThemeSettings />} />
+                <Route index element={<AccountSettings />} />
               </Route>
 
               <Route path={`${ROUTES.PROFILE}`} element={<ProfileLayout />}>
@@ -168,31 +168,7 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      <Outlet />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#fff',
-            color: '#333',
-          },
-          success: {
-            style: {
-              background: '#ECFDF5',
-              border: '1px solid #10B981',
-              color: '#065F46',
-            },
-          },
-          error: {
-            style: {
-              background: '#FEF2F2',
-              border: '1px solid #EF4444',
-              color: '#991B1B',
-            },
-          },
-        }}
-      />
+      <AppToaster />
     </>
   );
 };

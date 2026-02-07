@@ -2,7 +2,16 @@ import { useState, useMemo } from 'react';
 import { Bookmark, Grid, List, X, Trash2, Loader2 } from 'lucide-react';
 import Post from '@/components/features/feed/Posts/Post';
 import { useSavedPosts, useToggleSave } from '@/hooks/usePostsQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
+
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
+};
 
 const SavePosts = () => {
   const [viewMode, setViewMode] = useState('list');
@@ -27,12 +36,12 @@ const SavePosts = () => {
     if (!selectedPostId) return;
     try {
       await toggleSaveMutation.mutateAsync(selectedPostId);
-      toast.success('Đã bỏ lưu bài viết');
+      notify.success('Đã bỏ lưu bài viết');
       setShowDeleteModal(false);
       setSelectedPostId(null);
     } catch (error) {
       console.error('Failed to unsave post:', error);
-      toast.error('Không thể bỏ lưu bài viết');
+      notify.error('Không thể bỏ lưu bài viết');
     }
   };
 
@@ -47,7 +56,7 @@ const SavePosts = () => {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-b-2xl mb-4 ">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Bookmark size={24} className="text-content dark:text-white" />
@@ -88,7 +97,7 @@ const SavePosts = () => {
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="animate-spin text-neutral-400" />
+          <LoadingSpinner size="md" />
         </div>
       ) : posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
@@ -99,7 +108,7 @@ const SavePosts = () => {
           <p className="text-sm">Posts you save will appear here</p>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
           {posts.map(post => {
             const actualPost = post.postId || post;
             return (
@@ -119,17 +128,33 @@ const SavePosts = () => {
         <div className="grid grid-cols-3 gap-1 p-1">
           {posts.map(post => {
             const actualPost = post.postId || post;
+            const mediaItem = actualPost.media?.[0];
+            const mediaUrl =
+              typeof mediaItem === 'string' ? mediaItem : mediaItem?.url;
+            const isVideo =
+              mediaItem?.type === 'video' || isVideoUrl(mediaUrl);
             return (
               <div
                 key={actualPost._id}
                 className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 group cursor-pointer overflow-hidden"
               >
-                {actualPost.media?.[0]?.url ? (
-                  <img
-                    src={actualPost.media[0].url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                {mediaUrl ? (
+                  isVideo ? (
+                    <video
+                      src={mediaUrl}
+                      poster={mediaItem?.thumbnail || mediaItem?.poster || mediaItem?.preview}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={mediaUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center p-2">
                     <p className="text-xs text-neutral-500 line-clamp-3 text-center">
@@ -154,7 +179,7 @@ const SavePosts = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 w-full max-w-sm mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-content dark:text-white">
                 Remove from saved?
@@ -172,7 +197,7 @@ const SavePosts = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Cancel
               </button>

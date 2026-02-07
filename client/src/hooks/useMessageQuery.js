@@ -6,10 +6,15 @@ import {
 } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { MESSAGE_API } from '@/axios/apiEndpoint';
+import { extractData } from '@/utils/apiUtils';
 
-const extractData = response =>
-  response?.data?.data || response?.data || response;
-
+/**
+ * Hook to fetch conversations list
+ * @param {Object} [options] - Query options
+ * @param {number} [options.page=1] - Page number
+ * @param {number} [options.limit=20] - Items per page
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing conversations
+ */
 export const useConversations = ({ page = 1, limit = 20 } = {}) => {
   return useQuery({
     queryKey: ['messages', 'conversations', { page, limit }],
@@ -23,6 +28,14 @@ export const useConversations = ({ page = 1, limit = 20 } = {}) => {
   });
 };
 
+/**
+ * Hook to fetch messages in a conversation
+ * @param {Object} [options] - Query options
+ * @param {string} [options.conversationId] - Conversation ID
+ * @param {number} [options.page=1] - Page number
+ * @param {number} [options.limit=50] - Items per page
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing messages
+ */
 export const useMessages = ({ conversationId, page = 1, limit = 50 } = {}) => {
   return useQuery({
     queryKey: ['messages', 'list', conversationId, { page, limit }],
@@ -38,6 +51,13 @@ export const useMessages = ({ conversationId, page = 1, limit = 50 } = {}) => {
   });
 };
 
+/**
+ * Hook to fetch messages with infinite scroll
+ * @param {Object} [options] - Query options
+ * @param {string} [options.conversationId] - Conversation ID
+ * @param {number} [options.limit=50] - Items per page
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult} Infinite query result
+ */
 export const useInfiniteMessages = ({ conversationId, limit = 50 } = {}) => {
   return useInfiniteQuery({
     queryKey: ['messages', 'infinite', conversationId],
@@ -54,6 +74,10 @@ export const useInfiniteMessages = ({ conversationId, limit = 50 } = {}) => {
   });
 };
 
+/**
+ * Hook to send a message
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to send message
+ */
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -95,6 +119,10 @@ export const useSendMessage = () => {
   });
 };
 
+/**
+ * Hook to mark conversation as read
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to mark as read
+ */
 export const useMarkAsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -102,13 +130,17 @@ export const useMarkAsRead = () => {
       await api.post(MESSAGE_API.MARK_CONVERSATION_READ(conversationId));
       return conversationId;
     },
-    onSuccess: _ => {
+    onSuccess: () => {
       queryClient.invalidateQueries(['messages', 'conversations']);
       queryClient.invalidateQueries(['messages', 'unreadCount']);
     },
   });
 };
 
+/**
+ * Hook to fetch unread messages count
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing unread count
+ */
 export const useUnreadMessagesCount = () => {
   return useQuery({
     queryKey: ['messages', 'unreadCount'],
@@ -117,10 +149,15 @@ export const useUnreadMessagesCount = () => {
       const data = extractData(response);
       return data?.unreadCount ?? data?.count ?? data ?? 0;
     },
-    refetchInterval: 1000 * 60, // Refresh every minute as fallback
+    refetchInterval: 1000 * 60,
   });
 };
 
+/**
+ * Hook to fetch conversation media
+ * @param {string} conversationId - Conversation ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing media list
+ */
 export const useConversationMedia = conversationId => {
   return useQuery({
     queryKey: ['messages', 'media', conversationId],
@@ -132,6 +169,11 @@ export const useConversationMedia = conversationId => {
   });
 };
 
+/**
+ * Hook to fetch conversation by ID
+ * @param {string} conversationId - Conversation ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing conversation info
+ */
 export const useConversationById = conversationId => {
   return useQuery({
     queryKey: ['messages', 'conversation', conversationId],
@@ -141,10 +183,14 @@ export const useConversationById = conversationId => {
       );
       return extractData(response);
     },
-    enabled: !!conversationId && conversationId.length === 24, // Assuming MongoDB ObjectId
+    enabled: !!conversationId && conversationId.length === 24,
   });
 };
 
+/**
+ * Hook to create a new conversation
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to create conversation
+ */
 export const useCreateConversation = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -160,6 +206,10 @@ export const useCreateConversation = () => {
   });
 };
 
+/**
+ * Hook to create a group chat
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to create group
+ */
 export const useCreateGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -175,6 +225,11 @@ export const useCreateGroup = () => {
     },
   });
 };
+
+/**
+ * Hook to delete a message
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete message
+ */
 export const useDeleteMessage = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -193,6 +248,10 @@ export const useDeleteMessage = () => {
   });
 };
 
+/**
+ * Hook to update group information
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to update group
+ */
 export const useUpdateGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -211,6 +270,10 @@ export const useUpdateGroup = () => {
   });
 };
 
+/**
+ * Hook to add member to group
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to add member
+ */
 export const useAddGroupMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -230,6 +293,10 @@ export const useAddGroupMember = () => {
   });
 };
 
+/**
+ * Hook to remove member from group
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to remove member
+ */
 export const useRemoveGroupMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -243,6 +310,10 @@ export const useRemoveGroupMember = () => {
   });
 };
 
+/**
+ * Hook to leave a group
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to leave group
+ */
 export const useLeaveGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -256,6 +327,10 @@ export const useLeaveGroup = () => {
   });
 };
 
+/**
+ * Hook to delete a conversation
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete conversation
+ */
 export const useDeleteConversation = () => {
   const queryClient = useQueryClient();
   return useMutation({

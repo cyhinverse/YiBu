@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import {
   useConversations,
@@ -6,7 +6,7 @@ import {
   useSendMessage,
   useMarkAsRead,
 } from '@/hooks/useMessageQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -29,19 +29,22 @@ const Messages = () => {
   });
 
   const sendMessageMutation = useSendMessage();
-  const markAsReadMutation = useMarkAsRead();
+  const { mutate: markAsRead } = useMarkAsRead();
 
   useEffect(() => {
     if (selectedChatId) {
-      markAsReadMutation.mutate(selectedChatId);
+      markAsRead(selectedChatId);
     }
-  }, [selectedChatId]);
+  }, [markAsRead, selectedChatId]);
 
   // Scroll to bottom
-  const messages = messagesData?.messages || messagesData || [];
+  const messages = useMemo(
+    () => messagesData?.messages ?? messagesData ?? [],
+    [messagesData]
+  );
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedChat]);
+  }, [messages.length, selectedChatId]);
 
   const handleSend = async e => {
     e.preventDefault();
@@ -55,7 +58,7 @@ const Messages = () => {
       });
       setMessageInput('');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
+      notify.error(error?.response?.data?.message || 'Gửi tin nhắn thất bại');
     }
   };
 
@@ -64,7 +67,8 @@ const Messages = () => {
     conversationsData?.conversations || conversationsData || [];
 
   return (
-    <div className="h-[calc(100vh-8rem)] bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 flex overflow-hidden">
+    <div className="h-[calc(100vh-8rem)] admin-card flex overflow-hidden">
+
       <ChatSidebar
         conversations={conversations}
         loading={loading}
@@ -90,3 +94,4 @@ const Messages = () => {
 };
 
 export default Messages;
+

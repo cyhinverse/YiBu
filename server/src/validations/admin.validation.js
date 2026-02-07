@@ -3,12 +3,9 @@ import { objectId } from './common.validation.js';
 
 /**
  * Admin Validation Schemas
- * Validation cho tất cả endpoints trong admin.router.js
+ * Validation for all endpoints in admin.router.js
  */
 
-// ======================================
-// User Management
-// ======================================
 
 // GET /users
 export const getUsersQuery = Joi.object({
@@ -86,9 +83,6 @@ export const warnUserBody = Joi.object({
   severity: Joi.string().valid('low', 'medium', 'high').default('low'),
 });
 
-// ======================================
-// Content Moderation
-// ======================================
 
 // GET /posts
 export const getPostsQuery = Joi.object({
@@ -146,9 +140,6 @@ export const moderateCommentBody = Joi.object({
     }),
 });
 
-// ======================================
-// Reports Management
-// ======================================
 
 // GET /reports
 export const getReportsQuery = Joi.object({
@@ -204,9 +195,6 @@ export const resolveReportBody = Joi.object({
   notes: Joi.string().trim().max(1000),
 });
 
-// ======================================
-// System Management
-// ======================================
 
 // POST /broadcast
 export const broadcastBody = Joi.object({
@@ -238,6 +226,30 @@ export const getLogsQuery = Joi.object({
   adminId: objectId,
 });
 
+// GET /dashboard/stats
+export const getStatsQuery = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+});
+
+// GET /analytics/top-users
+export const getTopUsersQuery = Joi.object({
+  limit: Joi.number().integer().min(1).max(100).default(10),
+});
+
+// GET /analytics/interactions
+export const getInteractionsQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  type: Joi.string().valid('like', 'comment', 'follow', 'share', 'report'),
+  search: Joi.string().trim().max(100),
+});
+
+// GET /users/banned
+export const getBannedUsersQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
 export default {
   getUsersQuery,
   userIdParam,
@@ -257,4 +269,8 @@ export default {
   resolveReportBody,
   broadcastBody,
   getLogsQuery,
+  getStatsQuery,
+  getTopUsersQuery,
+  getInteractionsQuery,
+  getBannedUsersQuery,
 };

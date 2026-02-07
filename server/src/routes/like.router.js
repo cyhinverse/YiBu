@@ -1,5 +1,6 @@
 import express from 'express';
-import PostController from '../controllers/post.controller.js';
+import PostController from '../modules/post/post.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBody,
@@ -21,26 +22,30 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// Like Operations
-// ======================================
+/* POST / - Like a post */
 router.post('/', validateBody(createLikeBody), PostController.CreateLike);
+/* DELETE / - Unlike a post */
 router.delete('/', validateBody(deleteLikeBody), PostController.DeleteLike);
-router.post('/toggle', validateBody(toggleLikeBody), PostController.ToggleLike);
+/* POST /toggle - Toggle like status on a post */
+router.post(
+  '/toggle',
+  validateBody(toggleLikeBody),
+  PostController.ToggleLike
+);
 
-// ======================================
-// Like Status
-// ======================================
+/* GET /status/:postId - Get like status for a post */
 router.get(
   '/status/:postId',
   validateParams(likeStatusParam),
   PostController.GetLikeStatus
 );
+/* POST /batch-status - Get like status for multiple posts */
 router.post(
   '/batch-status',
   validateBody(batchStatusBody),
   PostController.GetAllLikeFromPosts
 );
+/* GET /post/:postId/users - Get users who liked a post */
 router.get(
   '/post/:postId/users',
   validateParams(postLikesParam),
@@ -48,9 +53,7 @@ router.get(
   PostController.GetPostLikes
 );
 
-// ======================================
-// User's Liked Posts
-// ======================================
+/* GET /my-likes - Get posts liked by current user */
 router.get(
   '/my-likes',
   validateQuery(myLikesQuery),

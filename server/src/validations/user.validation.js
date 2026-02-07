@@ -1,9 +1,9 @@
 import Joi from 'joi';
-import { objectId, paginationQuery } from './common.validation.js';
+import { objectId } from './common.validation.js';
 
 /**
  * User Validation Schemas
- * Validation cho tất cả endpoints trong user.router.js
+ * Validation for all endpoints in user.router.js
  */
 
 // ======================================
@@ -161,106 +161,22 @@ export const blockMuteUserIdParam = Joi.object({
 });
 
 // ======================================
-// PUT /settings/privacy
-// Body: { isPrivate?, allowTagging?, allowMentions?, showOnlineStatus? }
-// ======================================
-export const updatePrivacyBody = Joi.object({
-  isPrivate: Joi.boolean(),
-  allowTagging: Joi.string().valid('everyone', 'followers', 'no_one'),
-  allowMentions: Joi.string().valid('everyone', 'followers', 'no_one'),
-  showOnlineStatus: Joi.boolean(),
-  showLastSeen: Joi.boolean(),
-  showReadReceipts: Joi.boolean(),
-});
-
-// ======================================
-// PUT /settings/notifications
-// Body: { likes?, comments?, follows?, messages?, mentions? }
-// ======================================
-export const updateNotificationBody = Joi.object({
-  likes: Joi.boolean(),
-  comments: Joi.boolean(),
-  follows: Joi.boolean(),
-  messages: Joi.boolean(),
-  mentions: Joi.boolean(),
-  emailNotifications: Joi.boolean(),
-  pushNotifications: Joi.boolean(),
-});
-
-// ======================================
-// PUT /settings/security
-// Body: { twoFactorEnabled?, loginAlerts? }
-// ======================================
-export const updateSecurityBody = Joi.object({
-  twoFactorEnabled: Joi.boolean(),
-  loginAlerts: Joi.boolean(),
-  trustedDevicesOnly: Joi.boolean(),
-});
-
-// ======================================
-// PUT /settings/content
-// Body: { language?, sensitiveContent?, autoplayVideos? }
-// ======================================
-export const updateContentBody = Joi.object({
-  language: Joi.string().max(10),
-  sensitiveContent: Joi.boolean(),
-  autoplayVideos: Joi.boolean(),
-  dataUsage: Joi.string().valid('low', 'medium', 'high'),
-});
-
-// ======================================
-// PUT /settings/theme
-// Body: { theme, fontSize? }
-// ======================================
-export const updateThemeBody = Joi.object({
-  theme: Joi.string().valid('light', 'dark', 'system').required().messages({
-    'any.required': 'Theme là bắt buộc',
-    'any.only': 'Theme phải là light, dark hoặc system',
-  }),
-  fontSize: Joi.string().valid('small', 'medium', 'large'),
-  accentColor: Joi.string().pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
-  primaryColor: Joi.string()
-    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
-    .allow(''),
-  secondaryColor: Joi.string()
-    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
-    .allow(''),
-  textColor: Joi.string()
-    .pattern(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
-    .allow(''),
-});
-
-// ======================================
-// POST /settings/devices
-// Body: { deviceName, deviceType }
-// ======================================
-export const addDeviceBody = Joi.object({
-  deviceName: Joi.string().trim().min(1).max(50).required().messages({
-    'string.empty': 'Tên thiết bị không được để trống',
-    'any.required': 'Tên thiết bị là bắt buộc',
-  }),
-  deviceType: Joi.string()
-    .valid('mobile', 'tablet', 'desktop', 'other')
-    .required()
-    .messages({
-      'any.required': 'Loại thiết bị là bắt buộc',
-    }),
-});
-
-// ======================================
-// DELETE /settings/devices/:deviceId
-// Params: { deviceId }
-// ======================================
-export const deviceIdParam = Joi.object({
-  deviceId: objectId.required(),
-});
-
-// ======================================
 // GET /:id (Get User By Id)
 // Params: { id }
 // ======================================
 export const getUserByIdParam = Joi.object({
   id: objectId.required(),
+});
+
+// GET /mutual-followers/:targetUserId
+export const getMutualFollowersQuery = Joi.object({
+  limit: Joi.number().integer().min(1).max(50).default(10),
+});
+
+// GET /follow-requests/pending
+export const getPendingFollowRequestsQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(50).default(20),
 });
 
 export default {
@@ -275,12 +191,7 @@ export default {
   followListQuery,
   requestIdParam,
   blockMuteUserIdParam,
-  updatePrivacyBody,
-  updateNotificationBody,
-  updateSecurityBody,
-  updateContentBody,
-  updateThemeBody,
-  addDeviceBody,
-  deviceIdParam,
   getUserByIdParam,
+  getMutualFollowersQuery,
+  getPendingFollowRequestsQuery,
 };

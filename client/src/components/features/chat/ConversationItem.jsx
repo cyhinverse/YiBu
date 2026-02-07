@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useSocketContext } from '@/contexts/SocketContext';
+import { useSocketContext } from '@/contexts/useSocketContext';
 
 const ConversationItem = ({
   conversation,
@@ -34,9 +34,19 @@ const ConversationItem = ({
       ? 'Đã gửi một tệp đính kèm'
       : 'Bắt đầu trò chuyện');
 
+  const handleKeyDown = event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <div
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       className={`relative flex items-center gap-4 p-4 cursor-pointer group transition-all duration-300 ${
         isActive
           ? 'bg-surface-secondary'
@@ -52,12 +62,14 @@ const ConversationItem = ({
         <img
           src={displayUser.avatar || 'https://via.placeholder.com/150'}
           alt={displayUser.name}
-          className={`w-12 h-12 rounded-full object-cover border-2 shadow-sm transition-all duration-300 ${
-            isActive ? 'border-primary' : 'border-border'
+          className={`w-12 h-12 rounded-full object-cover transition-all duration-300 ${
+            isActive
+              ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-neutral-900'
+              : ''
           }`}
         />
         {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success rounded-full border-[3px] border-surface shadow-sm" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success rounded-full ring-2 ring-white dark:ring-neutral-900 shadow-sm" />
         )}
       </div>
 

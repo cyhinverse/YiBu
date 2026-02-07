@@ -24,8 +24,9 @@ const SavePostSchema = new Schema(
       index: true,
     },
 
-    // Optional collection for organizing saves
-    collection: {
+    // Optional folder/collection for organizing saves
+    // NOTE: Avoid using reserved Mongoose pathname `collection` as a schema field.
+    folder: {
       type: String,
       default: "default",
       trim: true,
@@ -44,12 +45,20 @@ const SavePostSchema = new Schema(
   }
 );
 
+// Backward-compat: older data used `collection` field name. On read, map it to `folder`.
+SavePostSchema.pre('init', function (next, data) {
+  if (data && data.folder == null && data.collection != null) {
+    data.folder = data.collection;
+  }
+  next();
+});
+
 // ============ INDEXES ============
 // Unique constraint
 SavePostSchema.index({ user: 1, post: 1 }, { unique: true });
 
 // Get user's saved posts (by collection)
-SavePostSchema.index({ user: 1, collection: 1, createdAt: -1 });
+SavePostSchema.index({ user: 1, folder: 1, createdAt: -1 });
 SavePostSchema.index({ user: 1, createdAt: -1 });
 
 // Check if post is saved
@@ -71,8 +80,8 @@ SavePostSchema.statics.savePost = async function (
   const existing = await this.findOne({ user: userId, post: postId });
   if (existing) {
     // Update collection if different
-    if (existing.collection !== collection) {
-      existing.collection = collection;
+    if (existing.folder !== collection) {
+      existing.folder = collection;
       await existing.save();
       return { success: true, save: existing, updated: true };
     }
@@ -83,7 +92,7 @@ SavePostSchema.statics.savePost = async function (
   const save = await this.create({
     user: userId,
     post: postId,
-    collection,
+    folder: collection,
   });
 
   // Update post counter
@@ -140,7 +149,7 @@ SavePostSchema.statics.getSavedPosts = async function (userId, options = {}) {
 
   const query = { user: userId };
   if (collection) {
-    query.collection = collection;
+    query.$or = [{ folder: collection }, { collection }];
   }
 
   return this.find(query)
@@ -164,7 +173,7 @@ SavePostSchema.statics.getCollections = async function (userId) {
     { $match: { user: new Types.ObjectId(userId) } },
     {
       $group: {
-        _id: "$collection",
+        _id: { $ifNull: ["$folder", "$collection"] },
         count: { $sum: 1 },
         latestSave: { $max: "$createdAt" },
       },

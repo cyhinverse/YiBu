@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   UserX,
   Check,
-  ChevronLeft,
-  ChevronRight,
   RefreshCcw,
   Loader2,
 } from 'lucide-react';
 import { useBannedUsers, useUnbanUser } from '@/hooks/useAdminQuery';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 const BannedAccounts = () => {
+  const bannedSearchId = useId();
+
   /* State */
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 500);
@@ -23,6 +24,17 @@ const BannedAccounts = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!showUnbanModal) return undefined;
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        setShowUnbanModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showUnbanModal]);
 
   // Queries
   const {
@@ -70,23 +82,33 @@ const BannedAccounts = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Bị chặn
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)]">
             Tài khoản bị chặn
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Quản lý danh sách người dùng bị khóa truy cập (
             {pagination?.total || bannedUsers.length} người)
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={handleRefresh}
             disabled={loading}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors disabled:opacity-50"
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
+            className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors disabled:opacity-50"
+            aria-label="Làm mới danh sách bị chặn"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -94,93 +116,102 @@ const BannedAccounts = () => {
       </div>
 
       {/* Search */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm">
+      <div className="admin-card p-4">
         <div className="relative max-w-md w-full">
+          <label htmlFor={bannedSearchId} className="sr-only">
+            Tìm kiếm tài khoản bị chặn
+          </label>
           <Search
             size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
+            id={bannedSearchId}
             type="text"
             placeholder="Tìm kiếm tài khoản bị chặn..."
             value={searchQuery}
+            aria-label="Search banned accounts"
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
+            className="admin-input w-full pl-11"
           />
         </div>
       </div>
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
+      <div className="admin-card overflow-hidden">
+
         {loading && bannedUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
+          <div className="flex flex-col items-center justify-center py-24 text-[var(--color-text-secondary)]">
             <Loader2 size={32} className="animate-spin mb-4" />
             <p className="font-medium">Đang tải dữ liệu...</p>
           </div>
         ) : bannedUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-neutral-500">
+          <div className="flex flex-col items-center justify-center py-24 text-[var(--color-text-secondary)]">
             <UserX size={48} className="mb-4 opacity-20" />
             <p className="font-medium">Không có tài khoản nào bị chặn</p>
           </div>
         ) : (
+
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <tr className="bg-[var(--color-surface-secondary)]">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Người dùng
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Lý do
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Thời hạn
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Ngày chặn
                     </th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Người thực thi
                     </th>
-                    <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em]">
                       Thao tác
                     </th>
                   </tr>
+
                 </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                <tbody>
                   {bannedUsers.map(user => (
                     <tr
                       key={user._id}
-                      className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                      className="hover:bg-[var(--color-surface-hover)] transition-colors"
                     >
-                      <td className="px-6 py-4">
+
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <img
                             src={user.avatar || '/images/default-avatar.png'}
                             alt={user.fullName || user.name}
-                            className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover grayscale opacity-70"
+                            className="w-10 h-10 rounded-full object-cover grayscale opacity-70"
                           />
                           <div>
-                            <div className="font-bold text-sm text-neutral-900 dark:text-white">
+                            <div className="font-bold text-sm text-[var(--color-content)]">
                               {user.fullName || user.name}
                             </div>
-                            <div className="text-xs text-neutral-500">
+                            <div className="text-xs text-[var(--color-text-tertiary)]">
                               {user.email}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 max-w-[200px] block truncate text-ellipsis">
                           {user.banReason ||
                             user.moderationHistory?.[0]?.reason ||
                             'Không có lý do'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
                             user.banDuration === 'Permanent' ||
                             !user.banDuration
                               ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
@@ -192,7 +223,7 @@ const BannedAccounts = () => {
                             : user.banDuration}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-neutral-500">
+                      <td className="px-5 py-3.5 text-sm font-medium text-neutral-500">
                         {user.bannedAt
                           ? new Date(user.bannedAt).toLocaleDateString('vi-VN')
                           : user.moderationHistory?.[0]?.actionDate
@@ -201,18 +232,20 @@ const BannedAccounts = () => {
                             ).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         <span className="text-sm font-medium text-neutral-900 dark:text-white">
                           {user.bannedBy?.fullName ||
                             user.moderationHistory?.[0]?.adminId?.fullName ||
                             'Hệ thống'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-3.5 text-right">
                         <button
+                          type="button"
                           onClick={() => handleUnban(user)}
                           disabled={loading}
-                          className="px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 ml-auto"
+                          className="px-3 py-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 ml-auto"
+                          aria-label="Mở chặn người dùng"
                         >
                           <Check size={14} />
                           Mở chặn
@@ -224,47 +257,40 @@ const BannedAccounts = () => {
               </table>
             </div>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-                <span className="text-sm text-neutral-500 font-medium">
-                  Trang{' '}
-                  <span className="text-neutral-900 dark:text-white font-bold">
-                    {currentPage}
-                  </span>{' '}
-                  / {pagination.totalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1 || loading}
-                    className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 text-neutral-600 dark:text-neutral-400 transition-colors"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= pagination.totalPages || loading}
-                    className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 text-neutral-600 dark:text-neutral-400 transition-colors"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
 
+      {bannedUsers.length > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={pagination.totalPages}
+          canPrev={currentPage > 1 && !loading}
+          canNext={currentPage < pagination.totalPages && !loading}
+          onPrev={() => handlePageChange(currentPage - 1)}
+          onNext={() => handlePageChange(currentPage + 1)}
+        />
+      )}
+
       {/* Unban Modal */}
       {showUnbanModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 w-full max-w-md shadow-xl rounded-3xl p-8 transform animate-in scale-95 duration-200 border border-neutral-100 dark:border-neutral-800">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setShowUnbanModal(false);
+            }
+          }}
+        >
+          <div className="admin-card w-full max-w-md rounded-2xl p-4 transform animate-in scale-95 duration-200 overflow-hidden">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
                 <Check size={32} />
               </div>
-              <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
                 Mở chặn người dùng
               </h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">
@@ -275,17 +301,18 @@ const BannedAccounts = () => {
                 ? Người dùng sẽ có thể đăng nhập lại ngay lập tức.
               </p>
             </div>
-
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowUnbanModal(false)}
                 className="flex-1 px-4 py-3 rounded-xl font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
+                type="button"
                 onClick={confirmUnban}
-                className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"
+                className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
               >
                 Xác nhận
               </button>

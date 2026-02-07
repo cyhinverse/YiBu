@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { resetPassword } from "@/redux/actions/authActions";
 import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { notify } from '@/utils/notify';
 
 const ResetPassword = () => {
   const dispatch = useDispatch();
@@ -32,7 +32,7 @@ const ResetPassword = () => {
 
   useEffect(() => {
     if (!token) {
-      toast.error("Link đặt lại mật khẩu không hợp lệ");
+      notify.error("Link đặt lại mật khẩu không hợp lệ");
       navigate("/auth/forgot-password");
     }
   }, [token, navigate]);
@@ -49,15 +49,15 @@ const ResetPassword = () => {
 
   const validateForm = () => {
     if (!formData.newPassword || !formData.confirmPassword) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+      notify.error("Vui lòng điền đầy đủ thông tin");
       return false;
     }
     if (formData.newPassword.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      notify.error("Mật khẩu phải có ít nhất 6 ký tự");
       return false;
     }
     if (formData.newPassword !== formData.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      notify.error("Mật khẩu xác nhận không khớp");
       return false;
     }
     return true;
@@ -72,12 +72,12 @@ const ResetPassword = () => {
     );
     if (resetPassword.fulfilled.match(result)) {
       setSuccess(true);
-      toast.success("Đặt lại mật khẩu thành công!");
+      notify.success("Đặt lại mật khẩu thành công!");
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-[100dvh] flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
@@ -99,7 +99,7 @@ const ResetPassword = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-white dark:bg-black">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-10">
@@ -271,3 +271,5 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
+
+

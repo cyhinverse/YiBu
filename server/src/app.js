@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import config from './configs/config.js';
 import { morganMiddleware } from './configs/logger.js';
+import logger from './configs/logger.js';
 import errorMiddleware from './middlewares/error.middleware.js';
+import { sendOk } from './helpers/apiResponse.js';
+import { buildErrorResponse } from './helpers/apiResponse.js';
 import {
   helmetMiddleware,
   globalRateLimiter,
@@ -10,6 +14,7 @@ import {
   hppMiddleware,
   xssClean,
 } from './middlewares/security.middleware.js';
+
 
 // Import Routes
 import authRoutes from './routes/auth.router.js';
@@ -19,7 +24,6 @@ import commentRoutes from './routes/comment.router.js';
 import adminRoutes from './routes/admin.router.js';
 import reportRoutes from './routes/reports.router.js';
 import likeRoutes from './routes/like.router.js';
-import profileRoutes from './routes/profile.router.js';
 import messageRoutes from './routes/message.router.js';
 import savePostRoutes from './routes/savepost.router.js';
 import notificationRoutes from './routes/notification.router.js';
@@ -31,20 +35,17 @@ const app = express();
 const corsOptions = {
   origin: function (origin, callback) {
     // Cho phép requests không có origin (mobile apps, Postman, etc.)
-    const allowedOrigins = [
-      process.env.CLIENT_URL || 'http://localhost:3000',
-      'http://localhost:9258',
-      'http://localhost:9259',
-      'http://localhost:5173',
-      'http://127.0.0.1:9258',
-      'http://127.0.0.1:9259',
-    ];
+    const allowedOrigins = config.cors?.origins || [config.CLIENT_URL];
 
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      logger.warn('CORS blocked origin', { origin });
+      const err = new Error('Not allowed by CORS');
+      err.statusCode = 403;
+      err.errorCode = 'CORS_BLOCKED';
+      err.details = { origin };
+      callback(err);
     }
   },
   credentials: true,
@@ -69,6 +70,9 @@ app.options('*', cors(corsOptions));
 // Apply CORS to all routes
 app.use(cors(corsOptions));
 
+// Cookie Parser - Parse cookies from request headers
+app.use(cookieParser());
+
 // Helmet - HTTP Security Headers (sau CORS)
 app.use(helmetMiddleware);
 
@@ -84,6 +88,8 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10kb' })); // Giới hạn body size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
+
+
 // Data Sanitization - Chống NoSQL Injection
 app.use(mongoSanitizeMiddleware);
 
@@ -98,40 +104,45 @@ app.use(morganMiddleware);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
+  return sendOk(res, {
     message: 'API is running',
-    timestamp: new Date(),
-    env: config.env,
+    data: {
+      status: 'ok',
+      timestamp: new Date(),
+      env: config.env,
+    },
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
 
-app.use('/api/posts', postRoutes); // server.js had /api/v1 for posts.
-app.use('/api/v1', postRoutes); // Alias for legacy support
+// Routes (v2)
+app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/user', userRoutes);
 
-app.use('/api/comments', commentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/reports', reportRoutes); // check filename
-app.use('/api/like', likeRoutes);
-app.use('/profile', profileRoutes); // Legacy path?
-app.use('/api/profile', profileRoutes); // New standard path
+app.use('/api/v2/posts', postRoutes);
 
-app.use('/api/messages', messageRoutes);
-app.use('/api/savepost', savePostRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', userSettingsRoutes);
+app.use('/api/v2/comments', commentRoutes);
+app.use('/api/v2/admin', adminRoutes);
+app.use('/api/v2/reports', reportRoutes); // check filename
+app.use('/api/v2/like', likeRoutes);
+
+app.use('/api/v2/messages', messageRoutes);
+app.use('/api/v2/savepost', savePostRoutes);
+app.use('/api/v2/notifications', notificationRoutes);
+app.use('/api/v2/settings', userSettingsRoutes);
+
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({
-    code: 0,
-    message: `Endpoint not found: ${req.method} ${req.path}`,
-  });
+  return res.status(404).json(
+    buildErrorResponse({
+      message: `Endpoint not found: ${req.method} ${req.path}`,
+      errorCode: 'NOT_FOUND',
+      details: { method: req.method, path: req.path },
+    })
+  );
 });
+
 
 // Global Error Handler
 app.use(errorMiddleware);

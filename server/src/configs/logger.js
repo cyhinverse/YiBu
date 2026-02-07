@@ -1,4 +1,4 @@
-import winston from 'winston';
+import { format, transports, createLogger } from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
 import fs from 'fs';
@@ -11,23 +11,23 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir);
 }
 
-const customFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+const customFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.printf(({ timestamp, level, message, ...meta }) => {
     return `${timestamp} [${level.toUpperCase()}]: ${message} ${
       Object.keys(meta).length ? JSON.stringify(meta) : ''
     }`;
   })
 );
 
-const logger = winston.createLogger({
+const logger = createLogger({
   format: customFormat,
   transports: [
     // Console transport
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    new transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(({ timestamp, level, message, ...meta }) => {
           return `${timestamp} [${level}]: ${message} ${
             Object.keys(meta).length ? JSON.stringify(meta) : ''
           }`;
@@ -35,7 +35,7 @@ const logger = winston.createLogger({
       ),
     }),
     // Error log file rotate
-    new winston.transports.DailyRotateFile({
+    new transports.DailyRotateFile({
       filename: path.join(logDir, 'error-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -44,7 +44,7 @@ const logger = winston.createLogger({
       level: 'error',
     }),
     // Combined log file rotate
-    new winston.transports.DailyRotateFile({
+    new transports.DailyRotateFile({
       filename: path.join(logDir, 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -55,14 +55,14 @@ const logger = winston.createLogger({
 });
 
 /**
- * Morgan stream - Ghi HTTP request logs vào Winston
+ * Morgan stream - Write HTTP request logs to Winston
  */
 const morganStream = {
   write: message => {
-    // Loại bỏ newline cuối cùng
+    // Remove trailing newline
     const logMessage = message.trim();
 
-    // Phân loại log level dựa trên status code
+    // Classify log level based on status code
     const statusCode = parseInt(logMessage.split(' ')[2]) || 200;
 
     if (statusCode >= 500) {
@@ -76,19 +76,19 @@ const morganStream = {
 };
 
 /**
- * Morgan format tùy chỉnh
+ * Custom Morgan format
  * Format: :method :url :status :response-time ms - :res[content-length]
  */
 const morganFormat =
   ':method :url :status :response-time ms - :res[content-length]';
 
 /**
- * Morgan middleware cho development (có màu)
+ * Morgan middleware for development (with colors)
  */
 export const morganDev = morgan('dev');
 
 /**
- * Morgan middleware cho production (kết hợp với Winston)
+ * Morgan middleware for production (combined with Winston)
  */
 export const morganProd = morgan(morganFormat, { stream: morganStream });
 

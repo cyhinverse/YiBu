@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { USER_API } from '@/axios/apiEndpoint';
+import { extractData } from '@/utils/apiUtils';
+import { toFormData } from '@/utils/toFormData';
+import { useDispatch } from 'react-redux';
+import { updateUserProfile } from '@/redux/slices/AuthSlice';
 
-const extractData = response => {
-  const responseData = response.data;
-  return responseData?.data !== undefined ? responseData.data : responseData;
-};
-
+/**
+ * Hook to fetch user profile
+ * @param {string} userId - User ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing profile data
+ */
 export const useProfile = userId => {
   return useQuery({
     queryKey: ['profile', userId],
@@ -19,6 +23,12 @@ export const useProfile = userId => {
   });
 };
 
+/**
+ * Hook to check follow status
+ * @param {string} targetUserId - Target user ID
+ * @param {boolean} [enabled=true] - Enable query
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing follow status
+ */
 export const useCheckFollow = (targetUserId, enabled = true) => {
   return useQuery({
     queryKey: ['followStatus', targetUserId],
@@ -30,6 +40,10 @@ export const useCheckFollow = (targetUserId, enabled = true) => {
   });
 };
 
+/**
+ * Hook to follow a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to follow user
+ */
 export const useFollowUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -44,6 +58,10 @@ export const useFollowUser = () => {
   });
 };
 
+/**
+ * Hook to unfollow a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to unfollow user
+ */
 export const useUnfollowUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -58,6 +76,11 @@ export const useUnfollowUser = () => {
   });
 };
 
+/**
+ * Hook to fetch user suggestions
+ * @param {number} [limit=10] - Number of suggestions
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing suggestions
+ */
 export const useSuggestions = (limit = 10) => {
   return useQuery({
     queryKey: ['suggestions', { limit }],
@@ -70,19 +93,50 @@ export const useSuggestions = (limit = 10) => {
   });
 };
 
+/**
+ * Hook to update profile
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to update profile
+ */
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
+  const dispatch = useDispatch();
   return useMutation({
     mutationFn: async profileData => {
-      const response = await api.put(USER_API.UPDATE_PROFILE, profileData);
+      // Backend expects multipart/form-data when uploading avatar/cover.
+      const payload =
+        typeof FormData !== 'undefined' && profileData instanceof FormData
+          ? profileData
+          : toFormData(profileData);
+
+      const response = await api.put(USER_API.UPDATE_PROFILE, payload);
       return extractData(response);
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['profile', data?._id || data?.id]);
+      const id = data?._id || data?.id;
+
+      // Update auth user in Redux so nav/header/avatar/etc update immediately.
+      if (data && typeof data === 'object') {
+        dispatch(updateUserProfile(data));
+      }
+
+      // Update profile cache for common keys.
+      if (id) {
+        queryClient.setQueryData(['profile', id], data);
+        queryClient.invalidateQueries(['profile', id]);
+      }
+
+      // Also refresh any other cached profiles (e.g. cached by username) and posts.
+      queryClient.invalidateQueries({ queryKey: ['profile'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['posts'], exact: false });
     },
   });
 };
 
+/**
+ * Hook to fetch followers list
+ * @param {string} userId - User ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing followers
+ */
 export const useFollowers = userId => {
   return useQuery({
     queryKey: ['followers', userId],
@@ -94,6 +148,11 @@ export const useFollowers = userId => {
   });
 };
 
+/**
+ * Hook to fetch following list
+ * @param {string} userId - User ID
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing following
+ */
 export const useFollowing = userId => {
   return useQuery({
     queryKey: ['following', userId],
@@ -105,6 +164,11 @@ export const useFollowing = userId => {
   });
 };
 
+/**
+ * Hook to fetch user settings
+ * @param {Object} [options] - Query options
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing settings
+ */
 export const useSettings = (options = {}) => {
   return useQuery({
     queryKey: ['settings'],
@@ -116,6 +180,10 @@ export const useSettings = (options = {}) => {
   });
 };
 
+/**
+ * Hook to update settings
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to update settings
+ */
 export const useUpdateSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -149,6 +217,11 @@ export const useUpdateSettings = () => {
   });
 };
 
+/**
+ * Hook to fetch follow requests
+ * @param {Object} [options] - Query options
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing follow requests
+ */
 export const useFollowRequests = (options = {}) => {
   return useQuery({
     queryKey: ['followRequests'],
@@ -160,6 +233,10 @@ export const useFollowRequests = (options = {}) => {
   });
 };
 
+/**
+ * Hook to accept follow request
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to accept follow request
+ */
 export const useAcceptFollowRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -176,6 +253,10 @@ export const useAcceptFollowRequest = () => {
   });
 };
 
+/**
+ * Hook to reject follow request
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to reject follow request
+ */
 export const useRejectFollowRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -191,6 +272,10 @@ export const useRejectFollowRequest = () => {
   });
 };
 
+/**
+ * Hook to fetch blocked users
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing blocked users
+ */
 export const useBlockedUsers = () => {
   return useQuery({
     queryKey: ['blockedUsers'],
@@ -201,6 +286,10 @@ export const useBlockedUsers = () => {
   });
 };
 
+/**
+ * Hook to block a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to block user
+ */
 export const useBlockUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -217,11 +306,15 @@ export const useBlockUser = () => {
   });
 };
 
+/**
+ * Hook to unblock a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to unblock user
+ */
 export const useUnblockUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async userId => {
-      const response = await api.post(USER_API.UNBLOCK_USER(userId)); // Should be UNBLOCK_USER or DELETE based on API style, assuming POST for now from apiEndpoint
+      const response = await api.post(USER_API.UNBLOCK_USER(userId));
       return extractData(response);
     },
     onSuccess: () => {
@@ -230,6 +323,10 @@ export const useUnblockUser = () => {
   });
 };
 
+/**
+ * Hook to fetch muted users
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing muted users
+ */
 export const useMutedUsers = () => {
   return useQuery({
     queryKey: ['mutedUsers'],
@@ -240,6 +337,10 @@ export const useMutedUsers = () => {
   });
 };
 
+/**
+ * Hook to mute a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to mute user
+ */
 export const useMuteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -253,6 +354,10 @@ export const useMuteUser = () => {
   });
 };
 
+/**
+ * Hook to unmute a user
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to unmute user
+ */
 export const useUnmuteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({

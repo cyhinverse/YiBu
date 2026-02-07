@@ -3,7 +3,7 @@ import { objectId, paginationQuery } from './common.validation.js';
 
 /**
  * SavePost Validation Schemas
- * Validation cho tất cả endpoints trong savepost.router.js
+ * Validation for all endpoints in savepost.router.js
  */
 
 // ======================================

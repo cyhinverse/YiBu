@@ -1,29 +1,31 @@
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-const LoadingSpinner = ({ 
-  fullScreen = false, 
-  size = 'md', 
+const LoadingSpinner = ({
+  fullScreen = false,
+  size = 'md',
   className = '',
-  text = 'Loading...'
+  text = '',
 }) => {
-  const sizeClasses = {
-    sm: 'w-5 h-5',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12',
-    xl: 'w-16 h-16'
+  const sizeMap = {
+    xs: 14,
+    sm: 20,
+    md: 32,
+    lg: 48,
+    xl: 64,
   };
 
   const spinnerContent = (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-600`} />
-      {fullScreen && <p className="text-gray-600 font-medium animate-pulse">{text}</p>}
+    <div
+      className={`flex flex-col items-center justify-center gap-3 ${className}`}
+    >
+      <Loader2 size={sizeMap[size]} className="animate-spin text-neutral-400" />
+      {text && <p className="text-neutral-500 text-sm font-medium">{text}</p>}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-sm">
         {spinnerContent}
       </div>
     );

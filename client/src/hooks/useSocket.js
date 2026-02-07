@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
-import { toast } from 'react-hot-toast';
+import { notify } from '@/utils/notify';
+import { SOCKET_URL, MAX_RECONNECT_ATTEMPTS } from '@/constants/socket';
 
-const SOCKET_URL = 'http://localhost:5000';
-const MAX_RECONNECT_ATTEMPTS = 3;
-
+/**
+ * Hook to manage Socket.IO connection
+ * @param {string} userId - Current user ID
+ * @returns {Object} Socket instance and utility functions
+ * @returns {Object|null} returns.socket - Socket.IO instance
+ * @returns {Function} returns.joinRoom - Join room function
+ * @returns {Function} returns.leaveRoom - Leave room function
+ * @returns {Function} returns.sendMessage - Send message function
+ * @returns {Function} returns.emitEvent - Emit custom event function
+ * @returns {Function} returns.joinPostRoom - Join post room function
+ * @returns {Function} returns.emitLikeAction - Emit like action function
+ * @returns {boolean} returns.isConnected - Connection status
+ * @returns {Object} returns.onlineUsers - Online users map
+ * @returns {Function} returns.isUserOnline - Check user online function
+ */
 const useSocket = userId => {
   const socketRef = useRef(null);
   const queryClient = useQueryClient();
@@ -23,30 +36,24 @@ const useSocket = userId => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-      extraHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-      },
       path: '/socket.io/',
     });
 
     socketRef.current = socket;
+    const rooms = activeRooms.current;
 
-    // Connection events
     socket.on('connect', () => {
       reconnectAttempts.current = 0;
       setIsConnected(true);
 
       socket.emit('register_user', { userId });
-
       socket.emit('join_room', userId);
-      activeRooms.current.add(userId);
-      activeRooms.current.forEach(room => {
+      rooms.add(userId);
+      rooms.forEach(room => {
         if (room !== userId) socket.emit('join_room', room);
       });
 
       socket.emit('get_online_users');
-
-      // Unread counts and notifications handled by React Query cache invalidation
       queryClient.invalidateQueries(['messages', 'unreadCount']);
       queryClient.invalidateQueries(['notifications', 'unreadCount']);
     });
@@ -58,11 +65,11 @@ const useSocket = userId => {
       }
     });
 
-    socket.on('connect_error', err => {
+    socket.on('connect_error', () => {
       setIsConnected(false);
       reconnectAttempts.current++;
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
-        toast.error('Không thể kết nối tới server chat');
+        notify.error('Unable to connect to chat server');
       }
     });
 
@@ -77,14 +84,17 @@ const useSocket = userId => {
         socket.disconnect();
         socketRef.current = null;
         setIsConnected(false);
-        activeRooms.current.clear();
+        rooms.clear();
       }
     };
   }, [userId, queryClient]);
 
+  /**
+   * Join a room
+   * @param {string} roomId - Room ID
+   */
   const joinRoom = useCallback(roomId => {
     if (!roomId) return;
-    // Skip if already in room
     if (activeRooms.current.has(roomId)) return;
 
     if (socketRef.current?.connected) {
@@ -93,9 +103,12 @@ const useSocket = userId => {
     activeRooms.current.add(roomId);
   }, []);
 
+  /**
+   * Leave a room
+   * @param {string} roomId - Room ID
+   */
   const leaveRoom = useCallback(roomId => {
     if (!roomId) return;
-    // Skip if not in room
     if (!activeRooms.current.has(roomId)) return;
 
     activeRooms.current.delete(roomId);
@@ -104,18 +117,33 @@ const useSocket = userId => {
     }
   }, []);
 
+  /**
+   * Send message via socket
+   * @param {Object} data - Message data
+   * @returns {boolean} Send result
+   */
   const sendMessage = useCallback(data => {
     if (!socketRef.current?.connected) return false;
     socketRef.current.emit('send_message', data);
     return true;
   }, []);
 
+  /**
+   * Emit custom event
+   * @param {string} event - Event name
+   * @param {*} data - Event data
+   * @returns {boolean} Emit result
+   */
   const emitEvent = useCallback((event, data) => {
     if (!socketRef.current?.connected) return false;
     socketRef.current.emit(event, data);
     return true;
   }, []);
 
+  /**
+   * Join post room to receive updates
+   * @param {string} postId - Post ID
+   */
   const joinPostRoom = useCallback(
     postId => {
       if (!postId) return;
@@ -125,6 +153,11 @@ const useSocket = userId => {
     [joinRoom, emitEvent]
   );
 
+  /**
+   * Emit like action for post
+   * @param {string} postId - Post ID
+   * @param {string} action - Action ('like' | 'unlike')
+   */
   const emitLikeAction = useCallback(
     (postId, action) => {
       emitEvent('post:like', { postId, userId, action });
@@ -132,6 +165,11 @@ const useSocket = userId => {
     [emitEvent, userId]
   );
 
+  /**
+   * Check if user is online
+   * @param {string} uid - User ID to check
+   * @returns {boolean} Online status
+   */
   const isUserOnline = useCallback(
     uid => {
       if (!uid) return false;
@@ -140,7 +178,6 @@ const useSocket = userId => {
     [onlineUsers]
   );
 
-  // Memoize return value to prevent context unnecessary re-renders
   return useMemo(
     () => ({
       socket: socketRef.current,
@@ -168,8 +205,12 @@ const useSocket = userId => {
   );
 };
 
-/* --- Event Handlers Helpers --- */
-
+/**
+ * Register message handlers
+ * @param {Object} socket - Socket instance
+ * @param {string} userId - Current user ID
+ * @param {Object} queryClient - React Query client
+ */
 const registerMessageHandlers = (socket, userId, queryClient) => {
   socket.on('new_message', message => {
     if (!message?._id) return;
@@ -178,7 +219,6 @@ const registerMessageHandlers = (socket, userId, queryClient) => {
     const isMine =
       senderId && userId && senderId.toString() === userId.toString();
 
-    // Support React Query invalidation
     queryClient.invalidateQueries(['messages', 'list', message.conversationId]);
     queryClient.invalidateQueries([
       'messages',
@@ -190,8 +230,8 @@ const registerMessageHandlers = (socket, userId, queryClient) => {
 
     if (!isMine) {
       const senderName =
-        message.sender?.firstName || message.sender?.name || 'Người dùng';
-      toast.success(`Tin nhắn mới từ ${senderName}`);
+        message.sender?.firstName || message.sender?.name || 'User';
+      notify.success(`New message from ${senderName}`);
     }
   });
 
@@ -201,10 +241,15 @@ const registerMessageHandlers = (socket, userId, queryClient) => {
     }
   });
 
-  socket.on('user_typing', () => {}); // No-op instead of log
-  socket.on('user_stop_typing', () => {}); // No-op
+  socket.on('user_typing', () => {});
+  socket.on('user_stop_typing', () => {});
 };
 
+/**
+ * Register notification handlers
+ * @param {Object} socket - Socket instance
+ * @param {Object} queryClient - React Query client
+ */
 const registerNotificationHandlers = (socket, queryClient) => {
   const handleNotification = notification => {
     if (!notification?._id) {
@@ -212,28 +257,30 @@ const registerNotificationHandlers = (socket, queryClient) => {
       return;
     }
 
-    // Invalidate queries to refresh lists and counts
     queryClient.invalidateQueries(['notifications']);
-
-    // Also invalidate unread count specifically if not covered by 'notifications' key structure
     queryClient.invalidateQueries(['notifications', 'unreadCount']);
 
-    let msg = notification.content || 'Bạn có thông báo mới';
+    let msg = notification.content || 'You have a new notification';
     if (notification.type === 'like' && notification.post?.caption) {
       msg += ` - "${notification.post.caption.substring(0, 20)}..."`;
     }
-    toast.success(msg, { icon: '🔔' });
+    notify.success(msg, { icon: '🔔' });
   };
 
   socket.on('notification:new', handleNotification);
   socket.on('new_notification', handleNotification);
 };
 
+/**
+ * Register like handlers
+ * @param {Object} socket - Socket instance
+ * @param {string} currentUserId - Current user ID
+ * @param {Object} queryClient - React Query client
+ */
 const registerLikeHandlers = (socket, currentUserId, queryClient) => {
   socket.on('post:like:update', ({ postId, userId }) => {
     if (userId === currentUserId) return;
 
-    // Invalidate relevant queries to fetch fresh data
     queryClient.invalidateQueries(['feed']);
     queryClient.invalidateQueries(['posts']);
     queryClient.invalidateQueries(['post', postId]);
@@ -241,6 +288,11 @@ const registerLikeHandlers = (socket, currentUserId, queryClient) => {
   });
 };
 
+/**
+ * Register user status handlers
+ * @param {Object} socket - Socket instance
+ * @param {Function} setOnlineUsers - Online users state setter
+ */
 const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   socket.on('get_users_online', users => {
     const map = {};
@@ -254,11 +306,16 @@ const registerUserStatusHandlers = (socket, setOnlineUsers) => {
   });
 };
 
+/**
+ * Register comment handlers
+ * @param {Object} socket - Socket instance
+ * @param {string} currentUserId - Current user ID
+ * @param {Object} queryClient - React Query client
+ */
 const registerCommentHandlers = (socket, currentUserId, queryClient) => {
   socket.on('new_comment', data => {
-    // data: { postId, comment, userId }
     const { postId, userId } = data;
-    if (userId === currentUserId) return; // Already handled by mutation optimistic update or invalidation
+    if (userId === currentUserId) return;
 
     queryClient.invalidateQueries(['post', postId]);
     queryClient.invalidateQueries(['comments', postId]);
@@ -267,7 +324,6 @@ const registerCommentHandlers = (socket, currentUserId, queryClient) => {
   });
 
   socket.on('delete_comment', data => {
-    // data: { postId, commentId, isReply }
     const { postId, userId } = data;
     if (userId === currentUserId) return;
 
@@ -279,3 +335,4 @@ const registerCommentHandlers = (socket, currentUserId, queryClient) => {
 };
 
 export default useSocket;
+

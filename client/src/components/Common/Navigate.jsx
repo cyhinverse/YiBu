@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -12,13 +13,12 @@ import {
   User,
   LogOut,
   Bookmark,
-  Sparkles,
   PenSquare,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import { logout } from '@/redux/actions/authActions';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useUnreadCount } from '@/hooks/useNotificationQuery';
 import { useUnreadMessagesCount } from '@/hooks/useMessageQuery';
 
@@ -36,16 +36,29 @@ const NavItem = ({
     <NavLink to={to || '#'} onClick={onClick} className="group w-full">
       {({ isActive }) => {
         const active = forceActive !== undefined ? forceActive : isActive;
+        const baseClass = collapsed
+          ? 'relative flex items-center justify-center w-10 h-10 mx-auto rounded-full transition-all overflow-hidden'
+          : 'relative flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full overflow-hidden';
+        const stateClass = active
+          ? 'text-primary-foreground font-medium'
+          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white';
         return (
           <div
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all w-full ${
-              active
-                ? 'bg-primary text-primary-foreground font-medium'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white'
-            } ${collapsed ? 'justify-center px-2' : ''}`}
+            className={`${baseClass} ${stateClass}`}
             title={collapsed ? label : undefined}
           >
-            <div className="relative flex-shrink-0">
+            {active && (
+              <motion.span
+                layoutId="sidebarActiveItem"
+                className="absolute inset-0 rounded-full bg-primary/90"
+                transition={{
+                  type: 'tween',
+                  duration: 0.18,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              />
+            )}
+            <div className="relative z-10 flex-shrink-0">
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               {badge > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center px-1">
@@ -53,7 +66,9 @@ const NavItem = ({
                 </span>
               )}
             </div>
-            {!collapsed && <span className="text-sm truncate">{label}</span>}
+            {!collapsed && (
+              <span className="relative z-10 text-sm truncate">{label}</span>
+            )}
           </div>
         );
       }}
@@ -82,7 +97,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   /* Handlers */
   const handleLogout = async () => {
     await dispatch(logout());
-    toast.success('Đăng xuất thành công');
+    notify.success('Đăng xuất thành công');
     navigate('/auth/login');
   };
 
@@ -129,7 +144,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Mobile Bottom Navigation
   if (mobile) {
     return (
-      <div className="h-[56px] w-full flex justify-around items-center border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl">
+      <div className="w-full flex justify-around items-center bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border-t border-neutral-200/60 dark:border-neutral-800/60 px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {navItems.slice(0, 5).map((item, i) => (
           <NavLink
             key={i}
@@ -166,7 +181,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
   // Desktop Sidebar
   return (
     <div
-      className={`h-full flex flex-col py-6 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ease-in-out ${
+      className={`h-full flex flex-col py-6 bg-white rounded-r-2xl dark:bg-neutral-900 transition-all duration-300 ease-in-out ${
         collapsed ? 'px-2 w-[72px]' : 'px-4 w-full'
       }`}
     >
@@ -177,9 +192,6 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
           collapsed ? 'justify-center px-0' : 'px-1'
         }`}
       >
-        <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center flex-shrink-0">
-          <Sparkles size={18} className="text-white dark:text-black" />
-        </div>
         {!collapsed && (
           <span className="text-xl font-semibold tracking-tight text-black dark:text-white">
             YiBu
@@ -190,7 +202,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
       {/* Collapse Toggle */}
       <button
         onClick={toggleSidebar}
-        className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 transition-all self-center"
+        className="mb-4 p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all self-center"
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
@@ -222,13 +234,22 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
         />
 
         {/* Theme Toggle */}
-        <div
+        <button
+          type="button"
           onClick={toggleTheme}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              event.currentTarget.blur();
+            }
+          }}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-all cursor-pointer text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white ${
             collapsed ? 'justify-center px-2' : ''
           }`}
           title={
             collapsed ? (isDarkMode ? 'Light mode' : 'Dark mode') : undefined
+          }
+          aria-label={
+            isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'
           }
         >
           <div className="flex-shrink-0">
@@ -239,7 +260,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
               {isDarkMode ? 'Light mode' : 'Dark mode'}
             </span>
           )}
-        </div>
+        </button>
 
         {/* Create Post Button */}
         {collapsed ? (
@@ -258,7 +279,7 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
       </nav>
 
       {/* User Profile Card */}
-      <div className="mt-auto pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="mt-auto pt-4">
         <div
           className={`flex items-center gap-3 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all group ${
             collapsed ? 'justify-center' : ''
@@ -269,9 +290,9 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
             <img
               src={user?.avatar || DEFAULT_USER.avatar}
               alt="Profile"
-              className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+              className="w-10 h-10 rounded-full object-cover"
             />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full" />
           </Link>
           {!collapsed && (
             <>

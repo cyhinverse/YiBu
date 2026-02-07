@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Search,
   RefreshCcw,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
   Filter,
 } from 'lucide-react';
 import {
@@ -20,8 +19,13 @@ import {
   ModeratePostModal,
   PostReportsModal,
 } from './PostActionModal';
+import AdminPagination from '@/components/Admin/Shared/AdminPagination.jsx';
 
 export default function Posts() {
+  const postsSearchId = useId();
+  const postsTypeId = useId();
+  const postsStatusId = useId();
+
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,7 +101,7 @@ export default function Posts() {
   const handleToggleStatus = post => {
     setSelectedPost(post);
     setModerateAction({
-      action: post.status === 'active' ? 'hide' : 'approve',
+      action: post.status === 'active' ? 'hide' : 'unhide',
       reason: '',
     });
     setShowModerateModal(true);
@@ -110,23 +114,15 @@ export default function Posts() {
       await moderateMutation.mutateAsync({
         postId: selectedPost._id || selectedPost.id,
         action: moderateAction.action,
-        reason: moderateAction.reason || 'Kiểm duyệt Admin',
+        reason:
+          moderateAction.reason ||
+          (moderateAction.action === 'hide' ? 'Ẩn bởi quản trị' : ''),
       });
       setShowModerateModal(false);
       setSelectedPost(null);
     } catch (error) {
       console.error('Failed to moderate post:', error);
     }
-  };
-
-  const handleApprovePost = post => {
-    setSelectedPost(post);
-    setModerateAction({
-      action: 'approve',
-      reason: '',
-    });
-    setShowModerateModal(true);
-    setActiveDropdown(null);
   };
 
   const handleRefresh = () => {
@@ -138,21 +134,31 @@ export default function Posts() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="admin-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            Nội dung
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--color-content)]">
             Quản lý bài viết
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Kiểm duyệt và quản lý nội dung người dùng
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+            Giám sát và xử lý báo cáo nội dung
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={handleRefresh}
-            className="p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors"
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                event.currentTarget.blur();
+              }
+            }}
+            className="p-2 rounded-lg bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+            aria-label="Làm mới bài viết"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -160,102 +166,109 @@ export default function Posts() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full md:w-auto">
+      <div className="admin-card p-4 flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="relative flex-1 w-full">
+          <label htmlFor={postsSearchId} className="sr-only">
+            Tìm kiếm bài viết
+          </label>
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
           />
           <input
+            id={postsSearchId}
             type="text"
             placeholder="Tìm kiếm bài viết..."
             value={searchTerm}
+            aria-label="Search posts"
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm font-medium focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700 outline-none transition-all placeholder:text-neutral-400"
+            className="admin-input w-full pl-10"
           />
         </div>
-
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <div className="relative min-w-[140px]">
+          <div className="relative min-w-[160px]">
+            <label htmlFor={postsTypeId} className="sr-only">
+              Lọc loại bài viết
+            </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
+              id={postsTypeId}
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả loại</option>
               <option value="text">Văn bản</option>
               <option value="image">Hình ảnh</option>
               <option value="video">Video</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
 
-          <div className="relative min-w-[150px]">
+          <div className="relative min-w-[180px]">
+            <label htmlFor={postsStatusId} className="sr-only">
+              Lọc trạng thái bài viết
+            </label>
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
             />
             <select
+              id={postsStatusId}
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-neutral-300 dark:focus:border-neutral-700 cursor-pointer appearance-none hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="admin-select w-full pl-9 pr-9 appearance-none cursor-pointer"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
               <option value="hidden">Đã ẩn</option>
-              <option value="pending">Chờ duyệt</option>
+              <option value="flagged">Bị gắn cờ</option>
+              <option value="deleted">Đã xóa</option>
             </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none"
+            />
           </div>
         </div>
       </div>
 
       {/* Posts Grid */}
-      <PostsGrid
-        loading={loading}
-        posts={posts}
-        activeDropdown={activeDropdown}
-        setActiveDropdown={setActiveDropdown}
-        onViewDetails={handleViewDetails}
-        onApprove={handleApprovePost}
-        onToggleStatus={handleToggleStatus}
-        onDelete={post => {
-          setPostToDelete(post);
-          setShowDeleteModal(true);
-        }}
-        onViewReports={post => {
-          setSelectedPost(post);
-          setShowReportsModal(true);
-        }}
-      />
+      <div className="admin-card p-4">
+        <PostsGrid
+          loading={loading}
+          posts={posts}
+          activeDropdown={activeDropdown}
+          setActiveDropdown={setActiveDropdown}
+          onViewDetails={handleViewDetails}
+          onToggleStatus={handleToggleStatus}
+          onDelete={post => {
+            setPostToDelete(post);
+            setShowDeleteModal(true);
+          }}
+          onViewReports={post => {
+            setSelectedPost(post);
+            setShowReportsModal(true);
+          }}
+        />
+      </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-2">
-        <span className="text-sm text-neutral-500">
-          Trang {currentPage} / {pagination?.pages || 1}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={currentPage <= 1 || loading}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black rounded-full text-sm font-bold shadow-sm">
-            {currentPage}
-          </div>
-          <button
-            disabled={currentPage >= (pagination?.pages || 1) || loading}
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={pagination?.pages || 1}
+        canPrev={currentPage > 1 && !loading}
+        canNext={currentPage < (pagination?.pages || 1) && !loading}
+        onPrev={() => handlePageChange(currentPage - 1)}
+        onNext={() => handlePageChange(currentPage + 1)}
+      />
+
 
       {/* Modals */}
       {selectedPost &&

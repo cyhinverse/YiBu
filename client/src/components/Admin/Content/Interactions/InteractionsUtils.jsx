@@ -10,6 +10,14 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
+// Re-export from utils for backward compatibility
+export { getInteractionText } from '@/utils/interactionUtils';
+
+/**
+ * Get interaction icon component based on type
+ * @param {string} type - Interaction type
+ * @returns {JSX.Element} Icon component
+ */
 export const getInteractionIcon = type => {
   switch (type) {
     case 'like':
@@ -19,7 +27,9 @@ export const getInteractionIcon = type => {
     case 'share':
       return <Share2 size={18} className="text-green-500" />;
     case 'follow':
-      return <UserPlus size={18} className="text-purple-500" />;
+      return (
+        <UserPlus size={18} className="text-neutral-700 dark:text-neutral-300" />
+      );
     case 'save':
       return (
         <Bookmark size={18} className="text-amber-500" fill="currentColor" />
@@ -29,23 +39,11 @@ export const getInteractionIcon = type => {
   }
 };
 
-export const getInteractionText = type => {
-  switch (type) {
-    case 'like':
-      return 'đã thích';
-    case 'comment':
-      return 'đã bình luận';
-    case 'share':
-      return 'đã chia sẻ';
-    case 'follow':
-      return 'đã theo dõi';
-    case 'save':
-      return 'đã lưu';
-    default:
-      return 'tương tác';
-  }
-};
-
+/**
+ * Format time to relative string
+ * @param {Date|string} date - Date to format
+ * @returns {string} Formatted relative time
+ */
 export const formatTime = date => {
   try {
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });

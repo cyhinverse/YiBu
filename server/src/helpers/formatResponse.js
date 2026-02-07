@@ -7,6 +7,8 @@
  * @param {Object} data - Optional data payload
  * @param {Object} extras - Optional extra fields (e.g. pagination)
  */
+import { buildSuccessResponse, buildErrorResponse } from './apiResponse.js';
+
 export const formatResponse = (
   res,
   statusCode = 200,
@@ -15,18 +17,26 @@ export const formatResponse = (
   data = null,
   extras = {}
 ) => {
-  const response = {
-    code,
-    message,
-  };
+  const hasExtras = extras && Object.keys(extras).length > 0;
 
-  if (data !== null) {
-    response.data = data;
+  if (code === 1) {
+    return res.status(statusCode).json(
+      buildSuccessResponse({
+        code,
+        message,
+        data,
+        meta: hasExtras ? { ...extras } : undefined,
+      })
+    );
   }
 
-  if (Object.keys(extras).length > 0) {
-    Object.assign(response, extras);
-  }
-
-  return res.status(statusCode).json(response);
+  // Back-compat: callers sometimes pass `data` as extra info even for errors.
+  const details = data ?? (hasExtras ? { ...extras } : null);
+  return res.status(statusCode).json(
+    buildErrorResponse({
+      code,
+      message,
+      details,
+    })
+  );
 };

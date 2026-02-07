@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 /**
- * Common validation rules - Các quy tắc validation dùng chung
+ * Common validation rules - Shared validation rules
  */
 
 // MongoDB ObjectId validation

@@ -1,5 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import 'tailwindcss';
 
 /* Enable dark mode with class strategy in Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -60,9 +60,9 @@
   --color-transparent: transparent;
 
   /* Font Family */
-  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  --font-family-heading: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Border Radius */
   --radius-sm: 0.375rem;
@@ -101,6 +101,7 @@
   --color-surface-hover: #1a1a1a;
 
   --color-text-primary: #ffffff;
+  --color-content: #ffffff;
   --color-text-secondary: var(--color-secondary);
   --color-text-tertiary: #525252;
   --color-text-inverse: #18181b;
@@ -117,42 +118,6 @@
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.2);
 }
 
-/* ===== Custom Theme Color Overrides ===== */
-/* These ensure custom colors from ThemeSettings apply to common patterns */
-:root {
-  /* Custom color CSS variables that can be overridden by JS */
-  --custom-primary: var(--color-primary);
-  --custom-secondary: var(--color-secondary);
-  --custom-content: var(--color-content);
-}
-
-/* When custom primary color is set, apply it to common elements */
-:root[style*="--color-primary"] .text-primary,
-:root[style*="--color-primary"] .bg-primary,
-:root[style*="--color-primary"] .border-primary {
-  --tw-text-opacity: 1;
-  color: var(--color-primary) !important;
-}
-
-:root[style*="--color-primary"] .bg-primary {
-  background-color: var(--color-primary) !important;
-  color: var(--color-primary-foreground) !important;
-}
-
-:root[style*="--color-primary"] .border-primary {
-  border-color: var(--color-primary) !important;
-}
-
-/* Apply custom content/text color */
-:root[style*="--color-content"] .text-content {
-  color: var(--color-content) !important;
-}
-
-/* Apply custom secondary color */
-:root[style*="--color-secondary"] .text-secondary {
-  color: var(--color-secondary) !important;
-}
-
 /* ===== Base Styles ===== */
 * {
   scrollbar-width: thin;
@@ -161,6 +126,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -170,6 +136,33 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 8px;
+  z-index: 9999;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #e5e5e5;
+  border-radius: 9999px;
+  font-size: 14px;
+}
+
+.skip-link:focus {
+  left: 12px;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
 h1,
@@ -390,6 +383,188 @@ h6 {
   height: 1px;
   background-color: var(--color-border);
 }
+
+/* ===== Admin UI Utilities ===== */
+.admin-shell {
+  /* Flat base: cards should not feel like separate elevated blocks. */
+  background-color: var(--color-surface);
+  color: var(--color-content);
+}
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-card {
+  /* Keep same as shell to avoid "floating blocks". Use spacing and typography for structure. */
+  background-color: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+  border: none;
+}
+
+.admin-card-muted {
+  /* Secondary surface for subtle emphasis (still borderless/shadowless). */
+  background-color: var(--color-surface-secondary);
+  border-radius: var(--radius-2xl);
+}
+
+.admin-panel {
+  background-color: var(--color-surface-secondary);
+  border-radius: var(--radius-2xl);
+}
+
+.admin-header {
+  background-color: var(--color-surface);
+  border-bottom: none;
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+  background-color: var(--color-surface-secondary);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+  font-family: var(--font-family-sans);
+  color: var(--color-content);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-input,
+.admin-select {
+  min-height: 44px;
+  line-height: 1.2;
+}
+
+.admin-textarea {
+  line-height: 1.4;
+}
+
+.admin-input::placeholder,
+.admin-textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  outline: none;
+  /* Flat focus treatment: no shadow, just a subtle outline. */
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-pill-muted {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+}
+
+.admin-pill-inverse {
+  background-color: var(--color-content);
+  color: var(--color-text-inverse);
+}
+
+.admin-pill-success {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-success) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-success);
+}
+
+.admin-pill-warning {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-warning) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-warning);
+}
+
+.admin-pill-danger {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-error) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-error);
+}
+
+.admin-pill-info {
+  background-color: var(--color-surface-secondary);
+  background-color: color-mix(
+    in srgb,
+    var(--color-info) 14%,
+    var(--color-surface-secondary)
+  );
+  color: var(--color-info);
+}
+
+.admin-muted {
+  color: var(--color-text-secondary);
+}
+
+.admin-subtle {
+  color: var(--color-text-tertiary);
+}
+
+.admin-divider {
+  height: 1px;
+  background-color: transparent;
+}
+
+/* Admin overrides: keep UI flat, rely on spacing + surfaces (no borders/shadows). */
+.admin-shell .yb-card {
+  border: none;
+  box-shadow: none;
+  background-color: var(--color-surface);
+}
+
+.admin-shell .yb-card-elevated {
+  box-shadow: none;
+}
+
+.admin-shell .yb-avatar {
+  border: none;
+}
+
+.admin-shell .yb-btn-secondary {
+  border: none;
+}
+
 
 /* Hover lift effect */
 .hover-lift {

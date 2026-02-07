@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Bell,
-  Heart,
-  MessageCircle,
-  UserPlus,
-  Repeat2,
   Check,
   Filter,
   Loader2,
@@ -17,40 +13,13 @@ import {
   useMarkAllAsRead,
   useDeleteNotification,
   useDeleteAllNotifications,
-} from '../../../../hooks/useNotificationQuery';
-import toast from 'react-hot-toast';
+} from '@/hooks/useNotificationQuery';
+import { notify } from '@/utils/notify';
 import { useInView } from 'react-intersection-observer';
-
-const formatTime = dateStr => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-};
-
-const getNotificationIcon = type => {
-  switch (type) {
-    case 'like':
-      return <Heart size={16} className="text-red-500" />;
-    case 'comment':
-      return <MessageCircle size={16} className="text-blue-500" />;
-    case 'follow':
-      return <UserPlus size={16} className="text-green-500" />;
-    case 'repost':
-    case 'share':
-      return <Repeat2 size={16} className="text-purple-500" />;
-    default:
-      return <Bell size={16} className="text-neutral-500" />;
-  }
-};
+import {
+  formatNotificationTime as formatTime,
+  getNotificationIcon,
+} from '@/utils/notificationUtils';
 
 const NotificationPanel = () => {
   const [filter, setFilter] = useState('all');
@@ -99,7 +68,7 @@ const NotificationPanel = () => {
   // Handlers
   const handleMarkAllAsRead = () => {
     markAllAsRead(undefined, {
-      onError: () => toast.error('Failed to mark all as read'),
+      onError: () => notify.error('Failed to mark all as read'),
     });
   };
 
@@ -110,24 +79,24 @@ const NotificationPanel = () => {
   const handleDelete = (e, id) => {
     e.stopPropagation();
     deleteNotification(id, {
-      onError: () => toast.error('Failed to delete notification'),
+      onError: () => notify.error('Failed to delete notification'),
     });
   };
 
   const handleDeleteAll = async () => {
     try {
       await deleteAllNotifications();
-      toast.success('Đã xóa tất cả thông báo');
+      notify.success('Đã xóa tất cả thông báo');
       setShowDeleteAllConfirm(false);
     } catch (error) {
-      toast.error('Xóa thông báo thất bại', error.message);
+      notify.error('Xóa thông báo thất bại', error.message);
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl z-10 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="sticky top-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl z-10">
         <div className="flex items-center justify-between p-4">
           <h1 className="text-xl font-bold text-black dark:text-white">
             Notifications
@@ -160,7 +129,7 @@ const NotificationPanel = () => {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex bg-neutral-50 dark:bg-neutral-800/50 p-1 rounded-xl mx-4 mb-2">
           <button
             onClick={() => setFilter('all')}
             className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
@@ -171,7 +140,7 @@ const NotificationPanel = () => {
           >
             All
             {filter === 'all' && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
             )}
           </button>
           <button
@@ -226,10 +195,10 @@ const NotificationPanel = () => {
               <div
                 key={notification._id}
                 onClick={() => handleMarkAsRead(notification._id)}
-                className={`flex items-start gap-3 p-4 border-b border-neutral-100 dark:border-neutral-800 cursor-pointer transition-colors group ${
+                className={`flex items-start gap-4 p-4 cursor-pointer transition-all duration-300 rounded-2xl mx-4 mb-2 group ${
                   !notification.isRead
-                    ? 'bg-neutral-50 dark:bg-neutral-800/50'
-                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                    ? 'bg-primary/5 dark:bg-primary/10'
+                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800/30'
                 }`}
               >
                 {/* Avatar */}
@@ -239,7 +208,7 @@ const NotificationPanel = () => {
                       notification.sender?.avatar || notification.user?.avatar
                     }
                     alt={notification.sender?.name || notification.user?.name}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                    className="w-10 h-10 rounded-full object-cover"
                   />
                   <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-white dark:bg-neutral-900">
                     {getNotificationIcon(notification.type)}
@@ -309,7 +278,7 @@ const NotificationPanel = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteAllConfirm(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Cancel
               </button>
@@ -336,3 +305,4 @@ const NotificationPanel = () => {
 };
 
 export default NotificationPanel;
+

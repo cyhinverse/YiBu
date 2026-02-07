@@ -3,7 +3,7 @@ import { ShieldX, Home, ArrowLeft } from 'lucide-react';
 
 const AccessDenied = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 dark:bg-black px-4">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-neutral-50 dark:bg-black px-4">
       <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center">
         {/* Icon */}
         <div className="flex justify-center mb-6">

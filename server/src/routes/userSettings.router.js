@@ -1,5 +1,6 @@
 import express from 'express';
-import UserController from '../controllers/user.controller.js';
+import UserController from '../modules/user/user.controller.js';
+
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBody,
@@ -11,57 +12,44 @@ import {
   securitySettingsBody,
   contentSettingsBody,
   themeSettingsBody,
-  addDeviceBody,
-  deviceIdParam,
 } from '../validations/userSettings.validation.js';
 
 const router = express.Router();
 
 router.use(verifyToken);
 
-// ======================================
-// User Settings
-// ======================================
+/* GET / - Get all user settings */
 router.get('/', UserController.getUserSettings);
 
+/* PUT /privacy - Update privacy settings */
 router.put(
   '/privacy',
   validateBody(privacySettingsBody),
   UserController.updatePrivacySettings
 );
+/* PUT /notifications - Update notification settings */
 router.put(
   '/notifications',
   validateBody(notificationSettingsBody),
   UserController.updateNotificationSettings
 );
+/* PUT /security - Update security settings */
 router.put(
   '/security',
   validateBody(securitySettingsBody),
   UserController.updateSecuritySettings
 );
+/* PUT /content - Update content settings */
 router.put(
   '/content',
   validateBody(contentSettingsBody),
   UserController.updateContentSettings
 );
+/* PUT /theme - Update theme/appearance settings */
 router.put(
   '/theme',
   validateBody(themeSettingsBody),
   UserController.updateThemeSettings
-);
-
-// ======================================
-// Trusted Devices
-// ======================================
-router.post(
-  '/devices',
-  validateBody(addDeviceBody),
-  UserController.addTrustedDevice
-);
-router.delete(
-  '/devices/:deviceId',
-  validateParams(deviceIdParam),
-  UserController.removeTrustedDevice
 );
 
 export default router;

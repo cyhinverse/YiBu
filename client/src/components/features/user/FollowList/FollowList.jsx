@@ -8,7 +8,7 @@ import {
   useFollowUser,
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -37,13 +37,13 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
       try {
         if (isFollowing) {
           await unfollowMutation.mutateAsync(targetUserId);
-          toast.success('Đã bỏ theo dõi');
+          notify.success('Đã bỏ theo dõi');
         } else {
           await followMutation.mutateAsync(targetUserId);
-          toast.success('Đã theo dõi');
+          notify.success('Đã theo dõi');
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
     [followMutation, unfollowMutation]
@@ -62,11 +62,11 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-xl overflow-hidden"
+        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50">
           <h2 className="text-base font-semibold text-black dark:text-white">
             {type === 'followers' ? 'Followers' : 'Following'}
           </h2>
@@ -97,7 +97,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+            <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
               {users.map(user => {
                 const isFollowingUser =
                   user.isFollowing ||
@@ -122,7 +122,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
                           `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                         }
                         alt={user.username}
-                        className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                       <div className="min-w-0">
                         <p className="font-semibold text-black dark:text-white truncate">
@@ -142,7 +142,7 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
                           mutationLoading ? 'opacity-50 cursor-not-allowed' : ''
                         } ${
                           isFollowingUser
-                            ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
+                            ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white hover:bg-red-500/10 hover:text-red-500'
                             : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                         }`}
                       >
@@ -173,3 +173,4 @@ const FollowList = ({ userId, type = 'followers', isOpen, onClose }) => {
 };
 
 export default FollowList;
+

@@ -10,7 +10,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import {
   enable2FA,
   verify2FA,
@@ -19,6 +19,7 @@ import {
   revokeSession,
 } from '@/redux/actions/authActions';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const SecuritySettings = () => {
   const dispatch = useDispatch();
@@ -61,10 +62,10 @@ const SecuritySettings = () => {
         type: 'security',
         settings: newSecurity,
       });
-      toast.success('Đã lưu cài đặt bảo mật');
+      notify.success('Đã lưu cài đặt bảo mật');
     } catch (error) {
       setSecurity(security); // Revert on failure
-      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
+      notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -76,25 +77,25 @@ const SecuritySettings = () => {
       setQrCode(qrCodeData);
       setShow2FAModal(true);
     } catch (error) {
-      toast.error(error || 'Không thể bật 2FA');
+      notify.error(error || 'Không thể bật 2FA');
     }
   };
 
   const handleVerify2FA = async () => {
     if (!verifyCode || verifyCode.length !== 6) {
-      toast.error('Vui lòng nhập mã 6 số');
+      notify.error('Vui lòng nhập mã 6 số');
       return;
     }
 
     setVerifying(true);
     try {
       await dispatch(verify2FA({ token: verifyCode })).unwrap();
-      toast.success('Đã bật xác thực hai yếu tố');
+      notify.success('Đã bật xác thực hai yếu tố');
       setSecurity(prev => ({ ...prev, twoFactorEnabled: true }));
       setShow2FAModal(false);
       setVerifyCode('');
     } catch (error) {
-      toast.error(error || 'Mã xác thực không hợp lệ');
+      notify.error(error || 'Mã xác thực không hợp lệ');
     } finally {
       setVerifying(false);
     }
@@ -103,23 +104,30 @@ const SecuritySettings = () => {
   const handleDisable2FA = async () => {
     if (!window.confirm('Bạn có chắc muốn tắt xác thực hai yếu tố?')) return;
 
+    const password = window.prompt('Nhập mật khẩu để tắt 2FA');
+    if (!password) {
+      notify.error('Mật khẩu là bắt buộc');
+      return;
+    }
+
     try {
-      await dispatch(disable2FA()).unwrap();
-      toast.success('Đã tắt xác thực hai yếu tố');
+      await dispatch(disable2FA({ password })).unwrap();
+      notify.success('Đã tắt xác thực hai yếu tố');
       setSecurity(prev => ({ ...prev, twoFactorEnabled: false }));
     } catch (error) {
-      toast.error(error || 'Không thể tắt 2FA');
+      notify.error(error || 'Không thể tắt 2FA');
     }
   };
+
 
   const handleRevokeSession = async sessionId => {
     if (!window.confirm('Bạn có chắc muốn đăng xuất phiên này?')) return;
 
     try {
       await dispatch(revokeSession(sessionId)).unwrap();
-      toast.success('Đã đăng xuất phiên');
+      notify.success('Đã đăng xuất phiên');
     } catch (error) {
-      toast.error(error || 'Không thể đăng xuất phiên');
+      notify.error(error || 'Không thể đăng xuất phiên');
     }
   };
 
@@ -130,7 +138,7 @@ const SecuritySettings = () => {
     description,
     disabled,
   }) => (
-    <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+    <div className="flex items-center justify-between py-4 last:border-0">
       <div>
         <p className="text-sm font-medium text-content dark:text-white">
           {label}
@@ -142,11 +150,7 @@ const SecuritySettings = () => {
         disabled={disabled}
         className={`relative w-11 h-6 rounded-full transition-colors ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
-        } ${
-          enabled
-            ? 'bg-primary'
-            : 'bg-neutral-200 dark:bg-neutral-700'
-        }`}
+        } ${enabled ? 'bg-primary' : 'bg-neutral-200 dark:bg-neutral-700'}`}
       >
         <div
           className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
@@ -162,7 +166,7 @@ const SecuritySettings = () => {
   if (settingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -179,8 +183,8 @@ const SecuritySettings = () => {
       </div>
 
       {/* Two-Factor Authentication */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Key size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -194,8 +198,8 @@ const SecuritySettings = () => {
               <div
                 className={`p-2 rounded-lg ${
                   security.twoFactorEnabled
-                    ? 'bg-green-100 dark:bg-green-900/30'
-                    : 'bg-neutral-100 dark:bg-neutral-800'
+                    ? 'bg-green-50 dark:bg-green-900/20'
+                    : 'bg-neutral-100/50 dark:bg-neutral-800/40'
                 }`}
               >
                 {security.twoFactorEnabled ? (
@@ -232,8 +236,8 @@ const SecuritySettings = () => {
       </div>
 
       {/* Security Options */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -267,8 +271,8 @@ const SecuritySettings = () => {
       </div>
 
       {/* Active Sessions */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Monitor size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -281,7 +285,7 @@ const SecuritySettings = () => {
             sessions.map(session => (
               <div
                 key={session.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-neutral-50 dark:bg-neutral-800"
+                className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-neutral-800/40"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-white dark:bg-neutral-700">
@@ -324,7 +328,7 @@ const SecuritySettings = () => {
       {show2FAModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+            <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50">
               <h3 className="text-lg font-semibold text-content dark:text-white">
                 Thiết lập xác thực hai yếu tố
               </h3>
@@ -350,11 +354,11 @@ const SecuritySettings = () => {
                     setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))
                   }
                   placeholder="Nhập mã 6 số"
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-content dark:text-white text-center text-lg tracking-widest"
+                  className="w-full px-4 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             </div>
-            <div className="p-4 flex gap-3 border-t border-neutral-200 dark:border-neutral-700">
+            <div className="p-4 flex gap-3">
               <button
                 onClick={() => {
                   setShow2FAModal(false);
@@ -384,3 +388,4 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
+

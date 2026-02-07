@@ -32,7 +32,11 @@ export default function ReportStats({ reports }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div
+      className="grid grid-cols-1 md:grid-cols-3 gap-4"
+      role="group"
+      aria-label="Report stats"
+    >
       {stats.map((stat, index) => (
         <StatCard
           key={index}

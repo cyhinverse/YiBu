@@ -1,42 +1,45 @@
 /**
  * Validation Middleware Factory
- * Tạo middleware để validate request body/params/query với Joi schema
+ * Create middleware to validate request body/params/query with Joi schema
  */
+
+import ApiError from '../helpers/ApiError.js';
 
 /**
  * Validate request body
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateBody = schema => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.body, {
-      abortEarly: false, // Trả về tất cả lỗi, không dừng ở lỗi đầu tiên
-      stripUnknown: true, // Loại bỏ các field không có trong schema
+      abortEarly: false, // Return all errors, don't stop at first error
+      stripUnknown: true, // Remove fields not in schema
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Dữ liệu không hợp lệ',
-        errors,
-      });
+      return next(
+        ApiError.badRequest('Invalid request body', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
-    // Gán giá trị đã validate vào req.body
+    // Assign validated value to req.body
     req.body = value;
     next();
   };
 };
 
+
 /**
  * Validate request params
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateParams = schema => {
@@ -46,16 +49,16 @@ export const validateParams = schema => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Tham số không hợp lệ',
-        errors,
-      });
+      return next(
+        ApiError.badRequest('Invalid request params', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
     req.params = value;
@@ -63,9 +66,10 @@ export const validateParams = schema => {
   };
 };
 
+
 /**
  * Validate request query
- * @param {Joi.Schema} schema - Joi schema để validate
+ * @param {Joi.Schema} schema - Joi schema for validation
  * @returns {Function} Express middleware
  */
 export const validateQuery = schema => {
@@ -76,16 +80,16 @@ export const validateQuery = schema => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const details = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message,
       }));
-
-      return res.status(400).json({
-        code: 0,
-        message: 'Query parameters không hợp lệ',
-        errors,
-      });
+      return next(
+        ApiError.badRequest('Invalid request query', {
+          errorCode: 'VALIDATION_ERROR',
+          details,
+        })
+      );
     }
 
     req.query = value;
@@ -93,9 +97,10 @@ export const validateQuery = schema => {
   };
 };
 
+
 /**
- * Validate nhiều phần của request cùng lúc
- * @param {Object} schemas - Object chứa các schema cho body, params, query
+ * Validate multiple parts of request at once
+ * @param {Object} schemas - Object containing schemas for body, params, query
  * @returns {Function} Express middleware
  */
 export const validate = ({ body, params, query }) => {
@@ -159,16 +164,19 @@ export const validate = ({ body, params, query }) => {
     }
 
     if (errors.length > 0) {
-      return res.status(400).json({
-        code: 0,
-        message: 'Dữ liệu không hợp lệ',
-        errors,
-      });
+      const error = new Error('Dữ liệu không hợp lệ');
+      return next(
+        ApiError.badRequest('Invalid request data', {
+          errorCode: 'VALIDATION_ERROR',
+          details: errors,
+        })
+      );
     }
 
     next();
   };
 };
+
 
 export default {
   validateBody,

@@ -1,4 +1,14 @@
-import { useState, useCallback, lazy, Suspense, useEffect, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  memo,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import {
   MoreHorizontal,
@@ -16,14 +26,17 @@ import {
   Link2,
   Share2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 import {
   useToggleLike,
   useToggleSave,
   useDeletePost,
   useSharePost,
 } from '@/hooks/usePostsQuery';
-import UserProfilePreview from '../../../Common/UserProfilePreview';
+import UserProfilePreview from '@/components/Common/UserProfilePreview';
+import { formatCount, formatPostTime as formatTime } from '@/utils/postUtils';
+import VideoPlayer from './VideoPlayer';
 
 // Lazy load modals
 const CommentModal = lazy(() =>
@@ -37,260 +50,164 @@ const ReportModal = lazy(() =>
   }))
 );
 const ModelPost = lazy(() => import('./ModelPost'));
-const VideoModal = lazy(() => import('../../../Common/VideoModal'));
+const VideoModal = lazy(() => import('@/components/Common/VideoModal'));
 
-// Inline Video Player with basic controls
-const VideoPlayer = ({ src, onExpand, isGrid }) => {
-  const videoRef = useRef(null);
-  const containerRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [volume, setVolume] = useState(1);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isInView, setIsInView] = useState(false);
+const DEFAULT_USER = {
+  name: 'Unknown User',
+  username: 'unknown',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
+};
 
-  // Auto play/pause when scrolling in/out of view
-  useEffect(() => {
-    const video = videoRef.current;
-    const container = containerRef.current;
-    if (!video || !container) return;
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          setIsInView(entry.isIntersecting);
-          if (entry.isIntersecting) {
-            // Video is in view - auto play
-            video.play().catch(() => {});
-          } else {
-            // Video is out of view - pause
-            video.pause();
-          }
-        });
-      },
-      {
-        threshold: 0.5, // 50% of video must be visible
-      }
-    );
-
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const togglePlay = (e) => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = (e) => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-      if (isMuted && volume === 0) {
-        setVolume(1);
-        videoRef.current.volume = 1;
-      }
-    }
-  };
-
-  const handleVolumeChange = (e) => {
-    e.stopPropagation();
-    const newVolume = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      videoRef.current.muted = newVolume === 0;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
-    }
-  };
-
-  const handleSeek = (e) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    if (videoRef.current) {
-      videoRef.current.currentTime = percent * videoRef.current.duration;
-    }
-  };
-
-  const formatTime = (time) => {
-    if (isNaN(time)) return '0:00';
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
   return (
-    <div ref={containerRef} className="relative w-full h-full group">
-      <video
-        ref={videoRef}
-        src={src}
-        playsInline
-        muted={isMuted}
-        loop
-        className="w-full h-full object-cover"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onClick={togglePlay}
-      />
-
-      {/* Play/Pause Overlay (shows when paused) */}
-      {!isPlaying && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
-          onClick={togglePlay}
-        >
-          <div className="w-14 h-14 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform">
-            <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Progress Bar */}
-        <div 
-          className="h-1 bg-white/30 rounded-full cursor-pointer mb-2"
-          onClick={handleSeek}
-        >
-          <div 
-            className="h-full bg-white rounded-full"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            {/* Play/Pause */}
-            <button
-              onClick={togglePlay}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-            >
-              {isPlaying ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Mute/Unmute with Volume Slider */}
-            <div 
-              className="relative flex items-center"
-              onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
-            >
-              <button
-                onClick={toggleMute}
-                className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-              >
-                {isMuted || volume === 0 ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                )}
-              </button>
-              
-              {/* Volume Slider */}
-              <div className={`flex items-center overflow-hidden transition-all duration-200 ${showVolumeSlider ? 'w-16 ml-1' : 'w-0'}`}>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={isMuted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Time */}
-            <span className="text-white text-xs ml-1">
-              {formatTime(videoRef.current?.currentTime || 0)}
-            </span>
-          </div>
-
-          {/* Expand Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onExpand();
-            }}
-            className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors"
-            title="Expand"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
+    /\/video\/upload\//i.test(url) ||
+    /resource_type=video/i.test(url) ||
+    /\/videos?\//i.test(url)
   );
 };
 
-// Fake post data for component testing
-const formatCount = count => {
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return count.toString();
+const buildCloudinaryUrl = (publicId, type) => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  if (!cloudName || !publicId) return null;
+  const resourceType = type === 'video' ? 'video' : 'image';
+  const cleanId = publicId.replace(/^\/+/, '');
+  return `https://res.cloudinary.com/${cloudName}/${resourceType}/upload/${cleanId}`;
 };
 
-const formatTime = date => {
-  const now = new Date();
-  const postDate = new Date(date);
-  const diffMs = now - postDate;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+const ensureAbsoluteUrl = (url, type) => {
+  if (!url) return url;
+  if (/^(blob:|data:|https?:)/i.test(url)) return url;
 
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return postDate.toLocaleDateString();
+  const cloudinaryUrl = buildCloudinaryUrl(url, type);
+  if (cloudinaryUrl) return cloudinaryUrl;
+
+  const base =
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
+  if (!base) return url;
+  if (url.startsWith('/')) return `${base}${url}`;
+  return `${base}/${url}`;
 };
 
-const Post = ({ data, onDelete }) => {
-  const authUser = useSelector(state => state.auth?.user);
+const getMediaType = item => {
+  const rawType =
+    item?.type ||
+    item?.mediaType ||
+    item?.resource_type ||
+    item?.resourceType ||
+    item?.format;
+  if (typeof rawType === 'string') {
+    const type = rawType.toLowerCase();
+    if (type.startsWith('video')) return 'video';
+    if (type === 'image') return 'image';
+    if (VIDEO_EXTENSIONS.test(`file.${type}`)) return 'video';
+  }
+  if (typeof item?.duration === 'number' && item.duration > 0) {
+    return 'video';
+  }
+  if (item?.thumbnail) {
+    return 'video';
+  }
+  const mime = item?.mimetype || item?.mimeType || item?.mime_type;
+  if (typeof mime === 'string' && mime.startsWith('video/')) {
+    return 'video';
+  }
+  return null;
+};
+
+const normalizeMediaItem = item => {
+  if (!item) return null;
+  if (typeof item === 'string') {
+    const url = item;
+    return { url, type: isVideoUrl(url) ? 'video' : 'image' };
+  }
+
+  const rawUrl =
+    item.url ||
+    item.path ||
+    item.secure_url ||
+    item.secureUrl ||
+    item.secureURL ||
+    item.location ||
+    item.src ||
+    item.fileUrl ||
+    item.fileURL ||
+    item.preview ||
+    item.thumbnail ||
+    item.publicId ||
+    item.public_id;
+
+  const url =
+    typeof rawUrl === 'string'
+      ? rawUrl
+      : rawUrl?.url ||
+        rawUrl?.secure_url ||
+        rawUrl?.secureUrl ||
+        rawUrl?.path ||
+        rawUrl?.src ||
+        rawUrl?.location ||
+        '';
+
+  if (!url || typeof url !== 'string') return null;
+
+  const inferredType = getMediaType(item) || (isVideoUrl(url) ? 'video' : null);
+  const resolvedUrl = ensureAbsoluteUrl(url, inferredType);
+  const type =
+    inferredType || (isVideoUrl(resolvedUrl) ? 'video' : 'image');
+  return { ...item, url: resolvedUrl, type };
+};
+
+const arePostPropsEqual = (prev, next) => {
+  if (prev.onDelete !== next.onDelete) return false;
+  if (prev.onOpenComments !== next.onOpenComments) return false;
+  if (prev.onOptionsToggle !== next.onOptionsToggle) return false;
+  if (prev.data === next.data) return true;
+
+  const prevData = prev.data;
+  const nextData = next.data;
+
+  if (!prevData || !nextData) return prevData === nextData;
+  if (prevData._id !== nextData._id) return false;
+  if (prevData.updatedAt !== nextData.updatedAt) return false;
+  if (prevData.caption !== nextData.caption) return false;
+
+  const prevLikeCount = prevData.likeCount ?? prevData.likesCount;
+  const nextLikeCount = nextData.likeCount ?? nextData.likesCount;
+  if (prevLikeCount !== nextLikeCount) return false;
+
+  const prevCommentCount = prevData.commentCount ?? prevData.commentsCount;
+  const nextCommentCount = nextData.commentCount ?? nextData.commentsCount;
+  if (prevCommentCount !== nextCommentCount) return false;
+
+  if (prevData.isLiked !== nextData.isLiked) return false;
+  if (prevData.isSaved !== nextData.isSaved) return false;
+  if (prevData.viewCount !== nextData.viewCount) return false;
+
+  const prevMediaCount = Array.isArray(prevData.media) ? prevData.media.length : 0;
+  const nextMediaCount = Array.isArray(nextData.media) ? nextData.media.length : 0;
+  if (prevMediaCount !== nextMediaCount) return false;
+
+  const prevUser = prevData.user;
+  const nextUser = nextData.user;
+  if (prevUser || nextUser) {
+    const prevUserId = prevUser?._id || prevUser?.id;
+    const nextUserId = nextUser?._id || nextUser?.id;
+    if (prevUserId !== nextUserId) return false;
+    if (prevUser?.name !== nextUser?.name) return false;
+    if (prevUser?.username !== nextUser?.username) return false;
+    if (prevUser?.avatar !== nextUser?.avatar) return false;
+    if (prevUser?.verified !== nextUser?.verified) return false;
+  }
+
+  return true;
+};
+
+const Post = ({ data, onDelete, onOpenComments, onOptionsToggle }) => {
+  const { user: authUser } = useSelector(state => state.auth);
 
   const [isLiked, setIsLiked] = useState(data?.isLiked || false);
   const [isSaved, setIsSaved] = useState(data?.isSaved || false);
@@ -298,14 +215,12 @@ const Post = ({ data, onDelete }) => {
     data?.likeCount || data?.likesCount || 0
   );
 
-  // React Query Mutations
   const { mutate: toggleLike, isPending: likeLoading } = useToggleLike();
   const { mutate: toggleSave, isPending: saveLoading } = useToggleSave();
   const { mutateAsync: deletePostMutation, isPending: deletePending } =
     useDeletePost();
   const { mutateAsync: sharePostMutation, isPending: sharePending } =
     useSharePost();
-  // Removed dispatch
 
   useEffect(() => {
     setIsLiked(data?.isLiked || false);
@@ -326,15 +241,23 @@ const Post = ({ data, onDelete }) => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // Removed manual loading states
+  const optionsRef = useRef(null);
 
   const isOwner = authUser?._id === data?.user?._id;
 
-  const user = data?.user || {
-    name: 'Unknown User',
-    username: 'unknown',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
-  };
+  const user = useMemo(() => data?.user || DEFAULT_USER, [data?.user]);
+
+  const normalizedMedia = useMemo(() => {
+    const rawMedia = Array.isArray(data?.media) ? data.media : [];
+    return rawMedia.map(normalizeMediaItem).filter(Boolean);
+  }, [data?.media]);
+
+  const mediaCount = useMemo(() => normalizedMedia.length, [normalizedMedia]);
+
+  const mediaItems = useMemo(
+    () => normalizedMedia.slice(0, 4),
+    [normalizedMedia]
+  );
 
   const handleLike = useCallback(() => {
     if (likeLoading || !data?._id) return;
@@ -351,7 +274,7 @@ const Post = ({ data, onDelete }) => {
         // Revert on failure
         setIsLiked(prevLiked);
         setLikeCount(prevCount);
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       },
     });
   }, [data?._id, isLiked, likeCount, likeLoading, toggleLike]);
@@ -367,13 +290,13 @@ const Post = ({ data, onDelete }) => {
     toggleSave(
       { postId: data._id, isSaved: prevSaved },
       {
-        onSuccess: response => {
-          toast.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
+        onSuccess: () => {
+          notify.success(!prevSaved ? 'Đã lưu bài viết' : 'Đã bỏ lưu bài viết');
         },
         onError: error => {
           // Revert on failure
           setIsSaved(prevSaved);
-          toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+          notify.error(error?.response?.data?.message || 'Thao tác thất bại');
         },
       }
     );
@@ -384,34 +307,77 @@ const Post = ({ data, onDelete }) => {
 
     try {
       await deletePostMutation(data._id);
-      toast.success('Đã xóa bài viết');
+      notify.success('Đã xóa bài viết');
       setShowDeleteConfirm(false);
+      onOptionsToggle?.(data._id, false);
       setShowOptions(false);
       // Notify parent to remove from list
       onDelete?.(data._id);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Xóa bài viết thất bại');
+      notify.error(error?.response?.data?.message || 'Xóa bài viết thất bại');
     }
-  }, [deletePending, data?._id, onDelete, deletePostMutation]);
+  }, [deletePending, data?._id, onDelete, deletePostMutation, onOptionsToggle]);
 
   const handleShare = useCallback(async () => {
     if (sharePending || !data?._id) return;
 
     try {
       await sharePostMutation({ postId: data._id });
-      toast.success('Đã chia sẻ bài viết');
+      notify.success('Đã chia sẻ bài viết');
+      onOptionsToggle?.(data._id, false);
       setShowOptions(false);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Chia sẻ thất bại');
+      notify.error(error?.response?.data?.message || 'Chia sẻ thất bại');
     }
-  }, [sharePending, data?._id, sharePostMutation]);
+  }, [sharePending, data?._id, sharePostMutation, onOptionsToggle]);
 
   const handleCopyLink = useCallback(() => {
     const url = `${window.location.origin}/post/${data?._id}`;
     navigator.clipboard.writeText(url);
-    toast.success('Đã sao chép link');
+    notify.success('Đã sao chép link');
+    onOptionsToggle?.(data?._id, false);
     setShowOptions(false);
-  }, [data?._id]);
+  }, [data?._id, onOptionsToggle]);
+
+  const closeOptions = useCallback(() => {
+    setShowOptions(false);
+    onOptionsToggle?.(data?._id, false);
+  }, [data?._id, onOptionsToggle]);
+
+  const toggleOptions = useCallback(() => {
+    setShowOptions(prev => {
+      const next = !prev;
+      onOptionsToggle?.(data?._id, next);
+      return next;
+    });
+  }, [data?._id, onOptionsToggle]);
+
+  useEffect(() => {
+    if (!showOptions) return;
+    const handleClickOutside = e => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target)) {
+        closeOptions();
+      }
+    };
+    const handleKeyDown = e => {
+      if (e.key === 'Escape') closeOptions();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showOptions, closeOptions]);
+
+  const handleOpenComments = useCallback(() => {
+    if (!data?._id) return;
+    if (onOpenComments) {
+      onOpenComments(data._id);
+      return;
+    }
+    setShowComments(true);
+  }, [data?._id, onOpenComments]);
 
   if (!data)
     return (
@@ -421,22 +387,30 @@ const Post = ({ data, onDelete }) => {
     );
 
   return (
-    <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
+    <article className="rounded-2xl p-4 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <UserProfilePreview userId={user._id || user.id}>
+        <UserProfilePreview
+          userId={user._id || user.id}
+          triggerSelector="[data-profile-preview-trigger]"
+        >
           <div className="flex items-center gap-3">
             <div className="relative group cursor-pointer">
               <img
-                className="w-11 h-11 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                className="w-11 h-11 rounded-full object-cover"
                 src={user.avatar}
                 alt={user.name}
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-content dark:text-white hover:underline cursor-pointer">
+                <span
+                  data-profile-preview-trigger
+                  className="font-semibold text-content dark:text-white hover:underline cursor-pointer"
+                >
                   {user.name}
                 </span>
                 {user.verified && (
@@ -454,7 +428,7 @@ const Post = ({ data, onDelete }) => {
                 )}
               </div>
               <div className="flex items-center gap-1.5 text-sm text-secondary">
-                <span>@{user.username}</span>
+                <span data-profile-preview-trigger>@{user.username}</span>
                 <span>•</span>
                 <span>{formatTime(data.createdAt)}</span>
               </div>
@@ -462,12 +436,92 @@ const Post = ({ data, onDelete }) => {
           </div>
         </UserProfilePreview>
 
-        <button
-          onClick={() => setShowOptions(!showOptions)}
-          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-content dark:hover:text-white transition-all"
-        >
-          <MoreHorizontal size={18} />
-        </button>
+        <div className="relative" ref={optionsRef}>
+          <button
+            onClick={toggleOptions}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-content dark:hover:text-white transition-all"
+          >
+            <MoreHorizontal size={18} />
+          </button>
+
+          {showOptions && (
+            <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden z-40">
+              {/* Owner actions */}
+              {isOwner && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowEditModal(true);
+                      closeOptions();
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
+                  >
+                    <Edit3 size={18} />
+                    Edit post
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(true);
+                      closeOptions();
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500"
+                  >
+                    <Trash2 size={18} />
+                    Delete post
+                  </button>
+                </>
+              )}
+
+              {/* Report - only for non-owners */}
+              {!isOwner && (
+                <button
+                  onClick={() => {
+                    setShowReportModal(true);
+                    closeOptions();
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500"
+                >
+                  <Flag size={18} />
+                  Report post
+                </button>
+              )}
+
+              <button
+                onClick={handleShare}
+                disabled={sharePending}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
+              >
+                <Share2 size={18} />
+                {sharePending ? 'Sharing...' : 'Share post'}
+              </button>
+
+              <button
+                onClick={handleCopyLink}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
+              >
+                <Link2 size={18} />
+                Copy link
+              </button>
+
+              {!isOwner && (
+                <button
+                  onClick={closeOptions}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white"
+                >
+                  <EyeOff size={18} />
+                  Hide post
+                </button>
+              )}
+
+              <button
+                onClick={closeOptions}
+                className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -478,46 +532,56 @@ const Post = ({ data, onDelete }) => {
       )}
 
       {/* Media */}
-      {data.media && data.media.length > 0 && (
+      {mediaItems.length > 0 && (
         <div
           className={`rounded-xl overflow-hidden mb-3 ${
-            data.media.length === 1 ? '' : 'grid gap-1'
-          } ${data.media.length === 2 ? 'grid-cols-2' : ''} ${
-            data.media.length >= 3 ? 'grid-cols-2' : ''
+            mediaCount === 1 ? '' : 'grid gap-1'
+          } ${mediaCount === 2 ? 'grid-cols-2' : ''} ${
+            mediaCount >= 3 ? 'grid-cols-2' : ''
           }`}
         >
-          {data.media.slice(0, 4).map((item, index) => (
-            <div
-              key={index}
-              className={`relative overflow-hidden ${
-                data.media.length === 3 && index === 0 ? 'row-span-2' : ''
-              } ${data.media.length === 1 ? 'max-h-[450px]' : 'aspect-square'}`}
-            >
+          {mediaItems.map((item, index) => {
+            const frameClass =
+              mediaCount === 1
+                ? 'max-h-[450px]'
+                : mediaCount === 2
+                  ? 'aspect-video'
+                  : 'aspect-square';
+            return (
+              <div
+                key={index}
+                className={`relative overflow-hidden ${
+                  mediaCount === 3 && index === 0 ? 'row-span-2' : ''
+                } ${frameClass}`}
+              >
               {item.type === 'video' ? (
-                <VideoPlayer 
-                  src={item.url} 
+                <VideoPlayer
+                  src={item.url}
                   onExpand={() => setShowVideo(item.url)}
-                  isGrid={data.media.length > 1}
+                  isGrid={mediaCount > 1}
                 />
               ) : (
                 <img
                   className={`w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300 ${
-                    data.media.length === 1 ? 'max-h-[450px]' : ''
+                    mediaCount === 1 ? 'max-h-[450px]' : ''
                   }`}
                   src={item.url}
                   alt={`Post media ${index + 1}`}
+                  loading="lazy"
+                  decoding="async"
                   onClick={() => setShowImage(item.url)}
                 />
               )}
-              {data.media.length > 4 && index === 3 && (
+              {mediaCount > 4 && index === 3 && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
                   <span className="text-white text-2xl font-bold">
-                    +{data.media.length - 4}
+                    +{mediaCount - 4}
                   </span>
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -530,7 +594,7 @@ const Post = ({ data, onDelete }) => {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-neutral-200 dark:bg-neutral-800 mb-3" />
+      <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 mb-3" />
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between">
@@ -562,7 +626,7 @@ const Post = ({ data, onDelete }) => {
 
           {/* Comment */}
           <button
-            onClick={() => setShowComments(true)}
+            onClick={handleOpenComments}
             className="flex items-center gap-2 px-3 py-2 rounded-full text-neutral-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
           >
             <MessageCircle size={18} />
@@ -610,108 +674,28 @@ const Post = ({ data, onDelete }) => {
       </div>
 
       {/* Image Modal */}
-      {showImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-          onClick={() => setShowImage(null)}
-        >
-          <img
-            src={showImage}
-            alt="Full view"
-            className="max-w-[90vw] max-h-[90vh] rounded-xl"
-          />
-          <button
-            className="absolute top-4 right-4 bg-white/10 backdrop-blur-sm text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors"
+      {showImage &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
             onClick={() => setShowImage(null)}
           >
-            <X size={20} />
-          </button>
-        </div>
-      )}
-
-      {/* Options Modal */}
-      {showOptions && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowOptions(false)}
-        >
-          <div
-            className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Owner actions */}
-            {isOwner && (
-              <>
-                <button
-                  onClick={() => {
-                    setShowEditModal(true);
-                    setShowOptions(false);
-                  }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
-                >
-                  <Edit3 size={18} />
-                  Edit post
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(true);
-                    setShowOptions(false);
-                  }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
-                >
-                  <Trash2 size={18} />
-                  Delete post
-                </button>
-              </>
-            )}
-
-            {/* Report - only for non-owners */}
-            {!isOwner && (
-              <button
-                onClick={() => {
-                  setShowReportModal(true);
-                  setShowOptions(false);
-                }}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-red-500 border-b border-neutral-200 dark:border-neutral-800"
-              >
-                <Flag size={18} />
-                Report post
-              </button>
-            )}
-
+            <img
+              src={showImage}
+              alt="Full view"
+              className="max-w-[90vw] max-h-[90vh] rounded-xl object-contain"
+              onClick={e => e.stopPropagation()}
+            />
             <button
-              onClick={handleShare}
-              disabled={sharePending}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
+              className="absolute top-4 right-4 bg-white/10 backdrop-blur-sm text-white p-2.5 rounded-xl hover:bg-white/20 transition-colors"
+              onClick={() => setShowImage(null)}
             >
-              <Share2 size={18} />
-              {sharePending ? 'Sharing...' : 'Share post'}
+              <X size={20} />
             </button>
-
-            <button
-              onClick={handleCopyLink}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800"
-            >
-              <Link2 size={18} />
-              Copy link
-            </button>
-
-            {!isOwner && (
-              <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-content dark:text-white border-b border-neutral-200 dark:border-neutral-800">
-                <EyeOff size={18} />
-                Hide post
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowOptions(false)}
-              className="w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -733,7 +717,7 @@ const Post = ({ data, onDelete }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-content dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-content dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Cancel
               </button>
@@ -758,7 +742,7 @@ const Post = ({ data, onDelete }) => {
 
       {/* Report Modal */}
       {showReportModal && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
           <ReportModal
             isOpen={showReportModal}
             onClose={() => setShowReportModal(false)}
@@ -770,7 +754,7 @@ const Post = ({ data, onDelete }) => {
 
       {/* Edit Post Modal */}
       {showEditModal && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
           <ModelPost
             closeModal={() => setShowEditModal(false)}
             editPost={data}
@@ -780,7 +764,7 @@ const Post = ({ data, onDelete }) => {
 
       {/* Comments Modal Placeholder */}
       {showComments && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
           <CommentModal
             onClose={() => setShowComments(false)}
             postId={data?._id}
@@ -790,15 +774,12 @@ const Post = ({ data, onDelete }) => {
 
       {/* Video Modal */}
       {showVideo && (
-        <Suspense fallback={null}>
-          <VideoModal
-            videoUrl={showVideo}
-            onClose={() => setShowVideo(null)}
-          />
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
+          <VideoModal videoUrl={showVideo} onClose={() => setShowVideo(null)} />
         </Suspense>
       )}
     </article>
   );
 };
 
-export default Post;
+export default memo(Post, arePostPropsEqual);

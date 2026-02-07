@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Sparkles, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 import { requestPasswordReset } from "@/redux/actions/authActions";
 import { clearError } from "@/redux/slices/AuthSlice";
-import toast from "react-hot-toast";
+import { notify } from '@/utils/notify';
 
 const ForgotPassword = () => {
   const dispatch = useDispatch();
@@ -22,18 +22,18 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Vui lòng nhập email");
+      notify.error("Vui lòng nhập email");
       return;
     }
     const result = await dispatch(requestPasswordReset(email));
     if (requestPasswordReset.fulfilled.match(result)) {
       setSent(true);
-      toast.success("Đã gửi link đặt lại mật khẩu!");
+      notify.success("Đã gửi link đặt lại mật khẩu!");
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-[100dvh] flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
@@ -55,7 +55,7 @@ const ForgotPassword = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-black">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 bg-white dark:bg-black">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-10">
@@ -156,3 +156,5 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
+
+

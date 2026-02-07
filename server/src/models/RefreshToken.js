@@ -42,12 +42,18 @@ const RefreshTokenSchema = new Schema(
       ip: { type: String },
     },
 
-    // Is this token still valid?
-    isValid: {
+    // Is this token revoked?
+    isRevoked: {
       type: Boolean,
-      default: true,
+      default: false,
       index: true,
     },
+
+    revokedReason: {
+      type: String,
+      default: null,
+    },
+
 
     // When was it last used?
     lastUsedAt: {
@@ -71,8 +77,8 @@ const RefreshTokenSchema = new Schema(
 // ============ INDEXES ============
 // Primary lookups
 // RefreshTokenSchema.index({ token: 1 }, { unique: true }); // Already defined in schema
-RefreshTokenSchema.index({ user: 1, isValid: 1 });
-RefreshTokenSchema.index({ family: 1, isValid: 1 });
+RefreshTokenSchema.index({ user: 1, isRevoked: 1 });
+RefreshTokenSchema.index({ family: 1, isRevoked: 1 });
 
 // TTL index - automatically delete expired tokens
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
@@ -87,10 +93,11 @@ RefreshTokenSchema.statics.createToken = async function (data) {
   // Invalidate existing token for same device if exists
   if (device?.id) {
     await this.updateMany(
-      { user, "device.id": device.id, isValid: true },
-      { $set: { isValid: false } }
+      { user, "device.id": device.id, isRevoked: false },
+      { $set: { isRevoked: true, revokedReason: 'new_device_token' } }
     );
   }
+
 
   return this.create({
     user,
@@ -102,7 +109,7 @@ RefreshTokenSchema.statics.createToken = async function (data) {
 };
 
 RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
-  const existingToken = await this.findOne({ token, isValid: true });
+  const existingToken = await this.findOne({ token, isRevoked: false });
 
   if (!existingToken) {
     // Token not found or invalid - possible token reuse attack
@@ -111,7 +118,7 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
     if (stolenToken) {
       await this.updateMany(
         { family: stolenToken.family },
-        { $set: { isValid: false } }
+        { $set: { isRevoked: true, revokedReason: 'token_reuse_detected' } }
       );
     }
     return { success: false, error: "Invalid token", compromised: true };
@@ -119,14 +126,17 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
 
   // Check if expired
   if (existingToken.expiresAt < new Date()) {
-    existingToken.isValid = false;
+    existingToken.isRevoked = true;
+    existingToken.revokedReason = 'expired';
     await existingToken.save();
     return { success: false, error: "Token expired" };
   }
 
   // Invalidate current token
-  existingToken.isValid = false;
+  existingToken.isRevoked = true;
+  existingToken.revokedReason = 'rotated';
   await existingToken.save();
+
 
   // Create new token in same family
   const newRefreshToken = await this.create({
@@ -145,33 +155,40 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
 };
 
 RefreshTokenSchema.statics.revokeToken = async function (token) {
-  return this.updateOne({ token }, { $set: { isValid: false } });
+  return this.updateOne(
+    { token },
+    { $set: { isRevoked: true, revokedReason: 'manual' } }
+  );
 };
 
 RefreshTokenSchema.statics.revokeAllForUser = async function (
   userId,
   exceptToken = null
 ) {
-  const query = { user: userId, isValid: true };
+  const query = { user: userId, isRevoked: false };
   if (exceptToken) {
     query.token = { $ne: exceptToken };
   }
-  return this.updateMany(query, { $set: { isValid: false } });
+  return this.updateMany(
+    query,
+    { $set: { isRevoked: true, revokedReason: 'bulk_revoke' } }
+  );
 };
 
 RefreshTokenSchema.statics.revokeFamily = async function (family) {
   return this.updateMany(
-    { family, isValid: true },
-    { $set: { isValid: false } }
+    { family, isRevoked: false },
+    { $set: { isRevoked: true, revokedReason: 'family_revoke' } }
   );
 };
 
 RefreshTokenSchema.statics.getActiveSessions = async function (userId) {
-  return this.find({ user: userId, isValid: true })
+  return this.find({ user: userId, isRevoked: false })
     .select("device lastUsedAt createdAt")
     .sort({ lastUsedAt: -1 })
     .lean();
 };
+
 
 RefreshTokenSchema.statics.updateLastUsed = async function (token) {
   return this.updateOne({ token }, { $set: { lastUsedAt: new Date() } });

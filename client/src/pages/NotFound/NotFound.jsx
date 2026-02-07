@@ -3,7 +3,7 @@ import { Home, ArrowLeft, Search } from "lucide-react";
 
 const NotFound = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 dark:bg-black px-4">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-neutral-50 dark:bg-black px-4">
       <div className="max-w-md w-full text-center">
         {/* 404 Number */}
         <h1 className="text-[150px] font-black leading-none text-black dark:text-white">

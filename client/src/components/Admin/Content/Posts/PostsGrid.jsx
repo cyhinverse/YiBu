@@ -1,8 +1,5 @@
 import React from 'react';
 import {
-  Image,
-  Video,
-  FileText,
   Calendar,
   Heart,
   MessageCircle,
@@ -14,30 +11,65 @@ import {
   XCircle,
   Trash2,
   Loader2,
+  FileText,
 } from 'lucide-react';
+import {
+  getPostTypeIcon as getTypeIcon,
+  getPostStatusStyle as getStatusStyle,
+} from '@/utils/postUtils';
 
-const getTypeIcon = type => {
-  switch (type) {
-    case 'image':
-      return <Image size={16} strokeWidth={1.5} />;
-    case 'video':
-      return <Video size={16} strokeWidth={1.5} />;
-    default:
-      return <FileText size={16} strokeWidth={1.5} />;
-  }
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
+
+const isVideoUrl = url => {
+  if (!url) return false;
+  if (VIDEO_EXTENSIONS.test(url)) return true;
+  return /\/video\/upload\//i.test(url) || /resource_type=video/i.test(url);
 };
 
-const getStatusStyle = status => {
-  switch (status) {
-    case 'active':
-      return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800';
-    case 'hidden':
-      return 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800';
-    case 'pending':
-      return 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
-    default:
-      return 'bg-neutral-50 text-neutral-600 border-neutral-100 dark:bg-neutral-800/50 dark:text-neutral-400 dark:border-neutral-700';
+const getMediaUrl = media => {
+  if (!media) return '';
+  if (typeof media === 'string') return media;
+  return (
+    media.url ||
+    media.secure_url ||
+    media.secureUrl ||
+    media.path ||
+    media.src ||
+    media.location ||
+    media.preview ||
+    media.thumbnail ||
+    ''
+  );
+};
+
+const getMediaType = (media, url) => {
+  const rawType =
+    media?.type ||
+    media?.mediaType ||
+    media?.resource_type ||
+    media?.resourceType ||
+    media?.format;
+  if (typeof rawType === 'string') {
+    const type = rawType.toLowerCase();
+    if (type.startsWith('video')) return 'video';
+    if (type === 'image') return 'image';
   }
+  const mime = media?.mimetype || media?.mimeType || media?.mime_type;
+  if (typeof mime === 'string' && mime.startsWith('video/')) return 'video';
+  if (typeof media?.duration === 'number' && media.duration > 0) return 'video';
+  if (media?.thumbnail || media?.poster) return 'video';
+  if (isVideoUrl(url)) return 'video';
+  return 'image';
+};
+
+const normalizeMediaItem = media => {
+  const url = getMediaUrl(media);
+  if (!url) return null;
+  return {
+    ...media,
+    url,
+    type: getMediaType(media, url),
+  };
 };
 
 export default function PostsGrid({
@@ -46,7 +78,6 @@ export default function PostsGrid({
   activeDropdown,
   setActiveDropdown,
   onViewDetails,
-  onApprove,
   onToggleStatus,
   onDelete,
   onViewReports,
@@ -54,15 +85,17 @@ export default function PostsGrid({
   if (loading && posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 size={40} className="animate-spin text-neutral-500 mb-4" />
-        <p className="text-neutral-500 font-medium">Đang tải bài viết...</p>
+        <Loader2 size={40} className="animate-spin text-[var(--color-text-secondary)] mb-4" />
+        <p className="text-[var(--color-text-secondary)] font-medium">
+          Đang tải bài viết...
+        </p>
       </div>
     );
   }
 
   if (posts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-neutral-400">
+      <div className="flex flex-col items-center justify-center py-32 text-[var(--color-text-secondary)]">
         <FileText size={64} className="mb-4 opacity-10" />
         <p className="font-medium text-lg">Không tìm thấy bài viết nào</p>
       </div>
@@ -71,29 +104,26 @@ export default function PostsGrid({
 
   return (
     <div className="grid gap-4">
+
       {posts.map(post => {
         const author = post.author || post.user || {};
-        const mediaItems = post.media || post.images || [];
+        const rawMediaItems = post.media || post.images || [];
+        const mediaItems = rawMediaItems
+          .map(normalizeMediaItem)
+          .filter(Boolean);
         const hasMedia = mediaItems.length > 0;
         const postType =
           post.type ||
-          (hasMedia
-            ? mediaItems[0]?.type === 'video'
-              ? 'video'
-              : 'image'
-            : 'text');
+          (hasMedia ? (mediaItems[0]?.type === 'video' ? 'video' : 'image') : 'text');
 
         return (
-          <div
-            key={post._id || post.id}
-            className="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-neutral-200 dark:border-neutral-800 hover:shadow-lg transition-all duration-300"
-          >
-            <div className="flex items-start gap-5">
+          <div key={post._id || post.id} className="admin-card p-4">
+            <div className="flex items-start gap-4">
               {/* Author Avatar */}
               <img
                 src={author.avatar || '/images/default-avatar.png'}
                 alt={author.name || author.username || 'User'}
-                className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+                className="w-12 h-12 rounded-full object-cover"
               />
 
               {/* Content */}
@@ -101,21 +131,21 @@ export default function PostsGrid({
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-neutral-900 dark:text-white text-base">
+                      <h3 className="font-semibold text-[var(--color-content)] text-base">
                         {author.name || author.username || 'Nặc danh'}
                       </h3>
-                      <span className="text-neutral-500 text-sm">
+                      <span className="text-[var(--color-text-secondary)] text-sm">
                         @{author.username || 'user'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs font-medium text-neutral-500">
+                    <div className="flex items-center gap-3 mt-1 text-xs font-medium text-[var(--color-text-secondary)]">
                       <span className="flex items-center gap-1">
                         <Calendar size={12} strokeWidth={1.5} />
                         {post.createdAt
                           ? new Date(post.createdAt).toLocaleDateString('vi-VN')
                           : 'N/A'}
                       </span>
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                      <span className="admin-chip">
                         {getTypeIcon(postType)}
                         <span className="capitalize">
                           {postType === 'image'
@@ -130,7 +160,7 @@ export default function PostsGrid({
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(
+                      className={`admin-pill ${getStatusStyle(
                         post.status || 'active'
                       )}`}
                     >
@@ -138,13 +168,23 @@ export default function PostsGrid({
                         ? 'Hoạt động'
                         : post.status === 'hidden'
                         ? 'Đã ẩn'
-                        : 'Chờ duyệt'}
+                        : post.status === 'flagged'
+                        ? 'Bị gắn cờ'
+                        : post.status === 'deleted'
+                        ? 'Đã xóa'
+                        : 'Không xác định'}
                     </span>
 
                     {(post.reportsCount || post.reports) > 0 && (
                       <button
+                        type="button"
                         onClick={() => onViewReports(post)}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+                        onKeyDown={event => {
+                          if (event.key === 'Escape') {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        className="admin-pill admin-pill-danger hover:bg-[var(--color-surface-hover)] transition-colors"
                       >
                         <Flag size={12} />
                         {post.reportsCount || post.reports}
@@ -154,6 +194,7 @@ export default function PostsGrid({
                     {/* Actions Dropdown */}
                     <div className="relative">
                       <button
+                        type="button"
                         onClick={() =>
                           setActiveDropdown(
                             activeDropdown === (post._id || post.id)
@@ -161,46 +202,55 @@ export default function PostsGrid({
                               : post._id || post.id
                           )
                         }
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500"
+                        onKeyDown={event => {
+                          if (event.key === 'Escape') {
+                            setActiveDropdown(null);
+                          }
+                        }}
+                        aria-haspopup="menu"
+                        aria-expanded={
+                          activeDropdown === (post._id || post.id)
+                        }
+                        aria-label="Tùy chọn"
+                        className="p-2 hover:bg-[var(--color-surface-hover)] rounded-full transition-colors text-[var(--color-text-secondary)]"
                       >
-                        <MoreHorizontal size={20} />
+                        <MoreHorizontal size={20} strokeWidth={1.6} />
                       </button>
 
+
                       {activeDropdown === (post._id || post.id) && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-10 overflow-hidden animate-scale-in">
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] rounded-xl py-1.5 z-10 overflow-hidden animate-scale-in"
+                        >
                           <button
+                            type="button"
                             onClick={() => {
                               onViewDetails(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
+                            role="menuitem"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-text-secondary)] transition-colors"
                           >
                             <Eye size={16} />
                             Chi tiết bài viết
                           </button>
-                          {post.status === 'pending' && (
-                            <button
-                              onClick={() => {
-                                onApprove(post);
-                                setActiveDropdown(null);
-                              }}
-                              className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 transition-colors"
-                            >
-                              <CheckCircle size={16} />
-                              Phê duyệt
-                            </button>
-                          )}
                           <button
+                            type="button"
                             onClick={() => {
                               onToggleStatus(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center gap-2.5 text-neutral-700 dark:text-neutral-200 transition-colors"
+                            role="menuitem"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-text-secondary)] transition-colors"
                           >
                             {post.status === 'active' ? (
                               <>
-                                <XCircle size={16} className="text-rose-500" />
-                                <span className="text-rose-500">
+                                <XCircle
+                                  size={16}
+                                  className="text-[var(--color-error)]"
+                                />
+                                <span className="text-[var(--color-error)]">
                                   Ẩn bài viết
                                 </span>
                               </>
@@ -208,21 +258,23 @@ export default function PostsGrid({
                               <>
                                 <CheckCircle
                                   size={16}
-                                  className="text-emerald-500"
+                                  className="text-[var(--color-success)]"
                                 />
-                                <span className="text-emerald-500">
+                                <span className="text-[var(--color-success)]">
                                   Hiện bài viết
                                 </span>
                               </>
                             )}
                           </button>
-                          <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1 mx-2" />
+                          <div className="my-1 mx-2" />
                           <button
+                            type="button"
                             onClick={() => {
                               onDelete(post);
                               setActiveDropdown(null);
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 text-rose-500 transition-colors"
+                            role="menuitem"
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-error)] transition-colors"
                           >
                             <Trash2 size={16} />
                             Xóa bài viết
@@ -234,67 +286,29 @@ export default function PostsGrid({
                 </div>
 
                 {/* Post Content */}
-                <p className="text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-4">
+                <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed line-clamp-3 mb-4">
                   {post.content || post.caption || 'Không có nội dung'}
                 </p>
 
-                {/* Media Preview */}
-                {mediaItems.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto pb-2 mb-2 hide-scrollbar">
-                    {mediaItems.slice(0, 4).map((media, idx) => {
-                      const mediaUrl =
-                        typeof media === 'string' ? media : media.url;
-                      const isVideo =
-                        typeof media === 'object'
-                          ? media.type === 'video'
-                          : postType === 'video';
-                      return (
-                        <div
-                          key={idx}
-                          className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
-                        >
-                          <img
-                            src={mediaUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                          {isVideo && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                              <Video
-                                size={24}
-                                className="text-white drop-shadow-md"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {mediaItems.length > 4 && (
-                      <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-medium">
-                        +{mediaItems.length - 4}
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* Stats */}
-                <div className="flex items-center gap-6 pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-                    <Heart size={14} className="text-neutral-400" />
+                <div className="flex items-center gap-4 pt-4 bg-[var(--color-surface-secondary)] mt-2 px-3 py-2 rounded-xl">
+                  <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                    <Heart size={14} className="text-[var(--color-text-tertiary)]" />
                     {post.likesCount || post.likes || 0}
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-                    <MessageCircle size={14} className="text-neutral-400" />
+                  <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                    <MessageCircle size={14} className="text-[var(--color-text-tertiary)]" />
                     {post.commentsCount || post.comments || 0}
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-                    <Share2 size={14} className="text-neutral-400" />
+                  <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                    <Share2 size={14} className="text-[var(--color-text-tertiary)]" />
                     {post.sharesCount || post.shares || 0}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         );
       })}
     </div>

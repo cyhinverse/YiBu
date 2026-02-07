@@ -1,21 +1,28 @@
-import mongoose from "mongoose";
-import logger from "../configs/logger.js";
+import mongoose from 'mongoose';
+import logger from '../configs/logger.js';
+import ApiError from '../helpers/ApiError.js';
+import config from '../configs/config.js';
 
-const ConnectToMongodb = async (uri) => {
+const ConnectToMongodb = async uri => {
   if (!uri) {
-    throw new Error("MongoDB URI is undefined in configuration");
+    throw ApiError.internal('MongoDB URI is undefined in configuration');
   }
+
   try {
     const connect = await mongoose.connect(uri, {
       autoCreate: true,
-      autoIndex: true,
+      // Avoid costly index builds on production startup unless explicitly intended.
+      autoIndex: config.env !== 'production',
     });
     if (connect) {
       logger.info(`MongoDB connected to: ${connect.connection.host}`);
     }
   } catch (error) {
-    logger.error("MongoDB connection error: ", error);
-    process.exit(1);
+    logger.error('MongoDB connection error: ', error);
+    throw ApiError.internal('MongoDB connection failed', {
+      errorCode: 'DB_CONNECTION_FAILED',
+      details: { message: error?.message },
+    });
   }
 };
 

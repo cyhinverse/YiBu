@@ -11,11 +11,11 @@ const MainMessage = () => {
           {/* Floating Icon Container */}
           <div className="relative mb-8 group">
             <div className="absolute inset-0 bg-primary/20 dark:bg-primary/10 blur-3xl rounded-full scale-150 animate-pulse" />
-            <div className="relative w-24 h-24 bg-white dark:bg-neutral-900 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-neutral-200/50 dark:shadow-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+            <div className="relative w-24 h-24 bg-white dark:bg-neutral-900 rounded-[2rem] flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-500">
               <MessageCircle size={40} className="text-black dark:text-white" />
 
               {/* Decorative Elements */}
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center border-4 border-white dark:border-neutral-950">
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
                 <div className="w-2.5 h-2.5 bg-black dark:bg-white rounded-full animate-bounce" />
               </div>
             </div>

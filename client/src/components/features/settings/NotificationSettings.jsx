@@ -8,8 +8,9 @@ import {
   Mail,
   Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 import { useSettings, useUpdateSettings } from '@/hooks/useUserQuery';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const NotificationSettings = () => {
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
@@ -58,11 +59,11 @@ const NotificationSettings = () => {
         type: 'notifications',
         settings: newNotifications,
       });
-      toast.success('Đã lưu cài đặt thông báo');
+      notify.success('Đã lưu cài đặt thông báo');
     } catch (error) {
       // Revert on failure
       setNotifications(notifications);
-      toast.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
+      notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
 
@@ -72,11 +73,7 @@ const NotificationSettings = () => {
       disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition-colors ${
         disabled ? 'opacity-50 cursor-not-allowed' : ''
-      } ${
-        enabled
-          ? 'bg-primary'
-          : 'bg-neutral-200 dark:bg-neutral-700'
-      }`}
+      } ${enabled ? 'bg-primary' : 'bg-neutral-200 dark:bg-neutral-700'}`}
     >
       <div
         className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${
@@ -88,8 +85,10 @@ const NotificationSettings = () => {
     </button>
   );
 
-  const NotificationItem = ({ icon: Icon, label, description, settingKey }) => (
-    <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+  const NotificationItem = (
+    { icon: Icon, label, description, settingKey }
+  ) => (
+    <div className="flex items-center justify-between py-4 last:border-0">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
           <Icon size={18} className="text-neutral-500" />
@@ -112,7 +111,7 @@ const NotificationSettings = () => {
   if (settingsLoading && !settingsData) {
     return (
       <div className="flex justify-center items-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -129,8 +128,8 @@ const NotificationSettings = () => {
       </div>
 
       {/* Activity Notifications */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -173,8 +172,8 @@ const NotificationSettings = () => {
       </div>
 
       {/* Delivery Methods */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+      <div className="rounded-2xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-800/20">
+        <div className="px-4 py-3 bg-neutral-100/50 dark:bg-neutral-700/30">
           <div className="flex items-center gap-2">
             <Mail size={16} className="text-neutral-500" />
             <h3 className="text-sm font-medium text-content dark:text-white">
@@ -183,7 +182,7 @@ const NotificationSettings = () => {
           </div>
         </div>
         <div className="p-4">
-          <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center justify-between py-4">
             <div>
               <p className="text-sm font-medium text-content dark:text-white">
                 Push Notifications
@@ -228,3 +227,4 @@ const NotificationSettings = () => {
 };
 
 export default NotificationSettings;
+

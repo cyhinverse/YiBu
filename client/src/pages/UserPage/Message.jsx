@@ -18,8 +18,10 @@ function Message() {
 
   const { data: conversationsData, isLoading: conversationsLoading } =
     useConversations();
-  const conversations =
-    conversationsData?.conversations || conversationsData || [];
+  const conversations = useMemo(
+    () => conversationsData?.conversations ?? conversationsData ?? [],
+    [conversationsData]
+  );
 
   const { user } = useSelector(state => state.auth);
 
@@ -138,7 +140,7 @@ function Message() {
   };
 
   return (
-    <div className="flex w-full h-[calc(100vh-4rem)] md:h-screen bg-transparent overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full min-h-[100dvh] md:h-[100dvh] bg-transparent md:overflow-hidden">
       {/* Left Sidebar (Conversation List) */}
       <div
         className={`w-full md:w-[380px] lg:w-[400px] flex-shrink-0 border-r border-border flex flex-col bg-background transition-all ${
@@ -181,7 +183,7 @@ function Message() {
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 md:pb-0">
+        <div className="flex-1 overflow-y-auto custom-scrollbar pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           {conversationsLoading && conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -3,9 +3,9 @@ import { Outlet } from "react-router-dom";
 
 const AuthLayout = () => {
   return (
-    <div>
+    <main id="main-content">
       <Outlet />
-    </div>
+    </main>
   );
 };
 

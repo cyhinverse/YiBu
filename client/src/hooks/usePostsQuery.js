@@ -6,12 +6,14 @@ import {
 } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { POST_API, LIKE_API, SAVE_POST_API } from '@/axios/apiEndpoint';
+import { extractData } from '@/utils/apiUtils';
 
-const extractData = response => {
-  const responseData = response.data;
-  return responseData?.data !== undefined ? responseData.data : responseData;
-};
-
+/**
+ * Hook to fetch user posts with infinite scroll
+ * @param {string} userId - User ID
+ * @param {number} [limit=20] - Items per page
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult} Infinite query result containing posts
+ */
 export const useUserPosts = (userId, limit = 20) => {
   return useInfiniteQuery({
     queryKey: ['posts', 'user', userId],
@@ -30,6 +32,11 @@ export const useUserPosts = (userId, limit = 20) => {
   });
 };
 
+/**
+ * Hook to fetch liked posts
+ * @param {boolean} [enabled=true] - Enable query
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing liked posts
+ */
 export const useLikedPosts = (enabled = true) => {
   return useQuery({
     queryKey: ['posts', 'liked'],
@@ -41,6 +48,11 @@ export const useLikedPosts = (enabled = true) => {
   });
 };
 
+/**
+ * Hook to fetch saved posts
+ * @param {boolean} [enabled=true] - Enable query
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing saved posts
+ */
 export const useSavedPosts = (enabled = true) => {
   return useQuery({
     queryKey: ['posts', 'saved'],
@@ -52,6 +64,12 @@ export const useSavedPosts = (enabled = true) => {
   });
 };
 
+/**
+ * Hook to fetch shared posts by user
+ * @param {string} userId - User ID
+ * @param {number} [limit=20] - Items per page
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult} Infinite query result containing shared posts
+ */
 export const useSharedPosts = (userId, limit = 20) => {
   return useInfiniteQuery({
     queryKey: ['sharedPosts', userId],
@@ -67,6 +85,31 @@ export const useSharedPosts = (userId, limit = 20) => {
     enabled: !!userId,
   });
 };
+
+/**
+ * Hook to fetch posts by hashtag
+ * @param {string} hashtag - Hashtag to search
+ * @param {number} [limit=20] - Number of posts
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing posts by hashtag
+ */
+export const useGetPostsByHashtag = (hashtag, limit = 20) => {
+  return useQuery({
+    queryKey: ['posts', 'hashtag', hashtag],
+    queryFn: async () => {
+      const response = await api.get(POST_API.GET_BY_HASHTAG(hashtag), {
+        params: { limit },
+      });
+      return extractData(response);
+    },
+    enabled: !!hashtag,
+  });
+};
+
+/**
+ * Hook to fetch trending hashtags
+ * @param {number} [limit=10] - Number of hashtags
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing trending hashtags
+ */
 export const useTrendingHashtags = (limit = 10) => {
   return useQuery({
     queryKey: ['hashtags', 'trending', { limit }],
@@ -76,9 +119,18 @@ export const useTrendingHashtags = (limit = 10) => {
       });
       return extractData(response);
     },
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   });
 };
 
+/**
+ * Hook to fetch explore feed
+ * @param {Object} [options] - Query options
+ * @param {number} [options.page=1] - Page number
+ * @param {number} [options.limit=20] - Items per page
+ * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing explore feed
+ */
 export const useExploreFeed = ({ page = 1, limit = 20 } = {}) => {
   return useQuery({
     queryKey: ['posts', 'explore', { page, limit }],
@@ -91,6 +143,11 @@ export const useExploreFeed = ({ page = 1, limit = 20 } = {}) => {
     keepPreviousData: true,
   });
 };
+
+/**
+ * Hook to toggle like on a post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to toggle like
+ */
 export const useToggleLike = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -99,7 +156,6 @@ export const useToggleLike = () => {
       return extractData(response);
     },
     onSuccess: (_, postId) => {
-      // Invalidate relevant queries to refresh like status and counts
       queryClient.invalidateQueries(['feed']);
       queryClient.invalidateQueries(['posts', 'user']);
       queryClient.invalidateQueries(['posts', 'liked']);
@@ -109,6 +165,10 @@ export const useToggleLike = () => {
   });
 };
 
+/**
+ * Hook to toggle save on a post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to toggle save
+ */
 export const useToggleSave = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -130,6 +190,10 @@ export const useToggleSave = () => {
   });
 };
 
+/**
+ * Hook to create a new post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to create post
+ */
 export const useCreatePost = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -148,6 +212,10 @@ export const useCreatePost = () => {
   });
 };
 
+/**
+ * Hook to update a post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to update post
+ */
 export const useUpdatePost = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -168,6 +236,10 @@ export const useUpdatePost = () => {
   });
 };
 
+/**
+ * Hook to delete a post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to delete post
+ */
 export const useDeletePost = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -184,6 +256,10 @@ export const useDeletePost = () => {
   });
 };
 
+/**
+ * Hook to share a post
+ * @returns {import('@tanstack/react-query').UseMutationResult} Mutation to share post
+ */
 export const useSharePost = () => {
   const queryClient = useQueryClient();
   return useMutation({

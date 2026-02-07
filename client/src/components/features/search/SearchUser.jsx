@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Search, X, UserPlus, Check, Loader2 } from 'lucide-react';
 import { useSearchUsers } from '@/hooks/useSearchQuery';
 import { useFollowUser, useUnfollowUser } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const SearchUser = ({ isOpen, onClose }) => {
   const { user: currentUser } = useSelector(state => state.auth);
@@ -59,13 +59,13 @@ const SearchUser = ({ isOpen, onClose }) => {
       try {
         if (isCurrentlyFollowing) {
           await unfollowMutation.mutateAsync(userId);
-          toast.success('Đã bỏ theo dõi');
+          notify.success('Đã bỏ theo dõi');
         } else {
           await followMutation.mutateAsync(userId);
-          toast.success('Đã theo dõi');
+          notify.success('Đã theo dõi');
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        notify.error(error?.response?.data?.message || 'Thao tác thất bại');
       }
     },
     [followMutation, unfollowMutation]
@@ -227,3 +227,4 @@ const SearchUser = ({ isOpen, onClose }) => {
 };
 
 export default SearchUser;
+

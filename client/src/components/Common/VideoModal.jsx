@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Play,
@@ -246,10 +247,18 @@ const VideoModal = ({ videoUrl, onClose, poster }) => {
 
   const playbackRates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose?.();
+      }}
     >
       {/* Close Button - Same position as image preview */}
       <button
@@ -364,6 +373,7 @@ const VideoModal = ({ videoUrl, onClose, poster }) => {
                     step="0.1"
                     value={isMuted ? 0 : volume}
                     onChange={handleVolumeChange}
+                    aria-label="Volume"
                     className="w-0 group-hover:w-20 transition-all duration-200 accent-primary"
                   />
                 </div>
@@ -442,7 +452,8 @@ const VideoModal = ({ videoUrl, onClose, poster }) => {
           <span>F: Fullscreen</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

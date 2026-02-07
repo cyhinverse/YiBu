@@ -1,51 +1,8 @@
 import { useState } from 'react';
 import { X, AlertTriangle, Flag, Loader2, Check } from 'lucide-react';
 import { useSubmitReport } from '@/hooks/useReportQuery';
-import toast from 'react-hot-toast';
-
-const REPORT_REASONS = [
-  {
-    id: 'spam',
-    label: 'Spam',
-    description: 'Misleading or repetitive content',
-  },
-  {
-    id: 'harassment',
-    label: 'Harassment',
-    description: 'Bullying or harassment of individuals',
-  },
-  {
-    id: 'hate_speech',
-    label: 'Hate Speech',
-    description: 'Promotes hatred against groups',
-  },
-  {
-    id: 'violence',
-    label: 'Violence',
-    description: 'Violent threats or graphic content',
-  },
-  {
-    id: 'nudity',
-    label: 'Nudity or Sexual Content',
-    description: 'Adult or explicit content',
-  },
-  {
-    id: 'false_info',
-    label: 'False Information',
-    description: 'Misinformation or fake news',
-  },
-  {
-    id: 'scam',
-    label: 'Scam or Fraud',
-    description: 'Attempts to deceive for personal gain',
-  },
-  {
-    id: 'intellectual_property',
-    label: 'Intellectual Property',
-    description: 'Copyright or trademark violation',
-  },
-  { id: 'other', label: 'Other', description: 'Other issues not listed above' },
-];
+import { notify } from '@/utils/notify';
+import { REPORT_REASONS } from '@/constants/report';
 
 const ReportModal = ({
   isOpen,
@@ -60,27 +17,32 @@ const ReportModal = ({
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      toast.error('Please select a reason for reporting');
+      notify.error('Please select a reason for reporting');
       return;
     }
 
     try {
+      const reasonLabel =
+        REPORT_REASONS.find(r => r.id === selectedReason)?.label ||
+        selectedReason;
+
       await submitReport({
         targetId,
         targetType,
-        reason: selectedReason,
+        category: selectedReason,
+        reason: reasonLabel,
         description: description.trim(),
       });
 
       setSubmitted(true);
-      toast.success('Report submitted successfully');
+      notify.success('Report submitted successfully');
 
       // Close modal after showing success
       setTimeout(() => {
         handleClose();
       }, 2000);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Failed to submit report');
+      notify.error(error?.response?.data?.message || 'Failed to submit report');
     }
   };
 
@@ -258,3 +220,4 @@ const ReportModal = ({
 };
 
 export default ReportModal;
+

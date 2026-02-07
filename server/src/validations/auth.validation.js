@@ -2,13 +2,10 @@ import Joi from 'joi';
 
 /**
  * Auth Validation Schemas
- * Validation cho tất cả endpoints trong auth.router.js
+ * Validation for all endpoints in auth.router.js
  */
 
-// ======================================
-// POST /register
-// Body: { name, username, email, password, confirmPassword }
-// ======================================
+
 export const registerBody = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Tên không được để trống',
@@ -18,19 +15,25 @@ export const registerBody = Joi.object({
   }),
   username: Joi.string()
     .trim()
-    .alphanum()
+    .pattern(/^[a-zA-Z0-9_]+$/)
     .min(3)
     .max(30)
     .lowercase()
     .required()
     .messages({
       'string.empty': 'Username không được để trống',
-      'string.alphanum': 'Username chỉ được chứa chữ và số',
+      'string.pattern.base': 'Username chỉ được chứa chữ, số và dấu gạch dưới (_)',
       'string.min': 'Username phải có ít nhất 3 ký tự',
       'string.max': 'Username không được quá 30 ký tự',
       'any.required': 'Username là bắt buộc',
     }),
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    // Allow custom/local TLDs (e.g. ".local") for dev and seeded accounts.
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
@@ -55,7 +58,12 @@ export const registerBody = Joi.object({
 // Body: { email, password, rememberMe? }
 // ======================================
 export const loginBody = Joi.object({
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
@@ -64,7 +72,12 @@ export const loginBody = Joi.object({
     'string.empty': 'Mật khẩu không được để trống',
     'any.required': 'Mật khẩu là bắt buộc',
   }),
+  twoFactorToken: Joi.string().length(6).pattern(/^\d+$/).optional().messages({
+    'string.length': 'Mã xác thực phải có 6 chữ số',
+    'string.pattern.base': 'Mã xác thực chỉ được chứa số',
+  }),
   rememberMe: Joi.boolean().default(false),
+
 });
 
 // ======================================
@@ -83,7 +96,12 @@ export const googleAuthBody = Joi.object({
 // Body: { email }
 // ======================================
 export const forgotPasswordBody = Joi.object({
-  email: Joi.string().trim().email().lowercase().required().messages({
+  email: Joi.string()
+    .trim()
+    .email({ tlds: { allow: false } })
+    .lowercase()
+    .required()
+    .messages({
     'string.empty': 'Email không được để trống',
     'string.email': 'Email không hợp lệ',
     'any.required': 'Email là bắt buộc',
@@ -119,12 +137,11 @@ export const resetPasswordBody = Joi.object({
 
 // ======================================
 // POST /refresh
-// Body: { refreshToken }
+// Body: { refreshToken } - optional, fallback if cookie not available
 // ======================================
 export const refreshTokenBody = Joi.object({
-  refreshToken: Joi.string().required().messages({
+  refreshToken: Joi.string().optional().messages({
     'string.empty': 'Refresh token không được để trống',
-    'any.required': 'Refresh token là bắt buộc',
   }),
 });
 
@@ -137,26 +154,21 @@ export const updatePasswordBody = Joi.object({
     'string.empty': 'Mật khẩu hiện tại không được để trống',
     'any.required': 'Mật khẩu hiện tại là bắt buộc',
   }),
-  newPassword: Joi.string()
-    .min(6)
-    .max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .required()
-    .messages({
-      'string.empty': 'Mật khẩu mới không được để trống',
-      'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
-      'string.pattern.base':
-        'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
-      'any.required': 'Mật khẩu mới là bắt buộc',
-    }),
-  confirmNewPassword: Joi.string()
-    .valid(Joi.ref('newPassword'))
-    .required()
-    .messages({
-      'any.only': 'Xác nhận mật khẩu không khớp',
-      'any.required': 'Xác nhận mật khẩu mới là bắt buộc',
-    }),
+  newPassword: Joi.string().min(6).required().messages({
+    'string.empty': 'Mật khẩu mới không được để trống',
+    'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
+    'any.required': 'Mật khẩu mới là bắt buộc',
+  }),
 });
+
+export const disableTwoFactorBody = Joi.object({
+  password: Joi.string().min(6).required().messages({
+    'string.empty': 'Mật khẩu không được để trống',
+    'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
+    'any.required': 'Mật khẩu là bắt buộc',
+  }),
+});
+
 
 // ======================================
 // POST /2fa/verify

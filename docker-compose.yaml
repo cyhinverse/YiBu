@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   server:
     build: ./server
@@ -8,16 +6,24 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - PORT=5000
-      - CLIENT_URL=http://localhost:3000
+      - PORT=${PORT:-5000}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      # Force Docker services to use Docker Mongo (avoid accidental Atlas/host env override).
       - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      # JWT Secrets (REQUIRED for auth to work - replace with your own secure values)
-      - ACCESS_TOKEN_SECRET=your_access_token_secret_here_change_in_production
-      - REFRESH_TOKEN_SECRET=your_refresh_token_secret_here_change_in_production
-      # Cloudinary (optional, uncomment if needed)
-      # - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      # - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      # - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      # Provide non-empty defaults for local Docker runs (required by auth middleware).
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-dev_refresh_token_secret_change_me}
+      # Local Docker runs are usually plain HTTP, so secure cookies would be dropped by the browser.
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}
+      # Required for uploading images/videos (avatar/cover/post media) to Cloudinary.
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
     depends_on:
       - mongo
       - redis
@@ -28,7 +34,10 @@ services:
     build: ./client
     container_name: social_client
     ports:
-      - "3000:9258" # Map host 3000 to vite 9258
+      - "3000:9258"
+    environment:
+      # Vite dev proxy inside container must hit the server container, not localhost.
+      - VITE_PROXY_TARGET=http://server:5000
     depends_on:
       - server
     networks:
@@ -38,7 +47,9 @@ services:
     image: mongo:latest
     container_name: social_mongo
     ports:
-      - "27017:27017"
+      # Use 27018 by default to avoid conflicts with local MongoDB on 27017.
+      # Override via `MONGO_HOST_PORT=27017` if you want the default port.
+      - "${MONGO_HOST_PORT:-27018}:27017"
     volumes:
       - mongo_data:/data/db
     networks:
@@ -55,6 +66,80 @@ services:
     container_name: social_redis
     ports:
       - "6379:6379"
+    networks:
+      - social_network
+
+  # One-off: docker compose run --rm seed --drop
+  seed:
+    build: ./server
+    container_name: social_seed
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/socialmedia
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
+    depends_on:
+      - mongo
+    entrypoint: ["node", "scripts/seed.js"]
+    networks:
+      - social_network
+
+  # One-off: docker compose run --rm hashtags-sync [--prune]
+  hashtags-sync:
+    build: ./server
+    container_name: social_hashtags_sync
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/socialmedia
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
+    depends_on:
+      - mongo
+    entrypoint: ["node", "scripts/sync-hashtags.js"]
+    networks:
+      - social_network
+
+  # Auto scheduler: keeps Hashtags in sync with Posts.
+  # Config:
+  # - HASHTAGS_SYNC_INTERVAL_SEC (default 900 = 15 minutes)
+  # - HASHTAGS_SYNC_PRUNE ("true" to delete tags not found in Posts; default "false")
+  hashtags-sync-scheduler:
+    build: ./server
+    container_name: social_hashtags_sync_scheduler
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/socialmedia
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
+      - HASHTAGS_SYNC_INTERVAL_SEC=${HASHTAGS_SYNC_INTERVAL_SEC:-900}
+      # Default: prune enabled (delete hashtags with no posts).
+      - HASHTAGS_SYNC_PRUNE=${HASHTAGS_SYNC_PRUNE:-true}
+    depends_on:
+      - mongo
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        # NOTE: docker compose does interpolation on the YAML file.
+        # Use $$ to defer $-expansion to the container shell.
+        INTERVAL="$$HASHTAGS_SYNC_INTERVAL_SEC"
+        PRUNE="$$HASHTAGS_SYNC_PRUNE"
+        if [ -z "$$INTERVAL" ]; then INTERVAL="900"; fi
+        if [ -z "$$PRUNE" ]; then PRUNE="false"; fi
+        echo "Hashtag sync scheduler started: interval=$$INTERVAL""s prune=$$PRUNE"
+        while true; do
+          if [ "$$PRUNE" = "true" ]; then
+            node scripts/sync-hashtags.js --prune
+          else
+            node scripts/sync-hashtags.js
+          fi
+          sleep "$$INTERVAL"
+        done
     networks:
       - social_network
 

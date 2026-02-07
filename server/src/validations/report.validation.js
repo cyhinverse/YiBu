@@ -3,7 +3,7 @@ import { objectId } from './common.validation.js';
 
 /**
  * Report Validation Schemas
- * Validation cho tất cả endpoints trong reports.router.js
+ * Validation for all endpoints in reports.router.js
  */
 
 // ======================================

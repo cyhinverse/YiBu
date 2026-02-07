@@ -1,4 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
+import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -6,8 +7,8 @@ import {
   Calendar,
   MoreHorizontal,
   UserPlus,
+  UserMinus,
   Check,
-  X,
   MessageCircle,
   Grid3X3,
   Heart,
@@ -30,17 +31,10 @@ import {
   useUnfollowUser,
 } from '@/hooks/useUserQuery';
 import { useCreateConversation } from '@/hooks/useMessageQuery';
-import { useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
-
+import { notify } from '@/utils/notify';
+import { formatNumber } from '@/utils/numberUtils';
+import LoadingSpinner from '@/components/Common/LoadingSpinner';
 const FollowList = lazy(() => import('../FollowList/FollowList'));
-
-const formatNumber = num => {
-  if (num == null) return '0';
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-};
 
 const Profile = () => {
   const { userId } = useParams();
@@ -49,15 +43,18 @@ const Profile = () => {
   const [showFollowList, setShowFollowList] = useState(null); // 'followers' | 'following' | null
   const authUser = useSelector(state => state.auth?.user);
   const profileId = userId || authUser?._id;
-  const isOwnProfile = !userId || userId === authUser?._id;
+  const isOwnProfile =
+    !userId || userId === authUser?._id || userId === authUser?.username;
 
   // React Query Hooks
-  const { data: profileData, isLoading: profileLoading } =
+  const { data: profileData, isLoading: profileLoading, isFetching: profileFetching } =
     useProfile(profileId);
   const currentProfile = profileData;
 
   const { data: followStatusData } = useCheckFollow(profileId, !isOwnProfile);
-  const isFollowing = followStatusData?.isFollowing;
+  const followStatus = followStatusData?.status; // 'active' | 'pending' | 'none'
+  const isFollowing = followStatus === 'active';
+  const isFollowPending = followStatus === 'pending';
 
   // Posts Query
   const { data: userPostsData, isLoading: isPostsLoading } = useUserPosts(
@@ -81,8 +78,6 @@ const Profile = () => {
 
   const savedPosts = savedPostsData?.posts || savedPostsData || [];
 
-  const queryClient = useQueryClient();
-
   // React Query for Shared Posts
   const { data: sharedPostsData, isLoading: isSharedLoading } = useSharedPosts(
     activeTab === 'shared' ? profileId : null
@@ -100,21 +95,34 @@ const Profile = () => {
     if (isOwnProfile) return;
 
     try {
-      if (isFollowing) {
-        await unfollowMutation.mutateAsync(profileId);
-        toast.success('Đã bỏ theo dõi');
-      } else {
-        await followMutation.mutateAsync(profileId);
-        toast.success('Đã theo dõi');
+      const targetUserId = currentProfile?._id || profileId;
+      if (isFollowing || isFollowPending) {
+        await unfollowMutation.mutateAsync(targetUserId);
+        notify.success(isFollowing ? 'Đã bỏ theo dõi' : 'Đã hủy yêu cầu theo dõi');
+        return;
       }
+
+      const result = await followMutation.mutateAsync(targetUserId);
+      const status = result?.status || followStatus;
+      notify.success(status === 'pending' ? 'Đã gửi yêu cầu theo dõi' : 'Đã theo dõi');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+      notify.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
-  }, [isFollowing, profileId, isOwnProfile, followMutation, unfollowMutation]);
+  }, [
+    isFollowing,
+    isFollowPending,
+    profileId,
+    isOwnProfile,
+    followMutation,
+    unfollowMutation,
+    currentProfile,
+    followStatus,
+  ]);
 
   const handleMessage = useCallback(async () => {
     try {
-      const result = await createConversationMutation.mutateAsync(profileId);
+      const targetUserId = currentProfile?._id || profileId;
+      const result = await createConversationMutation.mutateAsync(targetUserId);
       const conversationId = result?._id || result?.id;
 
       if (conversationId) {
@@ -123,17 +131,20 @@ const Profile = () => {
         });
       } else {
         navigate(`/messages`, {
-          state: { selectedUser: currentProfile, targetUserId: profileId },
+          state: { selectedUser: currentProfile, targetUserId },
         });
       }
     } catch (error) {
       if (error?.response?.data?.message?.includes('already exists')) {
         // Find existing conversation ID if possible or just navigate to messages
         navigate(`/messages`, {
-          state: { selectedUser: currentProfile, targetUserId: profileId },
+          state: {
+            selectedUser: currentProfile,
+            targetUserId: currentProfile?._id || profileId,
+          },
         });
       } else {
-        toast.error(
+        notify.error(
           error?.response?.data?.message || 'Không thể tạo cuộc trò chuyện'
         );
       }
@@ -144,10 +155,23 @@ const Profile = () => {
   if (profileLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-neutral-300 border-t-black dark:border-t-white rounded-full animate-spin" />
+        <LoadingSpinner size="md" />
       </div>
     );
   }
+
+  const isRefreshingProfile = profileFetching && !!currentProfile;
+  const avatarSrc =
+    currentProfile?.avatar?.trim() ||
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+      currentProfile?.username || currentProfile?._id || 'user'
+    }`;
+  const coverSrc =
+    currentProfile?.cover?.trim() ||
+    'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg';
+  const joinedLabel = currentProfile?.createdAt?.slice
+    ? currentProfile.createdAt.slice(0, 7)
+    : null;
 
   const tabs = [
     { id: 'posts', label: 'Posts', icon: Grid3X3 },
@@ -166,7 +190,7 @@ const Profile = () => {
         if (isPostsLoading) {
           return (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={32} className="animate-spin text-neutral-400" />
+              <LoadingSpinner size="md" />
             </div>
           );
         }
@@ -267,47 +291,59 @@ const Profile = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {isRefreshingProfile && (
+        <div className="sticky top-0 z-10 flex justify-end py-2">
+          <div className="flex items-center gap-2 text-xs text-neutral-500 bg-white/80 dark:bg-neutral-900/70 backdrop-blur px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-neutral-800">
+            <Loader2 size={14} className="animate-spin" />
+            Updating profile
+          </div>
+        </div>
+      )}
       {/* Cover Image */}
-      <div className="h-48 bg-neutral-100 dark:bg-neutral-800 relative">
+      <div className="h-40 sm:h-48 bg-neutral-100 dark:bg-neutral-800 relative">
         <img
-          src={
-            currentProfile?.cover?.trim()
-              ? currentProfile.cover
-              : 'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg'
-          }
+          src={coverSrc}
           alt="Cover"
           className="w-full h-full object-cover"
+          onError={e => {
+            e.currentTarget.src =
+              'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg';
+          }}
         />
         {/* Avatar - positioned at bottom of cover */}
-        <div className="absolute -bottom-16 left-4">
+        <div className="absolute -bottom-12 sm:-bottom-16 left-4">
           <img
-            src={currentProfile?.avatar}
+            src={avatarSrc}
             alt={currentProfile?.username}
-            className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-neutral-900 bg-white dark:bg-neutral-900"
+            className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover bg-white dark:bg-neutral-900"
+            onError={e => {
+              const seed = currentProfile?.username || currentProfile?._id || 'user';
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+            }}
           />
         </div>
       </div>
 
       {/* Profile Header */}
-      <div className="px-4 pb-4 pt-20 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="px-4 pb-4 pt-20">
         {/* Actions */}
         <div className="flex justify-end mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             {isOwnProfile ? (
               <button
                 onClick={() => navigate('/settings/profile')}
-                className="px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
                 Edit Profile
               </button>
             ) : (
               <>
-                <button className="p-2 rounded-full border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                <button className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
                   <MoreHorizontal size={18} className="text-neutral-500" />
                 </button>
                 <button
                   onClick={handleMessage}
-                  className="p-2 rounded-full border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                 >
                   <MessageCircle size={18} className="text-neutral-500" />
                 </button>
@@ -321,8 +357,8 @@ const Profile = () => {
                       ? 'opacity-50 cursor-not-allowed'
                       : ''
                   } ${
-                    isFollowing
-                      ? 'border border-neutral-200 dark:border-neutral-700 text-black dark:text-white hover:border-red-500 hover:text-red-500'
+                    isFollowing || isFollowPending
+                      ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white hover:bg-red-500/10 hover:text-red-500'
                       : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                   }`}
                 >
@@ -332,6 +368,11 @@ const Profile = () => {
                     <>
                       <Check size={16} />
                       Following
+                    </>
+                  ) : isFollowPending ? (
+                    <>
+                      <UserMinus size={16} />
+                      Requested
                     </>
                   ) : (
                     <>
@@ -352,13 +393,9 @@ const Profile = () => {
               <h1 className="text-xl font-bold text-black dark:text-white">
                 {currentProfile?.name}
               </h1>
-              {currentProfile?.isVerified ? (
+              {(currentProfile?.verified || currentProfile?.isVerified) && (
                 <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                   <Check size={12} className="text-white dark:text-black" />
-                </div>
-              ) : (
-                <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
-                  <X size={12} className="text-white dark:text-black" />
                 </div>
               )}
             </div>
@@ -370,10 +407,7 @@ const Profile = () => {
               {currentProfile?.bio}
             </p>
           ) : (
-            <p className="text-black dark:text-white whitespace-pre-line">
-              Software Developer | Tech Enthusiast | Coffee Lover ☕\nBuilding
-              awesome things with code.
-            </p>
+            <p className="text-neutral-500 italic">No bio yet.</p>
           )}
 
           {/* Meta Info */}
@@ -397,12 +431,12 @@ const Profile = () => {
             )}
             <span className="flex items-center gap-1">
               <Calendar size={14} />
-              Joined {currentProfile?.createdAt?.slice(0, 7)}
+              Joined {joinedLabel || '—'}
             </span>
           </div>
 
           {/* Stats */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center flex-wrap gap-4">
             <button
               onClick={() => setShowFollowList('following')}
               className="hover:underline"
@@ -426,21 +460,25 @@ const Profile = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex bg-neutral-50 dark:bg-neutral-800/30 rounded-t-xl overflow-hidden mt-4">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors relative ${
+            className={`relative flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-black dark:text-white'
                 : 'text-neutral-500 hover:text-black dark:hover:text-white'
             }`}
           >
-            <tab.icon size={16} />
-            {tab.label}
+            <tab.icon size={16} className="relative z-10" />
+            <span className="relative z-10">{tab.label}</span>
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
+              <motion.div
+                layoutId="profileTabIndicator"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full"
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
             )}
           </button>
         ))}
@@ -450,7 +488,7 @@ const Profile = () => {
       <div className="p-4 space-y-4 min-h-[400px]">{getTabContent()}</div>
 
       {/* Follow List Modal */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
         {showFollowList && (
           <FollowList
             userId={profileId}
@@ -465,3 +503,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

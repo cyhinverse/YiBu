@@ -1,53 +1,88 @@
-import logger from "../configs/logger.js";
-import config from "../configs/config.js";
+import logger from '../configs/logger.js';
+import config from '../configs/config.js';
+import { buildErrorResponse } from '../helpers/apiResponse.js';
 
-// List of known user-facing error messages that should return 400
-const userErrors = [
-  "Email đã được sử dụng",
-  "Username đã được sử dụng",
-  "Email hoặc mật khẩu không đúng",
-  "Tài khoản đã bị khóa vĩnh viễn",
-  "Mật khẩu hiện tại không đúng",
-  "Mật khẩu mới phải khác mật khẩu cũ",
-  "Token không hợp lệ hoặc đã hết hạn",
-  "Email đã được xác thực",
-  "Invalid verification code",
-  "Mật khẩu không đúng",
-  "User not found",
-  "Invalid refresh token",
-  "Refresh token expired",
-];
+const normalizeError = err => {
+  let statusCode = err?.statusCode || 500;
+  let message = err?.message || 'Internal Server Error';
+  let errorCode =
+    err?.errorCode || (typeof err?.code === 'string' ? err.code : null);
+  let details = err?.details ?? null;
 
-const errorMiddleware = (err, req, res, next) => {
-  // Determine status code
-  let statusCode = err.statusCode || 500;
-
-  // Check if it's a user-facing error
-  if (
-    userErrors.some((msg) => err.message?.includes(msg)) ||
-    err.message?.includes("Tài khoản bị tạm khóa")
-  ) {
+  // Mongoose: invalid ObjectId / cast errors
+  if (err?.name === 'CastError') {
     statusCode = 400;
+    message = 'Invalid value';
+    errorCode = errorCode || 'CAST_ERROR';
+    details = details || { path: err.path, value: err.value };
   }
 
-  const message = err.message || "Internal Server Error";
+  // Mongoose: schema validation
+  if (err?.name === 'ValidationError' && err?.errors) {
+    statusCode = 400;
+    message = 'Validation error';
+    errorCode = errorCode || 'VALIDATION_ERROR';
+    details =
+      details ||
+      Object.values(err.errors).map(e => ({
+        field: e.path,
+        message: e.message,
+      }));
+  }
 
-  // Always log error stack for debugging
-  logger.error("Error Caught", {
-    module: "system",
-    message: message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    statusCode,
-  });
+  // Mongo duplicate key
+  if (err?.code === 11000) {
+    statusCode = 409;
+    message = 'Duplicate key';
+    errorCode = 'DUPLICATE_KEY';
+    details = details || err.keyValue || null;
+  }
 
-  res.status(statusCode).json({
-    success: false,
-    code: 0,
+  // JWT
+  if (err?.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Token expired';
+    errorCode = errorCode || 'TOKEN_EXPIRED';
+  }
+  if (err?.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    message = 'Invalid token';
+    errorCode = errorCode || 'TOKEN_INVALID';
+  }
+
+  // Multer
+  if (err?.name === 'MulterError') {
+    statusCode = 400;
+    message = err.message || 'Upload error';
+    errorCode = errorCode || 'UPLOAD_ERROR';
+  }
+
+  return { statusCode, message, errorCode, details };
+};
+
+const errorMiddleware = (err, req, res, next) => {
+  const { statusCode, message, errorCode, details } = normalizeError(err);
+
+  const logPayload = {
+    module: 'system',
     message,
-    ...(config.env === "development" &&
-      statusCode >= 500 && { stack: err.stack }),
+    errorCode,
+    statusCode,
+    method: req.method,
+    path: req.path,
+  };
+
+  if (statusCode >= 500) {
+    logger.error('Error', { ...logPayload, stack: err?.stack });
+  } else {
+    logger.warn('Request error', logPayload);
+  }
+
+  const response = buildErrorResponse({ message, errorCode, details });
+
+  return res.status(statusCode).json({
+    ...response,
+    ...(config.env === 'development' && statusCode >= 500 && { stack: err?.stack }),
   });
 };
 

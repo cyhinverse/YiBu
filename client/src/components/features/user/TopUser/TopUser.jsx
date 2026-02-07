@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { UserPlus, Check, Loader2 } from 'lucide-react';
 import { useFollowUser, useUnfollowUser } from '@/hooks/useUserQuery';
-import toast from 'react-hot-toast';
+import { notify } from '@/utils/notify';
 
 const TopUser = ({ users = [], loading = false }) => {
   const { user: currentUser } = useSelector(state => state.auth);
@@ -29,14 +29,14 @@ const TopUser = ({ users = [], loading = false }) => {
           next.delete(userId);
           return next;
         });
-        toast.success('Đã bỏ theo dõi');
+        notify.success('Đã bỏ theo dõi');
       } else {
         await followUser(userId);
         setFollowingIds(prev => new Set(prev).add(userId));
-        toast.success('Đã theo dõi');
+        notify.success('Đã theo dõi');
       }
-    } catch (error) {
-      toast.error('Có lỗi xảy ra');
+    } catch {
+      notify.error('Có lỗi xảy ra');
     } finally {
       setLoadingIds(prev => {
         const next = new Set(prev);
@@ -83,10 +83,10 @@ const TopUser = ({ users = [], loading = false }) => {
                   `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
                 }
                 alt={user.name || user.username}
-                className="w-10 h-10 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
+                className="w-10 h-10 rounded-full object-cover"
               />
-              {user.isVerified && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center border-2 border-white dark:border-neutral-900">
+              {(user.verified || user.isVerified) && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                   <Check size={8} className="text-white dark:text-black" />
                 </div>
               )}
@@ -111,7 +111,7 @@ const TopUser = ({ users = [], loading = false }) => {
                 disabled={isLoading}
                 className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 transition-colors disabled:opacity-50 ${
                   isFollowed
-                    ? 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border border-neutral-200 dark:border-neutral-700'
+                    ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
                     : 'bg-primary text-primary-foreground'
                 }`}
               >
@@ -138,3 +138,4 @@ const TopUser = ({ users = [], loading = false }) => {
 };
 
 export default TopUser;
+

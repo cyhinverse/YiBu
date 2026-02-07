@@ -9,7 +9,7 @@ import { CommentItem, CommentInput } from './CommentItem';
  * @param {string} postId - ID của post
  * @param {function} onClose - Callback đóng modal
  */
-const CommentModal = memo(({ postId, onClose }) => {
+const CommentModal = memo(({ postId, onClose, variant = 'modal' }) => {
   const {
     comments,
     loading,
@@ -25,6 +25,7 @@ const CommentModal = memo(({ postId, onClose }) => {
     cancelReply,
     refresh,
   } = useComments(postId);
+  const isPanel = variant === 'panel';
 
   // Thêm comment mới
   const handleAddComment = useCallback(
@@ -45,54 +46,53 @@ const CommentModal = memo(({ postId, onClose }) => {
     [onClose]
   );
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={handleBackdropClick}
+      className={
+        isPanel
+          ? 'flex w-full flex-1 min-h-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-content)] overflow-hidden'
+          : 'w-full max-w-lg rounded-2xl flex flex-col max-h-[80vh] overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-content)]'
+      }
+      onClick={isPanel ? undefined : e => e.stopPropagation()}
     >
-      <div
-        className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl flex flex-col 
-                   max-h-[80vh] overflow-hidden shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-b 
-                      border-neutral-200 dark:border-neutral-800"
+          className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]"
         >
-          <h3 className="font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+          <h3 className="font-semibold text-[var(--color-content)] flex items-center gap-2">
             <MessageCircle size={18} />
             Bình luận
-            <span className="text-neutral-400 font-normal text-sm">
+            <span className="text-[var(--color-text-tertiary)] font-normal text-sm">
               ({totalCount})
             </span>
           </h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 
-                     transition-colors"
+            className="p-2 rounded-full hover:bg-[var(--color-surface-hover)] transition-colors"
           >
-            <X size={18} className="text-neutral-500" />
+            <X size={18} className="text-[var(--color-text-tertiary)]" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 size={24} className="animate-spin text-neutral-400" />
+              <Loader2
+                size={24}
+                className="animate-spin text-[var(--color-text-tertiary)]"
+              />
             </div>
           )}
 
           {/* Error State */}
           {error && !loading && (
             <div className="text-center py-8">
-              <p className="text-red-500 text-sm">{error}</p>
+              <p className="text-[var(--color-error)] text-sm">{error}</p>
               <button
                 onClick={refresh}
-                className="mt-2 text-sm text-neutral-500 hover:text-neutral-700 
-                         dark:hover:text-neutral-300 underline"
+                className="mt-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-content)] underline"
               >
                 Thử lại
               </button>
@@ -104,10 +104,12 @@ const CommentModal = memo(({ postId, onClose }) => {
             <div className="text-center py-8">
               <MessageCircle
                 size={40}
-                className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3"
+                className="mx-auto text-[var(--color-text-tertiary)] mb-3"
               />
-              <p className="text-neutral-500 text-sm">Chưa có bình luận nào</p>
-              <p className="text-neutral-400 text-xs mt-1">
+              <p className="text-[var(--color-text-secondary)] text-sm">
+                Chưa có bình luận nào
+              </p>
+              <p className="text-[var(--color-text-tertiary)] text-xs mt-1">
                 Hãy là người đầu tiên bình luận!
               </p>
             </div>
@@ -135,14 +137,24 @@ const CommentModal = memo(({ postId, onClose }) => {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="p-4 border-t border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <img
               src={
                 currentUser?.profile?.avatar ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?._id}`
+                currentUser?.avatar ||
+                currentUser?.photo ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                  currentUser?._id || currentUser?.id || currentUser?.username || 'user'
+                }`
               }
               alt=""
+              onError={e => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                  currentUser?._id || currentUser?.id || currentUser?.username || 'user'
+                }`;
+              }}
               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
             />
             <div className="flex-1">
@@ -153,7 +165,19 @@ const CommentModal = memo(({ postId, onClose }) => {
             </div>
           </div>
         </div>
-      </div>
+    </div>
+  );
+
+  if (isPanel) {
+    return content;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={handleBackdropClick}
+    >
+      {content}
     </div>
   );
 });
