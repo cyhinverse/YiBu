@@ -221,6 +221,7 @@ class UserService {
    */
   static async updateProfile(userId, profileData) {
     const allowedFields = [
+      'username',
       'name',
       'bio',
       'birthday',
@@ -235,7 +236,12 @@ class UserService {
 
     for (const [key, value] of Object.entries(profileData)) {
       if (allowedFields.includes(key)) {
-        if (key === 'birthday' && value) {
+        if (key === 'username' && value) {
+          updateData[key] = String(value).trim().toLowerCase();
+        } else if (key === 'gender' && value === 'prefer_not_to_say') {
+          // Keep backward compatibility with older clients while respecting schema enum.
+          updateData[key] = 'other';
+        } else if (key === 'birthday' && value) {
           updateData[key] = new Date(value);
         } else if (key === 'interests' && typeof value === 'string') {
           updateData[key] = value
@@ -248,11 +254,22 @@ class UserService {
       }
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateData },
-      { new: true }
-    ).select('-loginAttempts');
+    let user;
+    try {
+      user = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select('-loginAttempts');
+    } catch (err) {
+      // Handle unique index violations cleanly (e.g. username already taken)
+      if (err?.code === 11000 && (err?.keyPattern?.username || err?.keyValue?.username)) {
+        throw ApiError.badRequest('Username đã được sử dụng', {
+          errorCode: 'USERNAME_TAKEN',
+        });
+      }
+      throw err;
+    }
 
     if (!user) {
       throw ApiError.notFound('User not found');
