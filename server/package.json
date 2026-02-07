@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
+    "dev:docker": "cross-env NODE_ENV=development MONGODB_URI=mongodb://localhost:27018/socialmedia?directConnection=true nodemon src/server.js",
     "production": "cross-env NODE_ENV=production node src/server.js",
     "seed": "cross-env NODE_ENV=development node scripts/seed.js",
     "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop",
