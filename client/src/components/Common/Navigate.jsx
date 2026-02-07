@@ -248,7 +248,9 @@ export default function Navigate({ mobile = false, onCollapsedChange }) {
           title={
             collapsed ? (isDarkMode ? 'Light mode' : 'Dark mode') : undefined
           }
-          aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={
+            isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'
+          }
         >
           <div className="flex-shrink-0">
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}

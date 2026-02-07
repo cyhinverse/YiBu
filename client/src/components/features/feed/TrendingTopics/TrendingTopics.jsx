@@ -1,13 +1,11 @@
-import { TrendingUp, Hash, ChevronRight, LayoutGrid, List } from 'lucide-react';
-
-import TrendingCircles from './TrendingCircles';
+import TrendingRadar from './TrendingRadar';
 
 const TrendingTopics = ({ trendingTopics = [] }) => {
   if (trendingTopics.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-4">
-      <TrendingCircles trendingTopics={trendingTopics} />
+      <TrendingRadar trendingTopics={trendingTopics} />
     </div>
   );
 };

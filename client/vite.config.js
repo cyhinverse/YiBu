@@ -78,14 +78,18 @@ export default defineConfig({
   },
   server: {
     port: 9258,
+    // Fix Google OAuth popup/postMessage warnings when COOP is set too strict.
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
     // Proxy API + Socket.IO in dev so HttpOnly cookies work without SameSite=None.
     proxy: {
       '/api': {
-        target: 'http://localhost:9785',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:9785',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         ws: true,
       },

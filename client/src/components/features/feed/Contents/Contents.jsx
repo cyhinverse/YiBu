@@ -71,67 +71,77 @@ const Contents = () => {
   const displayUsers = debouncedSearch.trim() ? searchResults : suggestions;
 
   return (
-    <div className="w-full flex flex-col xl:flex-row gap-6 xl:gap-10 min-h-[100dvh] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
+    <div className="w-full flex flex-col xl:flex-row gap-6 xl:gap-8 min-h-[100dvh] max-w-[1600px] mx-auto xl:ml-auto xl:mr-0 px-4 sm:px-6 lg:px-8 xl:px-10">
       {/* Main Feed */}
-      <div className="w-full min-w-0 mx-auto xl:mx-0 min-h-[100dvh] xl:h-[100dvh] flex flex-col xl:flex-1 xl:max-w-[760px]">
+      <div className="w-full min-w-0 mx-auto xl:mx-0 min-h-[100dvh] xl:h-[100dvh] flex flex-col xl:flex-1">
         {/* Header */}
         <div className="sticky top-0 z-10 pt-4 pb-2 bg-white/80 dark:bg-black/80 backdrop-blur-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-xl font-semibold text-black dark:text-white">
-                Feed
-              </h1>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                Discover what's happening
-              </p>
+          <div className="mx-auto w-full max-w-[760px]">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-xl font-semibold text-black dark:text-white">
+                  Feed
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Discover what's happening
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Tab Bar */}
-          <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-full">
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex-1 py-2 px-3 rounded-full text-sm font-medium transition-colors flex items-center justify-center gap-2 overflow-hidden ${
-                    activeTab === tab.id
-                      ? 'text-primary-foreground'
-                      : 'text-neutral-500 hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  {activeTab === tab.id && (
-                    <motion.span
-                      layoutId="feedTabIndicator"
-                      className="absolute inset-0 rounded-full bg-primary"
-                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                    />
-                  )}
-                  <Icon size={14} className="relative z-10" />
-                  <span className="hidden sm:inline relative z-10">{tab.label}</span>
-                </button>
-              );
-            })}
+            {/* Tab Bar */}
+            <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-full">
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex-1 py-2 px-3 rounded-full text-sm font-medium transition-colors flex items-center justify-center gap-2 overflow-hidden ${
+                      activeTab === tab.id
+                        ? 'text-primary-foreground'
+                        : 'text-neutral-500 hover:text-black dark:hover:text-white'
+                    }`}
+                  >
+                    {activeTab === tab.id && (
+                      <motion.span
+                        layoutId="feedTabIndicator"
+                        className="absolute inset-0 rounded-full bg-primary"
+                        transition={{
+                          type: 'spring',
+                          stiffness: 500,
+                          damping: 35,
+                        }}
+                      />
+                    )}
+                    <Icon size={14} className="relative z-10" />
+                    <span className="hidden sm:inline relative z-10">
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-visible xl:overflow-y-auto hide-scrollbar pt-4 space-y-4"
+          className="flex-1 overflow-visible xl:overflow-y-auto hide-scrollbar pt-4"
         >
-          <CreatePost />
-          <PostLists
-            activeTab={activeTab}
-            onOpenComments={handleOpenComments}
-            scrollRef={contentRef}
-          />
+          <div className="mx-auto w-full max-w-[760px] space-y-4">
+            <CreatePost />
+            <PostLists
+              activeTab={activeTab}
+              onOpenComments={handleOpenComments}
+              scrollRef={contentRef}
+            />
+          </div>
         </div>
       </div>
 
       {/* Right Sidebar */}
-      <div className="hidden xl:flex flex-col w-full xl:w-[420px] h-[100dvh] sticky top-0 py-4 gap-4">
+      <div className="hidden xl:flex flex-none flex-col w-full xl:w-[360px] 2xl:w-[400px] h-[100dvh] sticky top-0 py-4 gap-4">
         {/* Scrollable Sidebar */}
         <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4 flex flex-col">
           {activeCommentPostId ? (
@@ -151,7 +161,7 @@ const Contents = () => {
           ) : (
             <>
               {/* Trending */}
-              <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
+              <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <TrendingUp size={16} className="text-neutral-500" />
@@ -176,7 +186,7 @@ const Contents = () => {
               </div>
 
               {/* Suggested Users */}
-              <div className="flex-1 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
+              <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-neutral-500" />

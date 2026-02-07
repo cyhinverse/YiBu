@@ -166,7 +166,7 @@ const TrendingCircles = ({ trendingTopics = [] }) => {
   return (
     <div
       ref={containerRef}
-      className="h-[250px] w-full relative group/charts select-none overflow-hidden rounded-3xl bg-neutral-50/50 dark:bg-neutral-900/20"
+      className="h-[220px] 2xl:h-[250px] w-full relative group/charts select-none overflow-hidden rounded-3xl bg-neutral-50/50 dark:bg-neutral-900/20"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoveredSwarm(null)}
     >
