@@ -369,15 +369,20 @@ export default function TrendingRadar({ trendingTopics = [] }) {
                     x={p.labelX}
                     y={p.labelY}
                     textAnchor={p.anchor}
-                    fontSize={clamp(6.4 + p.hotness * 2.0 + (isHovered ? 0.4 : 0), 6.4, 9.6)}
-                    fontWeight={isHot ? 800 : 650}
-                    fill={rgba(theme.content, isHot ? 0.92 : 0.78)}
+                    // Lighter, tighter typography (avoid "bold blob" look on light panels)
+                    fontSize={clamp(
+                      6.0 + p.hotness * 1.6 + (isHovered ? 0.25 : 0),
+                      6.0,
+                      8.6
+                    )}
+                    fontWeight={isHot ? 650 : isHovered ? 600 : 520}
+                    fill={rgba(theme.content, isHot ? 0.86 : 0.72)}
                     style={{
                       pointerEvents: 'none',
-                      letterSpacing: '-0.02em',
+                      letterSpacing: '-0.01em',
                       paintOrder: 'stroke',
-                      stroke: rgba(theme.surface2, 0.88),
-                      strokeWidth: isHovered ? 1.2 : 1.0,
+                      stroke: rgba(theme.surface2, 0.55),
+                      strokeWidth: isHovered ? 0.8 : 0.65,
                     }}
                     opacity={hoveredKey && !isHovered ? 0.55 : 1}
                   >
@@ -418,4 +423,3 @@ export default function TrendingRadar({ trendingTopics = [] }) {
     </div>
   );
 }
-
