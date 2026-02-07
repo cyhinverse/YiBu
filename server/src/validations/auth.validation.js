@@ -15,14 +15,14 @@ export const registerBody = Joi.object({
   }),
   username: Joi.string()
     .trim()
-    .alphanum()
+    .pattern(/^[a-zA-Z0-9_]+$/)
     .min(3)
     .max(30)
     .lowercase()
     .required()
     .messages({
       'string.empty': 'Username không được để trống',
-      'string.alphanum': 'Username chỉ được chứa chữ và số',
+      'string.pattern.base': 'Username chỉ được chứa chữ, số và dấu gạch dưới (_)',
       'string.min': 'Username phải có ít nhất 3 ký tự',
       'string.max': 'Username không được quá 30 ký tự',
       'any.required': 'Username là bắt buộc',

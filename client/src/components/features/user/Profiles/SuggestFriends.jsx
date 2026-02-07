@@ -100,7 +100,7 @@ export default function SuggestFriends() {
                     alt={user.name || user.username}
                     className="w-12 h-12 rounded-full object-cover"
                   />
-                  {user.isVerified && (
+                  {(user.verified || user.isVerified) && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                       <Check size={8} className="text-white dark:text-black" />
                     </div>

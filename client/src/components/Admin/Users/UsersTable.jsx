@@ -84,7 +84,7 @@ const UsersTable = ({
                             }
                             className="w-10 h-10 rounded-full object-cover"
                           />
-                          {user.isVerified && (
+                          {(user.verified || user.isVerified) && (
                             <div className="absolute -bottom-0.5 -right-0.5 bg-[var(--color-info)] text-white p-0.5 rounded-full">
                               <Check size={8} strokeWidth={3} />
                             </div>

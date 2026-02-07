@@ -243,7 +243,7 @@ const Explore = () => {
                         alt={user.name}
                         className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                       />
-                      {user.isVerified && (
+                      {(user.verified || user.isVerified) && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center border-2 border-white dark:border-neutral-900">
                           <Check
                             size={8}

@@ -89,7 +89,7 @@ const Friends = () => {
                   {friend.isOnline && (
                     <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" />
                   )}
-                  {friend.isVerified && !friend.isOnline && (
+                  {(friend.verified || friend.isVerified) && !friend.isOnline && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                       <Check size={8} className="text-white dark:text-black" />
                     </div>

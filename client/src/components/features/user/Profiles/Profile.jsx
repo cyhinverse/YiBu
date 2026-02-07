@@ -7,8 +7,8 @@ import {
   Calendar,
   MoreHorizontal,
   UserPlus,
+  UserMinus,
   Check,
-  X,
   MessageCircle,
   Grid3X3,
   Heart,
@@ -43,7 +43,8 @@ const Profile = () => {
   const [showFollowList, setShowFollowList] = useState(null); // 'followers' | 'following' | null
   const authUser = useSelector(state => state.auth?.user);
   const profileId = userId || authUser?._id;
-  const isOwnProfile = !userId || userId === authUser?._id;
+  const isOwnProfile =
+    !userId || userId === authUser?._id || userId === authUser?.username;
 
   // React Query Hooks
   const { data: profileData, isLoading: profileLoading, isFetching: profileFetching } =
@@ -51,7 +52,9 @@ const Profile = () => {
   const currentProfile = profileData;
 
   const { data: followStatusData } = useCheckFollow(profileId, !isOwnProfile);
-  const isFollowing = followStatusData?.isFollowing;
+  const followStatus = followStatusData?.status; // 'active' | 'pending' | 'none'
+  const isFollowing = followStatus === 'active';
+  const isFollowPending = followStatus === 'pending';
 
   // Posts Query
   const { data: userPostsData, isLoading: isPostsLoading } = useUserPosts(
@@ -92,21 +95,34 @@ const Profile = () => {
     if (isOwnProfile) return;
 
     try {
-      if (isFollowing) {
-        await unfollowMutation.mutateAsync(profileId);
-        notify.success('Đã bỏ theo dõi');
-      } else {
-        await followMutation.mutateAsync(profileId);
-        notify.success('Đã theo dõi');
+      const targetUserId = currentProfile?._id || profileId;
+      if (isFollowing || isFollowPending) {
+        await unfollowMutation.mutateAsync(targetUserId);
+        notify.success(isFollowing ? 'Đã bỏ theo dõi' : 'Đã hủy yêu cầu theo dõi');
+        return;
       }
+
+      const result = await followMutation.mutateAsync(targetUserId);
+      const status = result?.status || followStatus;
+      notify.success(status === 'pending' ? 'Đã gửi yêu cầu theo dõi' : 'Đã theo dõi');
     } catch (error) {
       notify.error(error?.response?.data?.message || 'Thao tác thất bại');
     }
-  }, [isFollowing, profileId, isOwnProfile, followMutation, unfollowMutation]);
+  }, [
+    isFollowing,
+    isFollowPending,
+    profileId,
+    isOwnProfile,
+    followMutation,
+    unfollowMutation,
+    currentProfile,
+    followStatus,
+  ]);
 
   const handleMessage = useCallback(async () => {
     try {
-      const result = await createConversationMutation.mutateAsync(profileId);
+      const targetUserId = currentProfile?._id || profileId;
+      const result = await createConversationMutation.mutateAsync(targetUserId);
       const conversationId = result?._id || result?.id;
 
       if (conversationId) {
@@ -115,14 +131,17 @@ const Profile = () => {
         });
       } else {
         navigate(`/messages`, {
-          state: { selectedUser: currentProfile, targetUserId: profileId },
+          state: { selectedUser: currentProfile, targetUserId },
         });
       }
     } catch (error) {
       if (error?.response?.data?.message?.includes('already exists')) {
         // Find existing conversation ID if possible or just navigate to messages
         navigate(`/messages`, {
-          state: { selectedUser: currentProfile, targetUserId: profileId },
+          state: {
+            selectedUser: currentProfile,
+            targetUserId: currentProfile?._id || profileId,
+          },
         });
       } else {
         notify.error(
@@ -142,6 +161,17 @@ const Profile = () => {
   }
 
   const isRefreshingProfile = profileFetching && !!currentProfile;
+  const avatarSrc =
+    currentProfile?.avatar?.trim() ||
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${
+      currentProfile?.username || currentProfile?._id || 'user'
+    }`;
+  const coverSrc =
+    currentProfile?.cover?.trim() ||
+    'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg';
+  const joinedLabel = currentProfile?.createdAt?.slice
+    ? currentProfile.createdAt.slice(0, 7)
+    : null;
 
   const tabs = [
     { id: 'posts', label: 'Posts', icon: Grid3X3 },
@@ -272,20 +302,24 @@ const Profile = () => {
       {/* Cover Image */}
       <div className="h-40 sm:h-48 bg-neutral-100 dark:bg-neutral-800 relative">
         <img
-          src={
-            currentProfile?.cover?.trim()
-              ? currentProfile.cover
-              : 'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg'
-          }
+          src={coverSrc}
           alt="Cover"
           className="w-full h-full object-cover"
+          onError={e => {
+            e.currentTarget.src =
+              'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/168364/Originals/meme-con-meo%20(1).jpg';
+          }}
         />
         {/* Avatar - positioned at bottom of cover */}
         <div className="absolute -bottom-12 sm:-bottom-16 left-4">
           <img
-            src={currentProfile?.avatar}
+            src={avatarSrc}
             alt={currentProfile?.username}
             className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover bg-white dark:bg-neutral-900"
+            onError={e => {
+              const seed = currentProfile?.username || currentProfile?._id || 'user';
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+            }}
           />
         </div>
       </div>
@@ -323,7 +357,7 @@ const Profile = () => {
                       ? 'opacity-50 cursor-not-allowed'
                       : ''
                   } ${
-                    isFollowing
+                    isFollowing || isFollowPending
                       ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white hover:bg-red-500/10 hover:text-red-500'
                       : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                   }`}
@@ -334,6 +368,11 @@ const Profile = () => {
                     <>
                       <Check size={16} />
                       Following
+                    </>
+                  ) : isFollowPending ? (
+                    <>
+                      <UserMinus size={16} />
+                      Requested
                     </>
                   ) : (
                     <>
@@ -354,13 +393,9 @@ const Profile = () => {
               <h1 className="text-xl font-bold text-black dark:text-white">
                 {currentProfile?.name}
               </h1>
-              {currentProfile?.isVerified ? (
+              {(currentProfile?.verified || currentProfile?.isVerified) && (
                 <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
                   <Check size={12} className="text-white dark:text-black" />
-                </div>
-              ) : (
-                <div className="w-4 h-4 rounded-full bg-black dark:bg-white flex items-center justify-center">
-                  <X size={12} className="text-white dark:text-black" />
                 </div>
               )}
             </div>
@@ -372,10 +407,7 @@ const Profile = () => {
               {currentProfile?.bio}
             </p>
           ) : (
-            <p className="text-black dark:text-white whitespace-pre-line">
-              Software Developer | Tech Enthusiast | Coffee Lover ☕\nBuilding
-              awesome things with code.
-            </p>
+            <p className="text-neutral-500 italic">No bio yet.</p>
           )}
 
           {/* Meta Info */}
@@ -399,7 +431,7 @@ const Profile = () => {
             )}
             <span className="flex items-center gap-1">
               <Calendar size={14} />
-              Joined {currentProfile?.createdAt?.slice(0, 7)}
+              Joined {joinedLabel || '—'}
             </span>
           </div>
 
