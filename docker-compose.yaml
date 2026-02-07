@@ -10,12 +10,13 @@ services:
       - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
       # Force Docker services to use Docker Mongo (avoid accidental Atlas/host env override).
       - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      # Provide non-empty defaults for local Docker runs (required by auth middleware).
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-dev_refresh_token_secret_change_me}
       - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
       - EMAIL_PORT=${EMAIL_PORT:-587}
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
     depends_on:
       - mongo
       - redis
