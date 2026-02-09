@@ -15,7 +15,6 @@ const ReportSchema = new Schema(
       type: Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
 
     // Type of reported content
@@ -23,20 +22,17 @@ const ReportSchema = new Schema(
       type: String,
       enum: ['post', 'comment', 'user', 'message'],
       required: true,
-      index: true,
     },
 
     targetId: {
       type: Types.ObjectId,
       required: true,
-      index: true,
     },
 
     // Reported user (for easier querying)
     targetUser: {
       type: Types.ObjectId,
       ref: 'User',
-      index: true,
     },
 
     // Predefined reason categories
@@ -57,7 +53,6 @@ const ReportSchema = new Schema(
         'other',
       ],
       required: true,
-      index: true,
     },
 
     // Specific reason label
@@ -97,14 +92,12 @@ const ReportSchema = new Schema(
         'escalated',
       ],
       default: 'pending',
-      index: true,
     },
 
     // Priority for triage (higher = more urgent)
     priority: {
       type: Number,
       default: 0,
-      index: true,
     },
 
     // Resolution details
@@ -157,13 +150,11 @@ const ReportSchema = new Schema(
     assignedTo: {
       type: Types.ObjectId,
       ref: 'User',
-      index: true,
     },
 
     // For deduplication - group key
     groupKey: {
       type: String,
-      index: true,
     },
 
     // Count of similar reports (for the same content)
@@ -179,8 +170,8 @@ const ReportSchema = new Schema(
 );
 
 // ============ INDEXES ============
-// Primary queries for moderation dashboard
-ReportSchema.index({ status: 1, priority: -1, createdAt: -1 });
+// Primary queries for moderation dashboard (sort: priority desc, createdAt asc)
+ReportSchema.index({ status: 1, priority: -1, createdAt: 1 });
 ReportSchema.index({ status: 1, category: 1, createdAt: -1 });
 ReportSchema.index({ assignedTo: 1, status: 1 });
 

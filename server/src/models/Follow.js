@@ -79,9 +79,6 @@ FollowSchema.index({ follower: 1, status: 1, createdAt: -1 });
 // For feed ranking (get follows sorted by interaction)
 FollowSchema.index({ follower: 1, status: 1, interactionScore: -1 });
 
-// Pending follow requests
-FollowSchema.index({ following: 1, status: 1 });
-
 // Close friends
 FollowSchema.index({ follower: 1, isCloseFriend: 1 });
 

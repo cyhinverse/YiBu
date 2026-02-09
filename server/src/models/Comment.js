@@ -16,7 +16,6 @@ const CommentSchema = new Schema(
       type: Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
 
     // Content
@@ -31,7 +30,6 @@ const CommentSchema = new Schema(
       type: Types.ObjectId,
       ref: 'Post',
       required: true,
-      index: true,
     },
 
     // For nested comments (replies)
@@ -39,7 +37,6 @@ const CommentSchema = new Schema(
       type: Types.ObjectId,
       ref: 'Comment',
       default: null,
-      index: true,
     },
 
     // Root comment (for deep nesting - easier to get full thread)
@@ -47,7 +44,6 @@ const CommentSchema = new Schema(
       type: Types.ObjectId,
       ref: 'Comment',
       default: null,
-      index: true,
     },
     depth: {
       type: Number,
@@ -80,7 +76,6 @@ const CommentSchema = new Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     // Moderation

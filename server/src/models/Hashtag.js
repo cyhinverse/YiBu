@@ -17,14 +17,12 @@ const HashtagSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
 
     // Total usage count (all time)
     totalUsage: {
       type: Number,
       default: 0,
-      index: true,
     },
 
     // Recent usage for trending calculation
@@ -43,7 +41,6 @@ const HashtagSchema = new Schema(
     trendingScore: {
       type: Number,
       default: 0,
-      index: true,
     },
 
     // Velocity (rate of usage change)
@@ -80,14 +77,12 @@ const HashtagSchema = new Schema(
     isBanned: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     // Is this a featured/promoted hashtag?
     isFeatured: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     // First used timestamp

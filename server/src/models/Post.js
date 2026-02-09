@@ -44,7 +44,6 @@ const PostSchema = new Schema(
         type: String,
         lowercase: true,
         trim: true,
-        index: true,
       },
     ],
 
@@ -78,14 +77,12 @@ const PostSchema = new Schema(
     engagementScore: {
       type: Number,
       default: 0,
-      index: true,
     },
 
     // Trending score (engagement velocity)
     trendingScore: {
       type: Number,
       default: 0,
-      index: true,
     },
 
     // Quality score (based on media quality, caption length, etc.)
@@ -105,13 +102,11 @@ const PostSchema = new Schema(
       type: String,
       enum: ["public", "followers", "private"],
       default: "public",
-      index: true,
     },
 
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     isPinned: {
@@ -158,8 +153,7 @@ PostSchema.index({ user: 1, isDeleted: 1, createdAt: -1 });
 
 // Ranking indexes
 PostSchema.index({ engagementScore: -1, createdAt: -1 });
-PostSchema.index({ trendingScore: -1 });
-PostSchema.index({ createdAt: -1, engagementScore: -1 });
+PostSchema.index({ trendingScore: -1, createdAt: -1 });
 
 // Visibility-based queries
 PostSchema.index({ visibility: 1, isDeleted: 1, createdAt: -1 });

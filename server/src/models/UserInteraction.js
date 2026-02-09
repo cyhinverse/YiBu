@@ -7,7 +7,6 @@ const UserInteractionSchema = new Schema(
       type: Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     // Target of interaction
@@ -15,13 +14,11 @@ const UserInteractionSchema = new Schema(
       type: String,
       enum: ["post", "user", "hashtag", "comment"],
       required: true,
-      index: true,
     },
 
     targetId: {
       type: Types.ObjectId,
       required: true,
-      index: true,
     },
 
     // Type of interaction
@@ -56,15 +53,12 @@ const UserInteractionSchema = new Schema(
         "dwell", // Spent significant time on content
       ],
       required: true,
-      index: true,
     },
 
     // Interaction weight/strength (for ML models)
-    // Calculated based on interaction type and context
     weight: {
       type: Number,
       default: 1,
-      index: true,
     },
 
     // Context data for the interaction
@@ -112,7 +106,6 @@ const UserInteractionSchema = new Schema(
       type: String,
       enum: ["positive", "negative", "neutral"],
       default: "neutral",
-      index: true,
     },
 
     // Expiration for GDPR compliance and data freshness
@@ -135,7 +128,6 @@ UserInteractionSchema.index({ user: 1, targetId: 1, interactionType: 1 });
 
 // For finding interactions on a target
 UserInteractionSchema.index({ targetId: 1, targetType: 1, createdAt: -1 });
-UserInteractionSchema.index({ targetId: 1, interactionType: 1 });
 
 // For recommendation engine
 UserInteractionSchema.index({ user: 1, sentiment: 1, createdAt: -1 });
@@ -147,9 +139,6 @@ UserInteractionSchema.index({ targetId: 1, interactionType: 1, user: 1 });
 
 // TTL index for automatic cleanup
 UserInteractionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-// Time-based queries
-UserInteractionSchema.index({ createdAt: -1 });
 
 // ============ STATICS ============
 

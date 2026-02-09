@@ -14,7 +14,6 @@ const LikeSchema = new Schema(
       type: Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     // Type of target (post or comment)
@@ -22,21 +21,18 @@ const LikeSchema = new Schema(
       type: String,
       enum: ["post", "comment"],
       required: true,
-      index: true,
     },
 
     // Reference to post (if liking a post)
     post: {
       type: Types.ObjectId,
       ref: "Post",
-      index: true,
     },
 
     // Reference to comment (if liking a comment)
     comment: {
       type: Types.ObjectId,
       ref: "Comment",
-      index: true,
     },
   },
   {
@@ -56,16 +52,11 @@ LikeSchema.index(
   { unique: true, partialFilterExpression: { comment: { $exists: true } } }
 );
 
-// Check if user liked (fast lookup)
-LikeSchema.index({ user: 1, targetType: 1, post: 1 });
-LikeSchema.index({ user: 1, targetType: 1, comment: 1 });
-
-// Get all likes for a post/comment
+// Get all likes for a post/comment (sorted by time)
 LikeSchema.index({ post: 1, createdAt: -1 });
 LikeSchema.index({ comment: 1, createdAt: -1 });
 
-// Get user's likes
-LikeSchema.index({ user: 1, createdAt: -1 });
+// Get user's liked posts (filter by targetType + sort by time)
 LikeSchema.index({ user: 1, targetType: 1, createdAt: -1 });
 
 // ============ STATICS ============

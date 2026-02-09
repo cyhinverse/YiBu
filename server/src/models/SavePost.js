@@ -14,14 +14,12 @@ const SavePostSchema = new Schema(
       type: Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     post: {
       type: Types.ObjectId,
       ref: "Post",
       required: true,
-      index: true,
     },
 
     // Optional folder/collection for organizing saves
@@ -30,7 +28,6 @@ const SavePostSchema = new Schema(
       type: String,
       default: "default",
       trim: true,
-      index: true,
     },
 
     // Optional note about why saved

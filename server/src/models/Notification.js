@@ -14,7 +14,6 @@ const NotificationSchema = new Schema(
       type: Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
 
     sender: {
@@ -46,7 +45,6 @@ const NotificationSchema = new Schema(
         'share',
       ],
       required: true,
-      index: true,
     },
 
     // Pre-rendered content for fast display
@@ -60,7 +58,6 @@ const NotificationSchema = new Schema(
     post: {
       type: Types.ObjectId,
       ref: 'Post',
-      index: true,
     },
 
     comment: {
@@ -71,7 +68,6 @@ const NotificationSchema = new Schema(
     relatedPost: {
       type: Types.ObjectId,
       ref: 'Post',
-      index: true,
     },
 
     relatedComment: {
@@ -101,7 +97,6 @@ const NotificationSchema = new Schema(
     isRead: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     readAt: {
@@ -111,7 +106,6 @@ const NotificationSchema = new Schema(
     // For grouping similar notifications
     groupKey: {
       type: String,
-      index: true,
     },
 
     // Count of grouped notifications

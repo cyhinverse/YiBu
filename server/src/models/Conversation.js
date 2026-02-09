@@ -43,8 +43,7 @@ const ConversationSchema = new Schema(
 );
 
 // Indexes for fast lookups
-ConversationSchema.index({ members: 1 });
-ConversationSchema.index({ updatedAt: -1 });
+ConversationSchema.index({ members: 1, updatedAt: -1 });
 
 const Conversation = model("Conversation", ConversationSchema);
 export default Conversation;

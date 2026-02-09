@@ -5,20 +5,17 @@ const MessageSchema = new Schema(
     conversationId: {
       type: String,
       required: true,
-      index: true,
     },
 
     sender: {
       type: Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     receiver: {
       type: Types.ObjectId,
       required: true,
-      index: true,
     },
 
     // Individual tracking for group messages
@@ -69,7 +66,6 @@ const MessageSchema = new Schema(
       type: String,
       enum: ["sent", "delivered", "read"],
       default: "sent",
-      index: true,
     },
 
     readAt: {
