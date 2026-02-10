@@ -276,7 +276,9 @@ PostSchema.statics.getFeedForUser = async function (userId, options = {}) {
 
   // Get following list and blocked/muted users in parallel
   const [following, settings] = await Promise.all([
-    Follow.find({ follower: userId }).select("following").lean(),
+    Follow.find({ follower: userId, status: "active" })
+      .select("following")
+      .lean(),
     UserSettings.findOne({ user: userId }).select("blockedUsers mutedUsers").lean()
   ]);
 

@@ -31,6 +31,10 @@ import userSettingsRoutes from './routes/userSettings.router.js';
 
 const app = express();
 
+// If deployed behind a reverse proxy (common in production), trust X-Forwarded-* headers
+// so req.ip / secure cookies / rate limiting behave correctly.
+app.set('trust proxy', config.trustProxy);
+
 // CORS Configuration - PHẢI ĐẶT TRƯỚC TẤT CẢ MIDDLEWARE KHÁC
 const corsOptions = {
   origin: function (origin, callback) {

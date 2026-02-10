@@ -28,8 +28,6 @@ const ConversationSchema = new Schema(
       type: Types.ObjectId,
       ref: "Message",
     },
-    // For direct messages, we still use this to ensure uniqueness
-    // Format: userId1_userId2 (sorted)
     directId: {
       type: String,
       index: true,

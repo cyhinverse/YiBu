@@ -27,10 +27,27 @@ const parseCsv = (value, fallback = []) => {
 
 const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
 
+const parseTrustProxy = (value, fallback) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (value === true || value === false) return value;
+
+  const str = String(value).trim().toLowerCase();
+  if (str === 'true') return true;
+  if (str === 'false') return false;
+
+  const asInt = Number.parseInt(str, 10);
+  if (Number.isFinite(asInt) && String(asInt) === str) return asInt;
+
+  // Express also accepts strings like "loopback", "uniquelocal", "127.0.0.1"
+  return value;
+};
+
 const config = {
   env: nodeEnv,
   isProduction: nodeEnv === 'production',
   port: Number.parseInt(process.env.PORT, 10) || 5000,
+  // Default to trusting the first proxy hop in production (typical for reverse proxies / load balancers).
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY, nodeEnv === 'production' ? 1 : false),
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
   debugMode: process.env.DEBUG_MODE === 'true',
   cors: {
@@ -43,6 +60,7 @@ const config = {
         'http://localhost:5173',
         'http://127.0.0.1:9258',
         'http://127.0.0.1:9259',
+        "http://localhost:8080"
       ])
     ),
   },
@@ -63,6 +81,8 @@ const config = {
     port: Number.parseInt(process.env.EMAIL_PORT, 10) || 587,
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+    // Only enable for local/dev when using self-signed certs. Never enable in production.
+    allowInsecureTls: process.env.EMAIL_ALLOW_INSECURE_TLS === 'true',
   },
 };
 

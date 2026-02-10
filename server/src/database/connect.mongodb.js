@@ -18,7 +18,13 @@ const ConnectToMongodb = async uri => {
       logger.info(`MongoDB connected to: ${connect.connection.host}`);
     }
   } catch (error) {
-    logger.error('MongoDB connection error: ', error);
+    logger.error('MongoDB connection error', {
+      module: 'database',
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+      ...(config.env === 'development' && { stack: error?.stack }),
+    });
     throw ApiError.internal('MongoDB connection failed', {
       errorCode: 'DB_CONNECTION_FAILED',
       details: { message: error?.message },

@@ -10,6 +10,7 @@
     "production": "cross-env NODE_ENV=production node src/server.js",
     "seed": "cross-env NODE_ENV=development node scripts/seed.js",
     "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop",
+    "migrate:refresh-tokens-hash": "cross-env NODE_ENV=production node scripts/migrate-refresh-tokens-hash.js",
     "hashtags:sync": "cross-env NODE_ENV=development node scripts/sync-hashtags.js",
     "hashtags:sync:prune": "cross-env NODE_ENV=development node scripts/sync-hashtags.js --prune"
   },

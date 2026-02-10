@@ -60,22 +60,23 @@ LikeSchema.index({ comment: 1, createdAt: -1 });
 LikeSchema.index({ user: 1, targetType: 1, createdAt: -1 });
 
 // ============ STATICS ============
-LikeSchema.statics.likePost = async function (userId, postId) {
+LikeSchema.statics.likePost = async function (userId, postId, options = {}) {
   const Post = model("Post");
   const UserInteraction = model("UserInteraction");
+  const { session } = options;
 
-  // Check if already liked
-  const existing = await this.findOne({ user: userId, post: postId });
-  if (existing) {
-    return { success: false, message: "Already liked" };
+  let like;
+  try {
+    [like] = await this.create(
+      [{ user: userId, post: postId, targetType: "post" }],
+      { session }
+    );
+  } catch (err) {
+    if (err?.code === 11000) {
+      return { success: false, message: "Already liked", alreadyLiked: true };
+    }
+    throw err;
   }
-
-  // Create like
-  const like = await this.create({
-    user: userId,
-    post: postId,
-    targetType: "post",
-  });
 
   // Update post counter
   const post = await Post.findByIdAndUpdate(
@@ -84,38 +85,51 @@ LikeSchema.statics.likePost = async function (userId, postId) {
       $inc: { likesCount: 1 },
       $set: { lastEngagedAt: new Date() },
     },
-    { new: true }
+    { new: true, session }
   );
+  if (!post) {
+    await this.deleteOne({ _id: like._id }, { session });
+    return { success: false, message: "Post not found" };
+  }
 
   // Record interaction for recommendations
-  if (post) {
-    await UserInteraction.record({
-      user: userId,
-      targetType: "post",
-      targetId: postId,
-      interactionType: "like",
-      metadata: {
-        postAuthor: post.user,
-        postHashtags: post.hashtags,
-      },
-    });
-  }
+  await UserInteraction.record({
+    user: userId,
+    targetType: "post",
+    targetId: postId,
+    interactionType: "like",
+    metadata: {
+      postAuthor: post.user,
+      postHashtags: post.hashtags,
+    },
+  }, { session });
 
   return { success: true, like };
 };
 
-LikeSchema.statics.unlikePost = async function (userId, postId) {
+LikeSchema.statics.unlikePost = async function (userId, postId, options = {}) {
   const Post = model("Post");
   const UserInteraction = model("UserInteraction");
+  const { session } = options;
 
-  const like = await this.findOneAndDelete({ user: userId, post: postId });
+  const like = await this.findOneAndDelete({ user: userId, post: postId }).session(session);
 
   if (!like) {
     return { success: false, message: "Like not found" };
   }
 
   // Update post counter
-  await Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
+  await Post.updateOne(
+    { _id: postId },
+    [
+      {
+        $set: {
+          likesCount: { $max: [0, { $add: ["$likesCount", -1] }] },
+        },
+      },
+    ],
+    { session }
+  );
 
   // Record unlike interaction
   await UserInteraction.record({
@@ -123,43 +137,73 @@ LikeSchema.statics.unlikePost = async function (userId, postId) {
     targetType: "post",
     targetId: postId,
     interactionType: "unlike",
-  });
+  }, { session });
 
   return { success: true };
 };
 
-LikeSchema.statics.likeComment = async function (userId, commentId) {
+LikeSchema.statics.likeComment = async function (
+  userId,
+  commentId,
+  options = {}
+) {
   const Comment = model("Comment");
+  const { session } = options;
 
-  const existing = await this.findOne({ user: userId, comment: commentId });
-  if (existing) {
-    return { success: false, message: "Already liked" };
+  let like;
+  try {
+    [like] = await this.create(
+      [{ user: userId, comment: commentId, targetType: "comment" }],
+      { session }
+    );
+  } catch (err) {
+    if (err?.code === 11000) {
+      return { success: false, message: "Already liked", alreadyLiked: true };
+    }
+    throw err;
   }
 
-  const like = await this.create({
-    user: userId,
-    comment: commentId,
-    targetType: "comment",
-  });
-
-  await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: 1 } });
+  const comment = await Comment.findByIdAndUpdate(
+    commentId,
+    { $inc: { likesCount: 1 } },
+    { new: true, session }
+  );
+  if (!comment) {
+    await this.deleteOne({ _id: like._id }, { session });
+    return { success: false, message: "Comment not found" };
+  }
 
   return { success: true, like };
 };
 
-LikeSchema.statics.unlikeComment = async function (userId, commentId) {
+LikeSchema.statics.unlikeComment = async function (
+  userId,
+  commentId,
+  options = {}
+) {
   const Comment = model("Comment");
+  const { session } = options;
 
   const like = await this.findOneAndDelete({
     user: userId,
     comment: commentId,
-  });
+  }).session(session);
 
   if (!like) {
     return { success: false, message: "Like not found" };
   }
 
-  await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: -1 } });
+  await Comment.updateOne(
+    { _id: commentId },
+    [
+      {
+        $set: {
+          likesCount: { $max: [0, { $add: ["$likesCount", -1] }] },
+        },
+      },
+    ],
+    { session }
+  );
 
   return { success: true };
 };

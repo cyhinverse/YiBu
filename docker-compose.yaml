@@ -31,13 +31,15 @@ services:
       - social_network
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
     container_name: social_client
     ports:
-      - "3000:9258"
+      - "3000:80"
     environment:
-      # Vite dev proxy inside container must hit the server container, not localhost.
-      - VITE_PROXY_TARGET=http://server:5000
+      # Nginx proxies /api + /socket.io to the server container.
+      - NGINX_PROXY_PASS=http://server:5000
     depends_on:
       - server
     networks:

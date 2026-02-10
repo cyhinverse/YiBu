@@ -44,7 +44,8 @@ export const getAccessTokenCookieOptions = () =>
  */
 export const getRefreshTokenCookieOptions = () =>
   withCommonCookieOptions({
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // Keep in sync with RefreshToken TTL in DB (defaults to 30 days).
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 
 

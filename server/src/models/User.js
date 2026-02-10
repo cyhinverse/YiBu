@@ -216,7 +216,9 @@ UserSchema.methods.calculateActivityScore = function () {
 
 // ============ STATICS ============
 UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
-  const user = await this.findById(userId).select('interests location');
+  const user = await this.findById(userId)
+    .select('interests location')
+    .lean();
   const Follow = model('Follow');
 
   if (!user) return [];
@@ -225,7 +227,7 @@ UserSchema.statics.getRecommendedUsers = async function (userId, limit = 10) {
   const userObjectId = new mongoose.Types.ObjectId(userId);
 
   // Get users that current user is following
-  const following = await Follow.find({ follower: userId })
+  const following = await Follow.find({ follower: userId, status: 'active' })
     .select('following')
     .lean();
   const followingIds = following.map(f => f.following);

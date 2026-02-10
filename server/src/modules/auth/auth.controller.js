@@ -118,6 +118,7 @@ const AuthController = {
 
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
+      // With `trust proxy` enabled, req.ip reflects X-Forwarded-For in production.
       ip: req.ip || req.connection?.remoteAddress,
     };
 

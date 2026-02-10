@@ -1,4 +1,5 @@
 import { Schema, Types, model } from "mongoose";
+import { hashRefreshToken } from "../utils/refreshTokenHash.js";
 
 /**
  * RefreshToken Model - Optimized for secure token management
@@ -89,6 +90,7 @@ RefreshTokenSchema.index({ user: 1, "device.id": 1 });
 // ============ STATICS ============
 RefreshTokenSchema.statics.createToken = async function (data) {
   const { user, token, family, device } = data;
+  const tokenHash = hashRefreshToken(token);
 
   // Invalidate existing token for same device if exists
   if (device?.id) {
@@ -101,20 +103,28 @@ RefreshTokenSchema.statics.createToken = async function (data) {
 
   return this.create({
     user,
-    token,
-    family: family || token, // Use token as family if not provided
+    token: tokenHash,
+    family: family || tokenHash, // Use token hash as family if not provided
     device,
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
 };
 
 RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
-  const existingToken = await this.findOne({ token, isRevoked: false });
+  const tokenHash = hashRefreshToken(token);
+  const newTokenHash = hashRefreshToken(newToken);
+
+  // Prefer hashed lookup; fall back to legacy plaintext tokens for backward compatibility.
+  let existingToken = await this.findOne({ token: tokenHash, isRevoked: false });
+  const matchedLegacyPlaintext = !existingToken;
+  if (!existingToken) {
+    existingToken = await this.findOne({ token, isRevoked: false });
+  }
 
   if (!existingToken) {
     // Token not found or invalid - possible token reuse attack
     // Invalidate entire family
-    const stolenToken = await this.findOne({ token });
+    const stolenToken = (await this.findOne({ token: tokenHash })) || (await this.findOne({ token }));
     if (stolenToken) {
       await this.updateMany(
         { family: stolenToken.family },
@@ -126,6 +136,9 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
 
   // Check if expired
   if (existingToken.expiresAt < new Date()) {
+    if (matchedLegacyPlaintext && existingToken.token === token) {
+      existingToken.token = tokenHash;
+    }
     existingToken.isRevoked = true;
     existingToken.revokedReason = 'expired';
     await existingToken.save();
@@ -135,13 +148,16 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
   // Invalidate current token
   existingToken.isRevoked = true;
   existingToken.revokedReason = 'rotated';
+  if (matchedLegacyPlaintext && existingToken.token === token) {
+    existingToken.token = tokenHash;
+  }
   await existingToken.save();
 
 
   // Create new token in same family
   const newRefreshToken = await this.create({
     user: existingToken.user,
-    token: newToken,
+    token: newTokenHash,
     family: existingToken.family,
     device: existingToken.device,
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -155,8 +171,9 @@ RefreshTokenSchema.statics.verifyAndRotate = async function (token, newToken) {
 };
 
 RefreshTokenSchema.statics.revokeToken = async function (token) {
+  const tokenHash = hashRefreshToken(token);
   return this.updateOne(
-    { token },
+    { token: { $in: [token, tokenHash] } },
     { $set: { isRevoked: true, revokedReason: 'manual' } }
   );
 };
@@ -167,7 +184,8 @@ RefreshTokenSchema.statics.revokeAllForUser = async function (
 ) {
   const query = { user: userId, isRevoked: false };
   if (exceptToken) {
-    query.token = { $ne: exceptToken };
+    const exceptHash = hashRefreshToken(exceptToken);
+    query.token = { $nin: [exceptToken, exceptHash] };
   }
   return this.updateMany(
     query,
@@ -191,7 +209,8 @@ RefreshTokenSchema.statics.getActiveSessions = async function (userId) {
 
 
 RefreshTokenSchema.statics.updateLastUsed = async function (token) {
-  return this.updateOne({ token }, { $set: { lastUsedAt: new Date() } });
+  const tokenHash = hashRefreshToken(token);
+  return this.updateOne({ token: { $in: [token, tokenHash] } }, { $set: { lastUsedAt: new Date() } });
 };
 
 const RefreshToken = model("RefreshToken", RefreshTokenSchema);

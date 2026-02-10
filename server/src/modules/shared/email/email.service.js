@@ -1,12 +1,20 @@
 import nodemailer from 'nodemailer';
 import config from '../../../configs/config.js';
 import logger from '../../../configs/logger.js';
+import crypto from 'crypto';
+
+const hashPII = value => {
+  if (!value) return null;
+  return crypto.createHash('sha256').update(String(value).toLowerCase()).digest('hex').slice(0, 12);
+};
 
 class EmailService {
   /**
    * Initialize Email Service with nodemailer configuration
    */
   constructor() {
+    const tls = config.email.allowInsecureTls ? { rejectUnauthorized: false } : undefined;
+
     this.transporter = nodemailer.createTransport({
       host: config.email.host,
       port: config.email.port,
@@ -15,9 +23,7 @@ class EmailService {
         user: config.email.user,
         pass: config.email.pass,
       },
-      tls: {
-        rejectUnauthorized: false,
-      },
+      ...(tls ? { tls } : {}),
     });
   }
 
@@ -30,12 +36,17 @@ class EmailService {
    */
   async sendEmail(to, subject, html) {
     try {
-      // Log email config for debugging
-      logger.info(
-        `Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`
-      );
-      logger.info(`Email user configured: ${config.email.user ? 'Yes' : 'No'}`);
-      logger.info(`Email pass configured: ${config.email.pass ? 'Yes' : 'No'}`);
+      if (config.debugMode) {
+        logger.info('Attempting to send email', {
+          module: 'email',
+          toHash: hashPII(to),
+          host: config.email.host,
+          port: config.email.port,
+          userConfigured: Boolean(config.email.user),
+          passConfigured: Boolean(config.email.pass),
+          allowInsecureTls: Boolean(config.email.allowInsecureTls),
+        });
+      }
 
       const info = await this.transporter.sendMail({
         from: `"YiBu Security" <${config.email.user}>`,
@@ -44,11 +55,17 @@ class EmailService {
         html,
       });
 
-      logger.info(`Email sent successfully to ${to}: ${info.messageId}`);
+      logger.info('Email sent', { module: 'email', toHash: hashPII(to), messageId: info.messageId });
       return info;
     } catch (error) {
-      logger.error(`Error sending email to ${to}:`, error.message);
-      logger.error(`Full error:`, error);
+      logger.error('Email send failed', {
+        module: 'email',
+        toHash: hashPII(to),
+        message: error?.message,
+        code: error?.code,
+        responseCode: error?.responseCode,
+        ...(config.env === 'development' && { stack: error?.stack }),
+      });
       return null;
     }
   }

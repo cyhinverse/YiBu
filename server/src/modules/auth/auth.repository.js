@@ -1,6 +1,7 @@
 import User from '../../models/User.js';
 import UserSettings from '../../models/UserSettings.js';
 import RefreshToken from '../../models/RefreshToken.js';
+import { hashRefreshToken } from '../../utils/refreshTokenHash.js';
 
 const createUser = data => User.create(data);
 
@@ -31,10 +32,14 @@ const updateUserSettings = (userId, update) => {
   return UserSettings.findOneAndUpdate({ user: userId }, update, { new: true });
 };
 
-const findRefreshToken = token => RefreshToken.findOne({ token });
+const findRefreshToken = token => {
+  const tokenHash = hashRefreshToken(token);
+  return RefreshToken.findOne({ token: { $in: [token, tokenHash] } });
+};
 
 const findActiveRefreshToken = token => {
-  return RefreshToken.findOne({ token, isRevoked: false });
+  const tokenHash = hashRefreshToken(token);
+  return RefreshToken.findOne({ token: { $in: [token, tokenHash] }, isRevoked: false });
 };
 
 const revokeRefreshToken = token => RefreshToken.revokeToken(token);

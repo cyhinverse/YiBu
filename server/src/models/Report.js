@@ -200,15 +200,19 @@ ReportSchema.statics.PRIORITY_SCORES = {
 };
 
 ReportSchema.statics.createReport = async function (data) {
-  const { reporter, targetType, targetId, category, description, parentPost } =
+  let { reporter, targetType, targetId, category, reason, description, parentPost } =
     data;
+
+  if (!reason) {
+    return { success: false, error: 'Reason is required' };
+  }
 
   // Check for duplicate report from same user
   const existing = await this.findOne({
     reporter,
     targetType,
     targetId,
-    status: { $in: ['pending', 'under_review'] },
+    status: { $in: ['pending', 'reviewing'] },
   });
 
   if (existing) {
@@ -222,24 +226,23 @@ ReportSchema.statics.createReport = async function (data) {
   if (targetType === 'post') {
     const Post = model('Post');
     const post = await Post.findById(targetId).lean();
-    if (post) {
-      targetUser = post.user;
-      contentSnapshot = {
-        text: post.caption,
-        media: post.media?.map(m => m.url) || [],
-        capturedAt: new Date(),
-      };
-    }
+    if (!post) return { success: false, error: 'Content not found' };
+    targetUser = post.user;
+    contentSnapshot = {
+      text: post.caption,
+      media: post.media?.map(m => m.url) || [],
+      capturedAt: new Date(),
+    };
   } else if (targetType === 'comment') {
     const Comment = model('Comment');
     const comment = await Comment.findById(targetId).lean();
-    if (comment) {
-      targetUser = comment.user;
-      contentSnapshot = {
-        text: comment.content,
-        capturedAt: new Date(),
-      };
-    }
+    if (!comment) return { success: false, error: 'Content not found' };
+    targetUser = comment.user;
+    contentSnapshot = {
+      text: comment.content,
+      capturedAt: new Date(),
+    };
+    if (!parentPost && comment.post) parentPost = comment.post;
   } else if (targetType === 'user') {
     targetUser = targetId;
   }
@@ -251,7 +254,7 @@ ReportSchema.statics.createReport = async function (data) {
   const existingReports = await this.countDocuments({
     targetType,
     targetId,
-    status: { $in: ['pending', 'under_review'] },
+    status: { $in: ['pending', 'reviewing'] },
   });
 
   const priority = basePriority + existingReports * 10;
@@ -265,6 +268,7 @@ ReportSchema.statics.createReport = async function (data) {
     targetId,
     targetUser,
     category,
+    reason,
     description,
     contentSnapshot,
     parentPost,

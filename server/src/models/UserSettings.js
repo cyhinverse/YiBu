@@ -118,14 +118,13 @@ UserSettingsSchema.index({ blockedUsers: 1 });
 UserSettingsSchema.index({ mutedUsers: 1 });
 
 // ============ STATICS ============
-UserSettingsSchema.statics.getOrCreate = async function (userId) {
-  let settings = await this.findOne({ user: userId });
-
-  if (!settings) {
-    settings = await this.create({ user: userId });
-  }
-
-  return settings;
+UserSettingsSchema.statics.getOrCreate = async function (userId, options = {}) {
+  const { session } = options;
+  return this.findOneAndUpdate(
+    { user: userId },
+    { $setOnInsert: { user: userId } },
+    { new: true, upsert: true, setDefaultsOnInsert: true, session }
+  );
 };
 
 UserSettingsSchema.statics.isBlocked = async function (userId, targetUserId) {

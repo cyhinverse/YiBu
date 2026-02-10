@@ -7,6 +7,8 @@
  * @param {Boolean} options.exponentialBackoff - Use exponential backoff (default: true)
  * @returns {Promise} - Result of the operation
  */
+import logger from '../configs/logger.js';
+
 export const retryOperation = async (operation, options = {}) => {
   const {
     maxRetries = 3,
@@ -46,11 +48,12 @@ export const retryOperation = async (operation, options = {}) => {
       // Add some jitter to prevent thundering herd
       const jitter = Math.random() * 50;
 
-      console.log(
-        `[RetryOperation] Write conflict detected, retrying (attempt ${attempt}/${maxRetries}) after ${Math.round(
-          delay + jitter
-        )}ms`
-      );
+      logger.warn('Write conflict detected, retrying', {
+        module: 'database',
+        attempt,
+        maxRetries,
+        delayMs: Math.round(delay + jitter),
+      });
 
       await new Promise(resolve => setTimeout(resolve, delay + jitter));
     }

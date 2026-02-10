@@ -135,14 +135,17 @@ MessageSchema.statics.getConversationId = function (userId1, userId2) {
   return [userId1.toString(), userId2.toString()].sort().join("_");
 };
 
-MessageSchema.statics.sendMessage = async function (data) {
+MessageSchema.statics.sendMessage = async function (data, options = {}) {
   const { sender, receiver, content, media, replyTo } = data;
+  const { session } = options;
 
   // Check if sender can message receiver
   const UserSettings = model("UserSettings");
   const receiverSettings = await UserSettings.findOne({
     user: receiver,
-  }).lean();
+  })
+    .session(session)
+    .lean();
 
   // Check blocked
   if (
@@ -155,7 +158,13 @@ MessageSchema.statics.sendMessage = async function (data) {
 
   // Check message permissions
   const User = model("User");
-  const receiverUser = await User.findById(receiver).select("privacy").lean();
+  const receiverUser = await User.findById(receiver)
+    .select("privacy")
+    .session(session)
+    .lean();
+  if (!receiverUser) {
+    return { success: false, error: "User not found" };
+  }
 
   if (receiverUser?.privacy?.allowMessages === "none") {
     return { success: false, error: "User has disabled messages" };
@@ -163,14 +172,18 @@ MessageSchema.statics.sendMessage = async function (data) {
 
   if (receiverUser?.privacy?.allowMessages === "followers") {
     const Follow = model("Follow");
-    const isFollowing = await Follow.findOne({
-      follower: receiver,
-      following: sender,
-    });
-    if (!isFollowing) {
+    // "followers" = only people who follow the receiver can message them.
+    const isFollower = await Follow.findOne({
+      follower: sender,
+      following: receiver,
+      status: "active",
+    })
+      .session(session)
+      .lean();
+    if (!isFollower) {
       return {
         success: false,
-        error: "User only accepts messages from people they follow",
+        error: "User only accepts messages from followers",
       };
     }
   }
@@ -178,15 +191,20 @@ MessageSchema.statics.sendMessage = async function (data) {
   const conversationId = this.getConversationId(sender, receiver);
   const messageType = media && media.length > 0 ? "media" : "text";
 
-  const message = await this.create({
-    conversationId,
-    sender,
-    receiver,
-    content,
-    media,
-    messageType,
-    replyTo,
-  });
+  const [message] = await this.create(
+    [
+      {
+        conversationId,
+        sender,
+        receiver,
+        content,
+        media,
+        messageType,
+        replyTo,
+      },
+    ],
+    { session }
+  );
 
   return {
     success: true,

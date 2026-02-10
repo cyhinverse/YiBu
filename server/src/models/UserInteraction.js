@@ -171,7 +171,7 @@ UserInteractionSchema.statics.INTERACTION_WEIGHTS = {
 };
 
 // Record an interaction
-UserInteractionSchema.statics.record = async function (data) {
+UserInteractionSchema.statics.record = async function (data, options = {}) {
   const {
     user,
     targetType,
@@ -180,6 +180,7 @@ UserInteractionSchema.statics.record = async function (data) {
     context = {},
     metadata = {},
   } = data;
+  const { session } = options;
 
   const weight = this.INTERACTION_WEIGHTS[interactionType] || 1;
 
@@ -213,7 +214,7 @@ UserInteractionSchema.statics.record = async function (data) {
       targetId,
       targetType,
       interactionType: opposites[interactionType],
-    });
+    }, { session });
   }
 
   return this.create({
@@ -225,7 +226,7 @@ UserInteractionSchema.statics.record = async function (data) {
     sentiment,
     context,
     metadata,
-  });
+  }, { session });
 };
 
 // Get user's interaction profile

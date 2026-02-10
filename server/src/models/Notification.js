@@ -136,6 +136,7 @@ const NotificationSchema = new Schema(
 // Primary queries
 NotificationSchema.index({ recipient: 1, createdAt: -1 });
 NotificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ recipient: 1, updatedAt: -1 });
 
 // For grouping
 NotificationSchema.index({ recipient: 1, groupKey: 1 });
@@ -189,10 +190,12 @@ NotificationSchema.statics.createNotification = async function (data) {
     if (existing) {
       // Update existing notification
       existing.additionalSenders = existing.additionalSenders || [];
-      if (
-        !existing.additionalSenders.includes(sender) &&
-        existing.sender.toString() !== sender.toString()
-      ) {
+      const senderId = sender.toString();
+      const primarySenderId = existing.sender?.toString();
+      const additionalIds = new Set(
+        existing.additionalSenders.map(s => s.toString())
+      );
+      if (primarySenderId !== senderId && !additionalIds.has(senderId)) {
         existing.additionalSenders.push(sender);
         // Cap the array to the last 10 senders to prevent unbounded growth
         if (existing.additionalSenders.length > 10) {
@@ -201,7 +204,6 @@ NotificationSchema.statics.createNotification = async function (data) {
       }
       existing.groupCount = 1 + existing.additionalSenders.length;
       existing.content = content; // Update content with new count
-      existing.createdAt = new Date(); // Bump to top
       return existing.save();
     }
   }
@@ -234,7 +236,7 @@ NotificationSchema.statics.getNotifications = async function (
   }
 
   return this.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ updatedAt: -1, createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
     .populate('sender', 'username name avatar verified')
@@ -253,7 +255,9 @@ NotificationSchema.statics.markAsRead = async function (
     query._id = { $in: notificationIds };
   }
 
-  return this.updateMany(query, { $set: { isRead: true } });
+  return this.updateMany(query, {
+    $set: { isRead: true, readAt: new Date() },
+  });
 };
 
 NotificationSchema.statics.getUnreadCount = async function (userId) {

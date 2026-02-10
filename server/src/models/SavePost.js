@@ -68,42 +68,62 @@ SavePostSchema.index({ post: 1, createdAt: -1 });
 SavePostSchema.statics.savePost = async function (
   userId,
   postId,
-  collection = "default"
+  collection = "default",
+  options = {}
 ) {
   const Post = model("Post");
   const UserInteraction = model("UserInteraction");
+  const { session } = options;
 
-  // Check if already saved
-  const existing = await this.findOne({ user: userId, post: postId });
-  if (existing) {
-    // Update collection if different
-    if (existing.folder !== collection) {
-      existing.folder = collection;
-      await existing.save();
-      return { success: true, save: existing, updated: true };
-    }
+  const now = new Date();
+  const result = await this.updateOne(
+    { user: userId, post: postId },
+    {
+      $set: { folder: collection },
+      $setOnInsert: {
+        user: userId,
+        post: postId,
+        folder: collection,
+        createdAt: now,
+        updatedAt: now,
+      },
+    },
+    { upsert: true, session, timestamps: false }
+  );
+
+  const created = !!(result?.upsertedId || result?.upsertedCount);
+  const updated = !created && result?.modifiedCount > 0;
+
+  if (!created && !updated) {
     return { success: false, message: "Already saved" };
   }
 
-  // Create save
-  const save = await this.create({
-    user: userId,
-    post: postId,
-    folder: collection,
-  });
+  const save = await this.findOne({ user: userId, post: postId }).session(
+    session
+  );
+  if (!save) {
+    return { success: false, message: "Save not found" };
+  }
 
   // Update post counter
-  const post = await Post.findByIdAndUpdate(
-    postId,
-    {
-      $inc: { savesCount: 1 },
-      $set: { lastEngagedAt: new Date() },
-    },
-    { new: true }
-  );
+  let post = null;
+  if (created) {
+    post = await Post.findByIdAndUpdate(
+      postId,
+      {
+        $inc: { savesCount: 1 },
+        $set: { lastEngagedAt: new Date() },
+      },
+      { new: true, session }
+    );
+    if (!post) {
+      await this.deleteOne({ _id: save._id }, { session });
+      return { success: false, message: "Post not found" };
+    }
+  }
 
   // Record interaction
-  if (post) {
+  if (created && post) {
     await UserInteraction.record({
       user: userId,
       targetType: "post",
@@ -113,30 +133,41 @@ SavePostSchema.statics.savePost = async function (
         postAuthor: post.user,
         postHashtags: post.hashtags,
       },
-    });
+    }, { session });
   }
 
-  return { success: true, save };
+  return { success: true, save, updated };
 };
 
-SavePostSchema.statics.unsavePost = async function (userId, postId) {
+SavePostSchema.statics.unsavePost = async function (userId, postId, options = {}) {
   const Post = model("Post");
   const UserInteraction = model("UserInteraction");
+  const { session } = options;
 
-  const save = await this.findOneAndDelete({ user: userId, post: postId });
+  const save = await this.findOneAndDelete({ user: userId, post: postId }).session(session);
 
   if (!save) {
     return { success: false, message: "Save not found" };
   }
 
-  await Post.findByIdAndUpdate(postId, { $inc: { savesCount: -1 } });
+  await Post.updateOne(
+    { _id: postId },
+    [
+      {
+        $set: {
+          savesCount: { $max: [0, { $add: ["$savesCount", -1] }] },
+        },
+      },
+    ],
+    { session }
+  );
 
   await UserInteraction.record({
     user: userId,
     targetType: "post",
     targetId: postId,
     interactionType: "unsave",
-  });
+  }, { session });
 
   return { success: true };
 };

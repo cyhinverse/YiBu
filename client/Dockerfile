@@ -1,15 +1,32 @@
-FROM node:20-alpine
+
+# stage 1
+FROM node:20-alpine as builder
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
+# Copy client source (must be within build context: ./client)
 COPY . .
 
-# Expose Vite port (from vite.config.js)
-EXPOSE 9258
+RUN npm run build
 
-# Run dev server with --host to allow external access
-CMD ["npm", "run", "dev", "--", "--host"]
+
+# stage 2
+FROM nginx:alpine
+
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY nginx.conf /etc/nginx/nginx.conf
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+
+
+
+

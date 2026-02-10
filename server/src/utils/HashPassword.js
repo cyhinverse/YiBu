@@ -1,18 +1,29 @@
-import bcrypt from "bcrypt";
+import bcrypt from 'bcrypt';
+import logger from '../configs/logger.js';
 
-import logger from "../configs/logger.js";
-
-export const hashPassword = async (password) => {
+export const hashPassword = async password => {
   try {
-    const salt = 10;
-    const PasswordHashed = await bcrypt.hash(password, salt);
-    return PasswordHashed;
-  } catch (e) {
-    logger.error(`Error hash password ${e}`);
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+  } catch (err) {
+    logger.error('Password hash failed', {
+      module: 'auth',
+      message: err?.message,
+      stack: err?.stack,
+    });
+    throw err;
   }
 };
 
 export const comparePassword = async (password, hashedPassword) => {
-  const isMatch = await bcrypt.compare(password, hashedPassword);
-  return isMatch;
+  try {
+    return await bcrypt.compare(password, hashedPassword);
+  } catch (err) {
+    logger.error('Password compare failed', {
+      module: 'auth',
+      message: err?.message,
+      stack: err?.stack,
+    });
+    throw err;
+  }
 };

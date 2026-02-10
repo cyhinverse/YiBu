@@ -2,15 +2,17 @@ import User from '../../models/User.js';
 import RefreshToken from '../../models/RefreshToken.js';
 import UserSettings from '../../models/UserSettings.js';
 import { hashPassword, comparePassword } from '../../utils/HashPassword.js';
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-} from '../../utils/GenerateTokens.js';
+import { generateAccessToken } from '../../utils/GenerateTokens.js';
 import crypto from 'crypto';
 import logger from '../../configs/logger.js';
 import EmailService from '../shared/email/email.service.js';
 import ApiError from '../../helpers/ApiError.js';
+import { hashRefreshToken } from '../../utils/refreshTokenHash.js';
+
+const hashPII = value => {
+  if (!value) return null;
+  return crypto.createHash('sha256').update(String(value).toLowerCase()).digest('hex').slice(0, 12);
+};
 
 
 /**
@@ -259,11 +261,13 @@ class AuthService {
 
   static async _createRefreshToken(userId, deviceInfo = {}) {
     const family = crypto.randomBytes(16).toString('hex');
-    const token = crypto.randomBytes(40).toString('hex');
+    const token = crypto.randomBytes(40).toString('hex'); // raw token for client
+    const tokenHash = hashRefreshToken(token);
 
     const refreshToken = await RefreshToken.create({
       user: userId,
-      token,
+      // Persist only the hash so DB leaks don't immediately grant session access.
+      token: tokenHash,
       family,
       device: {
         userAgent: deviceInfo.userAgent || 'unknown',
@@ -276,13 +280,19 @@ class AuthService {
   }
 
   static async refreshToken(token, deviceInfo = {}) {
-    const refreshTokenDoc = await RefreshToken.findOne({
-      token,
-      isRevoked: false,
-    });
+    const tokenHash = hashRefreshToken(token);
+
+    // Prefer hashed lookup; fall back to legacy plaintext tokens for backward compatibility.
+    let refreshTokenDoc = await RefreshToken.findOne({ token: tokenHash, isRevoked: false });
+    const matchedLegacyPlaintext = !refreshTokenDoc;
+    if (!refreshTokenDoc) {
+      refreshTokenDoc = await RefreshToken.findOne({ token, isRevoked: false });
+    }
 
     if (!refreshTokenDoc) {
-      const compromisedToken = await RefreshToken.findOne({ token });
+      const compromisedToken =
+        (await RefreshToken.findOne({ token: tokenHash })) ||
+        (await RefreshToken.findOne({ token }));
 
       if (compromisedToken) {
         await RefreshToken.updateMany(
@@ -299,6 +309,10 @@ class AuthService {
     }
 
     if (refreshTokenDoc.expiresAt < new Date()) {
+      if (matchedLegacyPlaintext && refreshTokenDoc.token === token) {
+        // Scrub legacy plaintext token before persisting revocation state.
+        refreshTokenDoc.token = tokenHash;
+      }
       refreshTokenDoc.isRevoked = true;
       refreshTokenDoc.revokedReason = 'expired';
       await refreshTokenDoc.save();
@@ -314,12 +328,17 @@ class AuthService {
 
     refreshTokenDoc.isRevoked = true;
     refreshTokenDoc.revokedReason = 'rotated';
+    if (matchedLegacyPlaintext && refreshTokenDoc.token === token) {
+      // Scrub legacy plaintext token before persisting revocation state.
+      refreshTokenDoc.token = tokenHash;
+    }
     await refreshTokenDoc.save();
 
     const newToken = crypto.randomBytes(40).toString('hex');
+    const newTokenHash = hashRefreshToken(newToken);
     await RefreshToken.create({
       user: user._id,
-      token: newToken,
+      token: newTokenHash,
       family: refreshTokenDoc.family,
       device: {
         userAgent:
@@ -346,11 +365,19 @@ class AuthService {
       return { success: true };
     }
 
-    const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    let tokenDoc = await RefreshToken.findOne({ token: refreshTokenHash });
+    const matchedLegacyPlaintext = !tokenDoc;
+    if (!tokenDoc) {
+      tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+    }
 
     if (tokenDoc) {
       tokenDoc.isRevoked = true;
       tokenDoc.revokedReason = 'logout';
+      if (matchedLegacyPlaintext && tokenDoc.token === refreshToken) {
+        tokenDoc.token = refreshTokenHash;
+      }
       await tokenDoc.save();
     }
 
@@ -399,16 +426,13 @@ class AuthService {
   }
 
   static async requestPasswordReset(email) {
-    logger.info(`Password reset requested for email: ${email}`);
+    logger.info('Password reset requested', { module: 'auth', emailHash: hashPII(email) });
 
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      logger.warn(`Password reset: User not found for email ${email}`);
       return { success: true };
     }
-
-    logger.info(`Password reset: User found - ${user._id}`);
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = crypto
@@ -422,14 +446,15 @@ class AuthService {
     });
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
-    logger.info(`Password reset link generated: ${resetLink}`);
 
     const emailResult = await EmailService.sendPasswordReset(email, resetLink);
-    logger.info(
-      `Password reset email result: ${emailResult ? 'SUCCESS' : 'FAILED'}`
-    );
+    logger.info('Password reset email sent', {
+      module: 'auth',
+      emailHash: hashPII(email),
+      ok: Boolean(emailResult),
+    });
 
-    return { success: true, resetToken };
+    return { success: true };
   }
 
   static async resetPassword(resetToken, newPassword) {
@@ -632,6 +657,7 @@ class AuthService {
   }
 
   static async getActiveSessions(userId, currentRefreshToken = null) {
+    const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null;
     const sessions = await RefreshToken.find({
       user: userId,
       isRevoked: false,
@@ -642,7 +668,9 @@ class AuthService {
       .lean();
 
     return sessions.map(session => {
-      const isCurrent = currentRefreshToken === session.token;
+      const isCurrent =
+        Boolean(currentRefreshToken) &&
+        (session.token === currentRefreshToken || (currentHash && session.token === currentHash));
       return {
         id: session._id,
         deviceType: session.device?.type || 'unknown',

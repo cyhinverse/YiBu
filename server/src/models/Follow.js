@@ -83,20 +83,34 @@ FollowSchema.index({ follower: 1, status: 1, interactionScore: -1 });
 FollowSchema.index({ follower: 1, isCloseFriend: 1 });
 
 // ============ STATICS ============
-FollowSchema.statics.follow = async function (followerId, followingId) {
+FollowSchema.statics.follow = async function (
+  followerId,
+  followingId,
+  options = {}
+) {
   const User = model('User');
   const UserInteraction = model('UserInteraction');
+  const { session } = options;
 
   // Can't follow yourself
   if (followerId.toString() === followingId.toString()) {
     return { success: false, error: 'Cannot follow yourself' };
   }
 
+  const targetUser = await User.findById(followingId)
+    .select('privacy')
+    .session(session)
+    .lean();
+  if (!targetUser) {
+    return { success: false, error: 'User not found' };
+  }
+
   // Check if already following
   const existing = await this.findOne({
     follower: followerId,
     following: followingId,
-  });
+  }).session(session);
+  let previousStatus = existing?.status;
   if (existing) {
     if (existing.status === 'active') {
       return { success: false, error: 'Already following' };
@@ -107,24 +121,62 @@ FollowSchema.statics.follow = async function (followerId, followingId) {
   }
 
   // Check target user's privacy
-  const targetUser = await User.findById(followingId).select('privacy').lean();
   const status =
     targetUser?.privacy?.profileVisibility === 'private' ? 'pending' : 'active';
 
   // Create or update follow
-  const follow = existing
-    ? await this.findByIdAndUpdate(existing._id, { status }, { new: true })
-    : await this.create({
-        follower: followerId,
-        following: followingId,
-        status,
-      });
+  let follow;
+  if (existing) {
+    follow = await this.findByIdAndUpdate(
+      existing._id,
+      { status },
+      { new: true, session }
+    );
+  } else {
+    try {
+      [follow] = await this.create(
+        [{ follower: followerId, following: followingId, status }],
+        { session }
+      );
+    } catch (err) {
+      // Unique index (follower, following) - treat as idempotent race.
+      if (err?.code === 11000) {
+        const doc = await this.findOne({
+          follower: followerId,
+          following: followingId,
+        }).session(session);
+        if (doc?.status === 'active') {
+          return { success: false, error: 'Already following' };
+        }
+        if (doc?.status === 'pending') {
+          return { success: false, error: 'Follow request pending' };
+        }
+        previousStatus = doc?.status;
+        follow =
+          doc && doc.status !== status
+            ? await this.findByIdAndUpdate(doc._id, { status }, { new: true, session })
+            : doc;
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const becameActive = status === 'active' && previousStatus !== 'active';
 
   // Update counters if active
-  if (status === 'active') {
+  if (becameActive) {
     await Promise.all([
-      User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } }),
-      User.updateOne({ _id: followingId }, { $inc: { followersCount: 1 } }),
+      User.updateOne(
+        { _id: followerId },
+        { $inc: { followingCount: 1 } },
+        { session }
+      ),
+      User.updateOne(
+        { _id: followingId },
+        { $inc: { followersCount: 1 } },
+        { session }
+      ),
     ]);
 
     // Record interaction
@@ -133,20 +185,25 @@ FollowSchema.statics.follow = async function (followerId, followingId) {
       targetType: 'user',
       targetId: followingId,
       interactionType: 'follow',
-    });
+    }, { session });
   }
 
   return { success: true, follow, status };
 };
 
-FollowSchema.statics.unfollow = async function (followerId, followingId) {
+FollowSchema.statics.unfollow = async function (
+  followerId,
+  followingId,
+  options = {}
+) {
   const User = model('User');
   const UserInteraction = model('UserInteraction');
+  const { session } = options;
 
   const follow = await this.findOneAndDelete({
     follower: followerId,
     following: followingId,
-  });
+  }).session(session);
 
   if (!follow) {
     return { success: false, error: 'Not following' };
@@ -155,8 +212,32 @@ FollowSchema.statics.unfollow = async function (followerId, followingId) {
   // Update counters if was active
   if (follow.status === 'active') {
     await Promise.all([
-      User.updateOne({ _id: followerId }, { $inc: { followingCount: -1 } }),
-      User.updateOne({ _id: followingId }, { $inc: { followersCount: -1 } }),
+      User.updateOne(
+        { _id: followerId },
+        [
+          {
+            $set: {
+              followingCount: {
+                $max: [0, { $add: ['$followingCount', -1] }],
+              },
+            },
+          },
+        ],
+        { session }
+      ),
+      User.updateOne(
+        { _id: followingId },
+        [
+          {
+            $set: {
+              followersCount: {
+                $max: [0, { $add: ['$followersCount', -1] }],
+              },
+            },
+          },
+        ],
+        { session }
+      ),
     ]);
 
     // Record interaction
@@ -165,21 +246,26 @@ FollowSchema.statics.unfollow = async function (followerId, followingId) {
       targetType: 'user',
       targetId: followingId,
       interactionType: 'unfollow',
-    });
+    }, { session });
   }
 
   return { success: true };
 };
 
-FollowSchema.statics.acceptFollowRequest = async function (userId, followerId) {
+FollowSchema.statics.acceptFollowRequest = async function (
+  userId,
+  followerId,
+  options = {}
+) {
   const User = model('User');
   const self = this;
+  const { session } = options;
 
   const follow = await retryOperation(() =>
     self.findOneAndUpdate(
       { follower: followerId, following: userId, status: 'pending' },
       { status: 'active' },
-      { new: true }
+      { new: true, session }
     )
   );
 
@@ -189,21 +275,34 @@ FollowSchema.statics.acceptFollowRequest = async function (userId, followerId) {
 
   // Update counters
   await Promise.all([
-    User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } }),
-    User.updateOne({ _id: userId }, { $inc: { followersCount: 1 } }),
+    User.updateOne(
+      { _id: followerId },
+      { $inc: { followingCount: 1 } },
+      { session }
+    ),
+    User.updateOne(
+      { _id: userId },
+      { $inc: { followersCount: 1 } },
+      { session }
+    ),
   ]);
 
   return { success: true, follow };
 };
 
-FollowSchema.statics.rejectFollowRequest = async function (userId, followerId) {
+FollowSchema.statics.rejectFollowRequest = async function (
+  userId,
+  followerId,
+  options = {}
+) {
   const self = this;
+  const { session } = options;
 
   const follow = await retryOperation(() =>
     self.findOneAndUpdate(
       { follower: followerId, following: userId, status: 'pending' },
       { status: 'rejected' },
-      { new: true }
+      { new: true, session }
     )
   );
 
