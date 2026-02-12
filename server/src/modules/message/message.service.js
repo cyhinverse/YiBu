@@ -5,9 +5,12 @@ import UserSettings from '../../models/UserSettings.js';
 import Follow from '../../models/Follow.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
+import { escapeRegExp } from '../../utils/escapeRegExp.js';
 import socketService from '../shared/socket/socket.service.js';
 import Conversation from '../../models/Conversation.js';
 import ApiError from '../../helpers/ApiError.js';
+
+const LEGACY_MEDIA_MESSAGE_TYPES = new Set(['image', 'video', 'audio', 'file']);
 
 
 /**
@@ -20,6 +23,22 @@ import ApiError from '../../helpers/ApiError.js';
  * 4. Pagination with cursor-based loading
  */
 class MessageService {
+  static normalizeMessageType(rawType, hasMedia = false) {
+    if (!rawType) {
+      return hasMedia ? 'media' : 'text';
+    }
+
+    if (LEGACY_MEDIA_MESSAGE_TYPES.has(rawType)) {
+      return 'media';
+    }
+
+    if (rawType === 'media' || rawType === 'system' || rawType === 'reply') {
+      return rawType;
+    }
+
+    return hasMedia ? 'media' : 'text';
+  }
+
   /**
    * Generate conversation ID from 2 user IDs
    * @param {string} userId1 - First user ID
@@ -188,13 +207,15 @@ class MessageService {
    * @returns {Promise<Object>} Created conversation object
    */
   static async createGroupConversation(userId, data) {
-    const { participantIds, groupName, groupAvatar } = data;
+    const { participantIds, groupName, groupAvatar, name, avatar } = data;
+    const finalGroupName = groupName || name;
+    const finalGroupAvatar = groupAvatar || avatar;
 
     const members = [...new Set([userId, ...participantIds])];
 
     const conversation = await Conversation.create({
-      name: groupName,
-      avatar: groupAvatar,
+      name: finalGroupName,
+      avatar: finalGroupAvatar,
       isGroup: true,
       members: members,
       admin: userId,
@@ -224,8 +245,11 @@ class MessageService {
 
     }
 
-    if (data.groupName) conversation.name = data.groupName;
-    if (data.groupAvatar) conversation.avatar = data.groupAvatar;
+    const finalGroupName = data.groupName || data.name;
+    const finalGroupAvatar = data.groupAvatar || data.avatar;
+
+    if (finalGroupName) conversation.name = finalGroupName;
+    if (finalGroupAvatar) conversation.avatar = finalGroupAvatar;
 
     await conversation.save();
     return Conversation.findById(conversationId)
@@ -430,6 +454,7 @@ class MessageService {
       Message.find(query)
         .populate('sender', 'username name avatar')
         .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
       Message.countDocuments(query),
@@ -539,45 +564,41 @@ class MessageService {
 
     }
 
-    const { content, type = 'text', media = [], replyTo } = messageData;
+    const { content, type, messageType, media = [], replyTo } = messageData;
+    const normalizedMessageType = this.normalizeMessageType(
+      type || messageType,
+      media.length > 0
+    );
+    const normalizedContent = typeof content === 'string' ? content.trim() : '';
 
-    if (type === 'text' && (!content || content.trim().length === 0)) {
+    if (normalizedMessageType === 'text' && normalizedContent.length === 0) {
       throw ApiError.badRequest('Nội dung tin nhắn không được để trống');
 
-    }
-
-    let receiverId = null;
-    if (!conversation.isGroup) {
-      receiverId = conversation.members.find(
-        m => m.toString() !== senderId.toString()
-      );
     }
 
     let replyToMessage = null;
     if (replyTo) {
       replyToMessage = await Message.findOne({
         _id: replyTo,
-        conversationId: conversation._id,
+        conversationId: conversation._id.toString(),
         isDeleted: false,
       })
-        .select('content sender type')
+        .select('_id')
         .lean();
     }
 
+    const receiver = conversation.isGroup
+      ? senderId
+      : conversation.members.find(m => m.toString() !== senderId.toString());
+
     const message = await Message.create({
       sender: senderId,
-      receiver: receiverId || conversation._id,
-      conversationId: conversation._id,
-      content: content?.trim(),
-      type,
+      receiver: receiver || senderId,
+      conversationId: conversation._id.toString(),
+      content: normalizedContent || undefined,
+      messageType: normalizedMessageType,
       media,
-      replyTo: replyToMessage
-        ? {
-            messageId: replyToMessage._id,
-            content: replyToMessage.content?.substring(0, 100),
-            sender: replyToMessage.sender,
-          }
-        : undefined,
+      replyTo: replyToMessage ? replyToMessage._id : undefined,
       status: 'sent',
     });
 
@@ -586,6 +607,7 @@ class MessageService {
 
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'username name avatar')
+      .populate('replyTo', 'content sender messageType')
       .lean();
 
     await Message.findByIdAndUpdate(message._id, {
@@ -675,7 +697,7 @@ class MessageService {
         },
         {
           $push: { seenBy: { user: userId, at: new Date() } },
-          status: 'read',
+          $set: { status: 'read', readAt: new Date() },
         }
       )
     );
@@ -811,10 +833,33 @@ class MessageService {
       .lean();
 
     const blockedUsers = settings?.blockedUsers || [];
+    const excludedSenders = [userId, ...blockedUsers];
+    const groupConversationIds = await Conversation.find({
+      members: userId,
+      isGroup: true,
+    })
+      .select('_id')
+      .lean();
+
+    const unreadFilters = [
+      {
+        receiver: userId,
+        status: { $ne: 'read' },
+      },
+    ];
+
+    if (groupConversationIds.length > 0) {
+      unreadFilters.push({
+        conversationId: {
+          $in: groupConversationIds.map(item => item._id.toString()),
+        },
+        'seenBy.user': { $ne: userId },
+      });
+    }
 
     const count = await Message.countDocuments({
-      'seenBy.user': { $ne: userId },
-      sender: { $nin: [userId, ...blockedUsers] },
+      $or: unreadFilters,
+      sender: { $nin: excludedSenders },
       isDeleted: false,
       deletedFor: { $ne: userId },
     });
@@ -830,18 +875,38 @@ class MessageService {
    * @returns {Promise<{messages: Array, total: number, hasMore: boolean}>} Search results
    */
   static async searchMessages(userId, query, options = {}) {
-    const { page = 1, limit = 20 } = options;
+    const { page = 1, limit = 20, conversationId } = options;
 
     if (!query || query.trim().length < 2) {
       return { messages: [], total: 0 };
     }
 
-    const messages = await Message.find({
-      $or: [{ sender: userId }, { receiver: userId }],
-      content: { $regex: query, $options: 'i' },
+    const normalizedQuery = query.trim();
+    const safePattern = escapeRegExp(normalizedQuery);
+    const messageQuery = {
+      content: { $regex: safePattern, $options: 'i' },
       isDeleted: false,
       deletedFor: { $ne: userId },
-    })
+    };
+
+    if (conversationId) {
+      const conversation = await this.findConversation(conversationId, userId);
+      if (!conversation) {
+        return { messages: [], total: 0, hasMore: false };
+      }
+      messageQuery.conversationId = conversation._id.toString();
+    } else {
+      const conversations = await Conversation.find({ members: userId })
+        .select('_id')
+        .lean();
+      const conversationIds = conversations.map(item => item._id.toString());
+      if (conversationIds.length === 0) {
+        return { messages: [], total: 0, hasMore: false };
+      }
+      messageQuery.conversationId = { $in: conversationIds };
+    }
+
+    const messages = await Message.find(messageQuery)
       .populate('sender', 'username name avatar')
       .populate('receiver', 'username name avatar')
       .sort({ createdAt: -1 })
@@ -849,17 +914,13 @@ class MessageService {
       .limit(limit)
       .lean();
 
-    const total = await Message.countDocuments({
-      $or: [{ sender: userId }, { receiver: userId }],
-      content: { $regex: query, $options: 'i' },
-      isDeleted: false,
-      deletedFor: { $ne: userId },
-    });
+    const total = await Message.countDocuments(messageQuery);
 
     return {
       messages: messages.map(msg => ({
         ...msg,
-        isMine: msg.sender._id.toString() === userId.toString(),
+        isMine:
+          (msg.sender?._id || msg.sender)?.toString() === userId.toString(),
       })),
       total,
       hasMore: page * limit < total,
@@ -965,11 +1026,68 @@ class MessageService {
    * @param {string} userId - User ID
    * @returns {Promise<Array>} List of users
    */
-  static async getUsersForChat(userId) {
-    const { conversations } = await this.getConversations(userId, {
-      limit: 100,
+  static async getUsersForChat(userId, options = {}) {
+    const { page = 1, limit = 20, search } = options;
+    const currentUserId = new mongoose.Types.ObjectId(userId);
+    const safeSearch = search && search.trim() ? escapeRegExp(search.trim()) : null;
+
+    const pipeline = [
+      { $match: { members: currentUserId } },
+      { $project: { members: 1 } },
+      { $unwind: '$members' },
+      { $match: { members: { $ne: currentUserId } } },
+      { $group: { _id: '$members' } },
+      {
+        $lookup: {
+          from: 'Users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      ...(safeSearch
+        ? [
+            {
+              $match: {
+                $or: [
+                  { 'user.username': { $regex: safeSearch, $options: 'i' } },
+                  { 'user.name': { $regex: safeSearch, $options: 'i' } },
+                ],
+              },
+            },
+          ]
+        : []),
+      {
+        $project: {
+          _id: '$user._id',
+          username: '$user.username',
+          name: '$user.name',
+          avatar: '$user.avatar',
+          verified: '$user.verified',
+        },
+      },
+      { $sort: { username: 1, _id: 1 } },
+      {
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          users: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        },
+      },
+    ];
+
+    const [result] = await Conversation.aggregate(pipeline).collation({
+      locale: 'en',
+      strength: 2,
     });
-    return conversations.map(conv => conv.otherUser);
+    const users = result?.users || [];
+    const total = result?.metadata?.[0]?.total || 0;
+
+    return {
+      users,
+      total,
+      hasMore: page * limit < total,
+    };
   }
 }
 

@@ -8,10 +8,50 @@ import UserSettings from '../../models/UserSettings.js';
 import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import { escapeRegExp } from '../../utils/escapeRegExp.js';
 
 import Like from '../../models/Like.js';
 import Follow from '../../models/Follow.js';
 import SavePost from '../../models/SavePost.js';
+import UserInteraction from '../../models/UserInteraction.js';
+
+const POST_ACTION_ALIASES = {
+  delete: 'remove',
+  unhide: 'approve',
+  unflag: 'approve',
+};
+
+const COMMENT_ACTION_ALIASES = {
+  hide: 'remove',
+  delete: 'remove',
+  unhide: 'approve',
+};
+
+const REVIEW_ACTION_TO_RESOLUTION = {
+  dismiss: { decision: 'rejected', actionTaken: null },
+  warn: { decision: 'resolved', actionTaken: 'warn_user' },
+  hide_content: { decision: 'resolved', actionTaken: 'remove_content' },
+  remove_content: { decision: 'resolved', actionTaken: 'remove_content' },
+  suspend_user: { decision: 'resolved', actionTaken: 'suspend_user' },
+  ban_user: { decision: 'resolved', actionTaken: 'ban_user' },
+};
+
+const LEGACY_RESOLUTION_TO_REVIEW = {
+  dismissed: { decision: 'rejected', actionTaken: null },
+  content_removed: { decision: 'resolved', actionTaken: 'remove_content' },
+  user_warned: { decision: 'resolved', actionTaken: 'warn_user' },
+  user_suspended: { decision: 'resolved', actionTaken: 'suspend_user' },
+  user_banned: { decision: 'resolved', actionTaken: 'ban_user' },
+};
+
+const INTERACTION_TYPE_TO_STATS_KEY = {
+  like: 'likes',
+  comment: 'comments',
+  follow: 'follows',
+  save: 'saves',
+  share: 'shares',
+  report: 'reports',
+};
 
 /**
  * Admin Service - Refactored for new model structure
@@ -34,6 +74,7 @@ class AdminService {
       limit = 20,
       search,
       status,
+      role,
       sortBy = 'createdAt',
       sortOrder = -1,
     } = options;
@@ -41,10 +82,11 @@ class AdminService {
     const query = {};
 
     if (search) {
+      const safePattern = escapeRegExp(search.trim());
       query.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: safePattern, $options: 'i' } },
+        { name: { $regex: safePattern, $options: 'i' } },
+        { email: { $regex: safePattern, $options: 'i' } },
       ];
     }
 
@@ -52,8 +94,19 @@ class AdminService {
       query['moderation.status'] = status;
     }
 
+    if (role) {
+      if (role === 'admin' || role === 'moderator') {
+        query.isAdmin = true;
+      } else if (role === 'user') {
+        query.isAdmin = false;
+      }
+    }
+
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder;
+    const userSortFieldMap = {
+      lastLogin: 'lastLoginAt',
+    };
+    sortOptions[userSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [users, total] = await Promise.all([
       User.find(query)
@@ -200,10 +253,30 @@ class AdminService {
    */
   static async updateUser(userId, updateData, adminId) {
     const { password, email, ...safeData } = updateData;
+    const normalizedData = { ...safeData };
+
+    if (typeof normalizedData.isVerified === 'boolean') {
+      normalizedData.verified = normalizedData.isVerified;
+      delete normalizedData.isVerified;
+    }
+
+    if (typeof normalizedData.role === 'string') {
+      if (normalizedData.role === 'admin' || normalizedData.role === 'moderator') {
+        normalizedData.isAdmin = true;
+      } else if (normalizedData.role === 'user') {
+        normalizedData.isAdmin = false;
+      }
+      delete normalizedData.role;
+    }
+
+    if (normalizedData.status) {
+      normalizedData['moderation.status'] = normalizedData.status;
+      delete normalizedData.status;
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { $set: safeData },
+      { $set: normalizedData },
       { new: true }
     ).select('-loginAttempts -security');
 
@@ -212,7 +285,7 @@ class AdminService {
     }
 
     await this._logAdminAction(adminId, 'update_user', 'user', userId, {
-      updateData: safeData,
+      updateData: normalizedData,
     });
 
     return user;
@@ -278,16 +351,18 @@ class AdminService {
    * @throws {Error} If user not found
    */
   static async unbanUser(userId, adminId) {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          'moderation.status': 'active',
-          'moderation.reason': null,
-          'moderation.moderatedBy': adminId,
-          'moderation.moderatedAt': new Date(),
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            'moderation.status': 'active',
+            'moderation.reason': null,
+            'moderation.suspendedUntil': null,
+            'moderation.expiresAt': null,
+            'moderation.moderatedBy': adminId,
+            'moderation.moderatedAt': new Date(),
+          },
         },
-      },
       { new: true }
     );
 
@@ -330,6 +405,7 @@ class AdminService {
             'moderation.status': 'suspended',
             'moderation.reason': reason,
             'moderation.suspendedUntil': suspendedUntil,
+            'moderation.expiresAt': suspendedUntil,
             'moderation.moderatedBy': adminId,
             'moderation.moderatedAt': new Date(),
           },
@@ -346,11 +422,17 @@ class AdminService {
         { isRevoked: true, revokedReason: 'user_suspended' }
       ).session(session);
 
-      await Notification.createNotification({
-        recipient: userId,
-        type: 'system',
-        content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
-      });
+      await Notification.create(
+        [
+          {
+            recipient: userId,
+            sender: adminId,
+            type: 'system',
+            content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
+          },
+        ],
+        { session }
+      );
 
       await this._logAdminAction(adminId, 'suspend_user', 'user', userId, {
         days,
@@ -382,6 +464,7 @@ class AdminService {
       {
         $inc: { 'moderation.warnings': 1 },
         $set: {
+          'moderation.status': 'warned',
           'moderation.lastWarningAt': new Date(),
           'moderation.moderatedBy': adminId,
         },
@@ -393,8 +476,9 @@ class AdminService {
       throw ApiError.notFound('User not found');
     }
 
-    await Notification.createNotification({
+    await Notification.create({
       recipient: userId,
+      sender: adminId,
       type: 'system',
       content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${reason}`,
     });
@@ -419,18 +503,66 @@ class AdminService {
       page = 1,
       limit = 20,
       status,
+      type,
       sortBy = 'createdAt',
       sortOrder = -1,
     } = options;
 
-    const query = { isDeleted: false };
+    const query = {};
 
     if (status) {
-      query['moderation.status'] = status;
+      switch (status) {
+        case 'active':
+        case 'approved':
+          query.isDeleted = false;
+          query['moderation.status'] = 'approved';
+          break;
+        case 'flagged':
+          query.isDeleted = false;
+          query['moderation.status'] = 'flagged';
+          break;
+        case 'pending':
+        case 'rejected':
+          query.isDeleted = false;
+          query['moderation.status'] = status;
+          break;
+        case 'hidden':
+        case 'removed':
+        case 'deleted':
+          query.isDeleted = true;
+          break;
+        default:
+          query['moderation.status'] = status;
+      }
+    } else {
+      query.isDeleted = false;
+    }
+
+    if (type === 'text') {
+      query.$or = [{ media: { $exists: false } }, { media: { $size: 0 } }];
+    } else if (type === 'image') {
+      query.$and = [
+        { media: { $elemMatch: { type: 'image' } } },
+        { media: { $not: { $elemMatch: { type: 'video' } } } },
+      ];
+    } else if (type === 'video') {
+      query.$and = [
+        { media: { $elemMatch: { type: 'video' } } },
+        { media: { $not: { $elemMatch: { type: 'image' } } } },
+      ];
+    } else if (type === 'mixed') {
+      query.$and = [
+        { media: { $elemMatch: { type: 'image' } } },
+        { media: { $elemMatch: { type: 'video' } } },
+      ];
     }
 
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder;
+    const postSortFieldMap = {
+      likes: 'likesCount',
+      comments: 'commentsCount',
+    };
+    sortOptions[postSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [posts, total] = await Promise.all([
       Post.find(query)
@@ -461,9 +593,10 @@ class AdminService {
    * @throws {Error} If action is invalid or post not found
    */
   static async moderatePost(postId, adminId, action, reason = '') {
+    const normalizedAction = POST_ACTION_ALIASES[action] || action;
     const validActions = ['approve', 'reject', 'flag', 'remove', 'hide'];
 
-    if (!validActions.includes(action)) {
+    if (!validActions.includes(normalizedAction)) {
       throw ApiError.badRequest('Invalid moderation action');
 
     }
@@ -476,12 +609,17 @@ class AdminService {
       hide: 'removed',
     };
 
+    const existingPost = await Post.findById(postId).select('isDeleted user').lean();
+    if (!existingPost) {
+      throw ApiError.notFound('Post not found');
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
       const updateData = {
-        'moderation.status': statusMap[action],
+        'moderation.status': statusMap[normalizedAction],
         'moderation.reviewedBy': adminId,
         'moderation.reviewedAt': new Date(),
       };
@@ -490,8 +628,10 @@ class AdminService {
         updateData['moderation.reason'] = reason;
       }
 
-      if (action === 'remove' || action === 'hide') {
+      if (normalizedAction === 'remove' || normalizedAction === 'hide') {
         updateData.isDeleted = true;
+      } else if (normalizedAction === 'approve') {
+        updateData.isDeleted = false;
       }
 
       const post = await Post.findByIdAndUpdate(
@@ -505,23 +645,46 @@ class AdminService {
 
       }
 
-      if (action === 'reject' || action === 'remove' || action === 'hide') {
+      const wasDeleted = Boolean(existingPost.isDeleted);
+      const isNowRemoved =
+        normalizedAction === 'remove' || normalizedAction === 'hide';
+      const isNowRestored = normalizedAction === 'approve' && wasDeleted;
+
+      if (isNowRemoved && !wasDeleted) {
         await User.findByIdAndUpdate(post.user._id, {
           $inc: { postsCount: -1 },
         }).session(session);
 
-        await Notification.createNotification({
-          recipient: post.user._id,
-          type: 'system',
-          content: `Bài viết của bạn đã bị ${
-            action === 'remove' ? 'gỡ bỏ' : 'từ chối'
-          }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
-        });
+        await Notification.create(
+          [
+            {
+              recipient: post.user._id,
+              sender: adminId,
+              type: 'system',
+              content: `Bài viết của bạn đã bị ${
+                normalizedAction === 'remove' || normalizedAction === 'hide'
+                  ? 'gỡ bỏ'
+                  : 'từ chối'
+              }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
+            },
+          ],
+          { session }
+        );
+      } else if (isNowRestored) {
+        await User.findByIdAndUpdate(post.user._id, {
+          $inc: { postsCount: 1 },
+        }).session(session);
       }
 
-      await this._logAdminAction(adminId, `${action}_post`, 'post', postId, {
+      await this._logAdminAction(
+        adminId,
+        `${normalizedAction}_post`,
+        'post',
+        postId,
+        {
         reason,
-      });
+        }
+      );
 
       await session.commitTransaction();
 
@@ -563,19 +726,42 @@ class AdminService {
     const query = {};
 
     if (search) {
-      query.content = { $regex: search, $options: 'i' };
+      query.content = {
+        $regex: escapeRegExp(search.trim()),
+        $options: 'i',
+      };
     }
 
     if (status) {
-      if (status === 'hidden') {
-        query.isDeleted = true;
-      } else if (status === 'active') {
-        query.isDeleted = false;
+      switch (status) {
+        case 'active':
+        case 'approved':
+          query.isDeleted = false;
+          query['moderation.status'] = 'approved';
+          break;
+        case 'flagged':
+        case 'pending':
+          query.isDeleted = false;
+          query['moderation.status'] = status;
+          break;
+        case 'hidden':
+        case 'removed':
+        case 'deleted':
+          query.isDeleted = true;
+          break;
+        default:
+          query.isDeleted = false;
       }
+    } else {
+      query.isDeleted = false;
     }
 
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder;
+    const commentSortFieldMap = {
+      likes: 'likesCount',
+      replies: 'repliesCount',
+    };
+    sortOptions[commentSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [comments, total] = await Promise.all([
       Comment.find(query)
@@ -607,9 +793,12 @@ class AdminService {
    * @throws {Error} If action is invalid or comment not found
    */
   static async moderateComment(commentId, adminId, action, reason = '') {
+    const normalizedAction = COMMENT_ACTION_ALIASES[action] || action;
+    const shouldRedactContent =
+      normalizedAction === 'remove' && action !== 'hide' && action !== 'unhide';
     const validActions = ['approve', 'remove'];
 
-    if (!validActions.includes(action)) {
+    if (!validActions.includes(normalizedAction)) {
       throw ApiError.badRequest('Invalid moderation action');
 
     }
@@ -621,24 +810,44 @@ class AdminService {
 
     }
 
-    if (action === 'remove') {
+    const wasDeleted = Boolean(comment.isDeleted);
+
+    if (normalizedAction === 'remove') {
       comment.isDeleted = true;
-      comment.content = '[Nội dung đã bị xóa bởi quản trị viên]';
+      comment.moderation = {
+        ...comment.moderation,
+        status: 'removed',
+        reason: reason || comment.moderation?.reason,
+      };
+      if (shouldRedactContent) {
+        comment.content = '[Nội dung đã bị xóa bởi quản trị viên]';
+      }
       await comment.save();
 
-      await Post.findByIdAndUpdate(comment.post, {
-        $inc: { commentsCount: -1 },
-      });
+      if (!wasDeleted) {
+        await Post.findByIdAndUpdate(comment.post, {
+          $inc: { commentsCount: -1 },
+        });
+      }
 
-      await Notification.createNotification({
-        recipient: comment.user,
-        type: 'system',
-        content: `Bình luận của bạn đã bị xóa. Lý do: ${
-          reason || 'Vi phạm quy định cộng đồng'
-        }`,
-      });
-    } else if (action === 'approve' && comment.isDeleted) {
+      if (!wasDeleted) {
+        await Notification.create({
+          recipient: comment.user,
+          sender: adminId,
+          type: 'system',
+          content: `Bình luận của bạn đã bị ${
+            shouldRedactContent ? 'xóa' : 'ẩn'
+          }. Lý do: ${
+            reason || 'Vi phạm quy định cộng đồng'
+          }`,
+        });
+      }
+    } else if (normalizedAction === 'approve' && comment.isDeleted) {
       comment.isDeleted = false;
+      comment.moderation = {
+        ...comment.moderation,
+        status: 'approved',
+      };
       await comment.save();
 
       await Post.findByIdAndUpdate(comment.post, {
@@ -648,7 +857,7 @@ class AdminService {
 
     await this._logAdminAction(
       adminId,
-      `${action}_comment`,
+      `${normalizedAction}_comment`,
       'comment',
       commentId,
       { reason }
@@ -663,20 +872,43 @@ class AdminService {
    * @returns {Promise<{reports: Array, total: number, page: number, totalPages: number, hasMore: boolean}>}
    */
   static async getReports(options = {}) {
-    const { page = 1, limit = 20, status, category, priority } = options;
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      category,
+      targetType,
+      priority,
+      sortBy = 'createdAt',
+      sortOrder = -1,
+    } = options;
 
     const query = {};
 
-    if (status) query.status = status;
+    if (status) {
+      if (status === 'in_review') {
+        query.status = 'reviewing';
+      } else if (status === 'dismissed') {
+        query.status = 'rejected';
+      } else {
+        query.status = status;
+      }
+    }
     if (category) query.category = category;
-    if (priority) query.priority = priority;
+    if (targetType) query.targetType = targetType;
+    if (priority !== undefined && priority !== null && priority !== '') {
+      query.priority = Number(priority);
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
 
     const [reports, total] = await Promise.all([
       Report.find(query)
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar')
         .populate('reviewedBy', 'username name')
-        .sort({ priority: -1, createdAt: -1 })
+        .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -701,41 +933,52 @@ class AdminService {
    * @returns {Promise<Object>} Updated report object
    * @throws {Error} If decision is invalid or report not found
    */
-  static async reviewReport(reportId, adminId, decision, actionTaken = '') {
+  static async reviewReport(reportId, adminId, payload = {}) {
+    const {
+      action,
+      decision: rawDecision,
+      actionTaken: rawActionTaken,
+      resolution,
+      notes,
+    } = payload;
+
+    let decision = rawDecision;
+    let actionTaken = rawActionTaken;
+
+    if (!decision && action && REVIEW_ACTION_TO_RESOLUTION[action]) {
+      ({ decision, actionTaken } = REVIEW_ACTION_TO_RESOLUTION[action]);
+    } else if (
+      !decision &&
+      resolution &&
+      LEGACY_RESOLUTION_TO_REVIEW[resolution]
+    ) {
+      ({ decision, actionTaken } = LEGACY_RESOLUTION_TO_REVIEW[resolution]);
+    } else if (!decision && actionTaken) {
+      decision = 'resolved';
+    }
+
+    if (decision === 'dismissed') {
+      decision = 'rejected';
+    }
+
     const validDecisions = ['resolved', 'rejected', 'escalated'];
-
     if (!validDecisions.includes(decision)) {
-      throw ApiError.badRequest('Invalid decision');
-
+      throw ApiError.badRequest('Invalid review decision');
     }
 
-    const report = await Report.findByIdAndUpdate(
-      reportId,
-      {
-        $set: {
-          status: decision,
-          reviewedBy: adminId,
-          reviewedAt: new Date(),
-          resolution: {
-            decision,
-            actionTaken,
-            resolvedAt: new Date(),
-          },
-        },
-      },
-      { new: true }
-    )
-      .populate('reporter', 'username name avatar')
-      .populate('targetUser', 'username name avatar');
-
-    if (!report) {
-      throw ApiError.notFound('Report not found');
-
-    }
+    const ReportService = (await import('../report/report.service.js')).default;
+    const report = await ReportService.resolveReport(reportId, adminId, {
+      decision,
+      actionTaken,
+      notes,
+    });
 
     await this._logAdminAction(adminId, 'review_report', 'report', reportId, {
       decision,
       actionTaken,
+      action,
+      resolution,
+      notes,
     });
 
     return report;
@@ -900,23 +1143,246 @@ class AdminService {
   }
 
   /**
-   * Get statistics and list of interactions (likes, comments, follows, saves)
+   * Get statistics and list of interactions
    * @param {Object} options - Options {page, limit, type, search}
    * @returns {Promise<{interactions: Array, stats: Object, total: number, page: number, totalPages: number, hasMore: boolean}>}
    */
   static async getInteractions(options = {}) {
     const { page = 1, limit = 20, type, search } = options;
+    const skip = (page - 1) * limit;
+    const mixedTypes = Object.keys(INTERACTION_TYPE_TO_STATS_KEY);
+    const perTypeLimit = Math.ceil(
+      (type ? limit : skip + limit) / mixedTypes.length
+    );
 
-    const [totalLikes, totalComments, totalFollows, totalSaves, totalShares] =
-      await Promise.all([
-        Like.countDocuments(),
-        Comment.countDocuments({ isDeleted: false }),
-        Follow.countDocuments({ status: 'active' }),
-        SavePost.countDocuments(),
-        Post.aggregate([
-          { $group: { _id: null, total: { $sum: '$sharesCount' } } },
-        ]).then(r => r[0]?.total || 0),
-      ]);
+    const statsPromise = Promise.all([
+      Like.countDocuments(),
+      Comment.countDocuments({ isDeleted: false }),
+      Follow.countDocuments({ status: 'active' }),
+      SavePost.countDocuments(),
+      UserInteraction.countDocuments({
+        interactionType: 'share',
+        targetType: 'post',
+      }),
+      Report.countDocuments(),
+    ]);
+
+    const interactionTasks = [];
+
+    if (!type || type === 'like') {
+      interactionTasks.push(
+        Like.find()
+          .select('user post createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'like' ? skip : 0)
+          .limit(type === 'like' ? limit : perTypeLimit)
+          .populate('user', 'username name avatar')
+          .populate({
+            path: 'post',
+            select: 'caption user',
+            populate: { path: 'user', select: 'username name' },
+          })
+          .lean()
+          .then(likes =>
+            likes
+              .filter(like => like.user && like.post)
+              .map(like => ({
+                _id: like._id,
+                type: 'like',
+                user: like.user,
+                target: {
+                  type: 'post',
+                  preview: like.post.caption?.substring(0, 100) || 'Bài viết',
+                  author: like.post.user?.name || 'Unknown',
+                },
+                createdAt: like.createdAt,
+              }))
+          )
+      );
+    }
+
+    if (!type || type === 'comment') {
+      interactionTasks.push(
+        Comment.find({ isDeleted: false })
+          .select('user post content createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'comment' ? skip : 0)
+          .limit(type === 'comment' ? limit : perTypeLimit)
+          .populate('user', 'username name avatar')
+          .populate({
+            path: 'post',
+            select: 'caption user',
+            populate: { path: 'user', select: 'username name' },
+          })
+          .lean()
+          .then(comments =>
+            comments
+              .filter(comment => comment.user && comment.post)
+              .map(comment => ({
+                _id: comment._id,
+                type: 'comment',
+                user: comment.user,
+                content: comment.content?.substring(0, 100),
+                target: {
+                  type: 'post',
+                  preview: comment.post.caption?.substring(0, 100) || 'Bài viết',
+                  author: comment.post.user?.name || 'Unknown',
+                },
+                createdAt: comment.createdAt,
+              }))
+          )
+      );
+    }
+
+    if (!type || type === 'follow') {
+      interactionTasks.push(
+        Follow.find({ status: 'active' })
+          .select('follower following createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'follow' ? skip : 0)
+          .limit(type === 'follow' ? limit : perTypeLimit)
+          .populate('follower', 'username name avatar')
+          .populate('following', 'username name')
+          .lean()
+          .then(follows =>
+            follows
+              .filter(follow => follow.follower && follow.following)
+              .map(follow => ({
+                _id: follow._id,
+                type: 'follow',
+                user: follow.follower,
+                target: {
+                  type: 'user',
+                  name: follow.following.name,
+                  username: `@${follow.following.username}`,
+                },
+                createdAt: follow.createdAt,
+              }))
+          )
+      );
+    }
+
+    if (!type || type === 'save') {
+      interactionTasks.push(
+        SavePost.find()
+          .select('user post createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'save' ? skip : 0)
+          .limit(type === 'save' ? limit : perTypeLimit)
+          .populate('user', 'username name avatar')
+          .populate({
+            path: 'post',
+            select: 'caption user',
+            populate: { path: 'user', select: 'username name' },
+          })
+          .lean()
+          .then(saves =>
+            saves
+              .filter(save => save.user && save.post)
+              .map(save => ({
+                _id: save._id,
+                type: 'save',
+                user: save.user,
+                target: {
+                  type: 'post',
+                  preview: save.post.caption?.substring(0, 100) || 'Bài viết',
+                  author: save.post.user?.name || 'Unknown',
+                },
+                createdAt: save.createdAt,
+              }))
+          )
+      );
+    }
+
+    if (!type || type === 'share') {
+      interactionTasks.push(
+        UserInteraction.find({
+          interactionType: 'share',
+          targetType: 'post',
+        })
+          .select('user targetId createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'share' ? skip : 0)
+          .limit(type === 'share' ? limit : perTypeLimit)
+          .populate('user', 'username name avatar')
+          .lean()
+          .then(async shares => {
+            const postIds = shares.map(share => share.targetId).filter(Boolean);
+            const sharedPosts = postIds.length
+              ? await Post.find({ _id: { $in: postIds } })
+                  .select('caption user')
+                  .populate('user', 'username name')
+                  .lean()
+              : [];
+
+            const postMap = new Map(
+              sharedPosts.map(post => [String(post._id), post])
+            );
+
+            return shares
+              .map(share => {
+                const post = postMap.get(String(share.targetId));
+                if (!share.user || !post) return null;
+
+                return {
+                  _id: share._id,
+                  type: 'share',
+                  user: share.user,
+                  target: {
+                    type: 'post',
+                    preview: post.caption?.substring(0, 100) || 'Bài viết',
+                    author: post.user?.name || 'Unknown',
+                  },
+                  createdAt: share.createdAt,
+                };
+              })
+              .filter(Boolean);
+          })
+      );
+    }
+
+    if (!type || type === 'report') {
+      interactionTasks.push(
+        Report.find()
+          .select('reporter targetUser targetType description reason createdAt')
+          .sort({ createdAt: -1 })
+          .skip(type === 'report' ? skip : 0)
+          .limit(type === 'report' ? limit : perTypeLimit)
+          .populate('reporter', 'username name avatar')
+          .populate('targetUser', 'username name')
+          .lean()
+          .then(reports =>
+            reports
+              .filter(report => report.reporter)
+              .map(report => ({
+                _id: report._id,
+                type: 'report',
+                user: report.reporter,
+                content: report.reason,
+                target: {
+                  type: report.targetType,
+                  preview: report.description?.substring(0, 100) || report.reason,
+                  author: report.targetUser?.name || null,
+                },
+                createdAt: report.createdAt,
+              }))
+          )
+      );
+    }
+
+    const [statsRaw, interactionBuckets] = await Promise.all([
+      statsPromise,
+      Promise.all(interactionTasks),
+    ]);
+
+    const [
+      totalLikes,
+      totalComments,
+      totalFollows,
+      totalSaves,
+      totalShares,
+      totalReports,
+    ] = statsRaw;
 
     const stats = {
       likes: totalLikes,
@@ -924,128 +1390,10 @@ class AdminService {
       follows: totalFollows,
       saves: totalSaves,
       shares: totalShares,
+      reports: totalReports,
     };
 
-    const interactions = [];
-    const skip = (page - 1) * limit;
-    const perType = Math.ceil(limit / 5);
-
-    if (!type || type === 'like') {
-      const likes = await Like.find()
-        .sort({ createdAt: -1 })
-        .skip(type === 'like' ? skip : 0)
-        .limit(type === 'like' ? limit : perType)
-        .populate('user', 'username name avatar')
-        .populate({
-          path: 'post',
-          select: 'caption user',
-          populate: { path: 'user', select: 'username name' },
-        })
-        .lean();
-
-      likes.forEach(like => {
-        if (like.user && like.post) {
-          interactions.push({
-            _id: like._id,
-            type: 'like',
-            user: like.user,
-            target: {
-              type: 'post',
-              preview: like.post.caption?.substring(0, 100) || 'Bài viết',
-              author: like.post.user?.name || 'Unknown',
-            },
-            createdAt: like.createdAt,
-          });
-        }
-      });
-    }
-
-    if (!type || type === 'comment') {
-      const comments = await Comment.find({ isDeleted: false })
-        .sort({ createdAt: -1 })
-        .skip(type === 'comment' ? skip : 0)
-        .limit(type === 'comment' ? limit : perType)
-        .populate('user', 'username name avatar')
-        .populate({
-          path: 'post',
-          select: 'caption user',
-          populate: { path: 'user', select: 'username name' },
-        })
-        .lean();
-
-      comments.forEach(comment => {
-        if (comment.user && comment.post) {
-          interactions.push({
-            _id: comment._id,
-            type: 'comment',
-            user: comment.user,
-            content: comment.content?.substring(0, 100),
-            target: {
-              type: 'post',
-              preview: comment.post.caption?.substring(0, 100) || 'Bài viết',
-              author: comment.post.user?.name || 'Unknown',
-            },
-            createdAt: comment.createdAt,
-          });
-        }
-      });
-    }
-
-    if (!type || type === 'follow') {
-      const follows = await Follow.find({ status: 'active' })
-        .sort({ createdAt: -1 })
-        .skip(type === 'follow' ? skip : 0)
-        .limit(type === 'follow' ? limit : perType)
-        .populate('follower', 'username name avatar')
-        .populate('following', 'username name')
-        .lean();
-
-      follows.forEach(follow => {
-        if (follow.follower && follow.following) {
-          interactions.push({
-            _id: follow._id,
-            type: 'follow',
-            user: follow.follower,
-            target: {
-              type: 'user',
-              name: follow.following.name,
-              username: `@${follow.following.username}`,
-            },
-            createdAt: follow.createdAt,
-          });
-        }
-      });
-    }
-
-    if (!type || type === 'save') {
-      const saves = await SavePost.find()
-        .sort({ createdAt: -1 })
-        .skip(type === 'save' ? skip : 0)
-        .limit(type === 'save' ? limit : perType)
-        .populate('user', 'username name avatar')
-        .populate({
-          path: 'post',
-          select: 'caption user',
-          populate: { path: 'user', select: 'username name' },
-        })
-        .lean();
-
-      saves.forEach(save => {
-        if (save.user && save.post) {
-          interactions.push({
-            _id: save._id,
-            type: 'save',
-            user: save.user,
-            target: {
-              type: 'post',
-              preview: save.post.caption?.substring(0, 100) || 'Bài viết',
-              author: save.post.user?.name || 'Unknown',
-            },
-            createdAt: save.createdAt,
-          });
-        }
-      });
-    }
+    const interactions = interactionBuckets.flat();
 
     let filteredInteractions = interactions.sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -1060,13 +1408,22 @@ class AdminService {
       );
     }
 
-    const total = type
-      ? stats[type + 's'] || filteredInteractions.length
-      : filteredInteractions.length;
+    let total;
+    if (search && search.trim()) {
+      total = filteredInteractions.length;
+    } else if (type) {
+      total =
+        stats[INTERACTION_TYPE_TO_STATS_KEY[type]] ||
+        filteredInteractions.length;
+    } else {
+      total = Object.values(stats).reduce((sum, value) => sum + value, 0);
+    }
     const totalPages = Math.ceil(total / limit);
 
     return {
-      interactions: filteredInteractions.slice(0, limit),
+      interactions: type
+        ? filteredInteractions.slice(0, limit)
+        : filteredInteractions.slice(skip, skip + limit),
       stats,
       total,
       page,
@@ -1109,7 +1466,24 @@ class AdminService {
    * @returns {Promise<{sentCount: number}>} Number of notifications sent
    * @throws {Error} If targetGroup is invalid
    */
-  static async broadcastNotification(adminId, content, targetGroup = 'all') {
+  static async broadcastNotification(
+    adminId,
+    payloadOrContent,
+    fallbackTargetGroup = 'all'
+  ) {
+    const payload =
+      payloadOrContent && typeof payloadOrContent === 'object'
+        ? payloadOrContent
+        : { content: payloadOrContent, targetGroup: fallbackTargetGroup };
+    const {
+      content,
+      targetGroup = fallbackTargetGroup,
+      type = 'system',
+      title,
+      priority = 'normal',
+      link,
+    } = payload;
+
     let users;
 
     switch (targetGroup) {
@@ -1125,29 +1499,81 @@ class AdminService {
           .select('_id')
           .lean();
         break;
+      case 'verified':
+        users = await User.find({ isActive: true, verified: true })
+          .select('_id')
+          .lean();
+        break;
+      case 'new_users':
+        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        users = await User.find({
+          isActive: true,
+          createdAt: { $gte: monthAgo },
+        })
+          .select('_id')
+          .lean();
+        break;
       default:
         throw ApiError.badRequest('Invalid target group');
 
     }
 
-    const notifications = users.map(user => ({
+    const userIds = users.map(user => user._id);
+    const settingsList = await UserSettings.find({ user: { $in: userIds } })
+      .select('user notifications')
+      .lean();
+    const settingsMap = new Map(
+      settingsList.map(s => [s.user.toString(), s.notifications || {}])
+    );
+
+    const eligibleUsers = users.filter(user => {
+      const notifications = settingsMap.get(user._id.toString()) || {};
+      const pushSettings =
+        notifications.push && typeof notifications.push === 'object'
+          ? notifications.push
+          : notifications;
+
+      if (pushSettings.enabled === false) return false;
+      if (pushSettings.systemUpdates === false) return false;
+      return true;
+    });
+
+    const notifications = eligibleUsers.map(user => ({
       recipient: user._id,
-      type: 'system',
+      sender: adminId,
+      type,
       content,
-      metadata: { broadcastBy: adminId },
+      metadata: {
+        broadcastBy: adminId,
+        ...(title ? { title } : {}),
+        ...(priority ? { priority } : {}),
+        ...(link ? { link } : {}),
+      },
     }));
 
-    await Promise.all(notifications);
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications, { ordered: false });
+    }
 
     await this._logAdminAction(
       adminId,
       'broadcast_notification',
       'system',
       null,
-      { content, targetGroup, count: users.length }
+      {
+        content,
+        targetGroup,
+        type,
+        count: eligibleUsers.length,
+        skipped: users.length - eligibleUsers.length,
+      }
     );
 
-    return { sentCount: users.length };
+    return {
+      sentCount: eligibleUsers.length,
+      skippedCount: users.length - eligibleUsers.length,
+      targetCount: users.length,
+    };
   }
 }
 
