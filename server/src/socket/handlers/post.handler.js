@@ -41,12 +41,14 @@ export const registerPostHandlers = (io, socket) => {
     // Client emitting like (usually done via API, but for immediate feedback/optimistic UI)
     socket.on("post:like", (data) => {
         try {
-            const { postId, userId, action } = data;
+            if (!socket.user?.id) return;
+            const { postId, action } = data || {};
             if (!postId) return;
-            
+            const userId = socket.user.id;
+
             const roomId = `post:${postId}`;
             const payload = { postId, userId, action, timestamp: new Date() };
-            
+
             io.to(roomId).emit("post:like:update", payload);
             io.emit(`post:${postId}:like:update`, payload); // Global fallback
         } catch (error) {

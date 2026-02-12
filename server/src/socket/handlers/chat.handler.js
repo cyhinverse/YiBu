@@ -1,20 +1,67 @@
 import logger from '../../configs/logger.js';
+import Conversation from '../../models/Conversation.js';
+
+const objectIdRegex = /^[a-fA-F0-9]{24}$/;
+const directConversationRegex = /^[a-fA-F0-9]{24}_[a-fA-F0-9]{24}$/;
+
+const normalizeConversationRoomId = roomIdStr => {
+  if (roomIdStr.startsWith('conversation:')) {
+    return roomIdStr.slice('conversation:'.length);
+  }
+  return roomIdStr;
+};
+
+const canJoinRoom = async (roomIdStr, userId) => {
+  if (!roomIdStr || !userId) return false;
+
+  if (roomIdStr === userId) return true;
+  if (roomIdStr.startsWith('post:')) return true;
+
+  if (roomIdStr.startsWith('chat_')) {
+    const parts = roomIdStr.split('_');
+    return parts.length === 3 && (parts[1] === userId || parts[2] === userId);
+  }
+
+  const conversationRoomId = normalizeConversationRoomId(roomIdStr);
+
+  if (directConversationRegex.test(conversationRoomId)) {
+    const exists = await Conversation.exists({
+      directId: conversationRoomId,
+      members: userId,
+    });
+    return Boolean(exists);
+  }
+
+  if (objectIdRegex.test(conversationRoomId)) {
+    const exists = await Conversation.exists({
+      _id: conversationRoomId,
+      members: userId,
+    });
+    return Boolean(exists);
+  }
+
+  return false;
+};
 
 export const registerChatHandlers = (io, socket) => {
   // Join Room
-  socket.on('join_room', roomId => {
+  socket.on('join_room', async roomId => {
     try {
       if (!roomId) return;
+      if (!socket.user?.id) {
+        socket.emit('error', { message: 'Authentication required' });
+        return;
+      }
 
       const roomIdStr = roomId.toString();
+      const allowed = await canJoinRoom(roomIdStr, socket.user.id);
+      if (!allowed) {
+        socket.emit('error', { message: 'Not allowed to join this room' });
+        return;
+      }
+
       socket.join(roomIdStr);
       logger.info(`User ${socket.id} joined room: ${roomIdStr}`);
-
-      // If generic room join, check if it's user room or something else?
-      // Legacy logic preserved:
-      if (!roomId.includes(':') && roomIdStr === socket.user?.id) {
-        // Already handled in register_user usually, but okay
-      }
 
       socket.emit('room_joined', { roomId: roomIdStr, success: true });
     } catch (error) {
@@ -45,32 +92,45 @@ export const registerChatHandlers = (io, socket) => {
     // However, if client sends via socket directly:
     logger.info('Socket received direct message (legacy/chat-only):', data);
 
-    if (!data.message || !data.receiverId || !data.senderId) {
+    if (!socket.user?.id) {
+      socket.emit('error', { message: 'Authentication required' });
+      return;
+    }
+
+    if (!data?.message || !data?.receiverId) {
       socket.emit('error', { message: 'Invalid message data' });
       return;
     }
 
-    const { message, receiverId, senderId } = data;
+    const senderIdStr = socket.user.id;
+    if (data?.senderId && data.senderId.toString() !== senderIdStr) {
+      socket.emit('error', { message: 'Sender mismatch' });
+      return;
+    }
+
+    const { message, receiverId } = data;
     const receiverIdStr = receiverId.toString();
-    const senderIdStr = senderId.toString();
+    const normalizedMessage =
+      typeof message === 'object' && message !== null
+        ? { ...message, senderId: senderIdStr, sender: senderIdStr }
+        : message;
 
     // Emitting to receiver
-    socket.to(receiverIdStr).emit('new_message', message);
+    socket.to(receiverIdStr).emit('new_message', normalizedMessage);
 
     // Sync to other sender devices
-    if (senderIdStr !== socket.id) {
-      socket.to(senderIdStr).emit('new_message', message);
-    }
+    socket.to(senderIdStr).emit('new_message', normalizedMessage);
 
     // Emit to Rooms
     const room1 = `chat_${senderIdStr}_${receiverIdStr}`;
     const room2 = `chat_${receiverIdStr}_${senderIdStr}`;
-    socket.to(room1).emit('new_message', message);
-    socket.to(room2).emit('new_message', message);
+    socket.to(room1).emit('new_message', normalizedMessage);
+    socket.to(room2).emit('new_message', normalizedMessage);
 
     socket.emit('message_sent', {
       success: true,
-      messageId: message._id,
+      senderId: senderIdStr,
+      messageId: normalizedMessage?._id,
       timestamp: new Date(),
     });
   });
@@ -79,67 +139,67 @@ export const registerChatHandlers = (io, socket) => {
   socket.on('mark_as_read', data => {
     // Similar to send_message, usually done via API.
     // logic ...
-    if (!data.messageIds) return;
+    if (!socket.user?.id || !data?.messageIds) return;
 
-    if (data.receiverId && data.senderId) {
-      const room1 = `chat_${data.senderId}_${data.receiverId}`;
-      const room2 = `chat_${data.receiverId}_${data.senderId}`;
-      io.to(room1).emit('message_read', data);
-      io.to(room2).emit('message_read', data);
-
-      io.to(data.receiverId.toString()).emit('message_read', data);
-      io.to(data.senderId.toString()).emit('message_read', data);
+    const senderId = socket.user.id;
+    if (data?.senderId && data.senderId.toString() !== senderId) {
+      socket.emit('error', { message: 'Sender mismatch' });
+      return;
     }
+
+    const payload = { ...data, senderId };
+
+    if (payload.receiverId) {
+      const receiverId = payload.receiverId.toString();
+      const room1 = `chat_${senderId}_${receiverId}`;
+      const room2 = `chat_${receiverId}_${senderId}`;
+      io.to(room1).emit('message_read', payload);
+      io.to(room2).emit('message_read', payload);
+
+      io.to(receiverId).emit('message_read', payload);
+    }
+
+    io.to(senderId).emit('message_read', payload);
+
     socket.emit('read_confirmed', {
       success: true,
-      messageIds: data.messageIds,
+      messageIds: payload.messageIds,
     });
   });
 
+  const emitTypingEvent = (eventName, data) => {
+    if (!socket.user?.id || !data?.receiverId) return;
+
+    const senderId = socket.user.id;
+    if (data?.senderId && data.senderId.toString() !== senderId) {
+      socket.emit('error', { message: 'Sender mismatch' });
+      return;
+    }
+
+    const receiverId = data.receiverId.toString();
+    const payload = { ...data, senderId };
+
+    socket.to(receiverId).emit(eventName, payload);
+    const room1 = `chat_${senderId}_${receiverId}`;
+    const room2 = `chat_${receiverId}_${senderId}`;
+    socket.to(room1).emit(eventName, payload);
+    socket.to(room2).emit(eventName, payload);
+  };
+
   // Typing - support both event names for compatibility
   socket.on('typing', data => {
-    if (!data.senderId) return;
-    if (data.receiverId) {
-      socket.to(data.receiverId.toString()).emit('user_typing', data);
-      // Also rooms
-      const room1 = `chat_${data.senderId}_${data.receiverId}`;
-      const room2 = `chat_${data.receiverId}_${data.senderId}`;
-      socket.to(room1).emit('user_typing', data);
-      socket.to(room2).emit('user_typing', data);
-    }
+    emitTypingEvent('user_typing', data);
   });
 
   socket.on('user_typing', data => {
-    if (!data.senderId) return;
-    if (data.receiverId) {
-      socket.to(data.receiverId.toString()).emit('user_typing', data);
-      const room1 = `chat_${data.senderId}_${data.receiverId}`;
-      const room2 = `chat_${data.receiverId}_${data.senderId}`;
-      socket.to(room1).emit('user_typing', data);
-      socket.to(room2).emit('user_typing', data);
-    }
+    emitTypingEvent('user_typing', data);
   });
 
   socket.on('stop_typing', data => {
-    if (!data.senderId) return;
-    if (data.receiverId) {
-      socket.to(data.receiverId.toString()).emit('user_stop_typing', data);
-      // Also rooms
-      const room1 = `chat_${data.senderId}_${data.receiverId}`;
-      const room2 = `chat_${data.receiverId}_${data.senderId}`;
-      socket.to(room1).emit('user_stop_typing', data);
-      socket.to(room2).emit('user_stop_typing', data);
-    }
+    emitTypingEvent('user_stop_typing', data);
   });
 
   socket.on('user_stop_typing', data => {
-    if (!data.senderId) return;
-    if (data.receiverId) {
-      socket.to(data.receiverId.toString()).emit('user_stop_typing', data);
-      const room1 = `chat_${data.senderId}_${data.receiverId}`;
-      const room2 = `chat_${data.receiverId}_${data.senderId}`;
-      socket.to(room1).emit('user_stop_typing', data);
-      socket.to(room2).emit('user_stop_typing', data);
-    }
+    emitTypingEvent('user_stop_typing', data);
   });
 };

@@ -10,9 +10,9 @@ services:
       - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
       # Force Docker services to use Docker Mongo (avoid accidental Atlas/host env override).
       - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      # Provide non-empty defaults for local Docker runs (required by auth middleware).
-      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-dev_refresh_token_secret_change_me}
+      # Must be provided via environment (.env or deployment secrets).
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       # Local Docker runs are usually plain HTTP, so secure cookies would be dropped by the browser.
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}

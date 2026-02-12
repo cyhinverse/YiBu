@@ -11,7 +11,27 @@ import Follow from '../../models/Follow.js';
 import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
+import { escapeRegExp } from '../../utils/escapeRegExp.js';
 import ApiError from '../../helpers/ApiError.js';
+
+const POST_REPORT_CATEGORY_ALIASES = {
+  fake_account: 'impersonation',
+};
+
+const VALID_POST_REPORT_CATEGORIES = new Set([
+  'spam',
+  'harassment',
+  'hate_speech',
+  'violence',
+  'nudity',
+  'misinformation',
+  'copyright',
+  'impersonation',
+  'self_harm',
+  'illegal',
+  'scam',
+  'other',
+]);
 
 
 /**
@@ -724,6 +744,10 @@ class PostService {
       return { posts: [], total: 0 };
     }
 
+    const normalizedQuery = query.trim();
+    const safePattern = escapeRegExp(normalizedQuery);
+    const normalizedHashtagQuery = escapeRegExp(normalizedQuery.replace(/^#/, ''));
+
     let excludeUsers = [];
     if (userId) {
       const settings = await UserSettings.findOne({ user: userId })
@@ -741,8 +765,8 @@ class PostService {
       'moderation.status': 'approved',
       user: { $nin: excludeUsers },
       $or: [
-        { caption: { $regex: query, $options: 'i' } },
-        { hashtags: { $regex: query.replace('#', ''), $options: 'i' } },
+        { caption: { $regex: safePattern, $options: 'i' } },
+        { hashtags: { $regex: normalizedHashtagQuery, $options: 'i' } },
       ],
     };
 
@@ -1183,11 +1207,17 @@ class PostService {
    */
   static async getComments(postId, options = {}) {
     const { page = 1, limit = 20, sort = 'best' } = options;
+    const normalizedSort = sort === 'popular' ? 'best' : sort;
+    const sortByMap = {
+      best: 'likesCount',
+      newest: 'createdAt',
+      oldest: 'oldest',
+    };
 
     const comments = await Comment.getCommentsForPost(postId, {
       page,
       limit,
-      sortBy: sort === 'best' ? 'likesCount' : 'createdAt',
+      sortBy: sortByMap[normalizedSort] || 'likesCount',
       includeReplies: true,
       replyLimit: 3,
     });
@@ -1506,6 +1536,11 @@ class PostService {
    */
   static async reportPost(postId, userId, reason, description = '') {
     const Report = (await import('../../models/Report.js')).default;
+    const normalizedReason = POST_REPORT_CATEGORY_ALIASES[reason] || reason;
+
+    if (!VALID_POST_REPORT_CATEGORIES.has(normalizedReason)) {
+      throw ApiError.badRequest('Lý do báo cáo không hợp lệ');
+    }
 
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) {
@@ -1530,8 +1565,8 @@ class PostService {
       targetType: 'post',
       targetId: postId,
       targetUser: post.user,
-      category: reason,
-      reason,
+      category: normalizedReason,
+      reason: normalizedReason,
       description,
       contentSnapshot: {
         caption: post.caption,
@@ -1550,7 +1585,7 @@ class PostService {
    */
   static async uploadMedia(files, userId) {
     const { uploadToCloudinary } = await import(
-      '../middlewares/multerUpload.js'
+      '../../middlewares/multerUpload.js'
     );
     const fileArray = Array.isArray(files) ? files : [files];
     const uploadedMedia = [];

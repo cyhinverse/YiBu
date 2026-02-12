@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { escapeRegExp } from "../utils/escapeRegExp.js";
 
 /**
  * Hashtag Model - Optimized for Trending & Discovery
@@ -193,9 +194,12 @@ HashtagSchema.statics.getFeatured = async function (limit = 10) {
 };
 
 HashtagSchema.statics.searchHashtags = async function (query, limit = 10) {
+  const normalizedQuery = String(query || "").trim().toLowerCase();
+  const safePrefix = escapeRegExp(normalizedQuery);
+
   // First try prefix match (faster)
   const prefixResults = await this.find({
-    name: { $regex: `^${query.toLowerCase()}`, $options: "i" },
+    name: { $regex: `^${safePrefix}`, $options: "i" },
     isBanned: false,
   })
     .sort({ totalUsage: -1 })
@@ -209,7 +213,7 @@ HashtagSchema.statics.searchHashtags = async function (query, limit = 10) {
 
   // Fall back to text search for remaining slots
   const textResults = await this.find({
-    $text: { $search: query },
+    $text: { $search: normalizedQuery },
     isBanned: false,
     _id: { $nin: prefixResults.map((r) => r._id) },
   })

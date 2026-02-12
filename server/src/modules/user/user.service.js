@@ -11,6 +11,7 @@ import Message from '../../models/Message.js';
 import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import { escapeRegExp } from '../../utils/escapeRegExp.js';
 
 
 /**
@@ -68,33 +69,20 @@ class UserService {
 
     const userPromise = User.findById(userId).select('-loginAttempts').lean();
     let followStatusPromise = Promise.resolve('none');
-    let isFollowingPromise = Promise.resolve(false);
 
     if (requesterId && requesterId !== userId.toString()) {
-        // We can start checking follow status immediately
-        followStatusPromise = Follow.getFollowStatus(requesterId, userId);
-        isFollowingPromise = Follow.isFollowing(requesterId, userId); // Actually getFollowStatus might be enough if it returns 'active'
+      followStatusPromise = Follow.getFollowStatus(requesterId, userId);
     }
 
     const [user, followStatusRaw] = await Promise.all([
-        userPromise,
-        followStatusPromise
+      userPromise,
+      followStatusPromise,
     ]);
 
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    // Determine isFollowing based on followStatus to avoid redundant DB call if possible, 
-    // or use the specific isFollowing result if logic differs (like privacy handling)
-    // The original code used both Follow.isFollowing and Follow.getFollowStatus in different blocks.
-    // Let's stick to the logic: if private, check isFollowing to decide visibility.
-    // If not private, we just need status.
-    
-    // Simplification: We need 'isFollowing' boolean for private check AND 'followStatus' string for response.
-    // Follow.getFollowStatus returns 'active', 'pending', 'none'.
-    // So isFollowing === (followStatus === 'active').
-    
     const followStatus = followStatusRaw;
     const isFollowing = followStatus === 'active';
 
@@ -374,6 +362,9 @@ class UserService {
       return { users: [], total: 0 };
     }
 
+    const normalizedQuery = query.trim();
+    const safePattern = escapeRegExp(normalizedQuery);
+
     const settings = await UserSettings.findOne({ user: currentUserId })
       .select('blockedUsers mutedUsers')
       .lean();
@@ -387,8 +378,8 @@ class UserService {
     const searchQuery = {
       _id: { $nin: excludeIds },
       $or: [
-        { username: { $regex: query, $options: 'i' } },
-        { name: { $regex: query, $options: 'i' } },
+        { username: { $regex: safePattern, $options: 'i' } },
+        { name: { $regex: safePattern, $options: 'i' } },
       ],
     };
 
@@ -553,12 +544,13 @@ class UserService {
    * @param {string} followerId - User ID who sent the request
    * @returns {Promise<Object>} Accept result
    */
-  static async acceptFollowRequest(userId, followerId) {
-    const result = await Follow.acceptFollowRequest(userId, followerId);
+  static async acceptFollowRequest(userId, requestIdentifier) {
+    const result = await Follow.acceptFollowRequest(userId, requestIdentifier);
 
     if (result.success) {
+      const recipientId = result.follow?.follower || requestIdentifier;
       await Notification.createNotification({
-        recipient: followerId,
+        recipient: recipientId,
         sender: userId,
         type: 'follow',
         content: 'đã chấp nhận yêu cầu theo dõi của bạn',
@@ -574,8 +566,8 @@ class UserService {
    * @param {string} followerId - User ID who sent the request
    * @returns {Promise<Object>} Reject result
    */
-  static async rejectFollowRequest(userId, followerId) {
-    return Follow.rejectFollowRequest(userId, followerId);
+  static async rejectFollowRequest(userId, requestIdentifier) {
+    return Follow.rejectFollowRequest(userId, requestIdentifier);
   }
 
   /**
@@ -594,10 +586,12 @@ class UserService {
    * @returns {Promise<Object>} Settings object including privacy, notifications, security, appearance
    */
   static async getUserSettings(userId) {
-    const [userSettings, user] = await Promise.all([
-      UserSettings.getOrCreate(userId),
-      User.findById(userId).select('privacy'),
-    ]);
+    const user = await User.findById(userId).select('privacy').lean();
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
+    const userSettings = await UserSettings.getOrCreate(userId);
 
     const settings = userSettings.toObject();
 
@@ -608,6 +602,8 @@ class UserService {
       messagePermission: user.privacy?.allowMessages || 'everyone',
       showActivity: user.privacy?.showActivity ?? true,
       activityStatus: user.privacy?.showActivity ?? true,
+      showOnlineStatus: settings.privacy?.showOnlineStatus ?? true,
+      allowTagging: settings.privacy?.allowTagging ?? true,
     };
 
     if (settings.notifications) {
@@ -615,16 +611,22 @@ class UserService {
       const email = settings.notifications.email || {};
 
       settings.notifications = {
+        ...(settings.notifications?.toObject?.() || settings.notifications),
         likes: push.likes ?? true,
         comments: push.comments ?? true,
         follows: push.follows ?? true,
         messages: push.messages ?? true,
         mentions: push.mentions ?? true,
+        replies: push.comments ?? true,
+        shares: push.shares ?? true,
+        saves: push.saves ?? true,
+        tags: push.tags ?? true,
+        systemUpdates: push.systemUpdates ?? true,
+        sound: push.sound ?? true,
+        vibration: push.vibration ?? true,
 
         push: push.enabled ?? true,
         email: email.enabled ?? true,
-
-        ...settings.notifications,
       };
     }
 
@@ -652,12 +654,35 @@ class UserService {
       { $set: updateData },
       { new: true }
     );
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
 
     const settingsUpdate = {};
     if (privacySettings.postVisibility)
       settingsUpdate['privacy.postVisibility'] = privacySettings.postVisibility;
     if (privacySettings.searchable !== undefined)
       settingsUpdate['privacy.searchable'] = privacySettings.searchable;
+    if (privacySettings.showOnlineStatus !== undefined)
+      settingsUpdate['privacy.showOnlineStatus'] = privacySettings.showOnlineStatus;
+    if (privacySettings.allowTagging !== undefined)
+      settingsUpdate['privacy.allowTagging'] = privacySettings.allowTagging;
+    if (privacySettings.allowMentions !== undefined)
+      settingsUpdate['privacy.allowMentions'] = privacySettings.allowMentions;
+    if (privacySettings.showEmail !== undefined)
+      settingsUpdate['privacy.showEmail'] = privacySettings.showEmail;
+    if (privacySettings.showPhone !== undefined)
+      settingsUpdate['privacy.showPhone'] = privacySettings.showPhone;
+    if (privacySettings.showBirthday !== undefined)
+      settingsUpdate['privacy.showBirthday'] = privacySettings.showBirthday;
+    if (privacySettings.whoCanSeeFollowers)
+      settingsUpdate['privacy.whoCanSeeFollowers'] =
+        privacySettings.whoCanSeeFollowers;
+    if (privacySettings.whoCanSeeFollowing)
+      settingsUpdate['privacy.whoCanSeeFollowing'] =
+        privacySettings.whoCanSeeFollowing;
+    if (privacySettings.whoCanSeeLikes)
+      settingsUpdate['privacy.whoCanSeeLikes'] = privacySettings.whoCanSeeLikes;
 
     if (Object.keys(settingsUpdate).length > 0) {
       await UserSettings.findOneAndUpdate(
@@ -678,6 +703,17 @@ class UserService {
 
       postVisibility: latestUserSettings?.privacy?.postVisibility || 'public',
       searchable: latestUserSettings?.privacy?.searchable ?? true,
+      showOnlineStatus: latestUserSettings?.privacy?.showOnlineStatus ?? true,
+      allowTagging: latestUserSettings?.privacy?.allowTagging ?? true,
+      allowMentions: latestUserSettings?.privacy?.allowMentions ?? true,
+      showEmail: latestUserSettings?.privacy?.showEmail ?? false,
+      showPhone: latestUserSettings?.privacy?.showPhone ?? false,
+      showBirthday: latestUserSettings?.privacy?.showBirthday ?? false,
+      whoCanSeeFollowers:
+        latestUserSettings?.privacy?.whoCanSeeFollowers || 'everyone',
+      whoCanSeeFollowing:
+        latestUserSettings?.privacy?.whoCanSeeFollowing || 'everyone',
+      whoCanSeeLikes: latestUserSettings?.privacy?.whoCanSeeLikes || 'everyone',
     };
   }
 
@@ -696,14 +732,24 @@ class UserService {
       follows: 'notifications.push.follows',
       messages: 'notifications.push.messages',
       mentions: 'notifications.push.mentions',
+      replies: 'notifications.push.comments',
+      shares: 'notifications.push.shares',
+      saves: 'notifications.push.saves',
+      tags: 'notifications.push.tags',
+      systemUpdates: 'notifications.push.systemUpdates',
+      sound: 'notifications.push.sound',
+      vibration: 'notifications.push.vibration',
     };
 
     for (const [key, value] of Object.entries(notificationSettings)) {
+      if (value === undefined) continue;
+
       if (key === 'email') {
         if (typeof value === 'boolean') {
           updateOps['notifications.email.enabled'] = value;
         } else if (typeof value === 'object') {
           for (const [subKey, subValue] of Object.entries(value)) {
+            if (subValue === undefined) continue;
             updateOps[`notifications.email.${subKey}`] = subValue;
           }
         }
@@ -712,6 +758,7 @@ class UserService {
           updateOps['notifications.push.enabled'] = value;
         } else if (typeof value === 'object') {
           for (const [subKey, subValue] of Object.entries(value)) {
+            if (subValue === undefined) continue;
             updateOps[`notifications.push.${subKey}`] = subValue;
           }
         }
@@ -733,13 +780,20 @@ class UserService {
 
     return {
       ...(settings.notifications?.toObject?.() || settings.notifications),
-      likes: push.likes,
-      comments: push.comments,
-      follows: push.follows,
-      messages: push.messages,
-      mentions: push.mentions,
-      push: push.enabled,
-      email: email.enabled,
+      likes: push.likes ?? true,
+      comments: push.comments ?? true,
+      follows: push.follows ?? true,
+      messages: push.messages ?? true,
+      mentions: push.mentions ?? true,
+      replies: push.comments ?? true,
+      shares: push.shares ?? true,
+      saves: push.saves ?? true,
+      tags: push.tags ?? true,
+      systemUpdates: push.systemUpdates ?? true,
+      sound: push.sound ?? true,
+      vibration: push.vibration ?? true,
+      push: push.enabled ?? true,
+      email: email.enabled ?? true,
     };
   }
 
@@ -774,9 +828,23 @@ class UserService {
    * @returns {Promise<Object>} Updated appearance settings
    */
   static async updateAppearanceSettings(userId, appearanceSettings) {
+    const allowedFields = ['theme', 'fontSize', 'compactMode'];
+    const updateOps = {};
+
+    allowedFields.forEach(field => {
+      if (appearanceSettings[field] !== undefined) {
+        updateOps[`appearance.${field}`] = appearanceSettings[field];
+      }
+    });
+
+    if (Object.keys(updateOps).length === 0) {
+      const existing = await UserSettings.getOrCreate(userId);
+      return existing.appearance;
+    }
+
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
-      { $set: { appearance: appearanceSettings } },
+      { $set: updateOps },
       { new: true, upsert: true }
     );
 
@@ -790,9 +858,28 @@ class UserService {
    * @returns {Promise<Object>} Updated content settings
    */
   static async updateContentSettings(userId, contentSettings) {
+    const allowedFields = [
+      'language',
+      'contentFilter',
+      'autoplayVideos',
+      'showSensitiveContent',
+    ];
+    const updateOps = {};
+
+    allowedFields.forEach(field => {
+      if (contentSettings[field] !== undefined) {
+        updateOps[`content.${field}`] = contentSettings[field];
+      }
+    });
+
+    if (Object.keys(updateOps).length === 0) {
+      const existing = await UserSettings.getOrCreate(userId);
+      return existing.content;
+    }
+
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
-      { $set: { content: contentSettings } },
+      { $set: updateOps },
       { new: true, upsert: true }
     );
 

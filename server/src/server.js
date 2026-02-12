@@ -50,6 +50,7 @@ process.on('uncaughtException', err => {
 
 const startServer = async () => {
   try {
+    config.validateCriticalConfig();
     await ConnectToMongodb(config.mongodb.uri);
 
     server = http.createServer(app);
@@ -91,4 +92,3 @@ const startServer = async () => {
 };
 
 startServer();
-

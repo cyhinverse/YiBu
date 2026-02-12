@@ -42,6 +42,29 @@ const parseTrustProxy = (value, fallback) => {
   return value;
 };
 
+const INSECURE_SECRET_VALUES = new Set([
+  'dev_access_token_secret_change_me',
+  'dev_refresh_token_secret_change_me',
+  'changeme',
+  'change_me',
+  'secret',
+  'default_secret',
+]);
+
+const assertSecureSecret = (name, value) => {
+  if (!value) {
+    throw new Error(`${name} is required in production`);
+  }
+
+  if (value.length < 32) {
+    throw new Error(`${name} must be at least 32 characters in production`);
+  }
+
+  if (INSECURE_SECRET_VALUES.has(value.toLowerCase())) {
+    throw new Error(`${name} uses an insecure default value`);
+  }
+};
+
 const config = {
   env: nodeEnv,
   isProduction: nodeEnv === 'production',
@@ -83,6 +106,12 @@ const config = {
     pass: process.env.EMAIL_PASS,
     // Only enable for local/dev when using self-signed certs. Never enable in production.
     allowInsecureTls: process.env.EMAIL_ALLOW_INSECURE_TLS === 'true',
+  },
+  validateCriticalConfig: () => {
+    if (nodeEnv !== 'production') return;
+
+    assertSecureSecret('ACCESS_TOKEN_SECRET', process.env.ACCESS_TOKEN_SECRET);
+    assertSecureSecret('REFRESH_TOKEN_SECRET', process.env.REFRESH_TOKEN_SECRET);
   },
 };
 

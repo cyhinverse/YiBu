@@ -5,6 +5,7 @@ import { registerChatHandlers } from "./handlers/chat.handler.js";
 import { registerNotificationHandlers } from "./handlers/notification.handler.js";
 import { registerPostHandlers } from "./handlers/post.handler.js";
 import config from "../configs/config.js";
+import socketAuthMiddleware from "./middlewares/socketAuth.middleware.js";
 
 let io;
 
@@ -21,12 +22,31 @@ export const initSocket = (server) => {
 
   // Inject IO into Service
   SocketService.init(io);
+  io.use(socketAuthMiddleware);
 
   io.on("connection", (socket) => {
+    const userId = socket.user?.id;
+    const wasOnline = userId ? SocketService.isUserOnline(userId) : false;
+    if (userId) {
+      socket.join(userId);
+      SocketService.addUser(userId, socket.id);
+
+      if (!wasOnline) {
+        io.emit("user_status_change", {
+          userId,
+          status: "online",
+          timestamp: new Date(),
+        });
+      }
+    }
+
     // Client connected log handled by connection handler if needed
-    
+
     // Default connection response
-    socket.emit("connection_established", { message: "Kết nối thành công" });
+    socket.emit("connection_established", {
+      message: "Kết nối thành công",
+      userId,
+    });
 
     // Register Handlers
     registerConnectionHandlers(io, socket);
