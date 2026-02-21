@@ -92,7 +92,7 @@ const UsersTable = ({
                         </div>
                         <div>
                           <div className="font-semibold text-[var(--color-content)] text-sm">
-                            {user.name || 'Người dùng YiBu'}
+                            {user.fullName || user.name || 'Người dùng YiBu'}
                           </div>
                           <div className="text-xs text-[var(--color-text-tertiary)]">
                             @{user.username || 'username'}

@@ -37,6 +37,8 @@ const Notifications = () => {
     { id: 'like', label: 'Lượt thích' },
     { id: 'comment', label: 'Bình luận' },
     { id: 'follow', label: 'Theo dõi' },
+    { id: 'system', label: 'Hệ thống' },
+    { id: 'announcement', label: 'Thông báo' },
   ];
 
   const handleFilterChange = filterId => {
@@ -50,7 +52,11 @@ const Notifications = () => {
   });
 
   const handleMarkAllRead = () => {
-    markAllAsRead(undefined, {
+    const typeFilter =
+      activeFilter !== 'all' && activeFilter !== 'unread'
+        ? activeFilter
+        : undefined;
+    markAllAsRead(typeFilter, {
       onError: () => notify.error('Không thể đánh dấu tất cả là đã đọc'),
     });
   };
@@ -133,7 +139,13 @@ const Notifications = () => {
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {filteredNotifications.map(notif => {
             const sender = notif.sender || notif.user;
-            if (!sender) return null;
+            const displayName =
+              sender?.name || sender?.username || 'Hệ thống';
+            const displayContent =
+              notif.displayContent ||
+              notif.content ||
+              notif.message ||
+              getNotificationContent(notif);
 
             return (
               <div
@@ -146,12 +158,15 @@ const Notifications = () => {
                 {/* Avatar with Icon */}
                 <div className="relative flex-shrink-0">
                   <Link
-                    to={`/profile/${sender.username}`}
+                    to={sender?.username ? `/profile/${sender.username}` : '#'}
                     onClick={e => e.stopPropagation()}
                   >
                     <img
-                      src={sender.avatar || 'https://via.placeholder.com/40'}
-                      alt={sender.name}
+                      src={
+                        sender?.avatar ||
+                        '/images/default-avatar.png'
+                      }
+                      alt={displayName}
                       className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-700"
                     />
                   </Link>
@@ -163,14 +178,20 @@ const Notifications = () => {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-content dark:text-white">
-                    <Link
-                      to={`/profile/${sender.username}`}
-                      className="font-bold hover:underline"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {sender.name}
-                    </Link>{' '}
-                    {getNotificationContent(notif)}
+                    {sender?.username ? (
+                      <>
+                        <Link
+                          to={`/profile/${sender.username}`}
+                          className="font-bold hover:underline"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {displayName}
+                        </Link>{' '}
+                        {displayContent}
+                      </>
+                    ) : (
+                      displayContent
+                    )}
                   </p>
 
                   {/* Additional Content depending on type */}

@@ -69,9 +69,8 @@ const ReportSchema = new Schema(
 
     // Snapshot of reported content (in case it's deleted)
     contentSnapshot: {
-      text: { type: String },
-      media: [{ type: String }],
-      capturedAt: { type: Date, default: Date.now },
+      type: Schema.Types.Mixed,
+      default: {},
     },
 
     // For comment reports, link to parent post
@@ -92,6 +91,15 @@ const ReportSchema = new Schema(
         'escalated',
       ],
       default: 'pending',
+    },
+
+    reviewedBy: {
+      type: Types.ObjectId,
+      ref: 'User',
+    },
+
+    reviewedAt: {
+      type: Date,
     },
 
     // Priority for triage (higher = more urgent)

@@ -1,6 +1,7 @@
 const StatusBadge = ({ status }) => {
   const styles = {
     active: 'admin-pill admin-pill-success',
+    warned: 'admin-pill admin-pill-warning',
     pending: 'admin-pill admin-pill-warning',
     suspended: 'admin-pill admin-pill-muted',
     banned: 'admin-pill admin-pill-danger',
@@ -11,6 +12,8 @@ const StatusBadge = ({ status }) => {
     switch (s) {
       case 'active':
         return 'Hoạt động';
+      case 'warned':
+        return 'Cảnh báo';
       case 'pending':
         return 'Chờ duyệt';
       case 'suspended':

@@ -6,6 +6,22 @@ import { objectId } from './common.validation.js';
  * Validation for all endpoints in post.router.js
  */
 
+const REPORT_CATEGORIES = [
+  'spam',
+  'harassment',
+  'hate_speech',
+  'violence',
+  'nudity',
+  'misinformation',
+  'copyright',
+  'impersonation',
+  'self_harm',
+  'illegal',
+  'scam',
+  'other',
+  'fake_account',
+];
+
 // ======================================
 // GET / (GetAllPost)
 // Query: { page?, limit?, sort? }
@@ -50,15 +66,20 @@ export const trendingQuery = Joi.object({
 // Query: { q, page?, limit?, sort? }
 // ======================================
 export const searchPostsQuery = Joi.object({
-  q: Joi.string().trim().min(1).max(100).required().messages({
-    'string.empty': 'Từ khóa tìm kiếm không được để trống',
-    'any.required': 'Từ khóa tìm kiếm là bắt buộc',
-  }),
+  q: Joi.string().trim().min(2).max(100),
+  query: Joi.string().trim().min(2).max(100),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
   sort: Joi.string().valid('newest', 'oldest', 'popular').default('newest'),
   type: Joi.string().valid('all', 'image', 'video', 'text'),
-});
+})
+  .or('q', 'query')
+  .rename('query', 'q', { ignoreUndefined: true, override: false })
+  .messages({
+    'object.missing': 'Từ khóa tìm kiếm là bắt buộc',
+    'string.empty': 'Từ khóa tìm kiếm không được để trống',
+    'string.min': 'Từ khóa tìm kiếm phải có ít nhất 2 ký tự',
+  });
 
 // ======================================
 // GET /hashtag/:hashtag
@@ -207,7 +228,7 @@ export const reportPostParam = Joi.object({
 
 export const reportPostBody = Joi.object({
   reason: Joi.string()
-    .valid('spam', 'harassment', 'violence', 'hate_speech', 'nudity', 'other')
+    .valid(...REPORT_CATEGORIES)
     .required()
     .messages({
       'any.only': 'Lý do báo cáo không hợp lệ',

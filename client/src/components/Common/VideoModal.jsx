@@ -182,6 +182,7 @@ const VideoModal = ({ videoUrl, onClose, poster }) => {
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, []);
 

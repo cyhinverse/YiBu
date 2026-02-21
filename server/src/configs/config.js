@@ -25,6 +25,17 @@ const parseCsv = (value, fallback = []) => {
     .filter(Boolean);
 };
 
+const parseInteger = (value, fallback, options = {}) => {
+  const { min, max } = options;
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed)) return fallback;
+
+  if (Number.isFinite(min) && parsed < min) return min;
+  if (Number.isFinite(max) && parsed > max) return max;
+  return parsed;
+};
+
 const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
 
 const parseTrustProxy = (value, fallback) => {
@@ -45,11 +56,28 @@ const parseTrustProxy = (value, fallback) => {
 const INSECURE_SECRET_VALUES = new Set([
   'dev_access_token_secret_change_me',
   'dev_refresh_token_secret_change_me',
+  'your_access_token_secret_here_change_in_production',
+  'your_refresh_token_secret_here_change_in_production',
   'changeme',
   'change_me',
   'secret',
   'default_secret',
 ]);
+
+const calculateEntropy = str => {
+  if (!str || typeof str !== 'string') return 0;
+  const freq = {};
+  for (const char of str) {
+    freq[char] = (freq[char] || 0) + 1;
+  }
+  let entropy = 0;
+  const len = str.length;
+  for (const count of Object.values(freq)) {
+    const p = count / len;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+};
 
 const assertSecureSecret = (name, value) => {
   if (!value) {
@@ -63,29 +91,38 @@ const assertSecureSecret = (name, value) => {
   if (INSECURE_SECRET_VALUES.has(value.toLowerCase())) {
     throw new Error(`${name} uses an insecure default value`);
   }
+
+  const entropy = calculateEntropy(value);
+  if (entropy < 3.5) {
+    console.warn(
+      `Warning: ${name} has low entropy (${entropy.toFixed(2)}). Consider using a more random secret.`
+    );
+  }
 };
+
+const DEFAULT_CLIENT_URL = 'http://localhost:3000';
+const clientUrl = process.env.CLIENT_URL || DEFAULT_CLIENT_URL;
+const defaultCorsOrigins = [
+  clientUrl,
+  'http://localhost:9258',
+  'http://localhost:9259',
+  'http://localhost:5173',
+  'http://127.0.0.1:9258',
+  'http://127.0.0.1:9259',
+  'http://localhost:8080',
+];
 
 const config = {
   env: nodeEnv,
   isProduction: nodeEnv === 'production',
-  port: Number.parseInt(process.env.PORT, 10) || 5000,
+  port: parseInteger(process.env.PORT, 5000, { min: 1 }),
   // Default to trusting the first proxy hop in production (typical for reverse proxies / load balancers).
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY, nodeEnv === 'production' ? 1 : false),
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
+  CLIENT_URL: clientUrl,
   debugMode: process.env.DEBUG_MODE === 'true',
   cors: {
     // Comma-separated list, e.g. "http://localhost:3000,http://localhost:5173"
-    origins: uniq(
-      parseCsv(process.env.CORS_ORIGINS, [
-        process.env.CLIENT_URL || 'http://localhost:3000',
-        'http://localhost:9258',
-        'http://localhost:9259',
-        'http://localhost:5173',
-        'http://127.0.0.1:9258',
-        'http://127.0.0.1:9259',
-        "http://localhost:8080"
-      ])
-    ),
+    origins: uniq(parseCsv(process.env.CORS_ORIGINS, defaultCorsOrigins)),
   },
   mongodb: {
     uri: process.env.MONGODB_URI || process.env.MONGO_URI, // Handle both naming conventions found in code
@@ -101,7 +138,7 @@ const config = {
   },
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: Number.parseInt(process.env.EMAIL_PORT, 10) || 587,
+    port: parseInteger(process.env.EMAIL_PORT, 587, { min: 1 }),
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
     // Only enable for local/dev when using self-signed certs. Never enable in production.

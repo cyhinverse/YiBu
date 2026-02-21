@@ -4,6 +4,8 @@ import config from './configs/config.js';
 import app from './app.js';
 import ConnectToMongodb from './database/connect.mongodb.js';
 import { initSocket } from './socket/index.js';
+import socketService from './modules/shared/socket/socket.service.js';
+import { shutdownRateLimiter } from './socket/middlewares/socketRateLimit.middleware.js';
 import logger from './configs/logger.js';
 
 let server;
@@ -13,18 +15,32 @@ const shutdown = async signal => {
   try {
     logger.info(`Shutdown started (${signal})`, { module: 'system' });
 
+    shutdownRateLimiter();
+
+    if (socketService && typeof socketService.shutdown === 'function') {
+      socketService.shutdown();
+    }
+
     if (io) {
-      await io.close();
+      io.close(() => {
+        logger.info('Socket.IO server closed', { module: 'system' });
+      });
       io = null;
     }
 
     if (server) {
-      await new Promise(resolve => server.close(resolve));
+      await new Promise(resolve => {
+        server.close(() => {
+          logger.info('HTTP server closed', { module: 'system' });
+          resolve();
+        });
+      });
       server = null;
     }
 
     if (mongoose.connection?.readyState === 1) {
       await mongoose.connection.close(false);
+      logger.info('MongoDB connection closed', { module: 'system' });
     }
 
     logger.info(`Shutdown complete (${signal})`, { module: 'system' });

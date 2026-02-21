@@ -1,182 +1,152 @@
-/**
- * Validation Middleware Factory
- * Create middleware to validate request body/params/query with Joi schema
- */
-
 import ApiError from '../helpers/ApiError.js';
 
-/**
- * Validate request body
- * @param {Joi.Schema} schema - Joi schema for validation
- * @returns {Function} Express middleware
- */
+const VALIDATION_ERROR_CODE = 'VALIDATION_ERROR';
+
+const mapValidationDetails = (error, location) => {
+  if (!error?.details) {
+    return [];
+  }
+
+  return error.details.map(detail => ({
+    ...(location ? { location } : {}),
+    field: detail.path.join('.'),
+    message: detail.message,
+  }));
+};
+
+const validateInput = ({ input, schema, message, options, location }) => {
+  const { error, value } = schema.validate(input, options);
+
+  if (error) {
+    return {
+      error: ApiError.badRequest(message, {
+        errorCode: VALIDATION_ERROR_CODE,
+        details: mapValidationDetails(error, location),
+      }),
+    };
+  }
+
+  return { value };
+};
+
 export const validateBody = schema => {
   return (req, res, next) => {
-    const { error, value } = schema.validate(req.body, {
-      abortEarly: false, // Return all errors, don't stop at first error
-      stripUnknown: true, // Remove fields not in schema
+    const result = validateInput({
+      input: req.body,
+      schema,
+      message: 'Invalid request body',
+      options: { abortEarly: false, stripUnknown: true },
     });
 
-    if (error) {
-      const details = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-      }));
-      return next(
-        ApiError.badRequest('Invalid request body', {
-          errorCode: 'VALIDATION_ERROR',
-          details,
-        })
-      );
+    if (result.error) {
+      return next(result.error);
     }
 
-    // Assign validated value to req.body
-    req.body = value;
-    next();
+    req.body = result.value;
+    return next();
   };
 };
 
-
-/**
- * Validate request params
- * @param {Joi.Schema} schema - Joi schema for validation
- * @returns {Function} Express middleware
- */
 export const validateParams = schema => {
   return (req, res, next) => {
-    const { error, value } = schema.validate(req.params, {
-      abortEarly: false,
+    const result = validateInput({
+      input: req.params,
+      schema,
+      message: 'Invalid request params',
+      options: { abortEarly: false },
     });
 
-    if (error) {
-      const details = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-      }));
-      return next(
-        ApiError.badRequest('Invalid request params', {
-          errorCode: 'VALIDATION_ERROR',
-          details,
-        })
-      );
+    if (result.error) {
+      return next(result.error);
     }
 
-    req.params = value;
-    next();
+    req.params = result.value;
+    return next();
   };
 };
 
-
-/**
- * Validate request query
- * @param {Joi.Schema} schema - Joi schema for validation
- * @returns {Function} Express middleware
- */
 export const validateQuery = schema => {
   return (req, res, next) => {
-    const { error, value } = schema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: true,
+    const result = validateInput({
+      input: req.query,
+      schema,
+      message: 'Invalid request query',
+      options: { abortEarly: false, stripUnknown: true },
     });
 
-    if (error) {
-      const details = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-      }));
-      return next(
-        ApiError.badRequest('Invalid request query', {
-          errorCode: 'VALIDATION_ERROR',
-          details,
-        })
-      );
+    if (result.error) {
+      return next(result.error);
     }
 
-    req.query = value;
-    next();
+    req.query = result.value;
+    return next();
   };
 };
 
-
-/**
- * Validate multiple parts of request at once
- * @param {Object} schemas - Object containing schemas for body, params, query
- * @returns {Function} Express middleware
- */
 export const validate = ({ body, params, query }) => {
   return (req, res, next) => {
     const errors = [];
 
-    // Validate body
     if (body) {
-      const { error, value } = body.validate(req.body, {
-        abortEarly: false,
-        stripUnknown: true,
+      const result = validateInput({
+        input: req.body,
+        schema: body,
+        message: 'Invalid request data',
+        options: { abortEarly: false, stripUnknown: true },
+        location: 'body',
       });
-      if (error) {
-        errors.push(
-          ...error.details.map(detail => ({
-            location: 'body',
-            field: detail.path.join('.'),
-            message: detail.message,
-          }))
-        );
+
+      if (result.error) {
+        errors.push(...result.error.details);
       } else {
-        req.body = value;
+        req.body = result.value;
       }
     }
 
-    // Validate params
     if (params) {
-      const { error, value } = params.validate(req.params, {
-        abortEarly: false,
+      const result = validateInput({
+        input: req.params,
+        schema: params,
+        message: 'Invalid request data',
+        options: { abortEarly: false },
+        location: 'params',
       });
-      if (error) {
-        errors.push(
-          ...error.details.map(detail => ({
-            location: 'params',
-            field: detail.path.join('.'),
-            message: detail.message,
-          }))
-        );
+
+      if (result.error) {
+        errors.push(...result.error.details);
       } else {
-        req.params = value;
+        req.params = result.value;
       }
     }
 
-    // Validate query
     if (query) {
-      const { error, value } = query.validate(req.query, {
-        abortEarly: false,
-        stripUnknown: true,
+      const result = validateInput({
+        input: req.query,
+        schema: query,
+        message: 'Invalid request data',
+        options: { abortEarly: false, stripUnknown: true },
+        location: 'query',
       });
-      if (error) {
-        errors.push(
-          ...error.details.map(detail => ({
-            location: 'query',
-            field: detail.path.join('.'),
-            message: detail.message,
-          }))
-        );
+
+      if (result.error) {
+        errors.push(...result.error.details);
       } else {
-        req.query = value;
+        req.query = result.value;
       }
     }
 
     if (errors.length > 0) {
-      const error = new Error('Dữ liệu không hợp lệ');
       return next(
         ApiError.badRequest('Invalid request data', {
-          errorCode: 'VALIDATION_ERROR',
+          errorCode: VALIDATION_ERROR_CODE,
           details: errors,
         })
       );
     }
 
-    next();
+    return next();
   };
 };
-
 
 export default {
   validateBody,

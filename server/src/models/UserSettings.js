@@ -19,6 +19,12 @@ const UserSettingsSchema = new Schema(
         follows: { type: Boolean, default: true },
         messages: { type: Boolean, default: true },
         mentions: { type: Boolean, default: true },
+        shares: { type: Boolean, default: true },
+        saves: { type: Boolean, default: true },
+        tags: { type: Boolean, default: true },
+        systemUpdates: { type: Boolean, default: true },
+        sound: { type: Boolean, default: true },
+        vibration: { type: Boolean, default: true },
       },
       email: {
         enabled: { type: Boolean, default: true },
@@ -43,6 +49,25 @@ const UserSettingsSchema = new Schema(
       searchable: { type: Boolean, default: true },
       showOnlineStatus: { type: Boolean, default: true },
       allowTagging: { type: Boolean, default: true },
+      allowMentions: { type: Boolean, default: true },
+      showEmail: { type: Boolean, default: false },
+      showPhone: { type: Boolean, default: false },
+      showBirthday: { type: Boolean, default: false },
+      whoCanSeeFollowers: {
+        type: String,
+        enum: ["everyone", "followers", "only_me"],
+        default: "everyone",
+      },
+      whoCanSeeFollowing: {
+        type: String,
+        enum: ["everyone", "followers", "only_me"],
+        default: "everyone",
+      },
+      whoCanSeeLikes: {
+        type: String,
+        enum: ["everyone", "followers", "only_me"],
+        default: "everyone",
+      },
     },
 
     // Security

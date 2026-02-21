@@ -52,8 +52,10 @@ const ResetPassword = () => {
       notify.error("Vui lòng điền đầy đủ thông tin");
       return false;
     }
-    if (formData.newPassword.length < 6) {
-      notify.error("Mật khẩu phải có ít nhất 6 ký tự");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(formData.newPassword)) {
+      notify.error(
+        "Mật khẩu phải có ít nhất 6 ký tự, gồm chữ hoa, chữ thường và số"
+      );
       return false;
     }
     if (formData.newPassword !== formData.confirmPassword) {
@@ -68,7 +70,11 @@ const ResetPassword = () => {
     if (!validateForm()) return;
 
     const result = await dispatch(
-      resetPassword({ token, newPassword: formData.newPassword })
+      resetPassword({
+        token,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
+      })
     );
     if (resetPassword.fulfilled.match(result)) {
       setSuccess(true);

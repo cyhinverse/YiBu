@@ -166,10 +166,14 @@ export default function PostsGrid({
                     >
                       {post.status === 'active'
                         ? 'Hoạt động'
+                        : post.status === 'pending'
+                        ? 'Chờ duyệt'
                         : post.status === 'hidden'
                         ? 'Đã ẩn'
                         : post.status === 'flagged'
                         ? 'Bị gắn cờ'
+                        : post.status === 'rejected'
+                        ? 'Từ chối'
                         : post.status === 'deleted'
                         ? 'Đã xóa'
                         : 'Không xác định'}

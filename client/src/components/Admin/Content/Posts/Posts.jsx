@@ -45,7 +45,7 @@ export default function Posts() {
   // Reset page on search
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterType, filterStatus]);
 
   // Queries
   const {
@@ -55,7 +55,6 @@ export default function Posts() {
   } = useAdminPosts({
     page: currentPage,
     limit: 10,
-    search: debouncedSearch || undefined,
     status: filterStatus !== 'all' ? filterStatus : undefined,
     type: filterType !== 'all' ? filterType : undefined,
   });
@@ -65,8 +64,28 @@ export default function Posts() {
     : Array.isArray(postsData?.data)
     ? postsData.data
     : [];
+  const normalizedSearch = debouncedSearch.trim().toLowerCase();
+  const isLocalSearching = Boolean(normalizedSearch);
+  const filteredPosts = isLocalSearching
+    ? postsList.filter(post => {
+        const searchableText = [
+          post.content,
+          post.caption,
+          post.user?.name,
+          post.user?.username,
+          post.author?.name,
+          post.author?.username,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return searchableText.includes(normalizedSearch);
+      })
+    : postsList;
   const pagination = {
-    pages: postsData?.totalPages || postsData?.pages || 1,
+    pages: isLocalSearching
+      ? 1
+      : postsData?.totalPages || postsData?.pages || 1,
   };
 
   // Post Reports Query
@@ -81,7 +100,7 @@ export default function Posts() {
 
   const loading = postsLoading;
 
-  const posts = Array.isArray(postsList) ? postsList : [];
+  const posts = Array.isArray(filteredPosts) ? filteredPosts : [];
 
   const handleViewDetails = post => {
     setSelectedPost(post);

@@ -59,10 +59,13 @@ export const useSearchSuggestions = query => {
     queryKey: ['search', 'suggestions', query],
     queryFn: async () => {
       if (!query?.trim()) return [];
-      const response = await api.get(USER_API.SUGGESTIONS, {
-        params: { query },
+      const response = await api.get(USER_API.SEARCH, {
+        params: { q: query, page: 1, limit: 5 },
       });
-      return extractData(response);
+      const data = extractData(response);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.users)) return data.users;
+      return [];
     },
     enabled: !!query?.trim() && query.length >= 2,
     staleTime: 1000 * 60 * 5,

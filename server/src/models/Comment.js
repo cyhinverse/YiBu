@@ -174,7 +174,9 @@ CommentSchema.statics.getCommentsForPost = async function (
   const sort =
     sortBy === 'likesCount'
       ? { likesCount: -1, createdAt: -1 }
-      : { createdAt: -1 };
+      : sortBy === 'oldest'
+        ? { createdAt: 1 }
+        : { createdAt: -1 };
 
   // Get top-level comments
   const comments = await this.find({
@@ -195,12 +197,14 @@ CommentSchema.statics.getCommentsForPost = async function (
 
   // Fetch replies for each comment
   const commentIds = comments.map(c => c._id);
+  const replyFetchLimit = replyLimit * commentIds.length;
   const replies = await this.find({
     parentComment: { $in: commentIds },
     isDeleted: false,
     'moderation.status': 'approved',
   })
     .sort({ createdAt: 1 })
+    .limit(replyFetchLimit)
     .populate('user', 'username name avatar verified')
     .lean();
 

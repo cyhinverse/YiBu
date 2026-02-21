@@ -1,5 +1,6 @@
 import logger from "../../configs/logger.js";
 import socketService from "../../modules/shared/socket/socket.service.js";
+import { cleanupRateLimiter } from "../middlewares/socketRateLimit.middleware.js";
 
 export const registerConnectionHandlers = (io, socket) => {
   // Legacy compatibility event. User identity now comes from socket auth middleware.
@@ -38,6 +39,7 @@ export const registerConnectionHandlers = (io, socket) => {
   // Disconnect
   socket.on("disconnect", () => {
     logger.info("Client disconnected:", socket.id);
+    cleanupRateLimiter(socket.id);
     if (socket.user && socket.user.id) {
       const userId = socket.user.id;
 

@@ -40,6 +40,7 @@ const NotificationSchema = new Schema(
         'mention',
         'reply',
         'tag',
+        'message',
         'system',
         'announcement',
         'share',
@@ -165,16 +166,30 @@ NotificationSchema.statics.createNotification = async function (data) {
   const settings = await UserSettings.findOne({ user: recipient }).lean();
 
   // Check if this notification type is enabled
-  const notifSettings = settings?.notifications?.push || {};
+  const pushSettings =
+    settings?.notifications?.push &&
+    typeof settings.notifications.push === 'object'
+      ? settings.notifications.push
+      : settings?.notifications || {};
   const typeMapping = {
     like: 'likes',
     comment: 'comments',
     follow: 'follows',
     mention: 'mentions',
     reply: 'comments',
+    share: 'shares',
+    message: 'messages',
+    save: 'saves',
+    tag: 'tags',
+    system: 'systemUpdates',
+    announcement: 'systemUpdates',
   };
 
-  if (notifSettings[typeMapping[type]] === false) {
+  if (pushSettings.enabled === false) {
+    return null;
+  }
+
+  if (pushSettings[typeMapping[type]] === false) {
     return null;
   }
 

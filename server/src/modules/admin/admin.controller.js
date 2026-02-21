@@ -1,15 +1,37 @@
 import UserService from '../user/user.service.js';
-import PostService from '../post/post.service.js';
 import AdminService from './admin.service.js';
 import mongoose from 'mongoose';
 import { CatchError } from '../../configs/CatchError.js';
 import { sendOk } from '../../helpers/apiResponse.js';
-import {
-  getPaginationParams,
-  getPaginationResponse,
-} from '../../utils/pagination.js';
+import { getPaginationParams } from '../../utils/pagination.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+
+const REPORT_PRIORITY_MAP = {
+  low: 10,
+  medium: 30,
+  high: 60,
+  urgent: 90,
+};
+
+const POST_ACTION_MESSAGES = {
+  approve: 'approved',
+  reject: 'rejected',
+  flag: 'flagged',
+  unflag: 'unflagged',
+  hide: 'hidden',
+  unhide: 'unhidden',
+  remove: 'removed',
+  delete: 'deleted',
+};
+
+const COMMENT_ACTION_MESSAGES = {
+  approve: 'approved',
+  hide: 'hidden',
+  unhide: 'unhidden',
+  remove: 'removed',
+  delete: 'deleted',
+};
 
 
 export const AdminController = {
@@ -135,14 +157,16 @@ export const AdminController = {
    */
   getAllUsers: CatchError(async (req, res) => {
     const { page, limit } = getPaginationParams(req.query);
-    const { search, status, sortBy, sortOrder } = req.query;
+    const { search, status, role, sortBy, sortOrder } = req.query;
+    const normalizedSortBy = sortBy === 'lastLogin' ? 'lastLoginAt' : sortBy;
 
     const result = await AdminService.getAllUsers({
       page,
       limit,
       search,
       status,
-      sortBy,
+      role,
+      sortBy: normalizedSortBy,
       sortOrder: sortOrder === 'asc' ? 1 : -1,
     });
 
@@ -180,7 +204,7 @@ export const AdminController = {
     const user = await AdminService.getUserById(userId);
     return sendOk(res, {
       message: 'User profile retrieved successfully',
-      data: userProfile,
+      data: user,
     });
 
   }),
@@ -370,15 +394,21 @@ export const AdminController = {
    * @returns {Object} Response with suspended user data, or 400 if invalid user ID
    */
   suspendUser: CatchError(async (req, res) => {
-    const { userId, days, reason } = req.body;
+    const { userId, days, duration, reason } = req.body;
     const adminId = req.user.id;
+    const suspendDays = Number(days ?? duration);
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       throw ApiError.badRequest('Valid user ID is required');
     }
 
 
-    const user = await AdminService.suspendUser(userId, adminId, days, reason);
+    const user = await AdminService.suspendUser(
+      userId,
+      adminId,
+      Number.isFinite(suspendDays) ? suspendDays : undefined,
+      reason
+    );
     return sendOk(res, {
       message: 'User suspended successfully',
       data: user,
@@ -466,12 +496,13 @@ export const AdminController = {
    */
   getAllPosts: CatchError(async (req, res) => {
     const { page, limit } = getPaginationParams(req.query);
-    const { status, sortBy, sortOrder } = req.query;
+    const { status, type, sortBy, sortOrder } = req.query;
 
     const result = await AdminService.getAllPosts({
       page,
       limit,
       status,
+      type,
       sortBy,
       sortOrder: sortOrder === 'asc' ? 1 : -1,
     });
@@ -534,7 +565,7 @@ export const AdminController = {
    */
   moderatePost: CatchError(async (req, res) => {
     const { postId } = req.params;
-    const { action, reason } = req.body;
+    const { action, reason } = req.body || {};
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -554,7 +585,7 @@ export const AdminController = {
       reason
     );
     return sendOk(res, {
-      message: `Post ${action}d successfully`,
+      message: `Post ${POST_ACTION_MESSAGES[action] || 'moderated'} successfully`,
       data: post,
     });
 
@@ -601,7 +632,7 @@ export const AdminController = {
    */
   deletePost: CatchError(async (req, res) => {
     const { postId } = req.params;
-    const { reason } = req.body;
+    const { reason } = req.body || {};
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -672,7 +703,7 @@ export const AdminController = {
    */
   moderateComment: CatchError(async (req, res) => {
     const { commentId } = req.params;
-    const { action, reason } = req.body;
+    const { action, reason } = req.body || {};
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
@@ -687,7 +718,9 @@ export const AdminController = {
       reason
     );
     return sendOk(res, {
-      message: `Comment ${action}d successfully`,
+      message: `Comment ${
+        COMMENT_ACTION_MESSAGES[action] || 'moderated'
+      } successfully`,
       data: comment,
     });
 
@@ -707,7 +740,7 @@ export const AdminController = {
    */
   deleteComment: CatchError(async (req, res) => {
     const { commentId } = req.params;
-    const { reason } = req.body;
+    const { reason } = req.body || {};
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
@@ -742,14 +775,29 @@ export const AdminController = {
    */
   getReports: CatchError(async (req, res) => {
     const { page, limit } = getPaginationParams(req.query);
-    const { status, category, priority } = req.query;
+    const { status, category, priority, type, targetType, sortBy, sortOrder } =
+      req.query;
+    let normalizedStatus = status;
+    if (status === 'in_review') {
+      normalizedStatus = 'reviewing';
+    } else if (status === 'dismissed') {
+      normalizedStatus = 'rejected';
+    }
+    const normalizedTargetType = targetType || type;
+    const normalizedPriority =
+      typeof priority === 'string' && REPORT_PRIORITY_MAP[priority] !== undefined
+        ? REPORT_PRIORITY_MAP[priority]
+        : priority;
 
     const result = await AdminService.getReports({
       page,
       limit,
-      status,
+      status: normalizedStatus,
       category,
-      priority,
+      targetType: normalizedTargetType,
+      priority: normalizedPriority,
+      sortBy,
+      sortOrder: sortOrder === 'asc' ? 1 : -1,
     });
 
     return sendOk(res, {
@@ -782,23 +830,28 @@ export const AdminController = {
    */
   reviewReport: CatchError(async (req, res) => {
     const { reportId } = req.params;
-    const { decision, actionTaken } = req.body;
+    const { action, decision, actionTaken, resolution, notes } = req.body || {};
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
       throw ApiError.badRequest('Invalid report ID format');
     }
 
-    if (!decision) {
-      throw ApiError.badRequest('Decision is required (resolved/rejected/escalated)');
+    if (!action && !decision && !actionTaken && !resolution) {
+      throw ApiError.badRequest('Review input is required');
     }
 
 
     const report = await AdminService.reviewReport(
       reportId,
       adminId,
-      decision,
-      actionTaken
+      {
+        action,
+        decision,
+        actionTaken,
+        resolution,
+        notes,
+      }
     );
     return sendOk(res, {
       message: 'Report reviewed successfully',
@@ -846,8 +899,14 @@ export const AdminController = {
 
     const result = await AdminService.broadcastNotification(
       adminId,
-      finalContent,
-      finalTargetGroup
+      {
+        content: finalContent,
+        targetGroup: finalTargetGroup,
+        type: type || 'system',
+        title,
+        priority,
+        link,
+      }
     );
     return sendOk(res, {
       message: `Notification sent to ${result.sentCount} users`,

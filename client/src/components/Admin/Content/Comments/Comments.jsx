@@ -34,7 +34,7 @@ export default function Comments() {
   // Reset page on search
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterStatus]);
 
   // Query
   const {
@@ -80,10 +80,11 @@ export default function Comments() {
   };
 
   const handleModerate = (comment, status) => {
+    const isRestore = status === 'active';
     moderateComment({
       commentId: comment._id || comment.id,
-      action: status === 'active' ? 'restore' : 'hide',
-      reason: 'Kiểm duyệt bởi quản trị viên',
+      action: isRestore ? 'unhide' : 'hide',
+      reason: isRestore ? undefined : 'Kiểm duyệt bởi quản trị viên',
     });
   };
 

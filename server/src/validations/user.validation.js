@@ -11,14 +11,18 @@ import { objectId } from './common.validation.js';
 // Query: { q, page?, limit? }
 // ======================================
 export const searchUsersQuery = Joi.object({
-  q: Joi.string().trim().min(1).max(100).required().messages({
-    'string.empty': 'Từ khóa tìm kiếm không được để trống',
-    'string.min': 'Từ khóa phải có ít nhất 1 ký tự',
-    'any.required': 'Từ khóa tìm kiếm là bắt buộc',
-  }),
+  q: Joi.string().trim().min(2).max(100),
+  query: Joi.string().trim().min(2).max(100),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
-});
+})
+  .or('q', 'query')
+  .rename('query', 'q', { ignoreUndefined: true, override: false })
+  .messages({
+    'object.missing': 'Từ khóa tìm kiếm là bắt buộc',
+    'string.empty': 'Từ khóa tìm kiếm không được để trống',
+    'string.min': 'Từ khóa phải có ít nhất 2 ký tự',
+  });
 
 // ======================================
 // GET /suggestions

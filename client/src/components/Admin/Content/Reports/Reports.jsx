@@ -36,7 +36,7 @@ export default function Reports() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterStatus, filterType]);
 
   const {
     data: reportsData,
@@ -45,7 +45,6 @@ export default function Reports() {
   } = useAdminReports({
     page: currentPage,
     limit: 10,
-    search: debouncedSearch || undefined,
     status: filterStatus !== 'all' ? filterStatus : undefined,
     type: filterType !== 'all' ? filterType : undefined,
   });
@@ -57,12 +56,31 @@ export default function Reports() {
     : Array.isArray(reportsData?.data)
     ? reportsData.data
     : [];
+  const normalizedSearch = debouncedSearch.trim().toLowerCase();
+  const isLocalSearching = Boolean(normalizedSearch);
+  const filteredReports = isLocalSearching
+    ? reportsList.filter(report => {
+        const searchableText = [
+          report.reason,
+          report.description,
+          report.reporter?.name,
+          report.reporter?.username,
+          report.targetType,
+          report.targetContent,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return searchableText.includes(normalizedSearch);
+      })
+    : reportsList;
   const pagination = {
-    pages: reportsData?.totalPages || reportsData?.pages || 1,
+    pages: isLocalSearching
+      ? 1
+      : reportsData?.totalPages || reportsData?.pages || 1,
   };
 
-  const pendingCount =
-    pendingReportsData?.totalReports || pendingReportsData?.totalDocs || 0;
+  const pendingCount = pendingReportsData?.total || 0;
 
   // Mutations
   const resolveMutation = useResolveReport();
@@ -70,7 +88,7 @@ export default function Reports() {
   const updateStatusMutation = useUpdateReportStatus();
 
   const loading = reportsLoading;
-  const reports = Array.isArray(reportsList) ? reportsList : [];
+  const reports = Array.isArray(filteredReports) ? filteredReports : [];
 
   const handleResolve = async (report, notes) => {
     try {
@@ -217,6 +235,7 @@ export default function Reports() {
               <option value="post">Bài viết</option>
               <option value="comment">Bình luận</option>
               <option value="user">Người dùng</option>
+              <option value="message">Tin nhắn</option>
             </select>
             <ChevronDown
               size={16}
@@ -240,8 +259,10 @@ export default function Reports() {
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ xử lý</option>
+              <option value="reviewing">Đang xem xét</option>
               <option value="resolved">Đã giải quyết</option>
               <option value="rejected">Đã từ chối</option>
+              <option value="escalated">Leo thang</option>
             </select>
             <ChevronDown
               size={16}

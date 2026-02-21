@@ -137,12 +137,8 @@ const sanitizeString = str => {
   if (typeof str !== 'string') return str;
 
   return sanitizeHtml(str, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
-    allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
-      img: ['src', 'alt'],
-    },
-    allowedIframeHostnames: ['www.youtube.com'],
+    allowedTags: [],
+    allowedAttributes: {},
   });
 };
 

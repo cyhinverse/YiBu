@@ -3,22 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import io from 'socket.io-client';
 import { notify } from '@/utils/notify';
 import { SOCKET_URL, MAX_RECONNECT_ATTEMPTS } from '@/constants/socket';
+import { invalidateQueryKeys } from './queryClientUtils';
 
-/**
- * Hook to manage Socket.IO connection
- * @param {string} userId - Current user ID
- * @returns {Object} Socket instance and utility functions
- * @returns {Object|null} returns.socket - Socket.IO instance
- * @returns {Function} returns.joinRoom - Join room function
- * @returns {Function} returns.leaveRoom - Leave room function
- * @returns {Function} returns.sendMessage - Send message function
- * @returns {Function} returns.emitEvent - Emit custom event function
- * @returns {Function} returns.joinPostRoom - Join post room function
- * @returns {Function} returns.emitLikeAction - Emit like action function
- * @returns {boolean} returns.isConnected - Connection status
- * @returns {Object} returns.onlineUsers - Online users map
- * @returns {Function} returns.isUserOnline - Check user online function
- */
 const useSocket = userId => {
   const socketRef = useRef(null);
   const queryClient = useQueryClient();
@@ -26,6 +12,35 @@ const useSocket = userId => {
   const [isConnected, setIsConnected] = useState(false);
   const activeRooms = useRef(new Set());
   const [onlineUsers, setOnlineUsers] = useState({});
+  const handlersRef = useRef([]);
+  const isCleaningUp = useRef(false);
+  const mountedRef = useRef(true);
+
+  const cleanupHandlers = useCallback(socket => {
+    if (!socket || isCleaningUp.current) return;
+    isCleaningUp.current = true;
+    try {
+      handlersRef.current.forEach(({ event, handler }) => {
+        socket.off(event, handler);
+      });
+      handlersRef.current = [];
+    } finally {
+      isCleaningUp.current = false;
+    }
+  }, []);
+
+  const registerHandler = useCallback((socket, event, handler) => {
+    if (!socket || isCleaningUp.current) return;
+    socket.on(event, handler);
+    handlersRef.current.push({ event, handler });
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -42,7 +57,8 @@ const useSocket = userId => {
     socketRef.current = socket;
     const rooms = activeRooms.current;
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
+      if (!mountedRef.current) return;
       reconnectAttempts.current = 0;
       setIsConnected(true);
 
@@ -54,40 +70,70 @@ const useSocket = userId => {
       });
 
       socket.emit('get_online_users');
-      queryClient.invalidateQueries(['messages', 'unreadCount']);
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
-    });
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'unreadCount'],
+        ['notifications', 'unreadCount'],
+      ]);
+    };
 
-    socket.on('disconnect', reason => {
+    const handleDisconnect = reason => {
+      if (!mountedRef.current) return;
       setIsConnected(false);
       if (reason === 'io server disconnect') {
-        setTimeout(() => socket.connect(), 1000);
+        setTimeout(() => {
+          if (socketRef.current === socket && !socket.connected && mountedRef.current) {
+            socket.connect();
+          }
+        }, 1000);
       }
-    });
+    };
 
-    socket.on('connect_error', () => {
+    const handleConnectError = () => {
+      if (!mountedRef.current) return;
       setIsConnected(false);
       reconnectAttempts.current++;
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
         notify.error('Unable to connect to chat server');
       }
+    };
+
+    registerHandler(socket, 'connect', handleConnect);
+    registerHandler(socket, 'disconnect', handleDisconnect);
+    registerHandler(socket, 'connect_error', handleConnectError);
+
+    const messageHandlers = createMessageHandlers(userId, queryClient, mountedRef);
+    const notificationHandlers = createNotificationHandlers(queryClient, mountedRef);
+    const likeHandlers = createLikeHandlers(userId, queryClient, mountedRef);
+    const commentHandlers = createCommentHandlers(userId, queryClient, mountedRef);
+    const userStatusHandlers = createUserStatusHandlers(setOnlineUsers, mountedRef);
+
+    Object.entries(messageHandlers).forEach(([event, handler]) => {
+      registerHandler(socket, event, handler);
+    });
+    Object.entries(notificationHandlers).forEach(([event, handler]) => {
+      registerHandler(socket, event, handler);
+    });
+    Object.entries(likeHandlers).forEach(([event, handler]) => {
+      registerHandler(socket, event, handler);
+    });
+    Object.entries(commentHandlers).forEach(([event, handler]) => {
+      registerHandler(socket, event, handler);
+    });
+    Object.entries(userStatusHandlers).forEach(([event, handler]) => {
+      registerHandler(socket, event, handler);
     });
 
-    registerMessageHandlers(socket, userId, queryClient);
-    registerNotificationHandlers(socket, queryClient);
-    registerLikeHandlers(socket, userId, queryClient);
-    registerCommentHandlers(socket, userId, queryClient);
-    registerUserStatusHandlers(socket, setOnlineUsers);
-
     return () => {
+      cleanupHandlers(socket);
       if (socket) {
         socket.disconnect();
         socketRef.current = null;
-        setIsConnected(false);
-        rooms.clear();
       }
+      setIsConnected(false);
+      rooms.clear();
+      handlersRef.current = [];
     };
-  }, [userId, queryClient]);
+  }, [userId, queryClient, registerHandler, cleanupHandlers]);
 
   /**
    * Join a room
@@ -205,60 +251,49 @@ const useSocket = userId => {
   );
 };
 
-/**
- * Register message handlers
- * @param {Object} socket - Socket instance
- * @param {string} userId - Current user ID
- * @param {Object} queryClient - React Query client
- */
-const registerMessageHandlers = (socket, userId, queryClient) => {
-  socket.on('new_message', message => {
-    if (!message?._id) return;
+const createMessageHandlers = (userId, queryClient, mountedRef) => ({
+  new_message: message => {
+    if (!mountedRef?.current || !message?._id) return;
 
     const senderId = message.sender?._id || message.sender;
     const isMine =
       senderId && userId && senderId.toString() === userId.toString();
 
-    queryClient.invalidateQueries(['messages', 'list', message.conversationId]);
-    queryClient.invalidateQueries([
-      'messages',
-      'infinite',
-      message.conversationId,
+    invalidateQueryKeys(queryClient, [
+      ['messages', 'list', message.conversationId],
+      ['messages', 'infinite', message.conversationId],
+      ['messages', 'conversations'],
+      ['messages', 'unreadCount'],
     ]);
-    queryClient.invalidateQueries(['messages', 'conversations']);
-    queryClient.invalidateQueries(['messages', 'unreadCount']);
 
     if (!isMine) {
       const senderName =
         message.sender?.firstName || message.sender?.name || 'User';
       notify.success(`New message from ${senderName}`);
     }
-  });
-
-  socket.on('message_read', data => {
+  },
+  message_read: data => {
+    if (!mountedRef?.current) return;
     if (data?.messageId) {
-      queryClient.invalidateQueries(['messages']);
+      invalidateQueryKeys(queryClient, [['messages']]);
     }
-  });
+  },
+  user_typing: () => {},
+  user_stop_typing: () => {},
+});
 
-  socket.on('user_typing', () => {});
-  socket.on('user_stop_typing', () => {});
-};
-
-/**
- * Register notification handlers
- * @param {Object} socket - Socket instance
- * @param {Object} queryClient - React Query client
- */
-const registerNotificationHandlers = (socket, queryClient) => {
+const createNotificationHandlers = (queryClient, mountedRef) => {
   const handleNotification = notification => {
+    if (!mountedRef?.current) return;
     if (!notification?._id) {
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [['notifications', 'unreadCount']]);
       return;
     }
 
-    queryClient.invalidateQueries(['notifications']);
-    queryClient.invalidateQueries(['notifications', 'unreadCount']);
+    invalidateQueryKeys(queryClient, [
+      ['notifications'],
+      ['notifications', 'unreadCount'],
+    ]);
 
     let msg = notification.content || 'You have a new notification';
     if (notification.type === 'like' && notification.post?.caption) {
@@ -267,72 +302,65 @@ const registerNotificationHandlers = (socket, queryClient) => {
     notify.success(msg, { icon: '🔔' });
   };
 
-  socket.on('notification:new', handleNotification);
-  socket.on('new_notification', handleNotification);
+  return {
+    'notification:new': handleNotification,
+    new_notification: handleNotification,
+  };
 };
 
-/**
- * Register like handlers
- * @param {Object} socket - Socket instance
- * @param {string} currentUserId - Current user ID
- * @param {Object} queryClient - React Query client
- */
-const registerLikeHandlers = (socket, currentUserId, queryClient) => {
-  socket.on('post:like:update', ({ postId, userId }) => {
+const createLikeHandlers = (currentUserId, queryClient, mountedRef) => ({
+  'post:like:update': ({ postId, userId }) => {
+    if (!mountedRef?.current || userId === currentUserId) return;
+
+    invalidateQueryKeys(queryClient, [
+      ['feed'],
+      ['posts'],
+      ['post', postId],
+      ['likeStatus', postId],
+    ]);
+  },
+});
+
+const createCommentHandlers = (currentUserId, queryClient, mountedRef) => ({
+  new_comment: data => {
+    if (!mountedRef?.current) return;
+    const { postId, userId } = data;
     if (userId === currentUserId) return;
 
-    queryClient.invalidateQueries(['feed']);
-    queryClient.invalidateQueries(['posts']);
-    queryClient.invalidateQueries(['post', postId]);
-    queryClient.invalidateQueries(['likeStatus', postId]);
-  });
-};
+    invalidateQueryKeys(queryClient, [
+      ['post', postId],
+      ['comments', postId],
+      ['posts'],
+      ['feed'],
+    ]);
+  },
+  delete_comment: data => {
+    if (!mountedRef?.current) return;
+    const { postId, userId } = data;
+    if (userId === currentUserId) return;
 
-/**
- * Register user status handlers
- * @param {Object} socket - Socket instance
- * @param {Function} setOnlineUsers - Online users state setter
- */
-const registerUserStatusHandlers = (socket, setOnlineUsers) => {
-  socket.on('get_users_online', users => {
+    invalidateQueryKeys(queryClient, [
+      ['post', postId],
+      ['comments', postId],
+      ['posts'],
+      ['feed'],
+    ]);
+  },
+});
+
+const createUserStatusHandlers = (setOnlineUsers, mountedRef) => ({
+  get_users_online: users => {
+    if (!mountedRef?.current) return;
     const map = {};
     if (Array.isArray(users)) users.forEach(id => (map[id] = true));
     else Object.assign(map, users || {});
     setOnlineUsers(map);
-  });
-
-  socket.on('user_status_change', ({ userId, status }) => {
+  },
+  user_status_change: ({ userId, status }) => {
+    if (!mountedRef?.current) return;
     setOnlineUsers(prev => ({ ...prev, [userId]: status === 'online' }));
-  });
-};
-
-/**
- * Register comment handlers
- * @param {Object} socket - Socket instance
- * @param {string} currentUserId - Current user ID
- * @param {Object} queryClient - React Query client
- */
-const registerCommentHandlers = (socket, currentUserId, queryClient) => {
-  socket.on('new_comment', data => {
-    const { postId, userId } = data;
-    if (userId === currentUserId) return;
-
-    queryClient.invalidateQueries(['post', postId]);
-    queryClient.invalidateQueries(['comments', postId]);
-    queryClient.invalidateQueries(['posts']);
-    queryClient.invalidateQueries(['feed']);
-  });
-
-  socket.on('delete_comment', data => {
-    const { postId, userId } = data;
-    if (userId === currentUserId) return;
-
-    queryClient.invalidateQueries(['post', postId]);
-    queryClient.invalidateQueries(['comments', postId]);
-    queryClient.invalidateQueries(['posts']);
-    queryClient.invalidateQueries(['feed']);
-  });
-};
+  },
+});
 
 export default useSocket;
 

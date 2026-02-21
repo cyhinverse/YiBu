@@ -14,12 +14,28 @@ const PrivacySettings = () => {
     messagePermission: 'everyone',
     searchVisibility: true,
     activityStatus: true,
+    showOnlineStatus: true,
+    allowTagging: true,
   });
 
   // Sync local state with server settings
   useEffect(() => {
     if (settingsData?.privacy) {
-      setPrivacy(settingsData.privacy);
+      const apiPrivacy = settingsData.privacy;
+      const messagePermissionRaw =
+        apiPrivacy.messagePermission || apiPrivacy.allowMessages || 'everyone';
+      const messagePermission =
+        messagePermissionRaw === 'none' ? 'nobody' : messagePermissionRaw;
+
+      setPrivacy(prev => ({
+        ...prev,
+        ...apiPrivacy,
+        messagePermission,
+        searchVisibility: apiPrivacy.searchable ?? apiPrivacy.searchVisibility ?? true,
+        activityStatus: apiPrivacy.showActivity ?? apiPrivacy.activityStatus ?? true,
+        showOnlineStatus: apiPrivacy.showOnlineStatus ?? true,
+        allowTagging: apiPrivacy.allowTagging ?? true,
+      }));
     }
   }, [settingsData]);
 
@@ -204,6 +220,27 @@ const PrivacySettings = () => {
             enabled={privacy.activityStatus}
             onChange={() =>
               handlePrivacyChange('activityStatus', !privacy.activityStatus)
+            }
+            disabled={updateSettingsMutation.isPending}
+          />
+          <ToggleSwitch
+            label="Show online status"
+            description="Display your online/offline status"
+            enabled={privacy.showOnlineStatus}
+            onChange={() =>
+              handlePrivacyChange(
+                'showOnlineStatus',
+                !privacy.showOnlineStatus
+              )
+            }
+            disabled={updateSettingsMutation.isPending}
+          />
+          <ToggleSwitch
+            label="Allow tagging"
+            description="Allow others to tag you in posts"
+            enabled={privacy.allowTagging}
+            onChange={() =>
+              handlePrivacyChange('allowTagging', !privacy.allowTagging)
             }
             disabled={updateSettingsMutation.isPending}
           />

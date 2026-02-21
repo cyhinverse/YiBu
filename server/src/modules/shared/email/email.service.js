@@ -1,12 +1,7 @@
 import nodemailer from 'nodemailer';
 import config from '../../../configs/config.js';
 import logger from '../../../configs/logger.js';
-import crypto from 'crypto';
-
-const hashPII = value => {
-  if (!value) return null;
-  return crypto.createHash('sha256').update(String(value).toLowerCase()).digest('hex').slice(0, 12);
-};
+import { hashPII } from '../../../utils/hashPII.js';
 
 class EmailService {
   /**
@@ -94,27 +89,6 @@ class EmailService {
     return this.sendEmail(to, subject, html);
   }
 
-  /**
-   * Send account verification email
-   * @param {string} to - Recipient email address
-   * @param {string} verificationLink - Email verification link
-   * @returns {Promise<Object|null>} Sent email info or null if error
-   */
-  async sendVerificationEmail(to, verificationLink) {
-    const subject = 'Xác thực tài khoản - YiBu';
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Chào mừng đến với YiBu!</h2>
-        <p>Vui lòng xác thực địa chỉ email để kích hoạt đầy đủ tính năng:</p>
-        <a href="${verificationLink}" style="background-color: #008CBA; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Xác thực Email</a>
-        <p>Hoặc truy cập link sau:</p>
-        <p>${verificationLink}</p>
-        <hr>
-        <p style="font-size: 12px; color: #888;">YiBu Team</p>
-      </div>
-    `;
-    return this.sendEmail(to, subject, html);
-  }
 }
 
 export default new EmailService();

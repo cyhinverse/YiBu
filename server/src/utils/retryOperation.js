@@ -61,27 +61,3 @@ export const retryOperation = async (operation, options = {}) => {
 
   throw lastError;
 };
-
-/**
- * Wrapper for findOneAndUpdate with automatic retry
- * @param {Model} model - Mongoose model
- * @param {Object} filter - Query filter
- * @param {Object} update - Update operations
- * @param {Object} options - Mongoose options
- * @param {Object} retryOptions - Retry options
- * @returns {Promise} - Updated document
- */
-export const findOneAndUpdateWithRetry = async (
-  model,
-  filter,
-  update,
-  options = {},
-  retryOptions = {}
-) => {
-  return retryOperation(
-    () => model.findOneAndUpdate(filter, update, options),
-    retryOptions
-  );
-};
-
-export default retryOperation;

@@ -18,6 +18,7 @@ import {
   suspendUserBody,
   warnUserBody,
   getPostsQuery,
+  getCommentsQuery,
   postIdParam,
   moderatePostBody,
   commentIdParam,
@@ -35,10 +36,10 @@ import {
 
 const router = express.Router();
 
+router.use(verifyToken, adminMiddleware);
+
 /* GET /health - Health check endpoint */
 router.get('/health', AdminController.getSystemHealth);
-
-router.use(verifyToken, adminMiddleware);
 
 /* GET /dashboard/stats - Get dashboard statistics */
 router.get(
@@ -163,7 +164,7 @@ router.delete(
 /* GET /comments - Get all comments with pagination */
 router.get(
   '/comments',
-  validateQuery(getPostsQuery),
+  validateQuery(getCommentsQuery),
   AdminController.getAllComments
 );
 

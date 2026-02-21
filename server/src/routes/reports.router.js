@@ -2,6 +2,7 @@ import express from 'express';
 import ReportController from '../modules/report/report.controller.js';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
+import { adminMiddleware } from '../middlewares/admin.middleware.js';
 import {
   validateBody,
   validateParams,
@@ -71,41 +72,46 @@ router.get(
   validateQuery(myReportsQuery),
   ReportController.getMyReports
 );
-/* GET /:reportId - Get report by ID */
-router.get(
-  '/:reportId',
-  validateParams(reportIdParam),
-  ReportController.getReportById
-);
 
 /* GET / - Get all reports (admin only) */
 router.get(
   '/',
+  adminMiddleware,
   validateQuery(getAllReportsQuery),
   ReportController.getAllReports
 );
 /* GET /pending - Get pending reports (admin only) */
 router.get(
   '/pending',
+  adminMiddleware,
   validateQuery(pendingReportsQuery),
   ReportController.getPendingReports
 );
 /* GET /user/:userId/against - Get reports against a user (admin only) */
 router.get(
   '/user/:userId/against',
+  adminMiddleware,
   validateParams(reportsAgainstUserParam),
   validateQuery(reportsAgainstUserQuery),
   ReportController.getReportsAgainstUser
 );
+/* GET /:reportId - Get report by ID */
+router.get(
+  '/:reportId',
+  validateParams(reportIdParam),
+  ReportController.getReportById
+);
 /* POST /:reportId/start-review - Start reviewing a report (admin only) */
 router.post(
   '/:reportId/start-review',
+  adminMiddleware,
   validateParams(startReviewParam),
   ReportController.startReview
 );
 /* PUT /:reportId/resolve - Resolve a report (admin only) */
 router.put(
   '/:reportId/resolve',
+  adminMiddleware,
   validateParams(resolveReportParam),
   validateBody(resolveReportBody),
   ReportController.resolveReport
@@ -113,6 +119,7 @@ router.put(
 /* PUT /:reportId/status - Update report status (admin only) */
 router.put(
   '/:reportId/status',
+  adminMiddleware,
   validateParams(updateStatusParam),
   validateBody(updateStatusBody),
   ReportController.updateReportStatus

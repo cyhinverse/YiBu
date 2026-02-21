@@ -7,6 +7,8 @@ export const getCommentStatusStyle = status => {
   switch (status) {
     case 'active':
       return 'admin-pill-success';
+    case 'pending':
+      return 'admin-pill-warning';
     case 'hidden':
     case 'removed':
       return 'admin-pill-danger';
@@ -26,6 +28,8 @@ export const getCommentStatusText = status => {
   switch (status) {
     case 'active':
       return 'Hoạt động';
+    case 'pending':
+      return 'Chờ duyệt';
     case 'hidden':
     case 'removed':
       return 'Đã ẩn/xóa';

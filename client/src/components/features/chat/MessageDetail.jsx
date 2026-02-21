@@ -258,9 +258,29 @@ const MessageDetail = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const maxMessageFiles = 3;
+
+  // Memoize blob URLs for selected images to avoid re-creating on every render
+  const imagePreviews = useMemo(
+    () => selectedImages.map(f => URL.createObjectURL(f)),
+    [selectedImages]
+  );
+
+  // Revoke blob URLs on change and unmount
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [imagePreviews]);
   const maxMessageSizeMB = 15;
 
   const typingTimeoutRef = useRef(null);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
   // Derive conversation
   const conversation = useMemo(() => {
@@ -614,7 +634,7 @@ const MessageDetail = () => {
                 className="relative group flex-shrink-0 animate-scale-in"
               >
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={imagePreviews[i]}
                   alt=""
                   className="w-20 h-20 rounded-xl object-cover"
                 />

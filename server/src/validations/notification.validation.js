@@ -6,6 +6,20 @@ import { objectId } from './common.validation.js';
  * Validation for all endpoints in notification.router.js
  */
 
+const notificationType = Joi.string().valid(
+  'like',
+  'comment',
+  'follow',
+  'save',
+  'mention',
+  'reply',
+  'tag',
+  'share',
+  'message',
+  'system',
+  'announcement'
+);
+
 // ======================================
 // GET / (getNotifications)
 // Query: { page?, limit?, type?, unreadOnly? }
@@ -13,16 +27,7 @@ import { objectId } from './common.validation.js';
 export const getNotificationsQuery = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
-  type: Joi.string().valid(
-    'like',
-    'comment',
-    'follow',
-    'mention',
-    'reply',
-    'share',
-    'message',
-    'system'
-  ),
+  type: notificationType,
   unreadOnly: Joi.boolean().default(false),
 });
 
@@ -42,19 +47,7 @@ export const createNotificationBody = Joi.object({
   recipient: objectId,
   userId: objectId, // For fallback
   sender: objectId,
-  type: Joi.string()
-    .valid(
-      'like',
-      'comment',
-      'follow',
-      'mention',
-      'reply',
-      'share',
-      'message',
-      'system',
-      'announcement'
-    )
-    .required(),
+  type: notificationType.required(),
   content: Joi.string().trim().max(500),
   title: Joi.string().trim().max(100), // Legacy
   message: Joi.string().trim().max(500), // Legacy
@@ -68,6 +61,12 @@ export const createNotificationBody = Joi.object({
     userId: objectId,
     link: Joi.string().uri(),
   }),
+})
+  .or('recipient', 'userId')
+  .or('content', 'message');
+
+export const bulkNotificationActionBody = Joi.object({
+  type: notificationType.optional(),
 });
 
 
@@ -95,22 +94,58 @@ export const updatePreferencesBody = Joi.object({
   likes: Joi.boolean(),
   comments: Joi.boolean(),
   follows: Joi.boolean(),
+  newFollower: Joi.boolean(),
   messages: Joi.boolean(),
+  directMessages: Joi.boolean(),
   mentions: Joi.boolean(),
   replies: Joi.boolean(),
   shares: Joi.boolean(),
-  email: Joi.boolean(),
-  push: Joi.boolean(),
+  saves: Joi.boolean(),
+  tags: Joi.boolean(),
+  systemUpdates: Joi.boolean(),
+  email: Joi.alternatives().try(
+    Joi.boolean(),
+    Joi.object({
+      enabled: Joi.boolean(),
+      accountUpdates: Joi.boolean(),
+      newFeatures: Joi.boolean(),
+      marketing: Joi.boolean(),
+      digest: Joi.string().valid('none', 'daily', 'weekly'),
+    })
+  ),
+  push: Joi.alternatives().try(
+    Joi.boolean(),
+    Joi.object({
+      enabled: Joi.boolean(),
+      likes: Joi.boolean(),
+      comments: Joi.boolean(),
+      follows: Joi.boolean(),
+      messages: Joi.boolean(),
+      mentions: Joi.boolean(),
+      shares: Joi.boolean(),
+      replies: Joi.boolean(),
+      saves: Joi.boolean(),
+      tags: Joi.boolean(),
+      systemUpdates: Joi.boolean(),
+      sound: Joi.boolean(),
+      vibration: Joi.boolean(),
+    })
+  ),
   sound: Joi.boolean(),
-  quietHoursEnabled: Joi.boolean(),
-  quietHoursStart: Joi.string().pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/), // HH:mm
-  quietHoursEnd: Joi.string().pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-});
+  vibration: Joi.boolean(),
+})
+  .min(1)
+  .rename('newFollower', 'follows', { ignoreUndefined: true, override: false })
+  .rename('directMessages', 'messages', {
+    ignoreUndefined: true,
+    override: false,
+  });
 
 export default {
   getNotificationsQuery,
   notificationIdParam,
   createNotificationBody,
+  bulkNotificationActionBody,
   markAsReadParam,
   deleteNotificationParam,
   updatePreferencesBody,

@@ -19,6 +19,7 @@ import { useInView } from 'react-intersection-observer';
 import {
   formatNotificationTime as formatTime,
   getNotificationIcon,
+  getNotificationContent,
 } from '@/utils/notificationUtils';
 
 const NotificationPanel = () => {
@@ -67,7 +68,9 @@ const NotificationPanel = () => {
 
   // Handlers
   const handleMarkAllAsRead = () => {
-    markAllAsRead(undefined, {
+    const typeFilter =
+      filter !== 'all' && filter !== 'unread' ? filter : undefined;
+    markAllAsRead(typeFilter, {
       onError: () => notify.error('Failed to mark all as read'),
     });
   };
@@ -85,7 +88,9 @@ const NotificationPanel = () => {
 
   const handleDeleteAll = async () => {
     try {
-      await deleteAllNotifications();
+      const typeFilter =
+        filter !== 'all' && filter !== 'unread' ? filter : undefined;
+      await deleteAllNotifications(typeFilter);
       notify.success('Đã xóa tất cả thông báo');
       setShowDeleteAllConfirm(false);
     } catch (error) {
@@ -205,9 +210,15 @@ const NotificationPanel = () => {
                 <div className="relative flex-shrink-0">
                   <img
                     src={
-                      notification.sender?.avatar || notification.user?.avatar
+                      notification.sender?.avatar ||
+                      notification.user?.avatar ||
+                      '/images/default-avatar.png'
                     }
-                    alt={notification.sender?.name || notification.user?.name}
+                    alt={
+                      notification.sender?.name ||
+                      notification.user?.name ||
+                      'System'
+                    }
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-white dark:bg-neutral-900">
@@ -224,7 +235,7 @@ const NotificationPanel = () => {
                         : 'text-neutral-600 dark:text-neutral-400'
                     }`}
                   >
-                    {notification.message || notification.content}
+                    {getNotificationContent(notification)}
                   </p>
                   <p className="text-xs text-neutral-400 mt-1">
                     {formatTime(notification.createdAt)}

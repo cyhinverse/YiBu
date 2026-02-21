@@ -72,10 +72,13 @@ export const deleteConversationParam = Joi.object({
 // Body: { name, participantIds, avatar? }
 // ======================================
 export const createGroupBody = Joi.object({
-  name: Joi.string().trim().min(1).max(100).required().messages({
+  groupName: Joi.string().trim().min(1).max(100).messages({
     'string.empty': 'Tên nhóm không được để trống',
     'string.max': 'Tên nhóm không được quá 100 ký tự',
-    'any.required': 'Tên nhóm là bắt buộc',
+  }),
+  name: Joi.string().trim().min(1).max(100).messages({
+    'string.empty': 'Tên nhóm không được để trống',
+    'string.max': 'Tên nhóm không được quá 100 ký tự',
   }),
   participantIds: Joi.array()
     .items(objectId)
@@ -87,8 +90,12 @@ export const createGroupBody = Joi.object({
       'array.max': 'Nhóm tối đa 50 thành viên',
       'any.required': 'Danh sách thành viên là bắt buộc',
     }),
+  groupAvatar: Joi.string().uri().allow(''),
   avatar: Joi.string().uri().allow(''),
-});
+})
+  .or('groupName', 'name')
+  .rename('name', 'groupName', { ignoreUndefined: true, override: false })
+  .rename('avatar', 'groupAvatar', { ignoreUndefined: true, override: false });
 
 // ======================================
 // PUT /groups/:conversationId (UpdateGroupConversation)
@@ -100,11 +107,17 @@ export const updateGroupParam = Joi.object({
 });
 
 export const updateGroupBody = Joi.object({
+  groupName: Joi.string().trim().min(1).max(100).messages({
+    'string.max': 'Tên nhóm không được quá 100 ký tự',
+  }),
   name: Joi.string().trim().min(1).max(100).messages({
     'string.max': 'Tên nhóm không được quá 100 ký tự',
   }),
+  groupAvatar: Joi.string().uri().allow(''),
   avatar: Joi.string().uri().allow(''),
-});
+})
+  .rename('name', 'groupName', { ignoreUndefined: true, override: false })
+  .rename('avatar', 'groupAvatar', { ignoreUndefined: true, override: false });
 
 // ======================================
 // POST /groups/:conversationId/members (AddGroupMembers)
@@ -165,16 +178,16 @@ export const sendMessageBody = Joi.object({
     'any.required': 'Conversation ID là bắt buộc',
     'alternatives.match': 'ID cuộc hội thoại không hợp lệ',
   }),
-  content: Joi.string().trim().min(1).max(2000).required().messages({
-    'string.empty': 'Nội dung tin nhắn không được để trống',
+  content: Joi.string().trim().max(2000).allow('').messages({
     'string.max': 'Nội dung không được quá 2000 ký tự',
-    'any.required': 'Nội dung là bắt buộc',
   }),
-  type: Joi.string()
-    .valid('text', 'image', 'file', 'video', 'audio')
+  messageType: Joi.string()
+    .valid('text', 'media', 'system', 'reply', 'image', 'file', 'video', 'audio')
     .default('text'),
+  type: Joi.string()
+    .valid('text', 'media', 'system', 'reply', 'image', 'file', 'video', 'audio'),
   replyTo: objectId.allow(null), // Reply to another message
-});
+}).rename('type', 'messageType', { ignoreUndefined: true, override: false });
 
 // ======================================
 // DELETE /messages/:messageId (DeleteMessage)
@@ -242,14 +255,19 @@ export const typingBody = Joi.object({
 // Query: { q, conversationId?, page?, limit? }
 // ======================================
 export const searchMessagesQuery = Joi.object({
-  q: Joi.string().trim().min(1).max(100).required().messages({
-    'string.empty': 'Từ khóa tìm kiếm không được để trống',
-    'any.required': 'Từ khóa tìm kiếm là bắt buộc',
-  }),
+  q: Joi.string().trim().min(2).max(100),
+  query: Joi.string().trim().min(2).max(100),
   conversationId: Joi.alternatives().try(objectId, conversationIdFormat).allow(null),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
-});
+})
+  .or('q', 'query')
+  .rename('query', 'q', { ignoreUndefined: true, override: false })
+  .messages({
+    'object.missing': 'Từ khóa tìm kiếm là bắt buộc',
+    'string.empty': 'Từ khóa tìm kiếm không được để trống',
+    'string.min': 'Từ khóa phải có ít nhất 2 ký tự',
+  });
 
 // ======================================
 // GET /users (GetUsersForChat)
@@ -257,9 +275,10 @@ export const searchMessagesQuery = Joi.object({
 // ======================================
 export const getUsersForChatQuery = Joi.object({
   q: Joi.string().trim().max(100),
+  search: Joi.string().trim().max(100),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(30).default(20),
-});
+}).rename('search', 'q', { ignoreUndefined: true, override: false });
 
 export default {
   getConversationsQuery,

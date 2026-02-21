@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Users,
   FileText,
@@ -22,16 +22,6 @@ import StatCard from '../Shared/StatCard';
 const Dashboard = () => {
   const [period, setPeriod] = useState(30);
 
-  const { startDate, endDate } = useMemo(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - period);
-    return {
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-    };
-  }, [period]);
-
   const {
     data: stats,
     isLoading: statsLoading,
@@ -42,11 +32,11 @@ const Dashboard = () => {
     data: topUsersData,
     isLoading: usersLoading,
     refetch: refetchTopUsers,
-  } = useTopUsers(1, 5);
+  } = useTopUsers(5);
 
-  const topUsers = topUsersData?.users || [];
+  const topUsers = Array.isArray(topUsersData) ? topUsersData : [];
 
-  const { data: growthData } = useUserGrowth(startDate, endDate);
+  const { data: growthData } = useUserGrowth(period);
 
   const handleRefresh = () => {
     refetchStats();
@@ -56,33 +46,33 @@ const Dashboard = () => {
   const statCards = [
     {
       title: 'Tổng người dùng',
-      value: stats?.totalUsers?.toLocaleString() || '0',
-      change: '+12.5%',
-      trend: 'up',
+      value: stats?.users?.total?.toLocaleString() || '0',
+      change: `${stats?.users?.newThisWeek || 0} mới/tuần`,
+      trend: (stats?.users?.newThisWeek || 0) > 0 ? 'up' : 'down',
       icon: Users,
       color: 'primary',
     },
     {
-      title: 'Bài viết mới',
-      value: stats?.totalPosts?.toLocaleString() || '0',
-      change: '+8.2%',
-      trend: 'up',
+      title: 'Tổng bài viết',
+      value: stats?.posts?.total?.toLocaleString() || '0',
+      change: `${stats?.posts?.today || 0} hôm nay`,
+      trend: (stats?.posts?.today || 0) > 0 ? 'up' : 'down',
       icon: FileText,
       color: 'success',
     },
     {
-      title: 'Bình luận',
-      value: stats?.totalComments?.toLocaleString() || '0',
-      change: '-2.4%',
-      trend: 'down',
+      title: 'Người dùng hoạt động',
+      value: stats?.users?.active?.toLocaleString() || '0',
+      change: `${stats?.users?.newToday || 0} mới hôm nay`,
+      trend: (stats?.users?.newToday || 0) > 0 ? 'up' : 'down',
       icon: MessageSquare,
       color: 'warning',
     },
     {
-      title: 'Lượt tương tác',
-      value: stats?.totalInteractions?.toLocaleString() || '0',
-      change: '+24.5%',
-      trend: 'up',
+      title: 'Báo cáo chờ xử lý',
+      value: stats?.reports?.pending?.toLocaleString() || '0',
+      change: `Tổng ${stats?.reports?.total || 0}`,
+      trend: (stats?.reports?.pending || 0) > 0 ? 'up' : 'down',
       icon: Activity,
       color: 'danger',
     },
@@ -222,20 +212,20 @@ const Dashboard = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium text-[var(--color-content)] truncate">
-                        {user.username}
+                        {user.name || user.username}
                       </h4>
                       <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                        {user.email}
+                        @{user.username}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
                       <span className="flex items-center gap-1">
                         <FileText size={12} strokeWidth={1.6} />
-                        {user.postCount || 0}
+                        {user.postsCount || 0}
                       </span>
                       <span className="flex items-center gap-1">
                         <Heart size={12} strokeWidth={1.6} />
-                        {user.totalLikes || 0}
+                        {Math.round(user.metrics?.engagementRate || 0)}%
                       </span>
                     </div>
                   </div>

@@ -2,10 +2,7 @@ import express from 'express';
 import UserController from '../modules/user/user.controller.js';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import {
-  validateBody,
-  validateParams,
-} from '../middlewares/validation.middleware.js';
+import { validateBody } from '../middlewares/validation.middleware.js';
 import {
   privacySettingsBody,
   notificationSettingsBody,

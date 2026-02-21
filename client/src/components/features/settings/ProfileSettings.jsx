@@ -111,9 +111,18 @@ const ProfileSettings = () => {
     }
   }, [currentProfile]);
 
+  // Cleanup blob URLs when previews change and on unmount
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [avatarPreview, coverPreview]);
+
   const handleAvatarChange = e => {
     const file = e.target.files[0];
     if (file) {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
@@ -122,6 +131,7 @@ const ProfileSettings = () => {
   const handleCoverChange = e => {
     const file = e.target.files[0];
     if (file) {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
       setCoverFile(file);
       setCoverPreview(URL.createObjectURL(file));
     }

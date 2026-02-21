@@ -5,12 +5,12 @@ import { NOTIFICATION_TYPES, TARGET_AUDIENCES } from '@/constants/broadcast';
 
 const Broadcast = () => {
   const broadcastMutation = useBroadcastNotification();
-  const loading = broadcastMutation.isLoading;
+  const loading = broadcastMutation.isPending;
 
   const [formData, setFormData] = useState({
     title: '',
     message: '',
-    type: 'info',
+    type: 'system',
     targetAudience: 'all',
     priority: 'normal',
     link: '',
@@ -64,7 +64,7 @@ const Broadcast = () => {
       setFormData({
         title: '',
         message: '',
-        type: 'info',
+        type: 'system',
         targetAudience: 'all',
         priority: 'normal',
         link: '',

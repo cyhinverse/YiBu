@@ -7,6 +7,21 @@ import {
 import api from '@/axios/axiosConfig';
 import { NOTIFICATION_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
+import { invalidateQueryKeys } from './queryClientUtils';
+
+const buildNotificationParams = (page, limit, filter) => {
+  const params = { page, limit };
+
+  if (filter && filter !== 'all') {
+    if (filter === 'unread') {
+      params.unreadOnly = true;
+    } else {
+      params.type = filter;
+    }
+  }
+
+  return params;
+};
 
 /**
  * Hook to fetch notifications with infinite scroll
@@ -17,18 +32,12 @@ export const useNotifications = (filter = 'all') => {
   return useInfiniteQuery({
     queryKey: ['notifications', 'list', filter],
     queryFn: async ({ pageParam = 1 }) => {
-      const params = { page: pageParam, limit: 20 };
-      if (filter !== 'all') {
-        params.type = filter === 'unread' ? undefined : filter;
-      }
-
+      const params = buildNotificationParams(pageParam, 20, filter);
       const response = await api.get(NOTIFICATION_API.GET_ALL, { params });
       return extractData(response);
     },
     getNextPageParam: (lastPage, allPages) => {
-      return lastPage.hasMore
-        ? lastPage.pagination?.page + 1 || allPages.length + 1
-        : undefined;
+      return lastPage?.hasMore ? allPages.length + 1 : undefined;
     },
     staleTime: 1000 * 60,
   });
@@ -45,10 +54,7 @@ export const useNotificationsPage = (page = 1, limit = 10, filter = 'all') => {
   return useQuery({
     queryKey: ['notifications', 'page', page, limit, filter],
     queryFn: async () => {
-      const params = { page, limit };
-      if (filter && filter !== 'all') {
-        params.type = filter;
-      }
+      const params = buildNotificationParams(page, limit, filter);
       const response = await api.get(NOTIFICATION_API.GET_ALL, { params });
       return extractData(response);
     },
@@ -66,8 +72,8 @@ export const useUnreadCount = () => {
     queryKey: ['notifications', 'unreadCount'],
     queryFn: async () => {
       const response = await api.get(NOTIFICATION_API.GET_UNREAD_COUNT);
-      const data = response.data;
-      const count = data?.data?.unreadCount ?? data?.unreadCount ?? data ?? 0;
+      const data = extractData(response);
+      const count = data?.unreadCount ?? data?.count ?? data ?? 0;
       return typeof count === 'number' ? count : 0;
     },
     staleTime: 1000 * 60,
@@ -86,7 +92,7 @@ export const useMarkAsRead = () => {
       return { notificationId };
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [['notifications', 'unreadCount']]);
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -110,12 +116,13 @@ export const useMarkAsRead = () => {
 export const useMarkAllAsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      await api.post(NOTIFICATION_API.MARK_ALL_READ);
-      return true;
+    mutationFn: async type => {
+      const payload = type ? { type } : {};
+      await api.post(NOTIFICATION_API.MARK_ALL_READ, payload);
+      return { type };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [['notifications', 'unreadCount']]);
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -145,7 +152,7 @@ export const useDeleteNotification = () => {
       return { notificationId };
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [['notifications', 'unreadCount']]);
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -169,12 +176,13 @@ export const useDeleteNotification = () => {
 export const useDeleteAllNotifications = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      await api.delete(NOTIFICATION_API.DELETE_ALL);
-      return true;
+    mutationFn: async type => {
+      const payload = type ? { type } : {};
+      await api.delete(NOTIFICATION_API.DELETE_ALL, { data: payload });
+      return { type };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['notifications', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [['notifications', 'unreadCount']]);
       queryClient.setQueriesData(['notifications', 'list'], oldData => {
         if (!oldData) return oldData;
         return {
@@ -185,7 +193,7 @@ export const useDeleteAllNotifications = () => {
           })),
         };
       });
-      queryClient.invalidateQueries(['notifications', 'list']);
+      invalidateQueryKeys(queryClient, [['notifications', 'list']]);
     },
   });
 };

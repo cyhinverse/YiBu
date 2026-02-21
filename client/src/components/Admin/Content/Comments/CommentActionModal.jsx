@@ -182,7 +182,7 @@ export const CommentDetailModal = ({ isOpen, onClose, comment }) => {
             <div className="p-4 rounded-2xl bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1">
               <Heart size={20} className="text-rose-500 mb-1 fill-rose-500" />
               <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
-                {comment.likes?.length || 0}
+                {comment.likesCount ?? comment.likes?.length ?? 0}
               </span>
               <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-widest">
                 Lượt thích

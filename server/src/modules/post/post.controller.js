@@ -891,16 +891,14 @@ const PostController = {
     const userId = req.user.id;
 
     if (!content || !content.trim()) {
-      return formatResponse(
-        res,
-        400,
-        0,
-        'Nội dung comment không được để trống'
-      );
+      throw ApiError.badRequest('Nội dung comment không được để trống');
     }
 
     const comment = await PostService.updateComment(id, userId, content);
-    return formatResponse(res, 200, 1, 'Cập nhật comment thành công', comment);
+    return sendOk(res, {
+      message: 'Cập nhật comment thành công',
+      data: comment,
+    });
   }),
 
   /**
@@ -920,7 +918,9 @@ const PostController = {
     const isAdmin = req.user.isAdmin;
 
     await PostService.deleteComment(id, userId, isAdmin);
-    return formatResponse(res, 200, 1, 'Xóa comment thành công');
+    return sendOk(res, {
+      message: 'Xóa comment thành công',
+    });
   }),
 
   /**
@@ -938,7 +938,10 @@ const PostController = {
     const userId = req.user.id;
 
     const result = await PostService.likeComment(commentId, userId);
-    return formatResponse(res, 200, 1, 'Liked comment', result);
+    return sendOk(res, {
+      message: 'Liked comment',
+      data: result,
+    });
   }),
 
   /**
@@ -956,7 +959,10 @@ const PostController = {
     const userId = req.user.id;
 
     const result = await PostService.unlikeComment(commentId, userId);
-    return formatResponse(res, 200, 1, 'Unliked comment', result);
+    return sendOk(res, {
+      message: 'Unliked comment',
+      data: result,
+    });
   }),
 
   /**
@@ -977,7 +983,10 @@ const PostController = {
     const { platform = 'internal' } = req.body;
 
     const result = await PostService.sharePost(postId, userId, platform);
-    return formatResponse(res, 200, 1, 'Shared successfully', result);
+    return sendOk(res, {
+      message: 'Shared successfully',
+      data: result,
+    });
   }),
 
   /**
@@ -999,7 +1008,7 @@ const PostController = {
     const { reason, description } = req.body;
 
     if (!reason) {
-      return formatResponse(res, 400, 0, 'Lý do báo cáo là bắt buộc');
+      throw ApiError.badRequest('Lý do báo cáo là bắt buộc');
     }
 
     const report = await PostService.reportPost(
@@ -1008,7 +1017,10 @@ const PostController = {
       reason,
       description
     );
-    return formatResponse(res, 200, 1, 'Báo cáo đã được gửi', report);
+    return sendOk(res, {
+      message: 'Báo cáo đã được gửi',
+      data: report,
+    });
   }),
 };
 

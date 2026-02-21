@@ -44,14 +44,28 @@ const BannedAccounts = () => {
   } = useBannedUsers({
     page: currentPage,
     limit: 10,
-    search: debouncedSearch || undefined,
   });
 
-  const bannedUsersList = bannedData?.users || bannedData || []; // Adjust based on API structure
-  const bannedUsers = Array.isArray(bannedUsersList) ? bannedUsersList : [];
+  const bannedUsersList = Array.isArray(bannedData?.users) ? bannedData.users : [];
+  const normalizedSearch = debouncedSearch.trim().toLowerCase();
+  const isLocalSearching = Boolean(normalizedSearch);
+  const bannedUsers = isLocalSearching
+    ? bannedUsersList.filter(user => {
+        const searchableText = [
+          user.fullName,
+          user.name,
+          user.username,
+          user.email,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return searchableText.includes(normalizedSearch);
+      })
+    : bannedUsersList;
   const pagination = {
-    totalPages: bannedData?.totalPages || 1,
-    total: bannedData?.totalUsers || 0,
+    totalPages: isLocalSearching ? 1 : bannedData?.totalPages || 1,
+    total: isLocalSearching ? bannedUsers.length : bannedData?.total || 0,
   };
 
   // Mutations
@@ -296,7 +310,7 @@ const BannedAccounts = () => {
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed px-4">
                 Bạn có chắc chắn muốn khôi phục quyền truy cập cho{' '}
                 <span className="text-neutral-900 dark:text-white font-bold">
-                  {selectedUser.name}
+                  {selectedUser.fullName || selectedUser.name || selectedUser.username}
                 </span>
                 ? Người dùng sẽ có thể đăng nhập lại ngay lập tức.
               </p>

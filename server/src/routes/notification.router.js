@@ -11,6 +11,7 @@ import {
   getNotificationsQuery,
   notificationIdParam,
   createNotificationBody,
+  bulkNotificationActionBody,
   markAsReadParam,
   deleteNotificationParam,
   updatePreferencesBody,
@@ -33,6 +34,8 @@ router.get(
   '/unread-count-by-type',
   NotificationController.getUnreadCountByType
 );
+/* GET /preferences - Get notification preferences */
+router.get('/preferences', NotificationController.getNotificationPreferences);
 /* GET /:notificationId - Get single notification by ID */
 router.get(
   '/:notificationId',
@@ -53,7 +56,11 @@ router.put(
   NotificationController.markAsRead
 );
 /* POST /read-all - Mark all notifications as read */
-router.post('/read-all', NotificationController.markAllAsRead);
+router.post(
+  '/read-all',
+  validateBody(bulkNotificationActionBody),
+  NotificationController.markAllAsRead
+);
 /* DELETE /:notificationId - Delete a notification */
 router.delete(
   '/:notificationId',
@@ -61,10 +68,12 @@ router.delete(
   NotificationController.deleteNotification
 );
 /* DELETE / - Delete all notifications */
-router.delete('/', NotificationController.deleteAllNotifications);
+router.delete(
+  '/',
+  validateBody(bulkNotificationActionBody),
+  NotificationController.deleteAllNotifications
+);
 
-/* GET /preferences - Get notification preferences */
-router.get('/preferences', NotificationController.getNotificationPreferences);
 /* PUT /preferences - Update notification preferences */
 router.put(
   '/preferences',

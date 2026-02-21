@@ -38,10 +38,21 @@ app.set('trust proxy', config.trustProxy);
 // CORS Configuration - PHẢI ĐẶT TRƯỚC TẤT CẢ MIDDLEWARE KHÁC
 const corsOptions = {
   origin: function (origin, callback) {
-    // Cho phép requests không có origin (mobile apps, Postman, etc.)
     const allowedOrigins = config.cors?.origins || [config.CLIENT_URL];
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    // In production, reject requests with no origin (prevents null-origin attacks)
+    // In development, allow no-origin for Postman/mobile
+    if (!origin) {
+      if (config.isProduction) {
+        const err = new Error('Not allowed by CORS');
+        err.statusCode = 403;
+        err.errorCode = 'CORS_BLOCKED';
+        return callback(err);
+      }
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       logger.warn('CORS blocked origin', { origin });
@@ -113,7 +124,6 @@ app.get('/api/health', (req, res) => {
     data: {
       status: 'ok',
       timestamp: new Date(),
-      env: config.env,
     },
   });
 });

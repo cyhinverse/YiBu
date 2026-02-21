@@ -1,7 +1,6 @@
 import User from '../../../models/User.js';
 import UserSettings from '../../../models/UserSettings.js';
 import Message from '../../../models/Message.js';
-import Notification from '../../../models/Notification.js';
 import logger from '../../../configs/logger.js';
 
 /**
@@ -14,10 +13,55 @@ import logger from '../../../configs/logger.js';
  * 4. Room-based conversation management
  */
 class SocketService {
+  static NOTIFICATION_SETTING_MAP = {
+    like: 'likes',
+    comment: 'comments',
+    reply: 'comments',
+    follow: 'follows',
+    mention: 'mentions',
+    share: 'shares',
+    save: 'saves',
+    tag: 'tags',
+    message: 'messages',
+    system: 'systemUpdates',
+    announcement: 'systemUpdates',
+  };
+
+  static CLEANUP_INTERVAL = 5 * 60 * 1000;
+  static MAX_SOCKET_AGE = 30 * 60 * 1000;
+
   constructor() {
     this.io = null;
     this.onlineUsers = new Map();
     this.userSockets = new Map();
+    this._cleanupInterval = null;
+  }
+
+  _getPushSettings(notifications) {
+    if (!notifications || typeof notifications !== 'object') {
+      return {};
+    }
+
+    if (notifications.push && typeof notifications.push === 'object') {
+      return notifications.push;
+    }
+
+    return notifications;
+  }
+
+  _isNotificationEnabled(notifications, type) {
+    const pushSettings = this._getPushSettings(notifications);
+    const settingKey = SocketService.NOTIFICATION_SETTING_MAP[type] || type;
+
+    if (pushSettings.enabled === false) {
+      return false;
+    }
+
+    if (pushSettings[settingKey] === false) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -26,11 +70,66 @@ class SocketService {
    */
   init(io) {
     this.io = io;
+    this._startCleanupInterval();
     logger.info('SocketService initialized');
   }
 
-  initialize(io) {
-    this.init(io);
+  /**
+   * Start periodic cleanup of stale socket connections
+   * @private
+   */
+  _startCleanupInterval() {
+    if (this._cleanupInterval) {
+      clearInterval(this._cleanupInterval);
+    }
+
+    this._cleanupInterval = setInterval(() => {
+      this._cleanupStaleConnections();
+    }, SocketService.CLEANUP_INTERVAL);
+  }
+
+  /**
+   * Cleanup stale socket connections that no longer exist in Socket.IO
+   * @private
+   */
+  _cleanupStaleConnections() {
+    if (!this.io) return;
+
+    const connectedSockets = new Set(this.io.sockets.sockets.keys());
+    let cleanedCount = 0;
+
+    for (const [socketId, userId] of this.onlineUsers) {
+      if (!connectedSockets.has(socketId)) {
+        this.onlineUsers.delete(socketId);
+        
+        const userSockets = this.userSockets.get(userId);
+        if (userSockets) {
+          userSockets.delete(socketId);
+          if (userSockets.size === 0) {
+            this.userSockets.delete(userId);
+          }
+        }
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      logger.debug(`Cleaned up ${cleanedCount} stale socket connections`);
+    }
+  }
+
+  /**
+   * Stop cleanup interval (for graceful shutdown)
+   */
+  shutdown() {
+    if (this._cleanupInterval) {
+      clearInterval(this._cleanupInterval);
+      this._cleanupInterval = null;
+    }
+    this.onlineUsers.clear();
+    this.userSockets.clear();
+    this.io = null;
+    logger.info('SocketService shut down');
   }
 
   /**
@@ -99,11 +198,20 @@ class SocketService {
   }
 
   /**
-   * Get list of all online users
+   * Get list of all online users with optional pagination
+   * @param {Object} options - Pagination options
+   * @param {number} [options.limit] - Max users to return
+   * @param {number} [options.offset] - Offset for pagination
    * @returns {Array} List of user IDs
    */
-  getOnlineUsers() {
-    return Array.from(this.userSockets.keys());
+  getOnlineUsers(options = {}) {
+    const { limit, offset = 0 } = options;
+    const userIds = Array.from(this.userSockets.keys());
+    
+    if (limit !== undefined) {
+      return userIds.slice(offset, offset + limit);
+    }
+    return userIds;
   }
 
   /**
@@ -146,24 +254,6 @@ class SocketService {
   }
 
   /**
-   * Send typing status
-   * @param {string} senderId - Sender ID
-   * @param {string} receiverId - Receiver ID
-   * @param {boolean} isTyping - Is typing or not
-   */
-  sendTypingStatus(senderId, receiverId, isTyping) {
-    const receiverSockets = this.getUserSockets(receiverId);
-
-    receiverSockets.forEach(socketId => {
-      this.io.to(socketId).emit('typing_status', {
-        userId: senderId,
-        isTyping,
-        timestamp: new Date(),
-      });
-    });
-  }
-
-  /**
    * Send message status (sent, delivered, read)
    * @param {string} senderId - Sender ID
    * @param {string} receiverId - Receiver ID
@@ -198,10 +288,6 @@ class SocketService {
         readAt: new Date(),
       });
     });
-  }
-
-  emitNotification(userId, notification) {
-    return this.sendNotification(userId, notification);
   }
 
   emitTyping(conversationId, userId, isTyping) {
@@ -248,16 +334,7 @@ class SocketService {
       .select('notifications')
       .lean();
 
-    const typeMap = {
-      like: 'likes',
-      comment: 'comments',
-      follow: 'follows',
-      mention: 'mentions',
-      message: 'messages',
-    };
-
-    const settingKey = typeMap[notification.type];
-    if (settingKey && settings?.notifications?.[settingKey] === false) {
+    if (!this._isNotificationEnabled(settings?.notifications, notification.type)) {
       return { sent: false, reason: 'disabled' };
     }
 
@@ -291,20 +368,10 @@ class SocketService {
     const settingsMap = new Map();
     settings.forEach(s => settingsMap.set(s.user.toString(), s.notifications));
 
-    const typeMap = {
-      like: 'likes',
-      comment: 'comments',
-      follow: 'follows',
-      mention: 'mentions',
-      message: 'messages',
-    };
-    const settingKey = typeMap[notification.type];
-
     for (const userId of userIds) {
-      const userSettings = settingsMap.get(userId.toString());
-      
-      // Check notification settings if applicable
-      if (settingKey && userSettings && userSettings[settingKey] === false) {
+      const userSettings = settingsMap.get(userId.toString()) || {};
+
+      if (!this._isNotificationEnabled(userSettings, notification.type)) {
         results.failed++;
         continue;
       }
@@ -351,83 +418,6 @@ class SocketService {
   }
 
   /**
-   * Emit new post event to followers
-   * @param {Array} followerIds - List of follower IDs
-   * @param {Object} post - Post object
-   */
-  emitNewPost(followerIds, post) {
-    followerIds.forEach(followerId => {
-      const followerSockets = this.getUserSockets(followerId);
-
-      followerSockets.forEach(socketId => {
-        this.io.to(socketId).emit('new_post', {
-          postId: post._id,
-          userId: post.user._id || post.user,
-          preview: {
-            caption: post.caption?.substring(0, 100),
-            media: post.media?.[0],
-          },
-          createdAt: post.createdAt,
-        });
-      });
-    });
-  }
-
-  /**
-   * Emit new follow event
-   * @param {string} targetUserId - Followed user ID
-   * @param {Object} data - Follow data
-   */
-  emitFollowEvent(targetUserId, data) {
-    const targetSockets = this.getUserSockets(targetUserId);
-
-    targetSockets.forEach(socketId => {
-      this.io.to(socketId).emit('new_follower', data);
-    });
-  }
-
-  /**
-   * Emit follow request event
-   * @param {string} targetUserId - User ID receiving the request
-   * @param {Object} data - Follow request data
-   */
-  emitFollowRequestEvent(targetUserId, data) {
-    const targetSockets = this.getUserSockets(targetUserId);
-
-    targetSockets.forEach(socketId => {
-      this.io.to(socketId).emit('follow_request', data);
-    });
-  }
-
-  /**
-   * Join socket to room
-   * @param {string} socketId - Socket ID
-   * @param {string} roomId - Room ID
-   */
-  joinRoom(socketId, roomId) {
-    if (this.io) {
-      const socket = this.io.sockets.sockets.get(socketId);
-      if (socket) {
-        socket.join(roomId);
-      }
-    }
-  }
-
-  /**
-   * Leave socket from room
-   * @param {string} socketId - Socket ID
-   * @param {string} roomId - Room ID
-   */
-  leaveRoom(socketId, roomId) {
-    if (this.io) {
-      const socket = this.io.sockets.sockets.get(socketId);
-      if (socket) {
-        socket.leave(roomId);
-      }
-    }
-  }
-
-  /**
    * Emit event to all sockets in room
    * @param {string} roomId - Room ID
    * @param {string} event - Event name
@@ -470,56 +460,34 @@ class SocketService {
    * @returns {Promise<Array>} List of presence info
    */
   async getMultiplePresence(userIds) {
-    const presenceList = await Promise.all(
-      userIds.map(userId => this.getUserPresence(userId))
-    );
+    const onlineResults = [];
+    const offlineUserIds = [];
 
-    return presenceList;
-  }
-
-  /**
-   * Broadcast system message to all users
-   * @param {string} message - Message content
-   */
-  broadcastSystemMessage(message) {
-    if (this.io) {
-      this.io.emit('system_message', {
-        message,
-        timestamp: new Date(),
-      });
-    }
-  }
-
-  /**
-   * Disconnect user from all sockets
-   * @param {string} userId - User ID
-   * @param {string} reason - Disconnect reason
-   */
-  disconnectUser(userId, reason = 'forced_disconnect') {
-    const userSockets = this.getUserSockets(userId);
-
-    userSockets.forEach(socketId => {
-      const socket = this.io?.sockets.sockets.get(socketId);
-      if (socket) {
-        socket.emit('forced_disconnect', { reason });
-        socket.disconnect(true);
+    for (const userId of userIds) {
+      if (this.isUserOnline(userId)) {
+        onlineResults.push({ userId, status: 'online', lastActiveAt: new Date() });
+      } else {
+        offlineUserIds.push(userId);
       }
-    });
+    }
 
-    logger.info(`User ${userId} forcefully disconnected: ${reason}`);
+    if (offlineUserIds.length > 0) {
+      const users = await User.find({ _id: { $in: offlineUserIds } })
+        .select('lastActiveAt')
+        .lean();
+      const userMap = new Map(users.map(u => [u._id.toString(), u.lastActiveAt]));
+      for (const userId of offlineUserIds) {
+        onlineResults.push({
+          userId,
+          status: 'offline',
+          lastActiveAt: userMap.get(userId.toString()) || null,
+        });
+      }
+    }
+
+    return onlineResults;
   }
 
-  /**
-   * Get socket connection statistics
-   * @returns {{totalConnections: number, uniqueUsers: number, timestamp: Date}} Stats object
-   */
-  getStats() {
-    return {
-      totalConnections: this.onlineUsers.size,
-      uniqueUsers: this.userSockets.size,
-      timestamp: new Date(),
-    };
-  }
 }
 
 const socketService = new SocketService();

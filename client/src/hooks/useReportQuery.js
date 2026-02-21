@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { REPORT_API } from '@/axios/apiEndpoint';
+import { extractData } from '@/utils/apiUtils';
 
 /**
  * Hook to submit a violation report
@@ -47,7 +48,7 @@ export const useSubmitReport = () => {
         reason,
         description,
       });
-      return response.data;
+      return extractData(response);
     },
   });
 };

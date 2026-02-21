@@ -97,12 +97,12 @@ const UserDetailModal = ({ user, onClose, posts, reports }) => {
             <div className="flex items-center gap-4">
               <img
                 src={user.avatar || '/images/default-avatar.png'}
-                alt={user.name}
+                alt={user.fullName || user.name || user.username}
                 className="w-20 h-20 yb-avatar"
               />
               <div>
                 <h3 className="text-lg font-semibold text-[var(--color-content)] flex items-center gap-3 tracking-tight">
-                  {user.name}
+                  {user.fullName || user.name || user.username}
                   <StatusBadge status={user.status || 'active'} />
                 </h3>
                 <p className="text-[var(--color-text-secondary)] font-medium mt-1">

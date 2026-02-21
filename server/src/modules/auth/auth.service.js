@@ -8,11 +8,8 @@ import logger from '../../configs/logger.js';
 import EmailService from '../shared/email/email.service.js';
 import ApiError from '../../helpers/ApiError.js';
 import { hashRefreshToken } from '../../utils/refreshTokenHash.js';
-
-const hashPII = value => {
-  if (!value) return null;
-  return crypto.createHash('sha256').update(String(value).toLowerCase()).digest('hex').slice(0, 12);
-};
+import { buildSuspensionResetUpdate } from '../../utils/userAccess.js';
+import { hashPII } from '../../utils/hashPII.js';
 
 
 /**
@@ -98,7 +95,8 @@ class AuthService {
     }
 
     if (user.moderation?.status === 'suspended') {
-      const suspendedUntil = user.moderation.suspendedUntil;
+      const suspendedUntil =
+        user.moderation.suspendedUntil || user.moderation.expiresAt;
       if (suspendedUntil && suspendedUntil > new Date()) {
         const remainingDays = Math.ceil(
           (suspendedUntil - new Date()) / (1000 * 60 * 60 * 24)
@@ -107,8 +105,8 @@ class AuthService {
           `Tài khoản bị tạm khóa, còn ${remainingDays} ngày`
         );
       }
-      user.moderation.status = 'active';
-      user.moderation.suspendedUntil = null;
+
+      await User.findByIdAndUpdate(user._id, buildSuspensionResetUpdate());
     }
 
 
@@ -482,62 +480,6 @@ class AuthService {
       { user: user._id, isRevoked: false },
       { isRevoked: true, revokedReason: 'password_reset' }
     );
-
-    return { success: true };
-  }
-
-  static async requestEmailVerification(userId) {
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw ApiError.notFound('User not found');
-    }
-
-    if (user.verified) {
-      throw ApiError.badRequest('Email đã được xác thực');
-    }
-
-
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenHash = crypto
-      .createHash('sha256')
-      .update(verificationToken)
-      .digest('hex');
-
-    await User.findByIdAndUpdate(userId, {
-      'security.emailVerificationToken': verificationTokenHash,
-      'security.emailVerificationExpires': new Date(
-        Date.now() + 24 * 60 * 60 * 1000
-      ),
-    });
-
-    const verificationLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
-    await EmailService.sendVerificationEmail(user.email, verificationLink);
-    logger.info(`Email verification requested for user ${userId}`);
-
-    return { success: true, verificationToken };
-  }
-
-  static async verifyEmail(verificationToken) {
-    const verificationTokenHash = crypto
-      .createHash('sha256')
-      .update(verificationToken)
-      .digest('hex');
-
-    const user = await User.findOne({
-      'security.emailVerificationToken': verificationTokenHash,
-      'security.emailVerificationExpires': { $gt: new Date() },
-    });
-
-    if (!user) {
-      throw ApiError.badRequest('Token không hợp lệ hoặc đã hết hạn');
-    }
-
-
-    user.verified = true;
-    user.security.emailVerificationToken = undefined;
-    user.security.emailVerificationExpires = undefined;
-    await user.save();
 
     return { success: true };
   }

@@ -4,9 +4,37 @@ import User from '../../models/User.js';
 import Post from '../../models/Post.js';
 import Comment from '../../models/Comment.js';
 import Message from '../../models/Message.js';
-import Notification from '../../models/Notification.js';
+import RefreshToken from '../../models/RefreshToken.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import { createSystemNotification } from '../../utils/systemNotification.js';
+import { normalizeReportStatus } from '../../utils/reportStatus.js';
+
+const CATEGORY_ALIASES = {
+  fake_account: 'impersonation',
+};
+
+const VALID_CATEGORIES = [
+  'spam',
+  'harassment',
+  'hate_speech',
+  'violence',
+  'nudity',
+  'misinformation',
+  'copyright',
+  'impersonation',
+  'self_harm',
+  'illegal',
+  'scam',
+  'other',
+];
+
+const ACTION_TO_RESOLUTION = {
+  warn_user: 'warning',
+  remove_content: 'content_removed',
+  suspend_user: 'user_suspended',
+  ban_user: 'user_banned',
+};
 
 
 /**
@@ -30,6 +58,12 @@ class ReportService {
    */
   static async createReport(reporterId, targetType, targetId, reportData) {
     const { category, reason, description } = reportData;
+
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
+    }
+
+    const normalizedCategory = this._normalizeCategory(category, reason);
 
     const validTargetTypes = ['post', 'comment', 'user', 'message'];
     if (!validTargetTypes.includes(targetType)) {
@@ -93,10 +127,13 @@ class ReportService {
       case 'message': {
         const message = await Message.findById(targetId).lean();
         if (!message) throw ApiError.notFound('Tin nhắn không tồn tại');
+        const normalizedMessageType =
+          message.messageType || message.type || 'text';
         targetUser = message.sender;
         contentSnapshot = {
           content: message.content,
-          type: message.type,
+          type: normalizedMessageType,
+          messageType: normalizedMessageType,
           createdAt: message.createdAt,
         };
         break;
@@ -114,7 +151,7 @@ class ReportService {
       targetType,
       targetId,
       targetUser,
-      category,
+      category: normalizedCategory,
       reason,
       description,
       contentSnapshot,
@@ -202,16 +239,20 @@ class ReportService {
    * @returns {Promise<{reports: Array, total: number, hasMore: boolean}>}
    */
   static async getUserReports(userId, options = {}) {
-    const { page = 1, limit = 20 } = options;
+    const { page = 1, limit = 20, status } = options;
+    const query = { reporter: userId };
+    if (status) {
+      query.status = normalizeReportStatus(status);
+    }
 
     const [reports, total] = await Promise.all([
-      Report.find({ reporter: userId })
+      Report.find(query)
         .populate('targetUser', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments({ reporter: userId }),
+      Report.countDocuments(query),
     ]);
 
     return {
@@ -232,7 +273,7 @@ class ReportService {
 
     const query = { targetUser: userId };
     if (status) {
-      query.status = status;
+      query.status = normalizeReportStatus(status);
     }
 
     const [reports, total] = await Promise.all([
@@ -265,19 +306,24 @@ class ReportService {
       category,
       targetType,
       priority,
+      sort = 'newest',
     } = options;
 
     const query = {};
-    if (status) query.status = status;
+    if (status) query.status = normalizeReportStatus(status);
     if (category) query.category = category;
     if (targetType) query.targetType = targetType;
-    if (priority) query.priority = priority;
+    if (priority !== undefined && priority !== null && priority !== '') {
+      query.priority = Number(priority);
+    }
+
+    const sortOptions = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
 
     const [reports, total] = await Promise.all([
       Report.find(query)
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar')
-        .sort({ priority: -1, createdAt: 1 })
+        .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -348,10 +394,22 @@ class ReportService {
   static async resolveReport(reportId, adminId, resolution) {
     const { decision, actionTaken, notes } = resolution;
 
-    const validDecisions = ['resolved', 'rejected', 'escalated'];
+    const validDecisions = ['resolved', 'rejected', 'escalated', 'dismissed'];
     if (!validDecisions.includes(decision)) {
       throw ApiError.badRequest('Invalid decision');
     }
+
+    const normalizedDecision = decision === 'dismissed' ? 'rejected' : decision;
+    if (normalizedDecision === 'resolved' && !actionTaken) {
+      throw ApiError.badRequest(
+        'actionTaken is required when decision is resolved'
+      );
+    }
+
+    const resolutionAction =
+      normalizedDecision === 'resolved'
+        ? ACTION_TO_RESOLUTION[actionTaken] || 'content_removed'
+        : 'no_violation';
 
 
     const session = await mongoose.startSession();
@@ -362,13 +420,13 @@ class ReportService {
         reportId,
         {
           $set: {
-            status: decision,
+            status: normalizedDecision,
             reviewedBy: adminId,
             reviewedAt: new Date(),
             resolution: {
-              decision,
-              actionTaken,
-              notes,
+              action: resolutionAction,
+              note: notes || undefined,
+              resolvedBy: adminId,
               resolvedAt: new Date(),
             },
           },
@@ -378,27 +436,31 @@ class ReportService {
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar');
 
-    if (!report) {
-      throw ApiError.notFound('Report not found');
-    }
+      if (!report) {
+        throw ApiError.notFound('Report not found');
+      }
 
 
-      if (decision === 'resolved' && actionTaken) {
+      if (normalizedDecision === 'resolved' && actionTaken) {
         await this._executeAction(report, actionTaken, adminId, session);
       }
 
-      await Notification.createNotification({
-        recipient: report.reporter,
-        type: 'system',
-        content: `Báo cáo của bạn đã được xử lý. Kết quả: ${this._getDecisionText(
-          decision
-        )}`,
-      });
+      const reporterId = report.reporter?._id || report.reporter;
+      if (reporterId) {
+        await createSystemNotification({
+          recipient: reporterId,
+          sender: adminId,
+          content: `Báo cáo của bạn đã được xử lý. Kết quả: ${this._getDecisionText(
+            normalizedDecision
+          )}`,
+          session,
+        });
+      }
 
       await session.commitTransaction();
 
       logger.info(
-        `Report ${reportId} resolved by admin ${adminId}: ${decision}`
+        `Report ${reportId} resolved by admin ${adminId}: ${normalizedDecision}`
       );
 
       return report;
@@ -408,6 +470,61 @@ class ReportService {
     } finally {
       session.endSession();
     }
+  }
+
+  static async updateReportStatus(reportId, adminId, payload) {
+    const { status, notes } = payload;
+    const validStatuses = [
+      'pending',
+      'reviewing',
+      'resolved',
+      'dismissed',
+      'rejected',
+      'escalated',
+    ];
+
+    if (!validStatuses.includes(status)) {
+      throw ApiError.badRequest('Invalid status');
+    }
+
+    const normalizedStatus = status === 'dismissed' ? 'rejected' : status;
+    const update = {
+      status: normalizedStatus,
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+    };
+
+    if (notes || normalizedStatus === 'rejected') {
+      update.resolution = {
+        action: normalizedStatus === 'resolved' ? 'content_removed' : 'no_violation',
+        note: notes || undefined,
+        resolvedBy: adminId,
+        resolvedAt: new Date(),
+      };
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      reportId,
+      { $set: update },
+      { new: true }
+    )
+      .populate('reporter', 'username name avatar')
+      .populate('targetUser', 'username name avatar')
+      .populate('reviewedBy', 'username name');
+
+    if (!report) {
+      throw ApiError.notFound('Report not found');
+    }
+
+    return report;
+  }
+
+  static _normalizeCategory(category, reason) {
+    const raw = String(category || reason || 'other')
+      .trim()
+      .toLowerCase();
+    const mapped = CATEGORY_ALIASES[raw] || raw;
+    return VALID_CATEGORIES.includes(mapped) ? mapped : 'other';
   }
 
   static _getDecisionText(decision) {
@@ -420,36 +537,168 @@ class ReportService {
   }
 
   static async _executeAction(report, action, adminId, session) {
-    const AdminService = (await import('../admin/admin.service.js')).default;
+    const targetUserId = report.targetUser?._id || report.targetUser;
 
     switch (action) {
       case 'warn_user':
-        await AdminService.warnUser(report.targetUser, adminId, report.reason);
+        if (!targetUserId) break;
+
+        {
+          const warnedUser = await User.findByIdAndUpdate(
+            targetUserId,
+            {
+              $inc: { 'moderation.warnings': 1 },
+              $set: {
+                'moderation.status': 'warned',
+                'moderation.reason': report.reason,
+                'moderation.lastWarningAt': new Date(),
+                'moderation.moderatedBy': adminId,
+                'moderation.moderatedAt': new Date(),
+              },
+            },
+            { new: true, session }
+          );
+
+          if (!warnedUser) break;
+
+          await createSystemNotification({
+            recipient: warnedUser._id,
+            sender: adminId,
+            content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${report.reason}`,
+            session,
+          });
+        }
         break;
 
       case 'remove_content':
         if (report.targetType === 'post') {
+          const existingPost = await Post.findById(report.targetId)
+            .select('isDeleted user')
+            .session(session);
+
           await Post.findByIdAndUpdate(report.targetId, {
-            isDeleted: true,
+            $set: {
+              isDeleted: true,
+              'moderation.status': 'removed',
+              'moderation.reason': report.reason,
+              'moderation.reviewedBy': adminId,
+              'moderation.reviewedAt': new Date(),
+            },
           }).session(session);
+
+          if (existingPost && !existingPost.isDeleted && existingPost.user) {
+            await User.findByIdAndUpdate(existingPost.user, {
+              $inc: { postsCount: -1 },
+            }).session(session);
+
+            await createSystemNotification({
+              recipient: existingPost.user,
+              sender: adminId,
+              content: `Bài viết của bạn đã bị gỡ bỏ. Lý do: ${
+                report.reason || 'Vi phạm quy định cộng đồng'
+              }`,
+              session,
+            });
+          }
         } else if (report.targetType === 'comment') {
+          const existingComment = await Comment.findById(report.targetId)
+            .select('isDeleted post user')
+            .session(session);
+
           await Comment.findByIdAndUpdate(report.targetId, {
-            isDeleted: true,
+            $set: {
+              isDeleted: true,
+              content: '[Nội dung đã bị xóa bởi quản trị viên]',
+              'moderation.status': 'removed',
+              'moderation.reason': report.reason,
+            },
           }).session(session);
+
+          if (existingComment && !existingComment.isDeleted && existingComment.post) {
+            await Post.findByIdAndUpdate(existingComment.post, {
+              $inc: { commentsCount: -1 },
+            }).session(session);
+
+            if (existingComment.user) {
+              await createSystemNotification({
+                recipient: existingComment.user,
+                sender: adminId,
+                content: `Bình luận của bạn đã bị xóa. Lý do: ${
+                  report.reason || 'Vi phạm quy định cộng đồng'
+                }`,
+                session,
+              });
+            }
+          }
         }
         break;
 
       case 'suspend_user':
-        await AdminService.suspendUser(
-          report.targetUser,
-          adminId,
-          7,
-          report.reason
-        );
+        if (!targetUserId) break;
+
+        {
+          const suspendedUntil = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+          );
+
+          await User.findByIdAndUpdate(
+            targetUserId,
+            {
+              $set: {
+                'moderation.status': 'suspended',
+                'moderation.reason': report.reason,
+                'moderation.suspendedUntil': suspendedUntil,
+                'moderation.expiresAt': suspendedUntil,
+                'moderation.moderatedBy': adminId,
+                'moderation.moderatedAt': new Date(),
+              },
+            },
+            { session }
+          );
+
+          await RefreshToken.updateMany(
+            { user: targetUserId },
+            { isRevoked: true, revokedReason: 'user_suspended' },
+            { session }
+          );
+
+          await createSystemNotification({
+            recipient: targetUserId,
+            sender: adminId,
+            content: `Tài khoản của bạn đã bị tạm khóa 7 ngày. Lý do: ${report.reason}`,
+            session,
+          });
+        }
         break;
 
       case 'ban_user':
-        await AdminService.banUser(report.targetUser, adminId, report.reason);
+        if (!targetUserId) break;
+
+        await User.findByIdAndUpdate(
+          targetUserId,
+          {
+            $set: {
+              'moderation.status': 'banned',
+              'moderation.reason': report.reason,
+              'moderation.moderatedBy': adminId,
+              'moderation.moderatedAt': new Date(),
+            },
+          },
+          { session }
+        );
+
+        await RefreshToken.updateMany(
+          { user: targetUserId },
+          { isRevoked: true, revokedReason: 'user_banned' },
+          { session }
+        );
+
+        await createSystemNotification({
+          recipient: targetUserId,
+          sender: adminId,
+          content: `Tài khoản của bạn đã bị khóa. Lý do: ${report.reason}`,
+          session,
+        });
         break;
 
       default:
@@ -457,135 +706,6 @@ class ReportService {
     }
   }
 
-  /**
-   * Dismiss report (no violation found)
-   * @param {string} reportId - Report ID
-   * @param {string} adminId - Admin ID
-   * @param {string} reason - Dismiss reason
-   * @returns {Promise<Object>} Updated report object
-   */
-  static async dismissReport(reportId, adminId, reason = '') {
-    return this.resolveReport(reportId, adminId, {
-      decision: 'rejected',
-      actionTaken: 'none',
-      notes: reason || 'No violation found',
-    });
-  }
-
-  /**
-   * Get report statistics
-   * @param {string} timeframe - Time period (day, week, month, year)
-   * @returns {Promise<Object>} Stats object with pending, reviewing, resolvedInPeriod, byCategory, byTargetType
-   */
-  static async getReportStats(timeframe = 'week') {
-    const timeframeDays = { day: 1, week: 7, month: 30, year: 365 };
-    const days = timeframeDays[timeframe] || 7;
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    const [
-      totalPending,
-      totalReviewing,
-      totalResolved,
-      byCategory,
-      byTargetType,
-    ] = await Promise.all([
-      Report.countDocuments({ status: 'pending' }),
-      Report.countDocuments({ status: 'reviewing' }),
-      Report.countDocuments({
-        status: 'resolved',
-        reviewedAt: { $gte: startDate },
-      }),
-      Report.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
-        { $group: { _id: '$category', count: { $sum: 1 } } },
-      ]),
-      Report.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
-        { $group: { _id: '$targetType', count: { $sum: 1 } } },
-      ]),
-    ]);
-
-    return {
-      pending: totalPending,
-      reviewing: totalReviewing,
-      resolvedInPeriod: totalResolved,
-      byCategory: byCategory.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {}),
-      byTargetType: byTargetType.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {}),
-      timeframe,
-      startDate,
-    };
-  }
-
-  /**
-   * Get user report history
-   * @param {string} userId - User ID
-   * @returns {Promise<{reportsMade: number, reportsReceived: number, violationsConfirmed: number}>}
-   */
-  static async getUserReportHistory(userId) {
-    const [reportsBy, reportsAgainst, resolvedAgainst] = await Promise.all([
-      Report.countDocuments({ reporter: userId }),
-      Report.countDocuments({ targetUser: userId }),
-      Report.countDocuments({ targetUser: userId, status: 'resolved' }),
-    ]);
-
-    return {
-      reportsMade: reportsBy,
-      reportsReceived: reportsAgainst,
-      violationsConfirmed: resolvedAgainst,
-    };
-  }
-
-  /**
-   * Get list of report categories
-   * @returns {Array<{value: string, label: string, priority: number}>} List of categories
-   */
-  static getReportCategories() {
-    return [
-      { value: 'spam', label: 'Spam hoặc lừa đảo', priority: 2 },
-      { value: 'harassment', label: 'Quấy rối hoặc bắt nạt', priority: 3 },
-      { value: 'hate_speech', label: 'Ngôn từ thù địch', priority: 3 },
-      { value: 'violence', label: 'Bạo lực hoặc nguy hiểm', priority: 4 },
-      { value: 'nudity', label: 'Nội dung khiêu dâm', priority: 3 },
-      { value: 'misinformation', label: 'Thông tin sai lệch', priority: 2 },
-      { value: 'copyright', label: 'Vi phạm bản quyền', priority: 2 },
-      { value: 'self_harm', label: 'Tự làm hại bản thân', priority: 5 },
-      { value: 'impersonation', label: 'Giả mạo', priority: 4 },
-      { value: 'illegal', label: 'Nội dung bất hợp pháp', priority: 5 },
-      { value: 'scam', label: 'Lừa đảo', priority: 3 },
-      { value: 'other', label: 'Khác', priority: 1 },
-    ];
-  }
-
-  /**
-   * Bulk resolve reports
-   * @param {Array} reportIds - List of report IDs
-   * @param {string} adminId - Admin ID
-   * @param {string} decision - Decision (resolved, rejected, escalated)
-   * @param {string} actionTaken - Action taken
-   * @returns {Promise<Array<{reportId: string, success: boolean, error?: string}>>} Processing results
-   */
-  static async bulkResolve(reportIds, adminId, decision, actionTaken = '') {
-    const promises = reportIds.map(async (reportId) => {
-      try {
-        await this.resolveReport(reportId, adminId, {
-          decision,
-          actionTaken,
-          notes: 'Bulk action',
-        });
-        return { reportId, success: true };
-      } catch (error) {
-        return { reportId, success: false, error: error.message };
-      }
-    });
-
-    return Promise.all(promises);
-  }
 }
 
 export default ReportService;

@@ -249,10 +249,17 @@ const UserController = {
     const { targetUserId } = req.params;
     const currentUserId = req.user.id;
     const { limit = 10 } = req.query;
+    const resolvedTargetId = await UserService.resolveUserIdOrUsername(
+      targetUserId
+    );
+
+    if (!resolvedTargetId) {
+      return formatResponse(res, 404, 0, 'Người dùng không tồn tại');
+    }
 
     const result = await UserService.getMutualFollowers(
       currentUserId,
-      targetUserId,
+      resolvedTargetId,
       parseInt(limit)
     );
     return formatResponse(res, 200, 1, 'Success', result);
@@ -292,10 +299,10 @@ const UserController = {
    */
   acceptFollowRequest: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { followerId } = req.body;
+    const followerId = req.body?.followerId || req.params?.requestId;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, 'Follower ID is required');
+      return formatResponse(res, 400, 0, 'Request ID or follower ID is required');
     }
 
     const result = await UserService.acceptFollowRequest(userId, followerId);
@@ -314,10 +321,10 @@ const UserController = {
    */
   rejectFollowRequest: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { followerId } = req.body;
+    const followerId = req.body?.followerId || req.params?.requestId;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, 'Follower ID is required');
+      return formatResponse(res, 400, 0, 'Request ID or follower ID is required');
     }
 
     const result = await UserService.rejectFollowRequest(userId, followerId);
@@ -431,12 +438,39 @@ const UserController = {
    */
   updatePrivacySettings: CatchError(async (req, res) => {
     const userId = req.user.id;
+    const rawAllowMessages =
+      req.body.allowMessages ??
+      req.body.messagePermission ??
+      req.body.whoCanMessage;
+    let normalizedAllowMessages = rawAllowMessages;
+    if (rawAllowMessages === 'nobody') {
+      normalizedAllowMessages = 'none';
+    } else if (rawAllowMessages === 'following') {
+      normalizedAllowMessages = 'followers';
+    }
+
+    let profileVisibility = req.body.profileVisibility;
+    if (!profileVisibility && req.body.isPrivate === true) {
+      profileVisibility = 'private';
+    } else if (!profileVisibility && req.body.isPrivate === false) {
+      profileVisibility = 'public';
+    }
+
     const privacySettings = {
-      profileVisibility: req.body.profileVisibility,
-      allowMessages: req.body.allowMessages || req.body.messagePermission,
-      showActivity: req.body.showActivity || req.body.activityStatus,
+      profileVisibility,
+      allowMessages: normalizedAllowMessages,
+      showActivity: req.body.showActivity ?? req.body.activityStatus,
       postVisibility: req.body.postVisibility,
       searchable: req.body.searchable ?? req.body.searchVisibility,
+      showOnlineStatus: req.body.showOnlineStatus,
+      allowTagging: req.body.allowTagging,
+      allowMentions: req.body.allowMentions,
+      showEmail: req.body.showEmail,
+      showPhone: req.body.showPhone,
+      showBirthday: req.body.showBirthday,
+      whoCanSeeFollowers: req.body.whoCanSeeFollowers,
+      whoCanSeeFollowing: req.body.whoCanSeeFollowing,
+      whoCanSeeLikes: req.body.whoCanSeeLikes,
     };
 
     const updated = await UserService.updatePrivacySettings(
@@ -481,6 +515,10 @@ const UserController = {
       mentions: req.body.mentions,
       messages: req.body.messages ?? req.body.directMessages,
       shares: req.body.shares,
+      saves: req.body.saves,
+      tags: req.body.tags,
+      sound: req.body.sound,
+      vibration: req.body.vibration,
       email: req.body.email,
       push: req.body.push,
       systemUpdates: req.body.systemUpdates,
@@ -543,11 +581,25 @@ const UserController = {
    */
   updateContentSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
+    const dataUsageToFilter = {
+      low: 'strict',
+      medium: 'moderate',
+      high: 'all',
+      auto: 'moderate',
+    };
+    const contentFilter =
+      req.body.contentFilter ||
+      (req.body.dataUsage ? dataUsageToFilter[req.body.dataUsage] : undefined);
+
     const settings = {
       language: req.body.language,
-      autoplay: req.body.autoplay ?? req.body.autoplayEnabled,
-      quality: req.body.quality,
-      contentFilters: req.body.contentFilters,
+      autoplayVideos:
+        req.body.autoplayVideos ??
+        req.body.autoplay ??
+        req.body.autoplayEnabled,
+      showSensitiveContent:
+        req.body.showSensitiveContent ?? req.body.sensitiveContent,
+      contentFilter,
     };
 
     const updated = await UserService.updateContentSettings(userId, settings);
@@ -579,13 +631,20 @@ const UserController = {
     const settings = {
       theme: req.body.theme ?? req.body.appearance,
       fontSize: req.body.fontSize,
-      colorScheme: req.body.colorScheme ?? req.body.primaryColor,
+      compactMode: req.body.compactMode ?? req.body.reducedMotion,
     };
 
     const updated = await UserService.updateAppearanceSettings(
       userId,
       settings
     );
+
+    if (req.body.language) {
+      await UserService.updateContentSettings(userId, {
+        language: req.body.language,
+      });
+    }
+
     return formatResponse(
       res,
       200,
@@ -607,7 +666,8 @@ const UserController = {
    */
   blockUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { blockedUserId } = req.body;
+    const blockedUserId =
+      req.params?.userId || req.body?.blockedUserId || req.body?.targetUserId;
 
     if (!blockedUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần chặn');
@@ -629,7 +689,8 @@ const UserController = {
    */
   unblockUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { blockedUserId } = req.params;
+    const blockedUserId =
+      req.params?.userId || req.params?.blockedUserId || req.body?.blockedUserId;
 
     if (!blockedUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần bỏ chặn');
@@ -651,7 +712,8 @@ const UserController = {
    */
   muteUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { targetUserId } = req.body;
+    const targetUserId =
+      req.params?.userId || req.body?.targetUserId || req.body?.mutedUserId;
 
     if (!targetUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần ẩn');
@@ -673,7 +735,12 @@ const UserController = {
    */
   unmuteUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { targetUserId } = req.params;
+    const targetUserId =
+      req.params?.userId || req.params?.targetUserId || req.body?.targetUserId;
+
+    if (!targetUserId) {
+      return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần bỏ ẩn');
+    }
 
     await UserService.unmuteUser(userId, targetUserId);
     return formatResponse(res, 200, 1, 'Đã bỏ ẩn người dùng thành công');

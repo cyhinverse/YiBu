@@ -9,6 +9,9 @@ import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
 import { escapeRegExp } from '../../utils/escapeRegExp.js';
+import { createSystemNotification } from '../../utils/systemNotification.js';
+import { buildSuspensionResetUpdate } from '../../utils/userAccess.js';
+import { normalizeReportStatus } from '../../utils/reportStatus.js';
 
 import Like from '../../models/Like.js';
 import Follow from '../../models/Follow.js';
@@ -351,18 +354,15 @@ class AdminService {
    * @throws {Error} If user not found
    */
   static async unbanUser(userId, adminId) {
-      const user = await User.findByIdAndUpdate(
-        userId,
-        {
-          $set: {
-            'moderation.status': 'active',
-            'moderation.reason': null,
-            'moderation.suspendedUntil': null,
-            'moderation.expiresAt': null,
-            'moderation.moderatedBy': adminId,
-            'moderation.moderatedAt': new Date(),
-          },
+    const suspensionResetSet = buildSuspensionResetUpdate().$set;
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          ...suspensionResetSet,
+          'moderation.moderatedBy': adminId,
         },
+      },
       { new: true }
     );
 
@@ -422,17 +422,12 @@ class AdminService {
         { isRevoked: true, revokedReason: 'user_suspended' }
       ).session(session);
 
-      await Notification.create(
-        [
-          {
-            recipient: userId,
-            sender: adminId,
-            type: 'system',
-            content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
-          },
-        ],
-        { session }
-      );
+      await createSystemNotification({
+        recipient: userId,
+        sender: adminId,
+        content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
+        session,
+      });
 
       await this._logAdminAction(adminId, 'suspend_user', 'user', userId, {
         days,
@@ -476,10 +471,9 @@ class AdminService {
       throw ApiError.notFound('User not found');
     }
 
-    await Notification.create({
+    await createSystemNotification({
       recipient: userId,
       sender: adminId,
-      type: 'system',
       content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${reason}`,
     });
 
@@ -655,21 +649,12 @@ class AdminService {
           $inc: { postsCount: -1 },
         }).session(session);
 
-        await Notification.create(
-          [
-            {
-              recipient: post.user._id,
-              sender: adminId,
-              type: 'system',
-              content: `Bài viết của bạn đã bị ${
-                normalizedAction === 'remove' || normalizedAction === 'hide'
-                  ? 'gỡ bỏ'
-                  : 'từ chối'
-              }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
-            },
-          ],
-          { session }
-        );
+        await createSystemNotification({
+          recipient: post.user._id,
+          sender: adminId,
+          content: `Bài viết của bạn đã bị gỡ bỏ. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
+          session,
+        });
       } else if (isNowRestored) {
         await User.findByIdAndUpdate(post.user._id, {
           $inc: { postsCount: 1 },
@@ -831,15 +816,12 @@ class AdminService {
       }
 
       if (!wasDeleted) {
-        await Notification.create({
+        await createSystemNotification({
           recipient: comment.user,
           sender: adminId,
-          type: 'system',
           content: `Bình luận của bạn đã bị ${
             shouldRedactContent ? 'xóa' : 'ẩn'
-          }. Lý do: ${
-            reason || 'Vi phạm quy định cộng đồng'
-          }`,
+          }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
         });
       }
     } else if (normalizedAction === 'approve' && comment.isDeleted) {
@@ -886,13 +868,7 @@ class AdminService {
     const query = {};
 
     if (status) {
-      if (status === 'in_review') {
-        query.status = 'reviewing';
-      } else if (status === 'dismissed') {
-        query.status = 'rejected';
-      } else {
-        query.status = status;
-      }
+      query.status = normalizeReportStatus(status);
     }
     if (category) query.category = category;
     if (targetType) query.targetType = targetType;

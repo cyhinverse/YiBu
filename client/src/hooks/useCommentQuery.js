@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/axios/axiosConfig';
 import { COMMENT_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
+import { invalidateQueryKeys } from './queryClientUtils';
 
 /**
  * Hook to fetch comments for a post
@@ -38,7 +39,7 @@ export const useCreateComment = () => {
       return extractData(response);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['comments', variables.postId]);
+      invalidateQueryKeys(queryClient, [['comments', variables.postId]]);
     },
   });
 };

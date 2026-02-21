@@ -12,6 +12,7 @@ export const formatDistanceToNow = date => {
 
   const now = new Date();
   const past = new Date(date);
+  if (Number.isNaN(past.getTime())) return '';
   const diffInSeconds = Math.floor((now - past) / 1000);
 
   if (diffInSeconds < 60) return 'vừa xong';
@@ -30,12 +31,25 @@ export const formatDistanceToNow = date => {
 };
 
 /**
- * Format distance between two dates
+ * Format date to compact relative time (e.g. "5m", "2h", "3d")
  * @param {Date|string} date - Target date
- * @param {Date|string} baseDate - Base date for comparison
- * @param {Object} [options] - Format options
  * @returns {string} Relative time string
  */
-export const formatDistance = date => {
-  return formatDistanceToNow(date);
+export const formatRelativeShortTime = date => {
+  if (!date) return '';
+
+  const target = new Date(date);
+  if (Number.isNaN(target.getTime())) return '';
+
+  const now = Date.now();
+  const diffMs = now - target.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'now';
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return target.toLocaleDateString();
 };

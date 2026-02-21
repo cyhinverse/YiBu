@@ -113,7 +113,13 @@ export default function CommentsTable({
                         <span>
                           trong bài viết{' '}
                           <span className="text-[var(--color-content)] hover:underline cursor-pointer font-semibold">
-                            #{comment.postId._id?.slice(-6) || '...'}
+                            #
+                            {(
+                              comment.postId?._id ||
+                              comment.post?._id ||
+                              comment.postId
+                            )?.toString?.()
+                              ?.slice(-6) || '...'}
                           </span>
                         </span>
                       </div>
@@ -131,20 +137,20 @@ export default function CommentsTable({
 
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-4 text-xs font-medium text-[var(--color-text-secondary)]">
-                    <div className="flex items-center gap-1.5" title="Likes">
-                      <Heart
-                        size={14}
-                        className="text-[var(--color-text-tertiary)] group-hover:text-[var(--color-like)] transition-colors"
-                      />
-                      {comment.likes?.length || 0}
+                    <div className="flex items-center gap-4 text-xs font-medium text-[var(--color-text-secondary)]">
+                      <div className="flex items-center gap-1.5" title="Likes">
+                        <Heart
+                          size={14}
+                          className="text-[var(--color-text-tertiary)] group-hover:text-[var(--color-like)] transition-colors"
+                        />
+                      {comment.likesCount ?? comment.likes?.length ?? 0}
                     </div>
                     <div className="flex items-center gap-1.5" title="Replies">
                       <MessageCircle
                         size={14}
                         className="text-[var(--color-text-tertiary)] group-hover:text-[var(--color-warning)] transition-colors"
                       />
-                      {comment.replies?.length || 0}
+                      {comment.repliesCount ?? comment.replies?.length ?? 0}
                     </div>
                   </div>
                 </td>

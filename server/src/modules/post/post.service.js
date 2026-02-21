@@ -1471,61 +1471,6 @@ class PostService {
   }
 
   /**
-   * Update engagement and trending scores for post
-   * @param {string} postId - Post ID
-   * @returns {Promise<void>}
-   */
-  static async updatePostScores(postId) {
-    const post = await Post.findById(postId);
-    if (post) {
-      post.calculateEngagementScore();
-      post.calculateTrendingScore();
-      await post.save();
-    }
-  }
-
-  /**
-   * Batch update scores for posts active in last 24 hours
-   * @returns {Promise<void>}
-   */
-  static async batchUpdateScores() {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const posts = await Post.find({
-      isDeleted: false,
-      $or: [
-        { createdAt: { $gte: twentyFourHoursAgo } },
-        { lastActivityAt: { $gte: twentyFourHoursAgo } },
-      ],
-    });
-
-    if (posts.length === 0) return;
-
-    const bulkOps = posts.map(post => {
-      post.calculateEngagementScore();
-      post.calculateTrendingScore();
-      
-      return {
-        updateOne: {
-          filter: { _id: post._id },
-          update: {
-            $set: {
-              engagementScore: post.engagementScore,
-              trendingScore: post.trendingScore
-            }
-          }
-        }
-      };
-    });
-
-    if (bulkOps.length > 0) {
-      await Post.bulkWrite(bulkOps);
-    }
-
-    logger.info(`Updated scores for ${posts.length} posts`);
-  }
-
-  /**
    * Report post violation
    * @param {string} postId - Post ID
    * @param {string} userId - Reporting user ID
@@ -1612,18 +1557,6 @@ class PostService {
     }
 
     return uploadedMedia;
-  }
-
-  static async getFollowingPosts(userId, page = 1, limit = 10) {
-    return this.getHomeFeed(userId, { page, limit });
-  }
-
-  static async getFeedPosts(userId, page = 1, limit = 20) {
-    return this.getHomeFeed(userId, { page, limit });
-  }
-
-  static async getPostsByUser(userId, options = {}) {
-    return this.getUserPosts(userId, null, options);
   }
 
   static async toggleLike(postId, userId) {

@@ -1,45 +1,17 @@
-import User from "../models/User.js";
-import logger from "../configs/logger.js";
+import { CatchError } from '../configs/CatchError.js';
+import ApiError from '../helpers/ApiError.js';
 
 /**
- * Middleware to check if the authenticated user is an admin
- * This should be used after the auth middleware
+ * Requires verifyToken to run first and attach req.user.
  */
-export const adminMiddleware = async (req, res, next) => {
-  try {
-    // User should already be authenticated at this point and req.user should be set
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        code: 0,
-        message: "Unauthorized. Authentication required.",
-      });
-    }
-
-    // Get user from database to check admin status
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(401).json({
-        code: 0,
-        message: "User not found.",
-      });
-    }
-
-    // Check if user is an admin by checking both isAdmin field and role
-    if (!user.isAdmin && user.role !== "admin") {
-      return res.status(403).json({
-        code: 0,
-        message: "Forbidden. Admin privileges required.",
-      });
-    }
-
-    // User is admin, continue to the next middleware or route handler
-    next();
-  } catch (error) {
-    logger.error("Admin middleware error:", error);
-    return res.status(500).json({
-      code: 0,
-      message: "Server error while checking admin privileges.",
-    });
+export const adminMiddleware = CatchError(async (req, _res, next) => {
+  if (!req.user?.id) {
+    throw ApiError.unauthorized('Unauthorized. Authentication required.');
   }
-};
+
+  if (!req.user.isAdmin) {
+    throw ApiError.forbidden('Forbidden. Admin privileges required.');
+  }
+
+  return next();
+});

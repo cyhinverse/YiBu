@@ -7,6 +7,11 @@ import {
 import api from '@/axios/axiosConfig';
 import { MESSAGE_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
+import { invalidateQueryKeys } from './queryClientUtils';
+
+const MESSAGE_PAGE_LIMIT = 50;
+const MAX_MEDIA_SCAN_PAGES = 20;
+const MEDIA_FETCH_BATCH_SIZE = 5;
 
 /**
  * Hook to fetch conversations list
@@ -86,14 +91,16 @@ export const useSendMessage = () => {
       content,
       type = 'text',
       attachments,
-    }) => {
+      }) => {
       const formData = new FormData();
       formData.append('conversationId', conversationId);
-      formData.append('content', content);
+      if (content !== undefined && content !== null) {
+        formData.append('content', content);
+      }
       formData.append('type', type);
       if (attachments) {
         attachments.forEach(file => {
-          formData.append('attachments', file);
+          formData.append('files', file);
         });
       }
       const response = await api.post(MESSAGE_API.SEND, formData, {
@@ -104,17 +111,11 @@ export const useSendMessage = () => {
       return extractData(response);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries([
-        'messages',
-        'list',
-        variables.conversationId,
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'list', variables.conversationId],
+        ['messages', 'infinite', variables.conversationId],
+        ['messages', 'conversations'],
       ]);
-      queryClient.invalidateQueries([
-        'messages',
-        'infinite',
-        variables.conversationId,
-      ]);
-      queryClient.invalidateQueries(['messages', 'conversations']);
     },
   });
 };
@@ -131,8 +132,10 @@ export const useMarkAsRead = () => {
       return conversationId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
-      queryClient.invalidateQueries(['messages', 'unreadCount']);
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'conversations'],
+        ['messages', 'unreadCount'],
+      ]);
     },
   });
 };
@@ -162,10 +165,61 @@ export const useConversationMedia = conversationId => {
   return useQuery({
     queryKey: ['messages', 'media', conversationId],
     queryFn: async () => {
-      const response = await api.get(MESSAGE_API.GET_MEDIA(conversationId));
-      return extractData(response);
+      const pagesToFetch = [];
+      for (let page = 1; page <= MAX_MEDIA_SCAN_PAGES; page++) {
+        pagesToFetch.push(page);
+      }
+
+      const batchResults = [];
+      for (let i = 0; i < pagesToFetch.length; i += MEDIA_FETCH_BATCH_SIZE) {
+        const batch = pagesToFetch.slice(i, i + MEDIA_FETCH_BATCH_SIZE);
+        const responses = await Promise.all(
+          batch.map(page =>
+            api
+              .get(MESSAGE_API.GET_MESSAGES(conversationId), {
+                params: { page, limit: MESSAGE_PAGE_LIMIT },
+              })
+              .then(res => extractData(res))
+              .catch(() => null)
+          )
+        );
+        batchResults.push(...responses);
+        
+        const lastResult = responses[responses.length - 1];
+        if (!lastResult?.hasMore) break;
+      }
+
+      const media = [];
+      batchResults.forEach(data => {
+        if (!data) return;
+        const messages = Array.isArray(data.messages) ? data.messages : [];
+        messages.forEach(message => {
+          const attachments = Array.isArray(message.media) ? message.media : [];
+          attachments.forEach(item => {
+            media.push({
+              ...item,
+              messageId: message._id,
+              createdAt: message.createdAt,
+              sender: message.sender,
+            });
+          });
+        });
+      });
+
+      media.sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime()
+      );
+
+      return {
+        media,
+        hasMore: false,
+        scannedPages: batchResults.filter(Boolean).length,
+      };
     },
     enabled: !!conversationId,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -183,7 +237,7 @@ export const useConversationById = conversationId => {
       );
       return extractData(response);
     },
-    enabled: !!conversationId && conversationId.length === 24,
+    enabled: !!conversationId,
   });
 };
 
@@ -201,7 +255,7 @@ export const useCreateConversation = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
+      invalidateQueryKeys(queryClient, [['messages', 'conversations']]);
     },
   });
 };
@@ -221,7 +275,7 @@ export const useCreateGroup = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
+      invalidateQueryKeys(queryClient, [['messages', 'conversations']]);
     },
   });
 };
@@ -238,11 +292,9 @@ export const useDeleteMessage = () => {
       return { conversationId, messageId };
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['messages', 'list', data.conversationId]);
-      queryClient.invalidateQueries([
-        'messages',
-        'infinite',
-        data.conversationId,
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'list', data.conversationId],
+        ['messages', 'infinite', data.conversationId],
       ]);
     },
   });
@@ -260,11 +312,9 @@ export const useUpdateGroup = () => {
       return extractData(response);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
-      queryClient.invalidateQueries([
-        'messages',
-        'conversation',
-        variables.groupId,
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'conversations'],
+        ['messages', 'conversation', variables.groupId],
       ]);
     },
   });
@@ -284,10 +334,8 @@ export const useAddGroupMember = () => {
       return extractData(response);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries([
-        'messages',
-        'conversation',
-        variables.groupId,
+      invalidateQueryKeys(queryClient, [
+        ['messages', 'conversation', variables.groupId],
       ]);
     },
   });
@@ -305,7 +353,7 @@ export const useRemoveGroupMember = () => {
       return { groupId, userId };
     },
     onSuccess: data => {
-      queryClient.invalidateQueries(['messages', 'conversation', data.groupId]);
+      invalidateQueryKeys(queryClient, [['messages', 'conversation', data.groupId]]);
     },
   });
 };
@@ -322,7 +370,7 @@ export const useLeaveGroup = () => {
       return groupId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
+      invalidateQueryKeys(queryClient, [['messages', 'conversations']]);
     },
   });
 };
@@ -339,7 +387,7 @@ export const useDeleteConversation = () => {
       return conversationId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['messages', 'conversations']);
+      invalidateQueryKeys(queryClient, [['messages', 'conversations']]);
     },
   });
 };

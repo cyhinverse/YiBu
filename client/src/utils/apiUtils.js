@@ -20,10 +20,3 @@ export const extractData = response => {
 
   return responseData?.data !== undefined ? responseData.data : responseData;
 };
-
-export const extractMeta = response => {
-  const responseData = response?.data;
-  if (!responseData || responseData.success === undefined) return null;
-  return responseData.meta || null;
-};
-

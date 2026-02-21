@@ -2,7 +2,6 @@ import { CatchError } from "../../configs/CatchError.js";
 import NotificationService from "./notification.service.js";
 import { sendCreated, sendOk } from "../../helpers/apiResponse.js";
 import { getPaginationParams } from "../../utils/pagination.js";
-import socketService from "../shared/socket/socket.service.js";
 import ApiError from "../../helpers/ApiError.js";
 
 
@@ -37,19 +36,27 @@ const NotificationController = {
    * @returns {Object} Response with created notification data
    */
   createNotification: CatchError(async (req, res) => {
+    const recipient = req.body.recipient || req.body.userId;
     const {
-      recipient,
       type,
       content,
+      title,
+      message,
       relatedPost,
       relatedComment,
       groupKey,
       metadata,
+      data,
     } = req.body;
-    const sender = req.body.sender || req.user.id;
+    const finalContent = content || message;
+    const finalMetadata = metadata || data;
+    const finalRelatedPost = relatedPost || data?.postId;
+    const finalRelatedComment = relatedComment || data?.commentId;
+    const sender =
+      req.user.isAdmin && req.body.sender ? req.body.sender : req.user.id;
 
-    if (!recipient || !type) {
-      throw ApiError.badRequest("Recipient and type are required");
+    if (!recipient || !type || !finalContent) {
+      throw ApiError.badRequest("Recipient, type and content are required");
     }
 
 
@@ -58,16 +65,15 @@ const NotificationController = {
       recipient,
       sender,
       type,
-      content,
-      relatedPost,
-      relatedComment,
+      content: finalContent,
+      relatedPost: finalRelatedPost,
+      relatedComment: finalRelatedComment,
       groupKey,
-      metadata,
+      metadata: {
+        ...(title ? { title } : {}),
+        ...(finalMetadata || {}),
+      },
     });
-
-    if (notification) {
-      socketService.emitNotification(recipient.toString(), notification);
-    }
 
     return sendCreated(res, {
       message: "Đã tạo thông báo",
@@ -95,12 +101,13 @@ const NotificationController = {
       defaultLimit: 20,
     });
     const { type, unreadOnly } = req.query;
+    const unreadOnlyFilter = unreadOnly === true || unreadOnly === 'true';
 
     const result = await NotificationService.getNotifications(userId, {
       page,
       limit,
       type,
-      unreadOnly: unreadOnly === "true",
+      unreadOnly: unreadOnlyFilter,
     });
 
     return sendOk(res, {
@@ -188,7 +195,7 @@ const NotificationController = {
    */
   markAllAsRead: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { type } = req.body;
+    const { type } = req.body || {};
 
     const result = await NotificationService.markAllAsRead(userId, type);
     return sendOk(res, {
@@ -239,7 +246,7 @@ const NotificationController = {
    */
   deleteAllNotifications: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { type } = req.body;
+    const { type } = req.body || {};
 
     const result = await NotificationService.deleteAllNotifications(
       userId,

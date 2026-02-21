@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { objectId } from './common.validation.js';
 
 /**
  * Auth Validation Schemas
@@ -117,6 +118,16 @@ export const resetPasswordBody = Joi.object({
     'string.empty': 'Token không được để trống',
     'any.required': 'Token là bắt buộc',
   }),
+  newPassword: Joi.string()
+    .min(6)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .messages({
+      'string.empty': 'Mật khẩu không được để trống',
+      'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
+      'string.pattern.base':
+        'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
+    }),
   password: Joi.string()
     .min(6)
     .max(128)
@@ -127,13 +138,30 @@ export const resetPasswordBody = Joi.object({
       'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
       'string.pattern.base':
         'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
-      'any.required': 'Mật khẩu là bắt buộc',
+      'any.required': 'Mật khẩu mới là bắt buộc',
     }),
-  confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
-    'any.only': 'Xác nhận mật khẩu không khớp',
-    'any.required': 'Xác nhận mật khẩu là bắt buộc',
-  }),
-});
+  confirmPassword: Joi.string()
+    .valid(Joi.ref('newPassword'), Joi.ref('password'))
+    .messages({
+      'any.only': 'Xác nhận mật khẩu không khớp',
+    }),
+  confirmNewPassword: Joi.string()
+    .valid(Joi.ref('newPassword'), Joi.ref('password'))
+    .messages({
+      'any.only': 'Xác nhận mật khẩu không khớp',
+    }),
+})
+  .or('newPassword', 'password')
+  .rename('password', 'newPassword', { ignoreUndefined: true, override: false })
+  .rename('confirmNewPassword', 'confirmPassword', {
+    ignoreUndefined: true,
+    override: false,
+  })
+  .with('newPassword', 'confirmPassword')
+  .messages({
+    'object.missing': 'Mật khẩu mới là bắt buộc',
+    'object.with': 'Xác nhận mật khẩu là bắt buộc',
+  });
 
 // ======================================
 // POST /refresh
@@ -154,11 +182,16 @@ export const updatePasswordBody = Joi.object({
     'string.empty': 'Mật khẩu hiện tại không được để trống',
     'any.required': 'Mật khẩu hiện tại là bắt buộc',
   }),
-  newPassword: Joi.string().min(6).required().messages({
-    'string.empty': 'Mật khẩu mới không được để trống',
-    'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
-    'any.required': 'Mật khẩu mới là bắt buộc',
-  }),
+  newPassword: Joi.string()
+    .min(6)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .required()
+    .messages({
+      'string.empty': 'Mật khẩu mới không được để trống',
+      'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự',
+      'string.pattern.base': 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
+      'any.required': 'Mật khẩu mới là bắt buộc',
+    }),
 });
 
 export const disableTwoFactorBody = Joi.object({
@@ -188,7 +221,7 @@ export const verifyTwoFactorBody = Joi.object({
 // Params: { sessionId }
 // ======================================
 export const sessionIdParam = Joi.object({
-  sessionId: Joi.string().required().messages({
+  sessionId: objectId.required().messages({
     'string.empty': 'Session ID không được để trống',
     'any.required': 'Session ID là bắt buộc',
   }),
@@ -202,6 +235,7 @@ export default {
   resetPasswordBody,
   refreshTokenBody,
   updatePasswordBody,
+  disableTwoFactorBody,
   verifyTwoFactorBody,
   sessionIdParam,
 };

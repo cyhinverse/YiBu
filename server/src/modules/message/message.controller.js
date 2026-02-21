@@ -166,28 +166,36 @@ const MessageController = {
    */
   CreateGroupConversation: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { participantIds, groupName, groupAvatar } = req.body;
+    const {
+      participantIds,
+      groupName,
+      groupAvatar,
+      name,
+      avatar,
+    } = req.body;
+    const finalGroupName = groupName || name;
+    const finalGroupAvatar = groupAvatar || avatar;
 
     if (!participantIds || participantIds.length < 2) {
       throw ApiError.badRequest('Group requires at least 2 participants');
     }
 
-    if (!groupName) {
+    if (!finalGroupName) {
       throw ApiError.badRequest('Group name is required');
     }
 
 
     const conversation = await MessageService.createGroupConversation(userId, {
       participantIds,
-      groupName,
-      groupAvatar,
+      groupName: finalGroupName,
+      groupAvatar: finalGroupAvatar,
     });
 
     participantIds.forEach(participantId => {
       if (participantId !== userId) {
         socketService.emitGroupCreated(participantId, {
           conversationId: conversation._id,
-          groupName,
+          groupName: finalGroupName,
           createdBy: userId,
         });
       }
@@ -216,14 +224,14 @@ const MessageController = {
   UpdateGroupConversation: CatchError(async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user.id;
-    const { groupName, groupAvatar } = req.body;
+    const { groupName, groupAvatar, name, avatar } = req.body;
 
     const conversation = await MessageService.updateGroup(
       conversationId,
       userId,
       {
-        groupName,
-        groupAvatar,
+        groupName: groupName || name,
+        groupAvatar: groupAvatar || avatar,
       }
     );
 
@@ -398,7 +406,13 @@ const MessageController = {
    */
   SendMessage: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { conversationId, content, messageType = 'text', replyTo } = req.body;
+    const {
+      conversationId,
+      content,
+      messageType = 'text',
+      type,
+      replyTo,
+    } = req.body;
 
     let attachments = [];
     if (req.files && req.files.length > 0) {
@@ -411,8 +425,8 @@ const MessageController = {
 
     const message = await MessageService.sendMessage(conversationId, userId, {
       content,
-      messageType,
-      attachments,
+      messageType: type || messageType,
+      media: attachments,
       replyTo,
     });
 
@@ -438,7 +452,7 @@ const MessageController = {
   DeleteMessage: CatchError(async (req, res) => {
     const { messageId } = req.params;
     const userId = req.user.id;
-    const { forEveryone = false } = req.body;
+    const { forEveryone = false } = req.body || {};
 
     const message = await MessageService.deleteMessage(
       messageId,
@@ -596,13 +610,14 @@ const MessageController = {
    */
   SearchMessages: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { query, conversationId, page = 1, limit = 20 } = req.query;
+    const { q, query, conversationId, page = 1, limit = 20 } = req.query;
+    const searchQuery = q || query;
 
-    if (!query || query.trim().length < 2) {
+    if (!searchQuery || searchQuery.trim().length < 2) {
       throw ApiError.badRequest('Query must be at least 2 characters');
     }
 
-    const result = await MessageService.searchMessages(userId, query, {
+    const result = await MessageService.searchMessages(userId, searchQuery, {
       conversationId,
       page: parseInt(page),
       limit: parseInt(limit),
@@ -628,12 +643,12 @@ const MessageController = {
    */
   GetUsersForChat: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 20, q, search } = req.query;
 
     const result = await MessageService.getUsersForChat(userId, {
       page: parseInt(page),
       limit: parseInt(limit),
-      search,
+      search: q || search,
     });
     return sendOk(res, {
       message: 'Success',

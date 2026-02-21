@@ -16,6 +16,92 @@ import socketService from '../shared/socket/socket.service.js';
  * 4. TTL support for automatic cleanup
  */
 class NotificationService {
+  static NOTIFICATION_SETTING_MAP = {
+    like: 'likes',
+    comment: 'comments',
+    reply: 'comments',
+    follow: 'follows',
+    mention: 'mentions',
+    share: 'shares',
+    message: 'messages',
+    save: 'saves',
+    tag: 'tags',
+    system: 'systemUpdates',
+    announcement: 'systemUpdates',
+  };
+
+  static _getPushSettings(settings) {
+    const notifications = settings?.notifications || {};
+    const pushSettings =
+      notifications?.push && typeof notifications.push === 'object'
+        ? notifications.push
+        : notifications;
+    return pushSettings || {};
+  }
+
+  static _isNotificationEnabled(settings, type) {
+    const pushSettings = this._getPushSettings(settings);
+    const settingKey = this.NOTIFICATION_SETTING_MAP[type] || type;
+
+    if (pushSettings.enabled === false) {
+      return false;
+    }
+
+    if (pushSettings[settingKey] === false) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static _isSenderBlockedOrMuted(settings, senderId) {
+    const senderIdString = senderId?.toString();
+    if (!senderIdString) return false;
+
+    if (settings?.blockedUsers?.some(id => id.toString() === senderIdString)) {
+      return true;
+    }
+
+    return settings?.mutedUsers?.some(id => id.toString() === senderIdString);
+  }
+
+  static _canReceiveNotification(settings, senderId, type) {
+    if (this._isSenderBlockedOrMuted(settings, senderId)) {
+      return false;
+    }
+
+    return this._isNotificationEnabled(settings, type);
+  }
+
+  static _buildDefaultExpiryDate(days = 30) {
+    return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  }
+
+  static _formatPreferences(settings) {
+    const notifications = settings?.notifications || {};
+    const push = this._getPushSettings(settings);
+    const email =
+      notifications?.email && typeof notifications.email === 'object'
+        ? notifications.email
+        : {};
+
+    return {
+      likes: push.likes ?? true,
+      comments: push.comments ?? true,
+      follows: push.follows ?? true,
+      messages: push.messages ?? true,
+      mentions: push.mentions ?? true,
+      replies: push.comments ?? true,
+      shares: push.shares ?? true,
+      saves: push.saves ?? true,
+      tags: push.tags ?? true,
+      systemUpdates: push.systemUpdates ?? true,
+      sound: push.sound ?? true,
+      vibration: push.vibration ?? true,
+      push: push.enabled ?? true,
+      email: email.enabled ?? true,
+    };
+  }
 
   /**
    * Create new notification (with grouping support)
@@ -42,30 +128,7 @@ class NotificationService {
       .select('notifications blockedUsers mutedUsers')
       .lean();
 
-    if (
-      settings?.blockedUsers?.some(id => id.toString() === sender?.toString())
-    ) {
-      return null;
-    }
-
-    if (
-      settings?.mutedUsers?.some(id => id.toString() === sender?.toString())
-    ) {
-      return null;
-    }
-
-    const notificationTypeMap = {
-      like: 'likes',
-      comment: 'comments',
-      reply: 'comments',
-      follow: 'follows',
-      mention: 'mentions',
-      share: 'shares',
-      message: 'messages',
-    };
-
-    const settingKey = notificationTypeMap[type] || type;
-    if (settings?.notifications?.[settingKey] === false) {
+    if (!this._canReceiveNotification(settings, sender, type)) {
       return null;
     }
 
@@ -87,7 +150,7 @@ class NotificationService {
             .select('username avatar')
             .lean();
 
-          await Notification.findByIdAndUpdate(existingGroup._id, {
+          const updatedGroup = await Notification.findByIdAndUpdate(existingGroup._id, {
             $push: {
               groupedSenders: {
                 user: sender,
@@ -95,12 +158,26 @@ class NotificationService {
                 avatar: senderUser?.avatar,
               },
             },
-            $inc: { groupCount: 1 },
-            $set: { updatedAt: new Date() },
-          });
+              $inc: { groupCount: 1 },
+              $set: { updatedAt: new Date() },
+            },
+            { new: true }
+          )
+            .populate('sender', 'username name avatar verified')
+            .populate('post', '_id caption media')
+            .populate('relatedPost', '_id caption media')
+            .lean();
+
+          return updatedGroup || existingGroup;
         }
 
-        return existingGroup;
+        const hydratedGroup = await Notification.findById(existingGroup._id)
+          .populate('sender', 'username name avatar verified')
+          .populate('post', '_id caption media')
+          .populate('relatedPost', '_id caption media')
+          .lean();
+
+        return hydratedGroup || existingGroup;
       }
     }
 
@@ -128,13 +205,15 @@ class NotificationService {
       sender,
       type,
       content,
+      post: relatedPost,
+      comment: relatedComment,
       relatedPost,
       relatedComment,
       groupKey,
       groupedSenders: senderData ? [senderData] : [],
       groupCount: 1,
       metadata,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expiresAt: this._buildDefaultExpiryDate(),
     });
 
     const populatedNotification = await Notification.findById(notification._id)
@@ -258,6 +337,7 @@ class NotificationService {
       recipient: userId,
     })
       .populate('sender', 'username name avatar verified')
+      .populate('post', '_id caption media')
       .populate('relatedPost', '_id caption media')
       .lean();
 
@@ -390,156 +470,66 @@ class NotificationService {
   }
 
   /**
-   * Send notification to all followers of user (Optimized with Batch Processing)
-   * @param {string} userId - User ID
-   * @param {string} type - Notification type
-   * @param {string} content - Content (can contain {username} placeholder)
-   * @param {string|null} relatedPost - Related post ID
-   * @returns {Promise<{sentCount: number}>} Number of notifications sent
-   */
-  static async notifyFollowers(userId, type, content, relatedPost = null) {
-    const Follow = (await import('../../models/Follow.js')).default;
-    
-    // Get sender info once
-    const sender = await User.findById(userId).select('username avatar').lean();
-    if (!sender) return { sentCount: 0 };
-
-    const notificationContent = content.replace('{username}', sender.username);
-    const notificationTypeMap = {
-      like: 'likes',
-      comment: 'comments',
-      reply: 'comments', // usually maps to comments setting
-      follow: 'follows',
-      mention: 'mentions',
-      share: 'shares',
-      message: 'messages',
-    };
-    const settingKey = notificationTypeMap[type] || type;
-
-    // Process in batches using cursor to avoid OOM
-    const BATCH_SIZE = 500;
-    let sentCount = 0;
-    
-    // Use cursor to stream follower IDs
-    const cursor = Follow.find({ following: userId, status: 'active' })
-      .select('follower')
-      .cursor();
-
-    let batchFollowerIds = [];
-
-    for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
-      batchFollowerIds.push(doc.follower);
-
-      if (batchFollowerIds.length >= BATCH_SIZE) {
-        sentCount += await this._processNotificationBatch(
-            batchFollowerIds, 
-            userId, 
-            sender, 
-            type, 
-            settingKey, 
-            notificationContent, 
-            relatedPost
-        );
-        batchFollowerIds = []; // Reset batch
-      }
-    }
-
-    // Process remaining
-    if (batchFollowerIds.length > 0) {
-      sentCount += await this._processNotificationBatch(
-        batchFollowerIds, 
-        userId, 
-        sender, 
-        type, 
-        settingKey, 
-        notificationContent, 
-        relatedPost
-      );
-    }
-
-    return { sentCount };
-  }
-
-  /**
-   * Process a batch of followers for notification (Private helper)
-   */
-  static async _processNotificationBatch(followerIds, senderId, senderUser, type, settingKey, content, relatedPost) {
-    // 1. Bulk fetch UserSettings for this batch
-    const settingsList = await UserSettings.find({ user: { $in: followerIds } })
-        .select('user notifications blockedUsers mutedUsers')
-        .lean();
-
-    const settingsMap = new Map();
-    settingsList.forEach(s => settingsMap.set(s.user.toString(), s));
-
-    // 2. Filter valid recipients
-    const validNotifications = [];
-    const senderIdStr = senderId.toString();
-
-    for (const recipientId of followerIds) {
-        const recipientIdStr = recipientId.toString();
-        const settings = settingsMap.get(recipientIdStr);
-
-        // Check 1: Blocked Users
-        if (settings?.blockedUsers?.some(id => id.toString() === senderIdStr)) {
-            continue;
-        }
-
-        // Check 2: Muted Users
-        if (settings?.mutedUsers?.some(id => id.toString() === senderIdStr)) {
-            continue;
-        }
-
-        // Check 3: Notification Preferences
-        if (settings?.notifications?.[settingKey] === false) {
-            continue;
-        }
-
-        // Prepare Notification Object
-        validNotifications.push({
-            recipient: recipientId,
-            sender: senderId,
-            type,
-            content,
-            relatedPost,
-            groupKey: relatedPost ? `${type}_${relatedPost}` : null,
-            groupedSenders: [{
-                user: senderId,
-                username: senderUser.username,
-                avatar: senderUser.avatar,
-            }],
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
-    }
-
-    // 3. Bulk Insert
-    if (validNotifications.length > 0) {
-        await Notification.insertMany(validNotifications, { ordered: false }).catch(err => 
-            logger.warn('Batch notification insert error:', err.message)
-        );
-        
-        // Optional: Fire socket events for this batch? 
-        // For mass notifications, we might skip real-time socket to avoid flooding server,
-        // or just send to online users. For now, we skip socket loop to save CPU in mass broadcast.
-    }
-
-    return validNotifications.length;
-  }
-
-  /**
    * Update notification preferences settings
    * @param {string} userId - User ID
    * @param {Object} preferences - New settings
    * @returns {Promise<Object>} Updated notification settings
    */
   static async updateNotificationPreferences(userId, preferences) {
+    const keyMapping = {
+      likes: 'notifications.push.likes',
+      comments: 'notifications.push.comments',
+      follows: 'notifications.push.follows',
+      messages: 'notifications.push.messages',
+      mentions: 'notifications.push.mentions',
+      replies: 'notifications.push.comments',
+      shares: 'notifications.push.shares',
+      saves: 'notifications.push.saves',
+      tags: 'notifications.push.tags',
+      systemUpdates: 'notifications.push.systemUpdates',
+      sound: 'notifications.push.sound',
+      vibration: 'notifications.push.vibration',
+    };
+
+    const updateOps = {};
+    for (const [key, value] of Object.entries(preferences || {})) {
+      if (value === undefined) continue;
+
+      if (key === 'email') {
+        if (typeof value === 'boolean') {
+          updateOps['notifications.email.enabled'] = value;
+        } else if (value && typeof value === 'object') {
+          for (const [subKey, subValue] of Object.entries(value)) {
+            if (subValue === undefined) continue;
+            updateOps[`notifications.email.${subKey}`] = subValue;
+          }
+        }
+      } else if (key === 'push') {
+        if (typeof value === 'boolean') {
+          updateOps['notifications.push.enabled'] = value;
+        } else if (value && typeof value === 'object') {
+          for (const [subKey, subValue] of Object.entries(value)) {
+            if (subValue === undefined) continue;
+            updateOps[`notifications.push.${subKey}`] = subValue;
+          }
+        }
+      } else if (keyMapping[key]) {
+        updateOps[keyMapping[key]] = value;
+      }
+    }
+
+    if (Object.keys(updateOps).length === 0) {
+      const settings = await UserSettings.findOne({ user: userId }).lean();
+      return this._formatPreferences(settings);
+    }
+
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
-      { $set: { notifications: preferences } },
+      { $set: updateOps },
       { new: true, upsert: true }
     );
 
-    return settings.notifications;
+    return this._formatPreferences(settings?.toObject?.() || settings);
   }
 
   /**
@@ -552,57 +542,9 @@ class NotificationService {
       .select('notifications')
       .lean();
 
-    return (
-      settings?.notifications || {
-        likes: true,
-        comments: true,
-        follows: true,
-        mentions: true,
-        messages: true,
-        shares: true,
-      }
-    );
+    return this._formatPreferences(settings);
   }
 
-  /**
-   * Send push notification (TODO: integrate with FCM/APNs)
-   * @param {string} userId - User ID
-   * @param {Object} notification - Notification object
-   * @returns {Promise<{sent: boolean, reason?: string, notification?: Object}>}
-   */
-  static async sendPushNotification(userId, notification) {
-    const settings = await UserSettings.findOne({ user: userId })
-      .select('notifications')
-      .lean();
-
-    if (!settings?.notifications?.push) {
-      return { sent: false, reason: 'Push notifications disabled' };
-    }
-
-    logger.info(
-      `Push notification queued for user ${userId}: ${notification.content}`
-    );
-
-    return { sent: true, notification };
-  }
-
-  /**
-   * Clean up old read notifications
-   * @param {number} days - Number of days to keep (default 30)
-   * @returns {Promise<{deletedCount: number}>} Number of notifications deleted
-   */
-  static async cleanupOldNotifications(days = 30) {
-    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    const result = await Notification.deleteMany({
-      isRead: true,
-      createdAt: { $lt: cutoffDate },
-    });
-
-    logger.info(`Cleaned up ${result.deletedCount} old notifications`);
-
-    return { deletedCount: result.deletedCount };
-  }
 }
 
 export default NotificationService;

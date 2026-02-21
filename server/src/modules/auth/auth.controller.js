@@ -80,7 +80,7 @@ const AuthController = {
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
       ip: req.ip || req.connection?.remoteAddress,
-      platform: req.body.platform || 'web',
+      platform: req.body?.platform || 'web',
     };
 
     const { user, accessToken, refreshToken } = await AuthService.login(
@@ -109,7 +109,7 @@ const AuthController = {
    * @returns {Object} Response with new HttpOnly cookies for tokens
    */
   RefreshToken: CatchError(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
     if (!refreshToken) {
       throw ApiError.unauthorized('Refresh token không hợp lệ');
@@ -144,7 +144,7 @@ const AuthController = {
    * @returns {Object} Response with logout success message
    */
   Logout: CatchError(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
     await AuthService.logout(refreshToken);
 
@@ -262,49 +262,6 @@ const AuthController = {
   }),
 
   /**
-   * Request email verification for account
-   * @param {Object} req - Express request object
-   * @param {Object} req.user - Authenticated user object
-   * @param {string} req.user.id - Current user's ID
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with verification email sent message
-   */
-  VerifyAccount: CatchError(async (req, res) => {
-    const userId = req.user.id;
-
-    const result = await AuthService.requestEmailVerification(userId);
-
-    return sendOk(res, {
-      message: 'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư',
-      data: result,
-    });
-
-  }),
-
-  /**
-   * Verify email using token
-   * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.token - Email verification token
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with email verification success message
-   */
-  VerifyEmail: CatchError(async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-      throw ApiError.badRequest('Token xác thực là bắt buộc');
-    }
-
-    await AuthService.verifyEmail(token);
-
-    return sendOk(res, {
-      message: 'Xác thực email thành công',
-    });
-
-  }),
-
-  /**
    * Enable two-factor authentication
    * @param {Object} req - Express request object
    * @param {Object} req.user - Authenticated user object
@@ -395,7 +352,7 @@ const AuthController = {
   GetActiveSessions: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     const sessions = await AuthService.getActiveSessions(userId, refreshToken);
 
     return sendOk(res, {
@@ -468,73 +425,6 @@ const AuthController = {
       data: user,
     });
 
-  }),
-
-  /**
-   * Update user email address
-   * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.email - New email address
-   * @param {string} req.body.password - User's current password for verification
-   * @param {Object} req.user - Authenticated user object
-   * @param {string} req.user.id - Current user's ID
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with email update status (feature in development)
-   */
-  UpdateEmail: CatchError(async (req, res) => {
-    const { email, password } = req.body;
-    const userId = req.user.id;
-
-    if (!email) {
-      throw ApiError.badRequest('Email mới là bắt buộc');
-    }
-
-    return sendOk(res, {
-      message: 'Tính năng đang được phát triển',
-    });
-
-  }),
-
-  /**
-   * Delete user account permanently
-   * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.password - User's current password for verification
-   * @param {Object} req.user - Authenticated user object
-   * @param {string} req.user.id - Current user's ID
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with account deletion success message
-   */
-  DeleteAccount: CatchError(async (req, res) => {
-    const { password } = req.body;
-    const userId = req.user.id;
-
-    if (!password) {
-      throw ApiError.badRequest('Mật khẩu là bắt buộc để xóa tài khoản');
-    }
-
-    const UserService = (await import('../user/user.service.js')).default;
-
-    await UserService.deleteUser(userId);
-
-    clearAuthCookies(res);
-
-    return sendOk(res, {
-      message: 'Tài khoản đã được xóa',
-    });
-
-  }),
-
-  /**
-   * Connect social account to user profile
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Object} Response with social account connection status (feature in development)
-   */
-  ConnectSocialAccount: CatchError(async (req, res) => {
-    return sendOk(res, {
-      message: 'Tính năng đang được phát triển',
-    });
   }),
 
 };

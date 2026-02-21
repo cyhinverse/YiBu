@@ -3,7 +3,9 @@ import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import StatCard from '../../Shared/StatCard';
 
 export default function ReportStats({ reports }) {
-  const pendingCount = reports.filter(r => r.status === 'pending').length;
+  const pendingCount = reports.filter(
+    r => r.status === 'pending' || r.status === 'reviewing'
+  ).length;
   const resolvedCount = reports.filter(r => r.status === 'resolved').length;
   const rejectedCount = reports.filter(r => r.status === 'rejected').length;
 

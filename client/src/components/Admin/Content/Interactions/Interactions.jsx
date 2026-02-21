@@ -47,7 +47,8 @@ export default function Interactions() {
   };
 
   const interactions = interactionsData?.interactions || [];
-  const interactionStats = interactionsData?.interactionStats || {};
+  const interactionStats =
+    interactionsData?.interactionStats || interactionsData?.stats || {};
   const pagination = interactionsData?.pagination || {};
 
   const interactionsList = Array.isArray(interactions) ? interactions : [];

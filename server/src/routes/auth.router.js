@@ -63,6 +63,7 @@ router.post(
 /* POST /refresh - Refresh access token */
 router.post(
   '/refresh',
+  authRateLimiter,
   validateBody(refreshTokenBody),
   AuthController.RefreshToken
 );

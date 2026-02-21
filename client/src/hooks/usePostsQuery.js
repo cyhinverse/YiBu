@@ -7,6 +7,7 @@ import {
 import api from '@/axios/axiosConfig';
 import { POST_API, LIKE_API, SAVE_POST_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
+import { invalidateQueryKeys, removeQueryKeys } from './queryClientUtils';
 
 /**
  * Hook to fetch user posts with infinite scroll
@@ -74,7 +75,7 @@ export const useSharedPosts = (userId, limit = 20) => {
   return useInfiniteQuery({
     queryKey: ['sharedPosts', userId],
     queryFn: async ({ pageParam = 1 }) => {
-      const response = await api.get(POST_API.GET_BY_USER(userId) + '/shared', {
+      const response = await api.get(POST_API.GET_SHARED_BY_USER(userId), {
         params: { page: pageParam, limit },
       });
       return extractData(response);
@@ -119,8 +120,8 @@ export const useTrendingHashtags = (limit = 10) => {
       });
       return extractData(response);
     },
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 1000 * 60 * 5,
+    refetchIntervalInBackground: false,
   });
 };
 
@@ -156,11 +157,11 @@ export const useToggleLike = () => {
       return extractData(response);
     },
     onSuccess: (_, postId) => {
-      queryClient.invalidateQueries(['feed']);
-      queryClient.invalidateQueries(['posts', 'user']);
-      queryClient.invalidateQueries(['posts', 'liked']);
-      queryClient.invalidateQueries(['post', postId]);
-      queryClient.invalidateQueries(['likeStatus', postId]);
+      invalidateQueryKeys(queryClient, [
+        { queryKey: ['post', postId] },
+        { queryKey: ['likeStatus', postId] },
+        { queryKey: ['feed'], refetchType: 'active' },
+      ]);
     },
   });
 };
@@ -183,9 +184,10 @@ export const useToggleSave = () => {
     },
     onSuccess: (_, variables) => {
       const { postId } = variables;
-      queryClient.invalidateQueries(['posts', 'saved']);
-      queryClient.invalidateQueries(['post', postId]);
-      queryClient.invalidateQueries(['saveStatus', postId]);
+      invalidateQueryKeys(queryClient, [
+        { queryKey: ['posts', 'saved'] },
+        { queryKey: ['saveStatus', postId] },
+      ]);
     },
   });
 };
@@ -206,8 +208,10 @@ export const useCreatePost = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['posts']);
-      queryClient.invalidateQueries(['feed']);
+      invalidateQueryKeys(queryClient, [
+        { queryKey: ['posts'], refetchType: 'active' },
+        { queryKey: ['feed'], refetchType: 'active' },
+      ]);
     },
   });
 };
@@ -229,9 +233,11 @@ export const useUpdatePost = () => {
     },
     onSuccess: (_, variables) => {
       const { postId } = variables;
-      queryClient.invalidateQueries(['post', postId]);
-      queryClient.invalidateQueries(['posts']);
-      queryClient.invalidateQueries(['feed']);
+      invalidateQueryKeys(queryClient, [
+        ['post', postId],
+        ['posts'],
+        ['feed'],
+      ]);
     },
   });
 };
@@ -248,10 +254,11 @@ export const useDeletePost = () => {
       return extractData(response);
     },
     onSuccess: (_, postId) => {
-      queryClient.invalidateQueries(['posts']);
-      queryClient.invalidateQueries(['feed']);
-      queryClient.invalidateQueries(['post', postId]);
-      queryClient.invalidateQueries(['users']);
+      removeQueryKeys(queryClient, [{ queryKey: ['post', postId] }]);
+      invalidateQueryKeys(queryClient, [
+        { queryKey: ['posts'], refetchType: 'active' },
+        { queryKey: ['feed'], refetchType: 'active' },
+      ]);
     },
   });
 };
@@ -269,10 +276,12 @@ export const useSharePost = () => {
     },
     onSuccess: (_, variables) => {
       const { postId } = variables;
-      queryClient.invalidateQueries(['posts', 'user']);
-      queryClient.invalidateQueries(['posts', 'shared']);
-      queryClient.invalidateQueries(['post', postId]);
-      queryClient.invalidateQueries(['feed']);
+      invalidateQueryKeys(queryClient, [
+        ['posts', 'user'],
+        ['posts', 'shared'],
+        ['post', postId],
+        ['feed'],
+      ]);
     },
   });
 };

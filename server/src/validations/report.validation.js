@@ -1,171 +1,103 @@
 import Joi from 'joi';
 import { objectId } from './common.validation.js';
 
-/**
- * Report Validation Schemas
- * Validation for all endpoints in reports.router.js
- */
+const REPORT_CATEGORIES = [
+  'spam',
+  'harassment',
+  'hate_speech',
+  'violence',
+  'nudity',
+  'misinformation',
+  'copyright',
+  'impersonation',
+  'self_harm',
+  'illegal',
+  'scam',
+  'other',
+  'fake_account',
+];
 
-// ======================================
-// POST / (createReport - generic)
-// Body: { targetType, targetId, reason, description? }
-// ======================================
-export const createReportBody = Joi.object({
-  targetType: Joi.string()
-    .valid('post', 'comment', 'user', 'message')
-    .required()
-    .messages({
-      'any.only': 'Loại đối tượng báo cáo không hợp lệ',
-      'any.required': 'Loại đối tượng là bắt buộc',
-    }),
-  targetId: objectId.required().messages({
-    'any.required': 'ID đối tượng là bắt buộc',
-  }),
-  reason: Joi.string()
-    .valid(
-      'spam',
-      'harassment',
-      'violence',
-      'hate_speech',
-      'nudity',
-      'misinformation',
-      'copyright',
-      'other'
-    )
-    .required()
-    .messages({
-      'any.only': 'Lý do báo cáo không hợp lệ',
-      'any.required': 'Lý do báo cáo là bắt buộc',
-    }),
-  description: Joi.string().trim().max(500).allow('').messages({
-    'string.max': 'Mô tả không được quá 500 ký tự',
-  }),
+const reportReason = Joi.string().trim().min(2).max(500).required();
+
+const reportBody = Joi.object({
+  category: Joi.string().valid(...REPORT_CATEGORIES),
+  reason: reportReason,
+  description: Joi.string().trim().max(500).allow(''),
 });
 
-// ======================================
-// POST /post/:postId (reportPost)
-// Params: { postId }
-// Body: { reason, description? }
-// ======================================
+export const createReportBody = Joi.object({
+  targetType: Joi.string().valid('post', 'comment', 'user', 'message').required(),
+  targetId: objectId.required(),
+  category: Joi.string().valid(...REPORT_CATEGORIES),
+  reason: reportReason,
+  description: Joi.string().trim().max(500).allow(''),
+});
+
 export const reportPostParam = Joi.object({
   postId: objectId.required(),
 });
 
-export const reportPostBody = Joi.object({
-  reason: Joi.string()
-    .valid('spam', 'harassment', 'violence', 'hate_speech', 'nudity', 'other')
-    .required()
-    .messages({
-      'any.only': 'Lý do báo cáo không hợp lệ',
-      'any.required': 'Lý do báo cáo là bắt buộc',
-    }),
-  description: Joi.string().trim().max(500).allow(''),
-});
+export const reportPostBody = reportBody;
 
-// ======================================
-// POST /comment/:commentId (reportComment)
-// Params: { commentId }
-// Body: { reason, description? }
-// ======================================
 export const reportCommentParam = Joi.object({
   commentId: objectId.required(),
 });
 
-export const reportCommentBody = Joi.object({
-  reason: Joi.string()
-    .valid('spam', 'harassment', 'violence', 'hate_speech', 'other')
-    .required()
-    .messages({
-      'any.only': 'Lý do báo cáo không hợp lệ',
-      'any.required': 'Lý do báo cáo là bắt buộc',
-    }),
-  description: Joi.string().trim().max(500).allow(''),
-});
+export const reportCommentBody = reportBody;
 
-// ======================================
-// POST /user/:userId (reportUser)
-// Params: { userId }
-// Body: { reason, description? }
-// ======================================
 export const reportUserParam = Joi.object({
   userId: objectId.required(),
 });
 
-export const reportUserBody = Joi.object({
-  reason: Joi.string()
-    .valid('spam', 'harassment', 'fake_account', 'impersonation', 'other')
-    .required()
-    .messages({
-      'any.only': 'Lý do báo cáo không hợp lệ',
-      'any.required': 'Lý do báo cáo là bắt buộc',
-    }),
-  description: Joi.string().trim().max(500).allow(''),
-});
+export const reportUserBody = reportBody;
 
-// ======================================
-// POST /message/:messageId (reportMessage)
-// Params: { messageId }
-// Body: { reason, description? }
-// ======================================
 export const reportMessageParam = Joi.object({
   messageId: objectId.required(),
 });
 
-export const reportMessageBody = Joi.object({
-  reason: Joi.string()
-    .valid('spam', 'harassment', 'violence', 'hate_speech', 'other')
-    .required()
-    .messages({
-      'any.only': 'Lý do báo cáo không hợp lệ',
-      'any.required': 'Lý do báo cáo là bắt buộc',
-    }),
-  description: Joi.string().trim().max(500).allow(''),
-});
+export const reportMessageBody = reportBody;
 
-// ======================================
-// GET /my-reports
-// Query: { page?, limit?, status? }
-// ======================================
 export const myReportsQuery = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
-  status: Joi.string().valid('pending', 'reviewed', 'resolved', 'dismissed'),
+  status: Joi.string().valid(
+    'pending',
+    'reviewing',
+    'in_review',
+    'resolved',
+    'dismissed',
+    'rejected',
+    'escalated'
+  ),
 });
 
-// ======================================
-// GET /:reportId (getReportById)
-// Params: { reportId }
-// ======================================
 export const reportIdParam = Joi.object({
   reportId: objectId.required(),
 });
 
-// ======================================
-// GET / (getAllReports - Admin)
-// Query: { page?, limit?, status?, targetType?, sort? }
-// ======================================
 export const getAllReportsQuery = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
-  status: Joi.string().valid('pending', 'reviewing', 'resolved', 'dismissed'),
+  status: Joi.string().valid(
+    'pending',
+    'reviewing',
+    'in_review',
+    'resolved',
+    'dismissed',
+    'rejected',
+    'escalated'
+  ),
+  category: Joi.string().valid(...REPORT_CATEGORIES),
   targetType: Joi.string().valid('post', 'comment', 'user', 'message'),
+  priority: Joi.number().integer().min(0),
   sort: Joi.string().valid('newest', 'oldest').default('newest'),
 });
 
-// ======================================
-// GET /pending (getPendingReports - Admin)
-// Query: { page?, limit? }
-// ======================================
 export const pendingReportsQuery = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
 });
 
-// ======================================
-// GET /user/:userId/against (getReportsAgainstUser - Admin)
-// Params: { userId }
-// Query: { page?, limit? }
-// ======================================
 export const reportsAgainstUserParam = Joi.object({
   userId: objectId.required(),
 });
@@ -173,54 +105,49 @@ export const reportsAgainstUserParam = Joi.object({
 export const reportsAgainstUserQuery = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
+  status: Joi.string().valid(
+    'pending',
+    'reviewing',
+    'in_review',
+    'resolved',
+    'dismissed',
+    'rejected',
+    'escalated'
+  ),
 });
 
-// ======================================
-// POST /:reportId/start-review (startReview - Admin)
-// Params: { reportId }
-// ======================================
 export const startReviewParam = Joi.object({
   reportId: objectId.required(),
 });
 
-// ======================================
-// PUT /:reportId/resolve (resolveReport - Admin)
-// Params: { reportId }
-// Body: { action, notes? }
-// ======================================
 export const resolveReportParam = Joi.object({
   reportId: objectId.required(),
 });
 
 export const resolveReportBody = Joi.object({
-  action: Joi.string()
-    .valid('warn', 'remove_content', 'suspend', 'ban', 'dismiss')
-    .required()
-    .messages({
-      'any.only': 'Hành động không hợp lệ',
-      'any.required': 'Hành động xử lý là bắt buộc',
-    }),
+  decision: Joi.string().valid('resolved', 'rejected', 'escalated'),
+  actionTaken: Joi.string().valid('warn_user', 'remove_content', 'suspend_user', 'ban_user'),
+  action: Joi.string().valid(
+    'dismiss',
+    'warn',
+    'hide_content',
+    'remove_content',
+    'suspend_user',
+    'ban_user'
+  ),
+  resolution: Joi.string().valid('dismissed', 'content_removed', 'user_warned', 'user_suspended', 'user_banned'),
   notes: Joi.string().trim().max(1000).allow(''),
-  duration: Joi.number().integer().min(1).max(365), // Days for suspension
-});
+}).or('decision', 'actionTaken', 'action', 'resolution');
 
-// ======================================
-// PUT /:reportId/status (updateReportStatus - Admin)
-// Params: { reportId }
-// Body: { status }
-// ======================================
 export const updateStatusParam = Joi.object({
   reportId: objectId.required(),
 });
 
 export const updateStatusBody = Joi.object({
   status: Joi.string()
-    .valid('pending', 'reviewing', 'resolved', 'dismissed')
-    .required()
-    .messages({
-      'any.only': 'Trạng thái không hợp lệ',
-      'any.required': 'Trạng thái là bắt buộc',
-    }),
+    .valid('pending', 'reviewing', 'resolved', 'dismissed', 'rejected', 'escalated')
+    .required(),
+  notes: Joi.string().trim().max(1000).allow(''),
 });
 
 export default {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MapPin, Link as LinkIcon, Calendar, Users } from 'lucide-react';
 import {
@@ -20,6 +20,14 @@ const UserProfilePreview = ({ userId, children, triggerSelector }) => {
   const hasMovedRef = useRef(false);
   const authUser = useSelector(state => state.auth.user);
   const isMe = authUser?._id === userId;
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (openTimeoutRef.current) clearTimeout(openTimeoutRef.current);
+    };
+  }, []);
 
   // Fetch full user details when hovered
   const { data: user, isLoading } = useProfile(isOpen ? userId : null);

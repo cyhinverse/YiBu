@@ -63,6 +63,10 @@ export default function ReportsList({
           report.content ||
           '';
         const targetAuthor = report.targetAuthor || report.target?.author || '';
+        const isReviewable =
+          !report.status ||
+          report.status === 'pending' ||
+          report.status === 'reviewing';
 
         return (
           <div
@@ -168,21 +172,23 @@ export default function ReportsList({
                             <Eye size={16} />
                             Xem chi tiết
                           </button>
-                          {(report.status === 'pending' || !report.status) && (
+                          {isReviewable && (
                             <>
                               <div className="my-1 mx-2" />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onStartReview(report);
-                                  setActiveDropdown(null);
-                                }}
-                                role="menuitem"
-                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-warning)] transition-colors"
-                              >
-                                <RefreshCcw size={16} />
-                                Xem xét
-                              </button>
+                              {(!report.status || report.status === 'pending') && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onStartReview(report);
+                                    setActiveDropdown(null);
+                                  }}
+                                  role="menuitem"
+                                  className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-[var(--color-surface-hover)] flex items-center gap-2.5 text-[var(--color-warning)] transition-colors"
+                                >
+                                  <RefreshCcw size={16} />
+                                  Xem xét
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {

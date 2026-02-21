@@ -18,6 +18,10 @@ export const initSocket = (server) => {
       allowedHeaders: ["Content-Type", "Authorization"],
     },
     path: "/socket.io/",
+    maxHttpBufferSize: 1e6,
+    pingTimeout: 30000,
+    pingInterval: 25000,
+    connectTimeout: 10000,
   });
 
   // Inject IO into Service

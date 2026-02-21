@@ -4,18 +4,12 @@ import logger from '../configs/logger.js';
 import ApiError from '../helpers/ApiError.js';
 import { CatchError } from '../configs/CatchError.js';
 import { clearAuthCookies } from '../configs/cookieOptions.js';
-
-const getAccessTokenFromRequest = req => {
-  const cookieToken = req.cookies?.accessToken;
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.split(' ')[1];
-  }
-
-  return null;
-};
+import { getAccessTokenFromRequest } from '../utils/authToken.js';
+import {
+  USER_ACCESS_SELECT_FIELDS,
+  buildSuspensionResetUpdate,
+  evaluateUserAccessState,
+} from '../utils/userAccess.js';
 
 export const verifyToken = CatchError(async (req, res, next) => {
   const accessToken = getAccessTokenFromRequest(req);
@@ -48,33 +42,36 @@ export const verifyToken = CatchError(async (req, res, next) => {
   }
 
   const User = (await import('../models/User.js')).default;
-  const userRecord = await User.findById(payload.id).select(
-    'isAdmin moderation.status moderation.suspendedUntil isActive'
-  );
+  const userRecord = await User.findById(payload.id).select(USER_ACCESS_SELECT_FIELDS);
+  const accessState = evaluateUserAccessState(userRecord);
 
-  if (!userRecord || userRecord.isActive === false) {
-    throw ApiError.unauthorized('User not found or inactive', {
-      errorCode: 'USER_INACTIVE',
-    });
-  }
-
-  if (userRecord.moderation?.status === 'banned') {
-    throw ApiError.forbidden('Account is banned', {
-      errorCode: 'ACCOUNT_BANNED',
-    });
-  }
-
-  if (userRecord.moderation?.status === 'suspended') {
-    const suspendedUntil = userRecord.moderation?.suspendedUntil;
-    if (suspendedUntil && suspendedUntil > new Date()) {
-      const remainingDays = Math.ceil(
-        (suspendedUntil - new Date()) / (1000 * 60 * 60 * 24)
-      );
-      throw ApiError.forbidden(`Account is suspended (${remainingDays} days remaining)`, {
-        errorCode: 'ACCOUNT_SUSPENDED',
-        details: { suspendedUntil, remainingDays },
+  if (!accessState.ok) {
+    if (accessState.reason === 'USER_INACTIVE') {
+      throw ApiError.unauthorized('User not found or inactive', {
+        errorCode: 'USER_INACTIVE',
       });
     }
+
+    if (accessState.reason === 'ACCOUNT_BANNED') {
+      throw ApiError.forbidden('Account is banned', {
+        errorCode: 'ACCOUNT_BANNED',
+      });
+    }
+
+    throw ApiError.forbidden(
+      `Account is suspended (${accessState.remainingDays} days remaining)`,
+      {
+        errorCode: 'ACCOUNT_SUSPENDED',
+        details: {
+          suspendedUntil: accessState.suspendedUntil,
+          remainingDays: accessState.remainingDays,
+        },
+      }
+    );
+  }
+
+  if (accessState.shouldClearSuspension) {
+    await User.findByIdAndUpdate(payload.id, buildSuspensionResetUpdate());
   }
 
   req.user = {

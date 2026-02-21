@@ -5,6 +5,7 @@ import { extractData } from '@/utils/apiUtils';
 import { toFormData } from '@/utils/toFormData';
 import { useDispatch } from 'react-redux';
 import { updateUserProfile } from '@/redux/slices/AuthSlice';
+import { invalidateQueryKeys } from './queryClientUtils';
 
 /**
  * Hook to fetch user profile
@@ -52,8 +53,10 @@ export const useFollowUser = () => {
       return extractData(response);
     },
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries(['followStatus', userId]);
-      queryClient.invalidateQueries(['profile', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['followStatus', userId],
+        ['profile', userId],
+      ]);
     },
   });
 };
@@ -70,8 +73,10 @@ export const useUnfollowUser = () => {
       return extractData(response);
     },
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries(['followStatus', userId]);
-      queryClient.invalidateQueries(['profile', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['followStatus', userId],
+        ['profile', userId],
+      ]);
     },
   });
 };
@@ -122,12 +127,14 @@ export const useUpdateProfile = () => {
       // Update profile cache for common keys.
       if (id) {
         queryClient.setQueryData(['profile', id], data);
-        queryClient.invalidateQueries(['profile', id]);
+        invalidateQueryKeys(queryClient, [['profile', id]]);
       }
 
       // Also refresh any other cached profiles (e.g. cached by username) and posts.
-      queryClient.invalidateQueries({ queryKey: ['profile'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['posts'], exact: false });
+      invalidateQueryKeys(queryClient, [
+        { queryKey: ['profile'], exact: false },
+        { queryKey: ['posts'], exact: false },
+      ]);
     },
   });
 };
@@ -212,7 +219,7 @@ export const useUpdateSettings = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['settings']);
+      invalidateQueryKeys(queryClient, [['settings']]);
     },
   });
 };
@@ -247,8 +254,7 @@ export const useAcceptFollowRequest = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['followRequests']);
-      queryClient.invalidateQueries(['followers']);
+      invalidateQueryKeys(queryClient, [['followRequests'], ['followers']]);
     },
   });
 };
@@ -267,7 +273,7 @@ export const useRejectFollowRequest = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['followRequests']);
+      invalidateQueryKeys(queryClient, [['followRequests']]);
     },
   });
 };
@@ -298,10 +304,12 @@ export const useBlockUser = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['blockedUsers']);
-      queryClient.invalidateQueries(['following']);
-      queryClient.invalidateQueries(['followers']);
-      queryClient.invalidateQueries(['suggestions']);
+      invalidateQueryKeys(queryClient, [
+        ['blockedUsers'],
+        ['following'],
+        ['followers'],
+        ['suggestions'],
+      ]);
     },
   });
 };
@@ -314,11 +322,11 @@ export const useUnblockUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async userId => {
-      const response = await api.post(USER_API.UNBLOCK_USER(userId));
+      const response = await api.delete(USER_API.UNBLOCK_USER(userId));
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['blockedUsers']);
+      invalidateQueryKeys(queryClient, [['blockedUsers']]);
     },
   });
 };
@@ -349,7 +357,7 @@ export const useMuteUser = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['mutedUsers']);
+      invalidateQueryKeys(queryClient, [['mutedUsers']]);
     },
   });
 };
@@ -362,11 +370,11 @@ export const useUnmuteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async userId => {
-      const response = await api.post(USER_API.UNMUTE_USER(userId));
+      const response = await api.delete(USER_API.UNMUTE_USER(userId));
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['mutedUsers']);
+      invalidateQueryKeys(queryClient, [['mutedUsers']]);
     },
   });
 };

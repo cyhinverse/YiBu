@@ -3,6 +3,242 @@ import api from '@/axios/axiosConfig';
 import { ADMIN_API, REPORT_API } from '@/axios/apiEndpoint';
 import { notify } from '@/utils/notify';
 import { extractData } from '@/utils/apiUtils';
+import { invalidateQueryKeys } from './queryClientUtils';
+
+const buildPagination = data => {
+  const pagination = data?.pagination || {};
+  const total = data?.total ?? pagination.total ?? 0;
+  const page = data?.page ?? pagination.page ?? 1;
+  const totalPages = data?.totalPages ?? pagination.totalPages ?? 1;
+  const hasMore = data?.hasMore ?? pagination.hasMore ?? page < totalPages;
+
+  return {
+    total,
+    page,
+    totalPages,
+    hasMore,
+    pagination: { total, page, totalPages, hasMore },
+  };
+};
+
+const normalizeUser = user => {
+  if (!user) return user;
+
+  const role =
+    user.role || (user.isAdmin || user?.permissions?.isAdmin ? 'admin' : 'user');
+  const status =
+    user.status ||
+    user?.moderation?.status ||
+    (user.isActive === false ? 'suspended' : 'active');
+  const verified = Boolean(user.verified ?? user.isVerified);
+
+  return {
+    ...user,
+    role,
+    status,
+    verified,
+    isVerified: verified,
+    fullName: user.fullName || user.name || user.username || 'User',
+    banReason: user.banReason || user?.moderation?.reason || '',
+    bannedAt: user.bannedAt || user?.moderation?.moderatedAt || null,
+    banDuration:
+      user.banDuration ||
+      (user?.moderation?.suspendedUntil
+        ? new Date(user.moderation.suspendedUntil).toLocaleDateString('vi-VN')
+        : null),
+    bannedBy: user.bannedBy || user?.moderation?.moderatedBy || null,
+  };
+};
+
+const normalizeUsersPayload = data => {
+  const users = Array.isArray(data?.users)
+    ? data.users.map(normalizeUser)
+    : Array.isArray(data)
+    ? data.map(normalizeUser)
+    : [];
+  const pagination = buildPagination(data);
+
+  return {
+    ...data,
+    users,
+    ...pagination,
+  };
+};
+
+const inferPostType = media => {
+  if (!Array.isArray(media) || media.length === 0) return 'text';
+  const hasImage = media.some(item => item?.type === 'image');
+  const hasVideo = media.some(item => item?.type === 'video');
+  if (hasImage && hasVideo) return 'mixed';
+  if (hasVideo) return 'video';
+  return 'image';
+};
+
+const normalizePostStatus = post => {
+  if (post?.status) return post.status;
+  const moderationStatus = post?.moderation?.status;
+
+  if (post?.isDeleted) {
+    if (moderationStatus === 'flagged') return 'flagged';
+    return 'hidden';
+  }
+
+  switch (moderationStatus) {
+    case 'approved':
+      return 'active';
+    case 'flagged':
+      return 'flagged';
+    case 'pending':
+      return 'pending';
+    case 'rejected':
+      return 'rejected';
+    case 'removed':
+      return 'hidden';
+    default:
+      return 'active';
+  }
+};
+
+const normalizePost = post => {
+  if (!post) return post;
+  const media = Array.isArray(post.media) ? post.media : [];
+
+  return {
+    ...post,
+    status: normalizePostStatus(post),
+    type: post.type || inferPostType(media),
+    content: post.content || post.caption || '',
+    reports: post.reports ?? post.reportsCount ?? 0,
+  };
+};
+
+const normalizePostsPayload = data => {
+  const posts = Array.isArray(data?.posts)
+    ? data.posts.map(normalizePost)
+    : Array.isArray(data)
+    ? data.map(normalizePost)
+    : [];
+  const pagination = buildPagination(data);
+
+  return {
+    ...data,
+    posts,
+    ...pagination,
+  };
+};
+
+const normalizeCommentStatus = comment => {
+  if (comment?.status) return comment.status;
+  const moderationStatus = comment?.moderation?.status;
+  if (comment?.isDeleted || moderationStatus === 'removed') return 'hidden';
+
+  switch (moderationStatus) {
+    case 'approved':
+      return 'active';
+    case 'pending':
+      return 'pending';
+    case 'flagged':
+      return 'flagged';
+    default:
+      return 'active';
+  }
+};
+
+const normalizeComment = comment => {
+  if (!comment) return comment;
+  const likesCount = Number.isFinite(comment.likesCount)
+    ? comment.likesCount
+    : Array.isArray(comment.likes)
+    ? comment.likes.length
+    : 0;
+  const repliesCount = Number.isFinite(comment.repliesCount)
+    ? comment.repliesCount
+    : Array.isArray(comment.replies)
+    ? comment.replies.length
+    : 0;
+
+  return {
+    ...comment,
+    status: normalizeCommentStatus(comment),
+    postId: comment.postId || comment.post || null,
+    likesCount,
+    repliesCount,
+  };
+};
+
+const normalizeCommentsPayload = data => {
+  const comments = Array.isArray(data?.comments)
+    ? data.comments.map(normalizeComment)
+    : Array.isArray(data)
+    ? data.map(normalizeComment)
+    : [];
+  const pagination = buildPagination(data);
+
+  return {
+    ...data,
+    comments,
+    ...pagination,
+  };
+};
+
+const normalizeReportStatus = status => {
+  if (status === 'in_review') return 'reviewing';
+  if (status === 'dismissed') return 'rejected';
+  return status || 'pending';
+};
+
+const normalizeReport = report => {
+  if (!report) return report;
+  const snapshotText =
+    report?.contentSnapshot?.text || report?.contentSnapshot?.caption || '';
+
+  return {
+    ...report,
+    status: normalizeReportStatus(report.status),
+    type: report.type || report.targetType,
+    targetType: report.targetType || report.type,
+    targetContent:
+      report.targetContent || report.target?.content || snapshotText || '',
+    targetAuthor:
+      report.targetAuthor || report.target?.author || report.targetUser?.name || '',
+  };
+};
+
+const normalizeReportsPayload = data => {
+  const reports = Array.isArray(data?.reports)
+    ? data.reports.map(normalizeReport)
+    : Array.isArray(data)
+    ? data.map(normalizeReport)
+    : [];
+  const pagination = buildPagination(data);
+
+  return {
+    ...data,
+    reports,
+    ...pagination,
+  };
+};
+
+const normalizeInteractionsPayload = data => {
+  const interactions = Array.isArray(data?.interactions) ? data.interactions : [];
+  const stats = data?.stats || data?.interactionStats || {};
+  const pagination = buildPagination(data);
+
+  return {
+    ...data,
+    interactions,
+    stats,
+    interactionStats: stats,
+    ...pagination,
+  };
+};
+
+const getApiErrorMessage = (error, fallbackMessage) =>
+  error?.response?.data?.message || fallbackMessage;
+
+const notifyMutationError = fallbackMessage => error => {
+  notify.error(getApiErrorMessage(error, fallbackMessage));
+};
 
 /**
  * Hook to fetch admin dashboard statistics
@@ -21,16 +257,15 @@ export const useDashboardStats = () => {
 
 /**
  * Hook to fetch user growth data within a date range
- * @param {string} startDate - Start date (ISO string)
- * @param {string} endDate - End date (ISO string)
+ * @param {number} [days=30] - Number of days
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing growth data
  */
-export const useUserGrowth = (startDate, endDate) => {
+export const useUserGrowth = (days = 30) => {
   return useQuery({
-    queryKey: ['admin', 'dashboard', 'userGrowth', startDate, endDate],
+    queryKey: ['admin', 'dashboard', 'userGrowth', days],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_USER_GROWTH, {
-        params: { startDate, endDate },
+        params: { days },
       });
       return extractData(response);
     },
@@ -40,15 +275,15 @@ export const useUserGrowth = (startDate, endDate) => {
 
 /**
  * Hook to fetch post statistics by period
- * @param {string} [period='month'] - Statistics period ('day' | 'week' | 'month' | 'year')
+ * @param {number} [days=30] - Number of days
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing post stats
  */
-export const usePostStats = (period = 'month') => {
+export const usePostStats = (days = 30) => {
   return useQuery({
-    queryKey: ['admin', 'dashboard', 'postStats', period],
+    queryKey: ['admin', 'dashboard', 'postStats', days],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_POST_STATS, {
-        params: { period },
+        params: { days },
       });
       return extractData(response);
     },
@@ -57,16 +292,15 @@ export const usePostStats = (period = 'month') => {
 
 /**
  * Hook to fetch top users list
- * @param {number} [page=1] - Page number
  * @param {number} [limit=50] - Items per page
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing top users
  */
-export const useTopUsers = (page = 1, limit = 50) => {
+export const useTopUsers = (limit = 50) => {
   return useQuery({
-    queryKey: ['admin', 'dashboard', 'topUsers', page, limit],
+    queryKey: ['admin', 'dashboard', 'topUsers', limit],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_TOP_USERS, {
-        params: { page, limit },
+        params: { limit },
       });
       return extractData(response);
     },
@@ -94,7 +328,7 @@ export const useAdminInteractions = ({
       const response = await api.get(ADMIN_API.GET_INTERACTIONS, {
         params: { page, limit, type, search },
       });
-      return extractData(response);
+      return normalizeInteractionsPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -124,7 +358,7 @@ export const useAdminUsers = ({
       const response = await api.get(ADMIN_API.GET_ALL_USERS, {
         params: { page, limit, search, status, role },
       });
-      return extractData(response);
+      return normalizeUsersPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -140,7 +374,7 @@ export const useUserDetails = userId => {
     queryKey: ['admin', 'users', 'detail', userId],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_USER_DETAILS(userId));
-      return extractData(response);
+      return normalizeUser(extractData(response));
     },
     enabled: !!userId,
   });
@@ -163,13 +397,13 @@ export const useBanUser = () => {
     },
     onSuccess: (_, { userId }) => {
       notify.success('User banned successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'dashboard']);
-      queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'dashboard'],
+        ['admin', 'users', 'detail', userId],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to ban user');
-    },
+    onError: notifyMutationError('Failed to ban user'),
   });
 };
 
@@ -186,12 +420,12 @@ export const useUnbanUser = () => {
     },
     onSuccess: (_, { userId }) => {
       notify.success('User unbanned successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'users', 'detail', userId],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to unban user');
-    },
+    onError: notifyMutationError('Failed to unban user'),
   });
 };
 
@@ -212,12 +446,12 @@ export const useSuspendUser = () => {
     },
     onSuccess: (_, { userId }) => {
       notify.success('Account suspended successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'users', 'detail', userId],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to suspend account');
-    },
+    onError: notifyMutationError('Failed to suspend account'),
   });
 };
 
@@ -237,12 +471,12 @@ export const useWarnUser = () => {
     },
     onSuccess: (_, { userId }) => {
       notify.success('Warning sent successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'users', 'detail', userId],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to send warning');
-    },
+    onError: notifyMutationError('Failed to send warning'),
   });
 };
 
@@ -259,12 +493,12 @@ export const useDeleteUser = () => {
     },
     onSuccess: () => {
       notify.success('User deleted successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'dashboard']);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'dashboard'],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to delete user');
-    },
+    onError: notifyMutationError('Failed to delete user'),
   });
 };
 
@@ -281,12 +515,12 @@ export const useUpdateUser = () => {
     },
     onSuccess: (_, { userId }) => {
       notify.success('User updated successfully');
-      queryClient.invalidateQueries(['admin', 'users']);
-      queryClient.invalidateQueries(['admin', 'users', 'detail', userId]);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'users'],
+        ['admin', 'users', 'detail', userId],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to update user');
-    },
+    onError: notifyMutationError('Failed to update user'),
   });
 };
 
@@ -295,17 +529,16 @@ export const useUpdateUser = () => {
  * @param {Object} [options] - Query options
  * @param {number} [options.page=1] - Page number
  * @param {number} [options.limit=20] - Items per page
- * @param {string} [options.search] - Search keyword
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing banned users
  */
-export const useBannedUsers = ({ page = 1, limit = 20, search } = {}) => {
+export const useBannedUsers = ({ page = 1, limit = 20 } = {}) => {
   return useQuery({
-    queryKey: ['admin', 'users', 'banned', { page, limit, search }],
+    queryKey: ['admin', 'users', 'banned', { page, limit }],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_BANNED_USERS, {
-        params: { page, limit, search },
+        params: { page, limit },
       });
-      return extractData(response);
+      return normalizeUsersPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -328,7 +561,7 @@ export const useAdminUserPosts = ({ userId, page = 1, limit = 20 } = {}) => {
       const response = await api.get(ADMIN_API.GET_USER_POSTS(userId), {
         params: { page, limit },
       });
-      return extractData(response);
+      return normalizePostsPayload(extractData(response));
     },
     enabled: !!userId,
   });
@@ -339,7 +572,6 @@ export const useAdminUserPosts = ({ userId, page = 1, limit = 20 } = {}) => {
  * @param {Object} [options] - Query options
  * @param {number} [options.page=1] - Page number
  * @param {number} [options.limit=20] - Items per page
- * @param {string} [options.search] - Search keyword
  * @param {string} [options.status] - Post status
  * @param {string} [options.type] - Post type
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing posts list
@@ -347,17 +579,16 @@ export const useAdminUserPosts = ({ userId, page = 1, limit = 20 } = {}) => {
 export const useAdminPosts = ({
   page = 1,
   limit = 20,
-  search,
   status,
   type,
 } = {}) => {
   return useQuery({
-    queryKey: ['admin', 'posts', 'list', { page, limit, search, status, type }],
+    queryKey: ['admin', 'posts', 'list', { page, limit, status, type }],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_ALL_POSTS, {
-        params: { page, limit, search, status, type },
+        params: { page, limit, status, type },
       });
-      return extractData(response);
+      return normalizePostsPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -379,7 +610,7 @@ export const useAdminPostReports = ({ postId, page = 1, limit = 20 } = {}) => {
       const response = await api.get(ADMIN_API.GET_POST_REPORTS(postId), {
         params: { page, limit },
       });
-      return extractData(response);
+      return normalizeReportsPayload(extractData(response));
     },
     enabled: !!postId,
   });
@@ -398,12 +629,12 @@ export const useDeletePost = () => {
     },
     onSuccess: () => {
       notify.success('Post deleted successfully');
-      queryClient.invalidateQueries(['admin', 'posts']);
-      queryClient.invalidateQueries(['admin', 'dashboard']);
+      invalidateQueryKeys(queryClient, [
+        ['admin', 'posts'],
+        ['admin', 'dashboard'],
+      ]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to delete post');
-    },
+    onError: notifyMutationError('Failed to delete post'),
   });
 };
 
@@ -423,11 +654,9 @@ export const useModeratePost = () => {
     },
     onSuccess: () => {
       notify.success('Post moderated successfully');
-      queryClient.invalidateQueries(['admin', 'posts']);
+      invalidateQueryKeys(queryClient, [['admin', 'posts']]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to moderate post');
-    },
+    onError: notifyMutationError('Failed to moderate post'),
   });
 };
 
@@ -444,11 +673,9 @@ export const useApprovePost = () => {
     },
     onSuccess: () => {
       notify.success('Post approved');
-      queryClient.invalidateQueries(['admin', 'posts']);
+      invalidateQueryKeys(queryClient, [['admin', 'posts']]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to approve post');
-    },
+    onError: notifyMutationError('Failed to approve post'),
   });
 };
 
@@ -466,8 +693,10 @@ export const useAdminUserReports = ({ userId, page = 1, limit = 20 } = {}) => {
     queryKey: ['admin', 'users', 'reports', userId, { page, limit }],
     queryFn: async () => {
       if (!userId) return { reports: [], total: 0 };
-      const response = await api.get(ADMIN_API.GET_USER_REPORTS(userId));
-      return extractData(response);
+      const response = await api.get(ADMIN_API.GET_USER_REPORTS(userId), {
+        params: { page, limit },
+      });
+      return normalizeReportsPayload(extractData(response));
     },
     enabled: !!userId,
   });
@@ -478,7 +707,6 @@ export const useAdminUserReports = ({ userId, page = 1, limit = 20 } = {}) => {
  * @param {Object} [options] - Query options
  * @param {number} [options.page=1] - Page number
  * @param {number} [options.limit=20] - Items per page
- * @param {string} [options.search] - Search keyword
  * @param {string} [options.status] - Report status
  * @param {string} [options.type] - Report type
  * @returns {import('@tanstack/react-query').UseQueryResult} Query result containing reports list
@@ -486,22 +714,16 @@ export const useAdminUserReports = ({ userId, page = 1, limit = 20 } = {}) => {
 export const useAdminReports = ({
   page = 1,
   limit = 20,
-  search,
   status,
   type,
 } = {}) => {
   return useQuery({
-    queryKey: [
-      'admin',
-      'reports',
-      'list',
-      { page, limit, search, status, type },
-    ],
+    queryKey: ['admin', 'reports', 'list', { page, limit, status, type }],
     queryFn: async () => {
       const response = await api.get(ADMIN_API.GET_REPORTS, {
-        params: { page, limit, search, status, type },
+        params: { page, limit, status, type },
       });
-      return extractData(response);
+      return normalizeReportsPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -524,11 +746,9 @@ export const useResolveReport = () => {
     },
     onSuccess: () => {
       notify.success('Report resolved');
-      queryClient.invalidateQueries(['admin', 'reports']);
+      invalidateQueryKeys(queryClient, [['admin', 'reports']]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to resolve report');
-    },
+    onError: notifyMutationError('Failed to resolve report'),
   });
 };
 
@@ -546,7 +766,7 @@ export const usePendingReports = ({ page = 1, limit = 20 } = {}) => {
       const response = await api.get(ADMIN_API.GET_PENDING_REPORTS, {
         params: { page, limit },
       });
-      return extractData(response);
+      return normalizeReportsPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -565,13 +785,9 @@ export const useStartReportReview = () => {
     },
     onSuccess: () => {
       notify.success('Started reviewing report');
-      queryClient.invalidateQueries(['admin', 'reports']);
+      invalidateQueryKeys(queryClient, [['admin', 'reports']]);
     },
-    onError: error => {
-      notify.error(
-        error.response?.data?.message || 'Failed to start report review'
-      );
-    },
+    onError: notifyMutationError('Failed to start report review'),
   });
 };
 
@@ -591,13 +807,9 @@ export const useUpdateReportStatus = () => {
     },
     onSuccess: () => {
       notify.success('Report status updated successfully');
-      queryClient.invalidateQueries(['admin', 'reports']);
+      invalidateQueryKeys(queryClient, [['admin', 'reports']]);
     },
-    onError: error => {
-      notify.error(
-        error.response?.data?.message || 'Failed to update report status'
-      );
-    },
+    onError: notifyMutationError('Failed to update report status'),
   });
 };
 
@@ -626,6 +838,7 @@ export const useBroadcastNotification = () => {
     mutationFn: async ({
       title,
       message,
+      content,
       type,
       targetAudience,
       priority,
@@ -633,7 +846,7 @@ export const useBroadcastNotification = () => {
     }) => {
       const response = await api.post(ADMIN_API.BROADCAST, {
         title,
-        message,
+        message: message || content,
         type,
         targetAudience,
         priority,
@@ -641,14 +854,14 @@ export const useBroadcastNotification = () => {
       });
       return extractData(response);
     },
-    onSuccess: () => {
-      notify.success('Notification sent successfully');
-    },
-    onError: error => {
-      notify.error(
-        error.response?.data?.message || 'Failed to broadcast notification'
+    onSuccess: data => {
+      const sentCount = data?.sentCount ?? 0;
+      const skippedCount = data?.skippedCount ?? 0;
+      notify.success(
+        `Đã gửi ${sentCount} thông báo${skippedCount ? `, bỏ qua ${skippedCount}` : ''}`
       );
     },
+    onError: notifyMutationError('Failed to broadcast notification'),
   });
 };
 
@@ -673,7 +886,7 @@ export const useAdminComments = ({
       const response = await api.get(ADMIN_API.GET_ALL_COMMENTS, {
         params: { page, limit, search, status },
       });
-      return extractData(response);
+      return normalizeCommentsPayload(extractData(response));
     },
     keepPreviousData: true,
   });
@@ -694,13 +907,9 @@ export const useModerateComment = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'comments']);
+      invalidateQueryKeys(queryClient, [['admin', 'comments']]);
     },
-    onError: error => {
-      notify.error(
-        error.response?.data?.message || 'Failed to moderate comment'
-      );
-    },
+    onError: notifyMutationError('Failed to moderate comment'),
   });
 };
 
@@ -716,11 +925,9 @@ export const useDeleteCommentAdmin = () => {
       return extractData(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'comments']);
+      invalidateQueryKeys(queryClient, [['admin', 'comments']]);
     },
-    onError: error => {
-      notify.error(error.response?.data?.message || 'Failed to delete comment');
-    },
+    onError: notifyMutationError('Failed to delete comment'),
   });
 };
 

@@ -16,6 +16,7 @@ export const getTargetIcon = type => {
     case 'post':
       return <FileText size={18} />;
     case 'comment':
+    case 'message':
       return <MessageCircle size={18} />;
     case 'user':
       return <User size={18} />;

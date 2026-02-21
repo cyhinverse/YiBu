@@ -7,10 +7,11 @@ import {
   Check,
   Loader2,
   Info,
-  AlertTriangle,
-  AlertCircle,
   Sparkles,
   Bell,
+  Mail,
+  UserPlus,
+  MessageCircle,
 } from 'lucide-react';
 import {
   useNotificationsPage,
@@ -45,14 +46,14 @@ const Notifications = () => {
 
   // Derived state
   const notifications = data?.notifications || [];
-  const pagination = data?.pagination || {};
 
   const handleMarkAsRead = id => {
     markAsRead(id);
   };
 
   const handleMarkAllAsRead = () => {
-    markAllAsRead(undefined, {
+    const typeFilter = filterType !== 'all' ? filterType : undefined;
+    markAllAsRead(typeFilter, {
       onError: () => notify.error('Không thể đánh dấu tất cả là đã đọc'),
       onSuccess: () => notify.success('Đã đánh dấu tất cả là đã đọc'),
     });
@@ -70,7 +71,8 @@ const Notifications = () => {
   const handleDeleteAll = async () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tất cả thông báo không?')) {
       try {
-        await deleteAllNotifications();
+        const typeFilter = filterType !== 'all' ? filterType : undefined;
+        await deleteAllNotifications(typeFilter);
         notify.success('Đã xóa tất cả thông báo');
       } catch {
         notify.error('Không thể xóa tất cả thông báo');
@@ -85,31 +87,35 @@ const Notifications = () => {
 
   const getIcon = type => {
     switch (type) {
-      case 'info':
+      case 'system':
         return <Info size={24} className="text-[var(--color-info)]" />;
-      case 'success':
+      case 'announcement':
+        return <Sparkles size={24} className="text-[var(--color-warning)]" />;
+      case 'follow':
+        return <UserPlus size={24} className="text-[var(--color-success)]" />;
+      case 'message':
+        return <Mail size={24} className="text-[var(--color-info)]" />;
+      case 'comment':
+      case 'reply':
+        return <MessageCircle size={24} className="text-[var(--color-info)]" />;
+      case 'like':
+      case 'share':
+      case 'save':
+      case 'mention':
+      case 'tag':
         return <CheckCircle size={24} className="text-[var(--color-success)]" />;
-      case 'warning':
-        return <AlertTriangle size={24} className="text-[var(--color-warning)]" />;
-      case 'alert':
-        return <AlertCircle size={24} className="text-[var(--color-error)]" />;
       default:
-        return (
-          <Sparkles
-            size={24}
-            className="text-[var(--color-text-secondary)]"
-          />
-        );
+        return <Bell size={24} className="text-[var(--color-text-secondary)]" />;
     }
   };
 
   const getTypeLabel = type => {
     const labels = {
       all: 'Tất cả',
-      info: 'Thông tin',
-      success: 'Thành công',
-      warning: 'Cảnh báo',
-      alert: 'Lỗi',
+      system: 'Hệ thống',
+      announcement: 'Thông báo',
+      follow: 'Theo dõi',
+      message: 'Tin nhắn',
     };
     return labels[type] || type;
   };
@@ -173,7 +179,7 @@ const Notifications = () => {
       {/* Filters */}
       <div className="admin-card p-3">
         <div className="flex gap-2 flex-wrap">
-          {['all', 'info', 'success', 'warning', 'alert'].map(type => (
+          {['all', 'system', 'announcement', 'follow', 'message'].map(type => (
             <button
               key={type}
               type="button"
@@ -242,7 +248,8 @@ const Notifications = () => {
                             : 'font-medium text-[var(--color-text-secondary)]'
                         }`}
                       >
-                        {notification.title}
+                        {notification.metadata?.title ||
+                          getTypeLabel(notification.type)}
                       </p>
                       <span className="text-xs font-medium text-[var(--color-text-tertiary)] whitespace-nowrap flex items-center gap-1.5 bg-[var(--color-surface-secondary)] px-2 py-1 rounded-full">
                         <Clock size={12} />
@@ -250,7 +257,9 @@ const Notifications = () => {
                       </span>
                     </div>
                     <p className="text-sm text-[var(--color-text-secondary)] mt-1.5 leading-relaxed">
-                      {notification.message}
+                      {notification.displayContent ||
+                        notification.content ||
+                        notification.message}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -283,16 +292,23 @@ const Notifications = () => {
       </div>
 
       {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
+      {Math.ceil((data?.total || 0) / LIMIT) > 1 && (
         <AdminPagination
           currentPage={currentPage}
-          totalPages={pagination.pages}
-          label={`Trang ${currentPage} / ${pagination.pages}`}
+          totalPages={Math.ceil((data?.total || 0) / LIMIT)}
+          label={`Trang ${currentPage} / ${Math.ceil((data?.total || 0) / LIMIT)}`}
           canPrev={currentPage > 1 && !isLoading}
-          canNext={!isPreviousData && currentPage < pagination.pages && !isLoading}
+          canNext={
+            !isPreviousData &&
+            currentPage < Math.ceil((data?.total || 0) / LIMIT) &&
+            !isLoading
+          }
           onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
           onNext={() => {
-            if (!isPreviousData && currentPage < pagination.pages) {
+            if (
+              !isPreviousData &&
+              currentPage < Math.ceil((data?.total || 0) / LIMIT)
+            ) {
               setCurrentPage(p => p + 1);
             }
           }}

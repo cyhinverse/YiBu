@@ -23,6 +23,11 @@ export default function ReportDetailModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !report) return null;
+  const currentStatus = report.status || 'pending';
+  const isActionable = currentStatus === 'pending' || currentStatus === 'reviewing';
+  const targetType = report.targetType || report.target?.type;
+  const targetAuthor = report.targetAuthor || report.target?.author;
+  const targetContent = report.targetContent || report.target?.content;
 
   const handleKeyDown = event => {
     if (event.key === 'Escape') {
@@ -107,7 +112,7 @@ export default function ReportDetailModal({
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2.5">
               <div className="p-1 rounded-md bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]">
-                {getTargetIcon(report.target?.type)}
+                {getTargetIcon(targetType)}
               </div>
               <p className="text-xs font-semibold text-[var(--color-content)]">
                 Nội dung bị báo cáo
@@ -115,23 +120,23 @@ export default function ReportDetailModal({
             </div>
             <div className="p-4 bg-[var(--color-surface-secondary)] rounded-2xl relative group">
               <div className="absolute top-4 right-4 text-[10px] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.2em] bg-[var(--color-surface)] px-2 py-1 rounded-md">
-                {getTargetTypeText(report.target?.type)}
+                {getTargetTypeText(targetType)}
               </div>
               <p className="text-xs font-semibold text-[var(--color-text-tertiary)] mb-2 flex items-center gap-1.5">
                 <User size={12} />
                 Tác giả:{' '}
                 <span className="text-[var(--color-content)]">
-                  {report.target?.author}
+                  {targetAuthor || 'Không rõ'}
                 </span>
               </p>
               <p className="text-[var(--color-content)] font-medium leading-relaxed pr-16 text-sm">
-                "{report.target?.content}"
+                "{targetContent || 'Nội dung không khả dụng'}"
               </p>
             </div>
           </div>
 
           {/* Resolution Note Input */}
-          {report.status === 'pending' && (
+          {isActionable && (
             <div className="mb-2">
               <p className="text-xs font-semibold text-[var(--color-content)] mb-2.5">
                 Ghi chú giải quyết
@@ -147,7 +152,7 @@ export default function ReportDetailModal({
         </div>
 
         {/* Actions */}
-        {(report.status === 'pending' || !report.status) && (
+        {isActionable && (
           <div className="p-4 pt-2 bg-[var(--color-surface-secondary)] flex gap-3 rounded-b-3xl">
             <button
               type="button"

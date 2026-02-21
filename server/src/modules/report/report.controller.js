@@ -2,7 +2,6 @@ import { CatchError } from '../../configs/CatchError.js';
 import { sendCreated, sendOk } from '../../helpers/apiResponse.js';
 import { getPaginationParams } from '../../utils/pagination.js';
 import ReportService from './report.service.js';
-import mongoose from 'mongoose';
 import ApiError from '../../helpers/ApiError.js';
 
 
@@ -15,6 +14,51 @@ import ApiError from '../../helpers/ApiError.js';
  * - Get user's report list
  * - Admin: Manage and process reports
  */
+const LEGACY_ACTION_TO_RESOLUTION = {
+  dismiss: { decision: 'rejected', actionTaken: null },
+  warn: { decision: 'resolved', actionTaken: 'warn_user' },
+  hide_content: { decision: 'resolved', actionTaken: 'remove_content' },
+  remove_content: { decision: 'resolved', actionTaken: 'remove_content' },
+  suspend_user: { decision: 'resolved', actionTaken: 'suspend_user' },
+  ban_user: { decision: 'resolved', actionTaken: 'ban_user' },
+};
+
+const LEGACY_RESOLUTION_TO_RESOLUTION = {
+  dismissed: { decision: 'rejected', actionTaken: null },
+  content_removed: { decision: 'resolved', actionTaken: 'remove_content' },
+  user_warned: { decision: 'resolved', actionTaken: 'warn_user' },
+  user_suspended: { decision: 'resolved', actionTaken: 'suspend_user' },
+  user_banned: { decision: 'resolved', actionTaken: 'ban_user' },
+};
+
+const normalizeResolutionPayload = payload => {
+  const { decision, actionTaken, action, resolution, notes } = payload;
+
+  if (decision) {
+    return { decision, actionTaken: actionTaken || null, notes };
+  }
+
+  if (action && LEGACY_ACTION_TO_RESOLUTION[action]) {
+    return { ...LEGACY_ACTION_TO_RESOLUTION[action], notes };
+  }
+
+  if (resolution && LEGACY_RESOLUTION_TO_RESOLUTION[resolution]) {
+    return { ...LEGACY_RESOLUTION_TO_RESOLUTION[resolution], notes };
+  }
+
+  if (actionTaken) {
+    return { decision: 'resolved', actionTaken, notes };
+  }
+
+  return { decision: null, actionTaken: null, notes };
+};
+
+const getReporterId = report => {
+  if (!report?.reporter) return null;
+  if (report.reporter._id) return report.reporter._id.toString();
+  return report.reporter.toString();
+};
+
 const ReportController = {
   /**
    * Create a new report
@@ -38,8 +82,8 @@ const ReportController = {
       throw ApiError.badRequest('Target type and target ID are required');
     }
 
-    if (!category || !reason) {
-      throw ApiError.badRequest('Category and reason are required');
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
     }
 
 
@@ -80,12 +124,8 @@ const ReportController = {
     const { postId } = req.params;
     const { category, reason, description } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-      throw ApiError.badRequest('Invalid post ID');
-    }
-
-    if (!category || !reason) {
-      throw ApiError.badRequest('Category and reason are required');
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
     }
 
 
@@ -121,12 +161,8 @@ const ReportController = {
     const { commentId } = req.params;
     const { category, reason, description } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      throw ApiError.badRequest('Invalid comment ID');
-    }
-
-    if (!category || !reason) {
-      throw ApiError.badRequest('Category and reason are required');
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
     }
 
 
@@ -162,12 +198,8 @@ const ReportController = {
     const { userId } = req.params;
     const { category, reason, description } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw ApiError.badRequest('Invalid user ID');
-    }
-
-    if (!category || !reason) {
-      throw ApiError.badRequest('Category and reason are required');
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
     }
 
 
@@ -203,12 +235,8 @@ const ReportController = {
     const { messageId } = req.params;
     const { category, reason, description } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(messageId)) {
-      throw ApiError.badRequest('Invalid message ID');
-    }
-
-    if (!category || !reason) {
-      throw ApiError.badRequest('Category and reason are required');
+    if (!reason) {
+      throw ApiError.badRequest('Reason is required');
     }
 
 
@@ -239,8 +267,13 @@ const ReportController = {
   getMyReports: CatchError(async (req, res) => {
     const userId = req.user.id;
     const { page, limit } = getPaginationParams(req.query);
+    const { status } = req.query;
 
-    const result = await ReportService.getUserReports(userId, { page, limit });
+    const result = await ReportService.getUserReports(userId, {
+      page,
+      limit,
+      status,
+    });
 
     return sendOk(res, {
       message: 'Success',
@@ -262,20 +295,17 @@ const ReportController = {
    * @param {string} req.user.id - Current user's ID
    * @param {boolean} req.user.isAdmin - Whether the user is an admin
    * @param {Object} res - Express response object
-   * @returns {Object} Response with report data, 400 if invalid ID, or 403 if not authorized
+   * @returns {Object} Response with report data or 403 if not authorized
    */
   getReportById: CatchError(async (req, res) => {
     const { reportId } = req.params;
     const userId = req.user.id;
     const isAdmin = req.user.isAdmin;
 
-    if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      throw ApiError.badRequest('Invalid report ID');
-    }
-
     const report = await ReportService.getReportById(reportId);
 
-    if (!isAdmin && report.reporter._id.toString() !== userId) {
+    const reporterId = getReporterId(report);
+    if (!isAdmin && reporterId !== userId) {
       throw ApiError.forbidden('Not authorized to view this report');
     }
 
@@ -307,7 +337,7 @@ const ReportController = {
     }
 
     const { page, limit } = getPaginationParams(req.query);
-    const { status, category, targetType, priority } = req.query;
+    const { status, category, targetType, priority, sort } = req.query;
 
     const result = await ReportService.getAllReports({
       page,
@@ -316,6 +346,7 @@ const ReportController = {
       category,
       targetType,
       priority,
+      sort,
     });
 
     return sendOk(res, {
@@ -382,7 +413,7 @@ const ReportController = {
    * @param {Object} req.user - Authenticated user object
    * @param {boolean} req.user.isAdmin - Whether the user is an admin
    * @param {Object} res - Express response object
-   * @returns {Object} Response with reports array, total count, and hasMore flag, or 400/403 on error
+   * @returns {Object} Response with reports array, total count, and hasMore flag, or 403 on error
    */
   getReportsAgainstUser: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
@@ -392,10 +423,6 @@ const ReportController = {
     const { userId } = req.params;
     const { page, limit } = getPaginationParams(req.query);
     const { status } = req.query;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw ApiError.badRequest('Invalid user ID');
-    }
 
     const result = await ReportService.getReportsAgainstUser(userId, {
       page,
@@ -423,7 +450,7 @@ const ReportController = {
    * @param {string} req.user.id - Admin user's ID
    * @param {boolean} req.user.isAdmin - Whether the user is an admin
    * @param {Object} res - Express response object
-   * @returns {Object} Response with updated report data, or 400/403 on error
+   * @returns {Object} Response with updated report data or 403 on error
    */
   startReview: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
@@ -432,10 +459,6 @@ const ReportController = {
 
     const { reportId } = req.params;
     const adminId = req.user.id;
-
-    if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      throw ApiError.badRequest('Invalid report ID');
-    }
 
     const report = await ReportService.startReview(reportId, adminId);
     return sendOk(res, {
@@ -467,14 +490,12 @@ const ReportController = {
 
     const { reportId } = req.params;
     const adminId = req.user.id;
-    const { decision, actionTaken, notes } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      throw ApiError.badRequest('Invalid report ID');
-    }
+    const { decision, actionTaken, notes } = normalizeResolutionPayload(
+      req.body || {}
+    );
 
     if (!decision) {
-      throw ApiError.badRequest('Decision is required (resolved/rejected/escalated)');
+      throw ApiError.badRequest('Resolution input is required');
     }
 
     const report = await ReportService.resolveReport(reportId, adminId, {
@@ -502,7 +523,7 @@ const ReportController = {
    * @param {string} req.user.id - Admin user's ID
    * @param {boolean} req.user.isAdmin - Whether the user is an admin
    * @param {Object} res - Express response object
-   * @returns {Object} Response with updated report data, or 400/403 on error
+   * @returns {Object} Response with updated report data or 403 on error
    */
   updateReportStatus: CatchError(async (req, res) => {
     if (!req.user.isAdmin) {
@@ -513,12 +534,8 @@ const ReportController = {
     const adminId = req.user.id;
     const { status, notes } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(reportId)) {
-      throw ApiError.badRequest('Invalid report ID');
-    }
-
-    const report = await ReportService.resolveReport(reportId, adminId, {
-      decision: status,
+    const report = await ReportService.updateReportStatus(reportId, adminId, {
+      status,
       notes,
     });
 

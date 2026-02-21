@@ -254,20 +254,31 @@ FollowSchema.statics.unfollow = async function (
 
 FollowSchema.statics.acceptFollowRequest = async function (
   userId,
-  followerId,
+  requestIdentifier,
   options = {}
 ) {
   const User = model('User');
   const self = this;
   const { session } = options;
 
-  const follow = await retryOperation(() =>
+  let follow = await retryOperation(() =>
     self.findOneAndUpdate(
-      { follower: followerId, following: userId, status: 'pending' },
+      { follower: requestIdentifier, following: userId, status: 'pending' },
       { status: 'active' },
       { new: true, session }
     )
   );
+
+  // Backward compatibility: allow using follow request document _id
+  if (!follow && Types.ObjectId.isValid(requestIdentifier)) {
+    follow = await retryOperation(() =>
+      self.findOneAndUpdate(
+        { _id: requestIdentifier, following: userId, status: 'pending' },
+        { status: 'active' },
+        { new: true, session }
+      )
+    );
+  }
 
   if (!follow) {
     return { success: false, error: 'Follow request not found' };
@@ -276,7 +287,7 @@ FollowSchema.statics.acceptFollowRequest = async function (
   // Update counters
   await Promise.all([
     User.updateOne(
-      { _id: followerId },
+      { _id: follow.follower },
       { $inc: { followingCount: 1 } },
       { session }
     ),
@@ -292,25 +303,36 @@ FollowSchema.statics.acceptFollowRequest = async function (
 
 FollowSchema.statics.rejectFollowRequest = async function (
   userId,
-  followerId,
+  requestIdentifier,
   options = {}
 ) {
   const self = this;
   const { session } = options;
 
-  const follow = await retryOperation(() =>
+  let follow = await retryOperation(() =>
     self.findOneAndUpdate(
-      { follower: followerId, following: userId, status: 'pending' },
+      { follower: requestIdentifier, following: userId, status: 'pending' },
       { status: 'rejected' },
       { new: true, session }
     )
   );
 
+  // Backward compatibility: allow using follow request document _id
+  if (!follow && Types.ObjectId.isValid(requestIdentifier)) {
+    follow = await retryOperation(() =>
+      self.findOneAndUpdate(
+        { _id: requestIdentifier, following: userId, status: 'pending' },
+        { status: 'rejected' },
+        { new: true, session }
+      )
+    );
+  }
+
   if (!follow) {
     return { success: false, error: 'Follow request not found' };
   }
 
-  return { success: true };
+  return { success: true, follow };
 };
 
 FollowSchema.statics.getFollowingIds = async function (userId) {
@@ -370,12 +392,12 @@ FollowSchema.statics.getFollowingForFeed = async function (
 };
 
 FollowSchema.statics.isFollowing = async function (followerId, followingId) {
-  const follow = await this.findOne({
+  const exists = await this.exists({
     follower: followerId,
     following: followingId,
     status: 'active',
-  }).lean();
-  return !!follow;
+  });
+  return !!exists;
 };
 
 FollowSchema.statics.getFollowStatus = async function (

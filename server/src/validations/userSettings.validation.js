@@ -12,9 +12,25 @@ import Joi from 'joi';
 export const privacySettingsBody = Joi.object({
   profileVisibility: Joi.string().valid('public', 'followers', 'private'),
   postVisibility: Joi.string().valid('public', 'followers', 'private'),
-  messagePermission: Joi.string().valid('everyone', 'followers', 'nobody', 'none'),
+  allowMessages: Joi.string().valid(
+    'everyone',
+    'followers',
+    'following',
+    'nobody',
+    'none'
+  ),
+  messagePermission: Joi.string().valid(
+    'everyone',
+    'followers',
+    'following',
+    'nobody',
+    'none'
+  ),
+  searchable: Joi.boolean(),
   searchVisibility: Joi.boolean(),
+  showActivity: Joi.boolean(),
   activityStatus: Joi.boolean(),
+  showOnlineStatus: Joi.boolean(),
   // Legacy support
   isPrivate: Joi.boolean(),
   showEmail: Joi.boolean(),
@@ -33,6 +49,22 @@ export const privacySettingsBody = Joi.object({
   whoCanSeeLikes: Joi.string().valid('everyone', 'followers', 'only_me'),
 })
   .min(1)
+  .rename('messagePermission', 'allowMessages', {
+    ignoreUndefined: true,
+    override: false,
+  })
+  .rename('whoCanMessage', 'allowMessages', {
+    ignoreUndefined: true,
+    override: false,
+  })
+  .rename('searchVisibility', 'searchable', {
+    ignoreUndefined: true,
+    override: false,
+  })
+  .rename('activityStatus', 'showActivity', {
+    ignoreUndefined: true,
+    override: false,
+  })
   .messages({
     'object.min': 'Cần ít nhất một cài đặt để cập nhật',
   });
@@ -51,13 +83,46 @@ export const notificationSettingsBody = Joi.object({
   mentions: Joi.boolean(),
   replies: Joi.boolean(),
   shares: Joi.boolean(),
-  email: Joi.boolean(),
-  push: Joi.boolean(),
+  saves: Joi.boolean(),
+  tags: Joi.boolean(),
+  email: Joi.alternatives().try(
+    Joi.boolean(),
+    Joi.object({
+      enabled: Joi.boolean(),
+      accountUpdates: Joi.boolean(),
+      newFeatures: Joi.boolean(),
+      marketing: Joi.boolean(),
+      digest: Joi.string().valid('none', 'daily', 'weekly'),
+    })
+  ),
+  push: Joi.alternatives().try(
+    Joi.boolean(),
+    Joi.object({
+      enabled: Joi.boolean(),
+      likes: Joi.boolean(),
+      comments: Joi.boolean(),
+      follows: Joi.boolean(),
+      messages: Joi.boolean(),
+      mentions: Joi.boolean(),
+      shares: Joi.boolean(),
+      replies: Joi.boolean(),
+      saves: Joi.boolean(),
+      tags: Joi.boolean(),
+      systemUpdates: Joi.boolean(),
+      sound: Joi.boolean(),
+      vibration: Joi.boolean(),
+    })
+  ),
   sound: Joi.boolean(),
   vibration: Joi.boolean(),
   systemUpdates: Joi.boolean(),
 })
   .min(1)
+  .rename('newFollower', 'follows', { ignoreUndefined: true, override: false })
+  .rename('directMessages', 'messages', {
+    ignoreUndefined: true,
+    override: false,
+  })
   .messages({
     'object.min': 'Cần ít nhất một cài đặt để cập nhật',
   });
@@ -83,14 +148,28 @@ export const securitySettingsBody = Joi.object({
 // Body: { sensitiveContent?, autoplayVideos?, etc. }
 // ======================================
 export const contentSettingsBody = Joi.object({
-  sensitiveContent: Joi.boolean(),
+  language: Joi.string().valid('vi', 'en', 'ja', 'ko', 'zh'),
+  contentFilter: Joi.string().valid('all', 'moderate', 'strict'),
   autoplayVideos: Joi.boolean(),
+  showSensitiveContent: Joi.boolean(),
+  sensitiveContent: Joi.boolean(),
+  autoplay: Joi.boolean(),
+  autoplayEnabled: Joi.boolean(),
   dataUsage: Joi.string().valid('low', 'medium', 'high', 'auto'),
   videoQuality: Joi.string().valid('auto', 'low', 'medium', 'high', 'hd'),
   imageQuality: Joi.string().valid('auto', 'low', 'medium', 'high'),
   muteVideos: Joi.boolean(),
 })
   .min(1)
+  .rename('sensitiveContent', 'showSensitiveContent', {
+    ignoreUndefined: true,
+    override: false,
+  })
+  .rename('autoplay', 'autoplayVideos', { ignoreUndefined: true, override: false })
+  .rename('autoplayEnabled', 'autoplayVideos', {
+    ignoreUndefined: true,
+    override: false,
+  })
   .messages({
     'object.min': 'Cần ít nhất một cài đặt để cập nhật',
   });
@@ -101,12 +180,17 @@ export const contentSettingsBody = Joi.object({
 // ======================================
 export const themeSettingsBody = Joi.object({
   theme: Joi.string().valid('light', 'dark', 'system'),
+  appearance: Joi.string().valid('light', 'dark', 'system'),
   fontSize: Joi.string().valid('small', 'medium', 'large'),
   language: Joi.string().valid('vi', 'en', 'ja', 'ko', 'zh'),
+  compactMode: Joi.boolean(),
   reducedMotion: Joi.boolean(),
   highContrast: Joi.boolean(),
+  colorScheme: Joi.string().valid('default', 'blue', 'green', 'orange', 'red'),
+  primaryColor: Joi.string().valid('default', 'blue', 'green', 'orange', 'red'),
 })
   .min(1)
+  .rename('appearance', 'theme', { ignoreUndefined: true, override: false })
   .messages({
     'object.min': 'Cần ít nhất một cài đặt để cập nhật',
   });

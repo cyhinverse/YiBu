@@ -5,8 +5,14 @@ import {
   UserPlus,
   Repeat2,
   AtSign,
+  Bookmark,
+  Reply,
+  Tag,
+  Mail,
+  Megaphone,
 } from 'lucide-react';
 import React from 'react';
+import { formatRelativeShortTime } from './dateUtils';
 
 /**
  * Format time to relative string (e.g., "5m", "2h", "3d")
@@ -14,18 +20,7 @@ import React from 'react';
  * @returns {string} Formatted relative time
  */
 export const formatNotificationTime = dateStr => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
+  return formatRelativeShortTime(dateStr);
 };
 
 /**
@@ -49,6 +44,24 @@ export const getNotificationIcon = type => {
       });
     case 'mention':
       return React.createElement(AtSign, { size: 16, className: 'text-orange-500' });
+    case 'save':
+      return React.createElement(Bookmark, {
+        size: 16,
+        className: 'text-emerald-500',
+      });
+    case 'reply':
+      return React.createElement(Reply, { size: 16, className: 'text-blue-500' });
+    case 'tag':
+      return React.createElement(Tag, { size: 16, className: 'text-amber-500' });
+    case 'message':
+      return React.createElement(Mail, { size: 16, className: 'text-indigo-500' });
+    case 'announcement':
+      return React.createElement(Megaphone, {
+        size: 16,
+        className: 'text-fuchsia-500',
+      });
+    case 'system':
+      return React.createElement(Bell, { size: 16, className: 'text-cyan-500' });
     default:
       return React.createElement(Bell, { size: 16, className: 'text-neutral-500' });
   }
@@ -60,6 +73,12 @@ export const getNotificationIcon = type => {
  * @returns {string} Notification content text
  */
 export const getNotificationContent = notification => {
+  if (notification?.displayContent || notification?.content || notification?.message) {
+    return (
+      notification.displayContent || notification.content || notification.message
+    );
+  }
+
   switch (notification.type) {
     case 'like':
       return 'đã thích bài viết của bạn';
@@ -71,6 +90,18 @@ export const getNotificationContent = notification => {
       return 'đã chia sẻ bài viết của bạn';
     case 'mention':
       return 'đã nhắc đến bạn trong một bài viết';
+    case 'message':
+      return 'đã gửi cho bạn một tin nhắn';
+    case 'save':
+      return 'đã lưu bài viết của bạn';
+    case 'reply':
+      return 'đã trả lời bình luận của bạn';
+    case 'tag':
+      return 'đã gắn thẻ bạn';
+    case 'system':
+      return 'thông báo hệ thống';
+    case 'announcement':
+      return 'thông báo mới';
     default:
       return 'có thông báo mới';
   }

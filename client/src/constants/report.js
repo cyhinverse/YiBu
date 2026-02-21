@@ -40,5 +40,10 @@ export const REPORT_REASONS = [
     label: 'Intellectual Property',
     description: 'Copyright or trademark violation',
   },
+  {
+    id: 'fake_account',
+    label: 'Fake Account',
+    description: 'Impersonation or deceptive account identity',
+  },
   { id: 'other', label: 'Other', description: 'Other issues not listed above' },
 ];

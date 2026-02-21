@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Search, RefreshCcw, Filter, ChevronDown } from 'lucide-react';
 import {
@@ -33,6 +33,10 @@ const Users = () => {
   const [actionReason, setActionReason] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterStatus]);
+
   const {
     data: usersData,
     isLoading: usersLoading,
@@ -50,13 +54,11 @@ const Users = () => {
 
   const { data: postsData } = useAdminUserPosts({
     userId: selectedUser?._id,
-    enabled: !!selectedUser,
   });
   const currentUserPosts = postsData?.posts || [];
 
   const { data: reportsData } = useAdminUserReports({
     userId: selectedUser?._id,
-    enabled: !!selectedUser,
   });
   const currentUserReports = reportsData?.reports || [];
 
@@ -209,7 +211,7 @@ const Users = () => {
             >
               <option value="all">Tất cả</option>
               <option value="active">Hoạt động</option>
-              <option value="pending">Chờ duyệt</option>
+              <option value="warned">Cảnh báo</option>
               <option value="suspended">Tạm ngưng</option>
               <option value="banned">Bị chặn</option>
             </select>
@@ -260,7 +262,7 @@ const Users = () => {
         <AdminActionModal
           isOpen={showActionModal}
           actionType={actionType}
-          targetName={selectedUser.name}
+          targetName={selectedUser.fullName || selectedUser.name || selectedUser.username}
           reason={actionReason}
           onReasonChange={setActionReason}
           onConfirm={confirmAction}

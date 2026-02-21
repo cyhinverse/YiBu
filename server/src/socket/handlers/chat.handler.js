@@ -1,8 +1,10 @@
 import logger from '../../configs/logger.js';
 import Conversation from '../../models/Conversation.js';
+import { createRateLimitedHandler } from '../middlewares/socketRateLimit.middleware.js';
 
 const objectIdRegex = /^[a-fA-F0-9]{24}$/;
 const directConversationRegex = /^[a-fA-F0-9]{24}_[a-fA-F0-9]{24}$/;
+const MAX_MESSAGE_IDS = 100;
 
 const normalizeConversationRoomId = roomIdStr => {
   if (roomIdStr.startsWith('conversation:')) {
@@ -44,8 +46,7 @@ const canJoinRoom = async (roomIdStr, userId) => {
 };
 
 export const registerChatHandlers = (io, socket) => {
-  // Join Room
-  socket.on('join_room', async roomId => {
+  const rateLimitedJoinRoom = createRateLimitedHandler('joinRoom', async (roomId) => {
     try {
       if (!roomId) return;
       if (!socket.user?.id) {
@@ -53,7 +54,7 @@ export const registerChatHandlers = (io, socket) => {
         return;
       }
 
-      const roomIdStr = roomId.toString();
+      const roomIdStr = roomId.toString().slice(0, 100);
       const allowed = await canJoinRoom(roomIdStr, socket.user.id);
       if (!allowed) {
         socket.emit('error', { message: 'Not allowed to join this room' });
@@ -68,16 +69,16 @@ export const registerChatHandlers = (io, socket) => {
       logger.error('Error joining room:', error);
       socket.emit('error', {
         message: 'Failed to join room',
-        error: error.message,
       });
     }
-  });
+  }, socket);
 
-  // Leave Room
+  socket.on('join_room', rateLimitedJoinRoom);
+
   socket.on('leave_room', roomId => {
     try {
       if (!roomId) return;
-      const roomIdStr = roomId.toString();
+      const roomIdStr = roomId.toString().slice(0, 100);
       socket.leave(roomIdStr);
       logger.info(`User ${socket.id} left room: ${roomIdStr}`);
       socket.emit('room_left', { roomId: roomIdStr, success: true });
@@ -86,11 +87,8 @@ export const registerChatHandlers = (io, socket) => {
     }
   });
 
-  // Send Message (Incoming from Client)
-  socket.on('send_message', data => {
-    // Note: Usually messages are sent via API (POST /messages) and then emitted via SocketService.
-    // However, if client sends via socket directly:
-    logger.info('Socket received direct message (legacy/chat-only):', data);
+  const rateLimitedSendMessage = createRateLimitedHandler('sendMessage', (data) => {
+    logger.debug('Socket received direct message (legacy/chat-only)');
 
     if (!socket.user?.id) {
       socket.emit('error', { message: 'Authentication required' });
@@ -109,19 +107,15 @@ export const registerChatHandlers = (io, socket) => {
     }
 
     const { message, receiverId } = data;
-    const receiverIdStr = receiverId.toString();
+    const receiverIdStr = receiverId.toString().slice(0, 24);
     const normalizedMessage =
       typeof message === 'object' && message !== null
         ? { ...message, senderId: senderIdStr, sender: senderIdStr }
         : message;
 
-    // Emitting to receiver
     socket.to(receiverIdStr).emit('new_message', normalizedMessage);
-
-    // Sync to other sender devices
     socket.to(senderIdStr).emit('new_message', normalizedMessage);
 
-    // Emit to Rooms
     const room1 = `chat_${senderIdStr}_${receiverIdStr}`;
     const room2 = `chat_${receiverIdStr}_${senderIdStr}`;
     socket.to(room1).emit('new_message', normalizedMessage);
@@ -133,13 +127,24 @@ export const registerChatHandlers = (io, socket) => {
       messageId: normalizedMessage?._id,
       timestamp: new Date(),
     });
-  });
+  }, socket);
 
-  // Mark as Read
-  socket.on('mark_as_read', data => {
-    // Similar to send_message, usually done via API.
-    // logic ...
+  socket.on('send_message', rateLimitedSendMessage);
+
+  const rateLimitedMarkAsRead = createRateLimitedHandler('markAsRead', (data) => {
     if (!socket.user?.id || !data?.messageIds) return;
+
+    const messageIds = Array.isArray(data.messageIds) ? data.messageIds : [data.messageIds];
+    if (messageIds.length > MAX_MESSAGE_IDS) {
+      socket.emit('error', { message: `Too many message IDs (max ${MAX_MESSAGE_IDS})` });
+      return;
+    }
+
+    const validMessageIds = messageIds
+      .filter(id => typeof id === 'string' && objectIdRegex.test(id))
+      .slice(0, MAX_MESSAGE_IDS);
+
+    if (validMessageIds.length === 0) return;
 
     const senderId = socket.user.id;
     if (data?.senderId && data.senderId.toString() !== senderId) {
@@ -147,10 +152,10 @@ export const registerChatHandlers = (io, socket) => {
       return;
     }
 
-    const payload = { ...data, senderId };
+    const payload = { ...data, messageIds: validMessageIds, senderId };
 
     if (payload.receiverId) {
-      const receiverId = payload.receiverId.toString();
+      const receiverId = payload.receiverId.toString().slice(0, 24);
       const room1 = `chat_${senderId}_${receiverId}`;
       const room2 = `chat_${receiverId}_${senderId}`;
       io.to(room1).emit('message_read', payload);
@@ -163,11 +168,13 @@ export const registerChatHandlers = (io, socket) => {
 
     socket.emit('read_confirmed', {
       success: true,
-      messageIds: payload.messageIds,
+      messageIds: validMessageIds,
     });
-  });
+  }, socket);
 
-  const emitTypingEvent = (eventName, data) => {
+  socket.on('mark_as_read', rateLimitedMarkAsRead);
+
+  const rateLimitedTyping = createRateLimitedHandler('typing', (eventName, data) => {
     if (!socket.user?.id || !data?.receiverId) return;
 
     const senderId = socket.user.id;
@@ -176,7 +183,7 @@ export const registerChatHandlers = (io, socket) => {
       return;
     }
 
-    const receiverId = data.receiverId.toString();
+    const receiverId = data.receiverId.toString().slice(0, 24);
     const payload = { ...data, senderId };
 
     socket.to(receiverId).emit(eventName, payload);
@@ -184,22 +191,10 @@ export const registerChatHandlers = (io, socket) => {
     const room2 = `chat_${receiverId}_${senderId}`;
     socket.to(room1).emit(eventName, payload);
     socket.to(room2).emit(eventName, payload);
-  };
+  }, socket);
 
-  // Typing - support both event names for compatibility
-  socket.on('typing', data => {
-    emitTypingEvent('user_typing', data);
-  });
-
-  socket.on('user_typing', data => {
-    emitTypingEvent('user_typing', data);
-  });
-
-  socket.on('stop_typing', data => {
-    emitTypingEvent('user_stop_typing', data);
-  });
-
-  socket.on('user_stop_typing', data => {
-    emitTypingEvent('user_stop_typing', data);
-  });
+  socket.on('typing', data => rateLimitedTyping('user_typing', data));
+  socket.on('user_typing', data => rateLimitedTyping('user_typing', data));
+  socket.on('stop_typing', data => rateLimitedTyping('user_stop_typing', data));
+  socket.on('user_stop_typing', data => rateLimitedTyping('user_stop_typing', data));
 };

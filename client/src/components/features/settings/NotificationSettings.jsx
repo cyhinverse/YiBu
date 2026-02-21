@@ -6,6 +6,11 @@ import {
   UserPlus,
   AtSign,
   Mail,
+  Share2,
+  Reply,
+  Bookmark,
+  Tag,
+  ShieldCheck,
   Loader2,
 } from 'lucide-react';
 import { notify } from '@/utils/notify';
@@ -22,6 +27,13 @@ const NotificationSettings = () => {
     follows: true,
     mentions: true,
     messages: true,
+    replies: true,
+    shares: true,
+    saves: true,
+    tags: true,
+    systemUpdates: true,
+    sound: true,
+    vibration: true,
     email: false,
     push: true,
   });
@@ -29,40 +41,61 @@ const NotificationSettings = () => {
   // Sync local state with server settings
   useEffect(() => {
     if (settingsData?.notifications) {
-      const apiSettings = { ...settingsData.notifications };
+      const apiSettings = settingsData.notifications || {};
+      const pushSettings =
+        typeof apiSettings.push === 'object' && apiSettings.push !== null
+          ? apiSettings.push
+          : {};
+      const emailSettings =
+        typeof apiSettings.email === 'object' && apiSettings.email !== null
+          ? apiSettings.email
+          : {};
 
-      // Handle legacy/nested structure where email/push might be objects
-      if (typeof apiSettings.email === 'object' && apiSettings.email !== null) {
-        apiSettings.email = apiSettings.email.enabled;
-      }
-      if (typeof apiSettings.push === 'object' && apiSettings.push !== null) {
-        apiSettings.push = apiSettings.push.enabled;
-      }
-
-      setNotifications(prev => ({
-        ...prev,
-        ...apiSettings,
-      }));
+      setNotifications({
+        likes: apiSettings.likes ?? pushSettings.likes ?? true,
+        comments: apiSettings.comments ?? pushSettings.comments ?? true,
+        follows: apiSettings.follows ?? pushSettings.follows ?? true,
+        mentions: apiSettings.mentions ?? pushSettings.mentions ?? true,
+        messages: apiSettings.messages ?? pushSettings.messages ?? true,
+        replies: apiSettings.replies ?? pushSettings.replies ?? true,
+        shares: apiSettings.shares ?? pushSettings.shares ?? true,
+        saves: apiSettings.saves ?? pushSettings.saves ?? true,
+        tags: apiSettings.tags ?? pushSettings.tags ?? true,
+        systemUpdates:
+          apiSettings.systemUpdates ?? pushSettings.systemUpdates ?? true,
+        sound: apiSettings.sound ?? pushSettings.sound ?? true,
+        vibration: apiSettings.vibration ?? pushSettings.vibration ?? true,
+        push:
+          typeof apiSettings.push === 'boolean'
+            ? apiSettings.push
+            : pushSettings.enabled ?? true,
+        email:
+          typeof apiSettings.email === 'boolean'
+            ? apiSettings.email
+            : emailSettings.enabled ?? false,
+      });
     }
   }, [settingsData]);
 
   const handleToggle = async settingKey => {
-    const newNotifications = {
-      ...notifications,
-      [settingKey]: !notifications[settingKey],
-    };
-
-    setNotifications(newNotifications);
+    const nextValue = !notifications[settingKey];
+    setNotifications(prev => ({
+      ...prev,
+      [settingKey]: nextValue,
+    }));
 
     try {
       await updateSettingsMutation.mutateAsync({
         type: 'notifications',
-        settings: newNotifications,
+        settings: { [settingKey]: nextValue },
       });
       notify.success('Đã lưu cài đặt thông báo');
     } catch (error) {
       // Revert on failure
-      setNotifications(notifications);
+      setNotifications(prev => ({
+        ...prev,
+        [settingKey]: !nextValue,
+      }));
       notify.error(error?.response?.data?.message || 'Lưu cài đặt thất bại');
     }
   };
@@ -168,6 +201,36 @@ const NotificationSettings = () => {
             description="When you receive a new message"
             settingKey="messages"
           />
+          <NotificationItem
+            icon={Reply}
+            label="Replies"
+            description="When someone replies to your comment"
+            settingKey="replies"
+          />
+          <NotificationItem
+            icon={Share2}
+            label="Shares"
+            description="When someone shares your post"
+            settingKey="shares"
+          />
+          <NotificationItem
+            icon={Bookmark}
+            label="Saves"
+            description="When someone saves your post"
+            settingKey="saves"
+          />
+          <NotificationItem
+            icon={Tag}
+            label="Tags"
+            description="When someone tags you"
+            settingKey="tags"
+          />
+          <NotificationItem
+            icon={ShieldCheck}
+            label="System Updates"
+            description="Updates and important system messages"
+            settingKey="systemUpdates"
+          />
         </div>
       </div>
 
@@ -209,6 +272,36 @@ const NotificationSettings = () => {
             <ToggleSwitch
               enabled={notifications.email}
               onChange={() => handleToggle('email')}
+              disabled={updateSettingsMutation.isPending}
+            />
+          </div>
+          <div className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium text-content dark:text-white">
+                Sound
+              </p>
+              <p className="text-xs text-neutral-500">
+                Play sound when notification arrives
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={notifications.sound}
+              onChange={() => handleToggle('sound')}
+              disabled={updateSettingsMutation.isPending}
+            />
+          </div>
+          <div className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium text-content dark:text-white">
+                Vibration
+              </p>
+              <p className="text-xs text-neutral-500">
+                Vibrate on mobile when notification arrives
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={notifications.vibration}
+              onChange={() => handleToggle('vibration')}
               disabled={updateSettingsMutation.isPending}
             />
           </div>

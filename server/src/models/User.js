@@ -86,7 +86,11 @@ const UserSchema = new Schema(
         enum: ['active', 'warned', 'suspended', 'banned'],
         default: 'active',
       },
+      warnings: { type: Number, default: 0, min: 0 },
+      lastWarningAt: { type: Date, default: null },
       reason: { type: String, default: '' },
+      suspendedUntil: { type: Date, default: null },
+      // Legacy alias kept for backward compatibility with older data/tools
       expiresAt: { type: Date, default: null },
       moderatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
       moderatedAt: { type: Date },
