@@ -1,27 +1,22 @@
-import Notification from '../../models/Notification.js';
+import NotificationModel from '../../models/Notification.js';
+import UserSettingsModel from '../../models/UserSettings.js';
+import UserModel from '../../models/User.js';
 
-const findNotifications = (query, options = {}) => {
-  return Notification.find(query)
-    .populate(options.populate || [])
-    .sort(options.sort || { createdAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 0);
+const notificationRepository = {
+  notificationAggregate: (...args) => NotificationModel.aggregate(...args),
+  notificationCountDocuments: (...args) => NotificationModel.countDocuments(...args),
+  notificationCreate: (...args) => NotificationModel.create(...args),
+  notificationDeleteMany: (...args) => NotificationModel.deleteMany(...args),
+  notificationFind: (...args) => NotificationModel.find(...args),
+  notificationFindById: (...args) => NotificationModel.findById(...args),
+  notificationFindByIdAndUpdate: (...args) => NotificationModel.findByIdAndUpdate(...args),
+  notificationFindOne: (...args) => NotificationModel.findOne(...args),
+  notificationFindOneAndDelete: (...args) => NotificationModel.findOneAndDelete(...args),
+  notificationFindOneAndUpdate: (...args) => NotificationModel.findOneAndUpdate(...args),
+  notificationUpdateMany: (...args) => NotificationModel.updateMany(...args),
+  userFindById: (...args) => UserModel.findById(...args),
+  userSettingsFindOne: (...args) => UserSettingsModel.findOne(...args),
+  userSettingsFindOneAndUpdate: (...args) => UserSettingsModel.findOneAndUpdate(...args),
 };
 
-const countNotifications = query => Notification.countDocuments(query);
-
-const createNotification = payload => Notification.createNotification(payload);
-
-const updateNotification = (id, update, options = {}) => {
-  return Notification.findByIdAndUpdate(id, update, { new: true, ...options });
-};
-
-const deleteNotification = id => Notification.findByIdAndDelete(id);
-
-export default {
-  findNotifications,
-  countNotifications,
-  createNotification,
-  updateNotification,
-  deleteNotification,
-};
+export default notificationRepository;

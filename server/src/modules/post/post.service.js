@@ -1,14 +1,5 @@
+import postRepository from './post.repository.js';
 import mongoose from 'mongoose';
-import Post from '../../models/Post.js';
-import User from '../../models/User.js';
-import UserSettings from '../../models/UserSettings.js';
-import Comment from '../../models/Comment.js';
-import Like from '../../models/Like.js';
-import SavePost from '../../models/SavePost.js';
-import Hashtag from '../../models/Hashtag.js';
-import UserInteraction from '../../models/UserInteraction.js';
-import Follow from '../../models/Follow.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
 import { escapeRegExp } from '../../utils/escapeRegExp.js';
@@ -65,7 +56,7 @@ class PostService {
 
       const processedHashtags = await this._processHashtags(caption, session);
 
-      const post = await Post.create(
+      const post = await postRepository.postCreate(
         [
           {
             user: userId,
@@ -79,13 +70,13 @@ class PostService {
         { session }
       );
 
-      await User.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } }).session(
+      await postRepository.userFindByIdAndUpdate(userId, { $inc: { postsCount: 1 } }).session(
         session
       );
 
       await session.commitTransaction();
 
-      const populatedPost = await Post.findById(post[0]._id)
+      const populatedPost = await postRepository.postFindById(post[0]._id)
         .populate('user', 'username name avatar verified')
         .lean();
 
@@ -121,14 +112,14 @@ class PostService {
     
     // Checking if Hashtag model has incrementMany (based on my read it does)
     if (Hashtag.incrementMany) {
-      await Hashtag.incrementMany(tags);
+      await postRepository.hashtagIncrementMany(tags);
       return tags;
     }
 
     // Fallback if bulk method not available (or if we strictly need session which bulkWrite supports but method might not expose)
     const operations = tags.slice(0, 30).map(tag => 
       retryOperation(() =>
-        Hashtag.findOneAndUpdate(
+        postRepository.hashtagFindOneAndUpdate(
           { name: tag },
           {
             $inc: {
@@ -158,7 +149,7 @@ class PostService {
   static async getLikedPosts(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const likes = await Like.find({ user: userId, targetType: 'post' })
+    const likes = await postRepository.likeFind({ user: userId, targetType: 'post' })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -173,7 +164,7 @@ class PostService {
 
     const postsWithStatus = await this._addUserStatus(posts, userId);
 
-    const total = await Like.countDocuments({
+    const total = await postRepository.likeCountDocuments({
       user: userId,
       targetType: 'post',
     });
@@ -194,7 +185,7 @@ class PostService {
   static async getSharedPosts(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const shares = await UserInteraction.find({
+    const shares = await postRepository.userInteractionFind({
       user: userId,
       targetType: 'post',
       interactionType: 'share',
@@ -206,7 +197,7 @@ class PostService {
 
     const postIds = shares.map(share => share.targetId);
 
-    const posts = await Post.find({
+    const posts = await postRepository.postFind({
       _id: { $in: postIds },
       isDeleted: false,
     })
@@ -220,7 +211,7 @@ class PostService {
 
     const postsWithStatus = await this._addUserStatus(orderedPosts, userId);
 
-    const total = await UserInteraction.countDocuments({
+    const total = await postRepository.userInteractionCountDocuments({
       user: userId,
       targetType: 'post',
       interactionType: 'share',
@@ -242,7 +233,7 @@ class PostService {
    * @throws {Error} If post not found or unauthorized
    */
   static async updatePost(postId, userId, updateData) {
-    const post = await Post.findOne({
+    const post = await postRepository.postFindOne({
       _id: postId,
       user: userId,
       isDeleted: false,
@@ -286,7 +277,7 @@ class PostService {
       );
 
       if (removedTags.length > 0) {
-        await Hashtag.updateMany(
+        await postRepository.hashtagUpdateMany(
           { name: { $in: removedTags } },
           {
             $inc: {
@@ -308,7 +299,7 @@ class PostService {
     if (location !== undefined) allowedUpdates.location = location;
     if (mentions !== undefined) allowedUpdates.mentions = mentions;
 
-    const updatedPost = await Post.findByIdAndUpdate(
+    const updatedPost = await postRepository.postFindByIdAndUpdate(
       postId,
       { $set: allowedUpdates },
       { new: true }
@@ -331,7 +322,7 @@ class PostService {
 
     try {
       const query = isAdmin ? { _id: postId } : { _id: postId, user: userId };
-      const post = await Post.findOne(query).session(session);
+      const post = await postRepository.postFindOne(query).session(session);
 
       if (!post) {
         throw ApiError.forbidden('Post not found or unauthorized');
@@ -341,13 +332,13 @@ class PostService {
       post.isDeleted = true;
       await post.save({ session });
 
-      await User.findByIdAndUpdate(post.user, {
+      await postRepository.userFindByIdAndUpdate(post.user, {
         $inc: { postsCount: -1 },
       }).session(session);
 
       if (post.hashtags && post.hashtags.length > 0) {
         const tags = post.hashtags.map(t => String(t).toLowerCase());
-        await Hashtag.updateMany(
+        await postRepository.hashtagUpdateMany(
           { name: { $in: tags } },
           {
             $inc: {
@@ -379,7 +370,7 @@ class PostService {
    * @throws {Error} If post not found
    */
   static async getPostById(postId, userId = null) {
-    const post = await Post.findOne({ _id: postId, isDeleted: false })
+    const post = await postRepository.postFindOne({ _id: postId, isDeleted: false })
       .populate('user', 'username name avatar verified')
       .lean();
 
@@ -392,14 +383,14 @@ class PostService {
 
     if (userId) {
       const [isLiked, isSaved] = await Promise.all([
-        Like.exists({ user: userId, post: postId }),
-        SavePost.exists({ user: userId, post: postId }),
+        postRepository.likeExists({ user: userId, post: postId }),
+        postRepository.savePostExists({ user: userId, post: postId }),
       ]);
 
       result.isLiked = !!isLiked;
       result.isSaved = !!isSaved;
 
-      await UserInteraction.record({
+      await postRepository.userInteractionRecord({
         user: userId,
         targetType: 'post',
         targetId: postId,
@@ -427,7 +418,7 @@ class PostService {
       if (requesterId === targetUserId.toString()) {
         visibilityFilter = ['public', 'followers', 'private'];
       } else {
-        const isFollowing = await Follow.isFollowing(requesterId, targetUserId);
+        const isFollowing = await postRepository.followIsFollowing(requesterId, targetUserId);
         if (isFollowing) {
           visibilityFilter = ['public', 'followers'];
         }
@@ -441,13 +432,13 @@ class PostService {
     };
 
     const [posts, total] = await Promise.all([
-      Post.find(query)
+      postRepository.postFind(query)
         .populate('user', 'username name avatar verified')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Post.countDocuments(query),
+      postRepository.postCountDocuments(query),
     ]);
 
     let postsWithStatus = posts;
@@ -473,10 +464,10 @@ class PostService {
     const postIds = posts.map(p => p._id);
 
     const [likes, saves] = await Promise.all([
-      Like.find({ user: userId, post: { $in: postIds } })
+      postRepository.likeFind({ user: userId, post: { $in: postIds } })
         .select('post')
         .lean(),
-      SavePost.find({ user: userId, post: { $in: postIds } })
+      postRepository.savePostFind({ user: userId, post: { $in: postIds } })
         .select('post')
         .lean(),
     ]);
@@ -500,12 +491,12 @@ class PostService {
   static async getHomeFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await postRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers mutedUsers content')
       .lean();
 
     const [following, blockedUsers, mutedUsers] = await Promise.all([
-      Follow.getFollowingIds(userId),
+      postRepository.followGetFollowingIds(userId),
       settings?.blockedUsers || [],
       settings?.mutedUsers || [],
     ]);
@@ -527,7 +518,7 @@ class PostService {
       ],
     };
 
-    const posts = await Post.find(query)
+    const posts = await postRepository.postFind(query)
       .populate('user', 'username name avatar verified')
       .sort({ createdAt: -1, engagementScore: -1 })
       .skip((page - 1) * limit)
@@ -551,7 +542,7 @@ class PostService {
   static async getExploreFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await postRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers mutedUsers')
       .lean();
 
@@ -568,7 +559,7 @@ class PostService {
       'moderation.status': 'approved',
     };
 
-    const posts = await Post.find(query)
+    const posts = await postRepository.postFind(query)
       .populate('user', 'username name avatar verified')
       .sort({ trendingScore: -1, engagementScore: -1, createdAt: -1 })
       .skip((page - 1) * limit)
@@ -592,7 +583,7 @@ class PostService {
   static async getHashtagFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await postRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers mutedUsers')
       .lean();
 
@@ -613,7 +604,7 @@ class PostService {
       ],
     };
 
-    const posts = await Post.find(query)
+    const posts = await postRepository.postFind(query)
       .populate('user', 'username name avatar verified')
       .sort({ createdAt: -1, engagementScore: -1 })
       .skip((page - 1) * limit)
@@ -637,9 +628,9 @@ class PostService {
   static async getPersonalizedFeed(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const user = await User.findById(userId).select('interests').lean();
+    const user = await postRepository.userFindById(userId).select('interests').lean();
 
-    const recentInteractions = await UserInteraction.find({
+    const recentInteractions = await postRepository.userInteractionFind({
       user: userId,
       interactionType: { $in: ['like', 'comment', 'share', 'save'] },
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
@@ -652,7 +643,7 @@ class PostService {
       .filter(i => i.targetType === 'post')
       .map(i => i.targetId);
 
-    const interactedPosts = await Post.find({ _id: { $in: interactedPostIds } })
+    const interactedPosts = await postRepository.postFind({ _id: { $in: interactedPostIds } })
       .select('hashtags')
       .lean();
 
@@ -664,7 +655,7 @@ class PostService {
       interestTags.add(interest.toLowerCase())
     );
 
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await postRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers mutedUsers')
       .lean();
 
@@ -685,7 +676,7 @@ class PostService {
       query.hashtags = { $in: [...interestTags] };
     }
 
-    const posts = await Post.find(query)
+    const posts = await postRepository.postFind(query)
       .populate('user', 'username name avatar verified')
       .sort({ qualityScore: -1, engagementScore: -1 })
       .skip((page - 1) * limit)
@@ -712,7 +703,7 @@ class PostService {
     const days = timeframeDays[timeframe] || 1;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const posts = await Post.find({
+    const posts = await postRepository.postFind({
       isDeleted: false,
       visibility: 'public',
       'moderation.status': 'approved',
@@ -750,7 +741,7 @@ class PostService {
 
     let excludeUsers = [];
     if (userId) {
-      const settings = await UserSettings.findOne({ user: userId })
+      const settings = await postRepository.userSettingsFindOne({ user: userId })
         .select('blockedUsers mutedUsers')
         .lean();
       excludeUsers = [
@@ -771,13 +762,13 @@ class PostService {
     };
 
     const [posts, total] = await Promise.all([
-      Post.find(searchQuery)
+      postRepository.postFind(searchQuery)
         .populate('user', 'username name avatar verified')
         .sort({ engagementScore: -1, createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Post.countDocuments(searchQuery),
+      postRepository.postCountDocuments(searchQuery),
     ]);
 
     let postsWithStatus = posts;
@@ -801,12 +792,12 @@ class PostService {
     const tag = hashtag.replace('#', '').toLowerCase();
 
     await retryOperation(() =>
-      Hashtag.findOneAndUpdate({ name: tag }, { $inc: { searchCount: 1 } })
+      postRepository.hashtagFindOneAndUpdate({ name: tag }, { $inc: { searchCount: 1 } })
     );
 
     let excludeUsers = [];
     if (userId) {
-      const settings = await UserSettings.findOne({ user: userId })
+      const settings = await postRepository.userSettingsFindOne({ user: userId })
         .select('blockedUsers mutedUsers')
         .lean();
       excludeUsers = [
@@ -824,13 +815,13 @@ class PostService {
     };
 
     const [posts, total] = await Promise.all([
-      Post.find(query)
+      postRepository.postFind(query)
         .populate('user', 'username name avatar verified')
         .sort({ engagementScore: -1, createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Post.countDocuments(query),
+      postRepository.postCountDocuments(query),
     ]);
 
     let postsWithStatus = posts;
@@ -847,7 +838,7 @@ class PostService {
    * @returns {Promise<Array>} List of trending hashtags
    */
   static async getTrendingHashtags(limit = 10) {
-    return Hashtag.getTrending(limit);
+    return postRepository.hashtagGetTrending(limit);
   }
 
   /**
@@ -862,7 +853,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const post = await Post.findOne({
+      const post = await postRepository.postFindOne({
         _id: postId,
         isDeleted: false,
       }).session(session);
@@ -871,7 +862,7 @@ class PostService {
 
       }
 
-      const existingLike = await Like.findOne({
+      const existingLike = await postRepository.likeFindOne({
         user: userId,
         post: postId,
       }).session(session);
@@ -880,15 +871,15 @@ class PostService {
         return { success: true, alreadyLiked: true };
       }
 
-      await Like.create([{ user: userId, post: postId, targetType: 'post' }], {
+      await postRepository.likeCreate([{ user: userId, post: postId, targetType: 'post' }], {
         session,
       });
 
-      await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } }).session(
+      await postRepository.postFindByIdAndUpdate(postId, { $inc: { likesCount: 1 } }).session(
         session
       );
 
-      await UserInteraction.record({
+      await postRepository.userInteractionRecord({
         user: userId,
         targetType: 'post',
         targetId: postId,
@@ -896,8 +887,8 @@ class PostService {
       });
 
       if (post.user.toString() !== userId) {
-        const sender = await User.findById(userId).select('username').lean();
-        await Notification.createNotification({
+        const sender = await postRepository.userFindById(userId).select('username').lean();
+        await postRepository.notificationCreateNotification({
           recipient: post.user,
           sender: userId,
           type: 'like',
@@ -928,7 +919,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const like = await Like.findOneAndDelete({
+      const like = await postRepository.likeFindOneAndDelete({
         user: userId,
         post: postId,
       }).session(session);
@@ -938,7 +929,7 @@ class PostService {
         return { success: true, wasNotLiked: true };
       }
 
-      await Post.findByIdAndUpdate(postId, {
+      await postRepository.postFindByIdAndUpdate(postId, {
         $inc: { likesCount: -1 },
       }).session(session);
 
@@ -961,7 +952,7 @@ class PostService {
   static async getPostLikes(postId, options = {}) {
     const { page = 1, limit = 50 } = options;
 
-    const likes = await Like.find({ post: postId, targetType: 'post' })
+    const likes = await postRepository.likeFind({ post: postId, targetType: 'post' })
       .populate('user', 'username name avatar verified')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -984,7 +975,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const post = await Post.findOne({
+      const post = await postRepository.postFindOne({
         _id: postId,
         isDeleted: false,
       }).session(session);
@@ -993,7 +984,7 @@ class PostService {
 
       }
 
-      const existingSave = await SavePost.findOne({
+      const existingSave = await postRepository.savePostFindOne({
         user: userId,
         post: postId,
       }).session(session);
@@ -1006,15 +997,15 @@ class PostService {
         return { success: true, alreadySaved: true };
       }
 
-      await SavePost.create([{ user: userId, post: postId, folder: collection }], {
+      await postRepository.savePostCreate([{ user: userId, post: postId, folder: collection }], {
         session,
       });
 
-      await Post.findByIdAndUpdate(postId, { $inc: { savesCount: 1 } }).session(
+      await postRepository.postFindByIdAndUpdate(postId, { $inc: { savesCount: 1 } }).session(
         session
       );
 
-      await UserInteraction.record({
+      await postRepository.userInteractionRecord({
         user: userId,
         targetType: 'post',
         targetId: postId,
@@ -1042,7 +1033,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const save = await SavePost.findOneAndDelete({
+      const save = await postRepository.savePostFindOneAndDelete({
         user: userId,
         post: postId,
       }).session(session);
@@ -1052,7 +1043,7 @@ class PostService {
         return { success: true, wasNotSaved: true };
       }
 
-      await Post.findByIdAndUpdate(postId, {
+      await postRepository.postFindByIdAndUpdate(postId, {
         $inc: { savesCount: -1 },
       }).session(session);
 
@@ -1080,7 +1071,7 @@ class PostService {
       query.$or = [{ folder: collection }, { collection }];
     }
 
-    const saved = await SavePost.find(query)
+    const saved = await postRepository.savePostFind(query)
       .populate({
         path: 'post',
         match: { isDeleted: false },
@@ -1111,7 +1102,7 @@ class PostService {
    * @returns {Promise<Array>} List of collections
    */
   static async getSavedCollections(userId) {
-    return SavePost.getCollections(userId);
+    return postRepository.savePostGetCollections(userId);
   }
 
   /**
@@ -1124,7 +1115,7 @@ class PostService {
    * @throws {Error} If post or parent comment not found
    */
   static async addComment(postId, userId, content, parentCommentId = null) {
-    const post = await Post.findOne({
+    const post = await postRepository.postFindOne({
       _id: postId,
       isDeleted: false,
     }).lean();
@@ -1138,7 +1129,7 @@ class PostService {
     let rootComment = null;
 
     if (parentCommentId) {
-      const parentComment = await Comment.findById(parentCommentId).lean();
+      const parentComment = await postRepository.commentFindById(parentCommentId).lean();
       if (!parentComment || parentComment.isDeleted) {
         throw ApiError.notFound('Parent comment not found');
 
@@ -1147,7 +1138,7 @@ class PostService {
       rootComment = parentComment.rootComment || parentComment._id;
     }
 
-    const comment = await Comment.create({
+    const comment = await postRepository.commentCreate({
       post: postId,
       user: userId,
       content,
@@ -1163,7 +1154,7 @@ class PostService {
     */
 
     retryOperation(() =>
-      UserInteraction.record({
+      postRepository.userInteractionRecord({
         user: userId,
         targetType: 'post',
         targetId: postId,
@@ -1172,12 +1163,12 @@ class PostService {
     ).catch(err => logger.warn(`Failed to record interaction: ${err.message}`));
 
     const notifyUserId = parentCommentId
-      ? (await Comment.findById(parentCommentId).select('user').lean())?.user
+      ? (await postRepository.commentFindById(parentCommentId).select('user').lean())?.user
       : post.user;
 
     if (notifyUserId && notifyUserId.toString() !== userId) {
-      const sender = await User.findById(userId).select('username').lean();
-      Notification.createNotification({
+      const sender = await postRepository.userFindById(userId).select('username').lean();
+      postRepository.notificationCreateNotification({
         recipient: notifyUserId,
         sender: userId,
         type: parentCommentId ? 'reply' : 'comment',
@@ -1192,7 +1183,7 @@ class PostService {
       );
     }
 
-    const populatedComment = await Comment.findById(comment._id)
+    const populatedComment = await postRepository.commentFindById(comment._id)
       .populate('user', 'username name avatar verified')
       .lean();
 
@@ -1214,7 +1205,7 @@ class PostService {
       oldest: 'oldest',
     };
 
-    const comments = await Comment.getCommentsForPost(postId, {
+    const comments = await postRepository.commentGetCommentsForPost(postId, {
       page,
       limit,
       sortBy: sortByMap[normalizedSort] || 'likesCount',
@@ -1222,7 +1213,7 @@ class PostService {
       replyLimit: 3,
     });
 
-    const totalTopLevel = await Comment.countDocuments({
+    const totalTopLevel = await postRepository.commentCountDocuments({
       post: postId,
       parentComment: null,
       isDeleted: false,
@@ -1244,7 +1235,7 @@ class PostService {
   static async getCommentReplies(commentId, options = {}) {
     const { page = 1, limit = 10 } = options;
 
-    const replies = await Comment.find({
+    const replies = await postRepository.commentFind({
       parentComment: commentId,
       isDeleted: false,
     })
@@ -1276,7 +1267,7 @@ class PostService {
       const query = isAdmin
         ? { _id: commentId }
         : { _id: commentId, user: userId };
-      const comment = await Comment.findOne(query).session(session);
+      const comment = await postRepository.commentFindOne(query).session(session);
 
       if (!comment) {
         throw ApiError.forbidden('Comment not found or unauthorized');
@@ -1286,12 +1277,12 @@ class PostService {
       comment.isDeleted = true;
       await comment.save({ session });
 
-      await Post.findByIdAndUpdate(comment.post, {
+      await postRepository.postFindByIdAndUpdate(comment.post, {
         $inc: { commentsCount: -1 },
       }).session(session);
 
       if (comment.parentComment) {
-        await Comment.findByIdAndUpdate(comment.parentComment, {
+        await postRepository.commentFindByIdAndUpdate(comment.parentComment, {
           $inc: { repliesCount: -1 },
         }).session(session);
       }
@@ -1315,7 +1306,7 @@ class PostService {
    * @throws {Error} If comment not found or unauthorized
    */
   static async updateComment(commentId, userId, content) {
-    const comment = await Comment.findOne({
+    const comment = await postRepository.commentFindOne({
       _id: commentId,
       user: userId,
       isDeleted: false,
@@ -1331,7 +1322,7 @@ class PostService {
     comment.editedAt = new Date();
     await comment.save();
 
-    const populatedComment = await Comment.findById(comment._id)
+    const populatedComment = await postRepository.commentFindById(comment._id)
       .populate('user', 'username name avatar verified')
       .lean();
 
@@ -1350,7 +1341,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const comment = await Comment.findOne({
+      const comment = await postRepository.commentFindOne({
         _id: commentId,
         isDeleted: false,
       }).session(session);
@@ -1359,7 +1350,7 @@ class PostService {
 
       }
 
-      const existingLike = await Like.findOne({
+      const existingLike = await postRepository.likeFindOne({
         user: userId,
         comment: commentId,
         targetType: 'comment',
@@ -1370,7 +1361,7 @@ class PostService {
         return { success: true, alreadyLiked: true };
       }
 
-      await Like.create(
+      await postRepository.likeCreate(
         [
           {
             user: userId,
@@ -1381,7 +1372,7 @@ class PostService {
         { session }
       );
 
-      await Comment.findByIdAndUpdate(commentId, {
+      await postRepository.commentFindByIdAndUpdate(commentId, {
         $inc: { likesCount: 1 },
       }).session(session);
 
@@ -1406,7 +1397,7 @@ class PostService {
     session.startTransaction();
 
     try {
-      const like = await Like.findOneAndDelete({
+      const like = await postRepository.likeFindOneAndDelete({
         user: userId,
         comment: commentId,
         targetType: 'comment',
@@ -1417,7 +1408,7 @@ class PostService {
         return { success: true, wasNotLiked: true };
       }
 
-      await Comment.findByIdAndUpdate(commentId, {
+      await postRepository.commentFindByIdAndUpdate(commentId, {
         $inc: { likesCount: -1 },
       }).session(session);
 
@@ -1440,15 +1431,15 @@ class PostService {
    * @throws {Error} If post not found
    */
   static async sharePost(postId, userId, platform = 'internal') {
-    const post = await Post.findOne({ _id: postId, isDeleted: false });
+    const post = await postRepository.postFindOne({ _id: postId, isDeleted: false });
     if (!post) {
       throw ApiError.notFound('Post not found');
 
     }
 
-    await Post.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
+    await postRepository.postFindByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
 
-    await UserInteraction.record({
+    await postRepository.userInteractionRecord({
       user: userId,
       targetType: 'post',
       targetId: postId,
@@ -1457,8 +1448,8 @@ class PostService {
     });
 
     if (post.user.toString() !== userId) {
-      const sender = await User.findById(userId).select('username').lean();
-      await Notification.createNotification({
+      const sender = await postRepository.userFindById(userId).select('username').lean();
+      await postRepository.notificationCreateNotification({
         recipient: post.user,
         sender: userId,
         type: 'share',
@@ -1480,20 +1471,19 @@ class PostService {
    * @throws {Error} If post not found or already reported
    */
   static async reportPost(postId, userId, reason, description = '') {
-    const Report = (await import('../../models/Report.js')).default;
     const normalizedReason = POST_REPORT_CATEGORY_ALIASES[reason] || reason;
 
     if (!VALID_POST_REPORT_CATEGORIES.has(normalizedReason)) {
       throw ApiError.badRequest('Lý do báo cáo không hợp lệ');
     }
 
-    const post = await Post.findOne({ _id: postId, isDeleted: false });
+    const post = await postRepository.postFindOne({ _id: postId, isDeleted: false });
     if (!post) {
       throw ApiError.notFound('Post not found');
 
     }
 
-    const existingReport = await Report.findOne({
+    const existingReport = await postRepository.reportFindOne({
       reporter: userId,
       targetType: 'post',
       targetId: postId,
@@ -1505,7 +1495,7 @@ class PostService {
 
     }
 
-    const report = await Report.create({
+    const report = await postRepository.reportCreate({
       reporter: userId,
       targetType: 'post',
       targetId: postId,
@@ -1560,7 +1550,7 @@ class PostService {
   }
 
   static async toggleLike(postId, userId) {
-    const existingLike = await Like.findOne({ user: userId, post: postId });
+    const existingLike = await postRepository.likeFindOne({ user: userId, post: postId });
     if (existingLike) {
       await this.unlikePost(postId, userId);
       return { liked: false };

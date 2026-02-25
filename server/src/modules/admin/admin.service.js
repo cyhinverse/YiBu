@@ -1,11 +1,5 @@
+import adminRepository from './admin.repository.js';
 import mongoose from 'mongoose';
-import User from '../../models/User.js';
-import Post from '../../models/Post.js';
-import Comment from '../../models/Comment.js';
-import Report from '../../models/Report.js';
-import RefreshToken from '../../models/RefreshToken.js';
-import UserSettings from '../../models/UserSettings.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
 import { escapeRegExp } from '../../utils/escapeRegExp.js';
@@ -13,10 +7,6 @@ import { createSystemNotification } from '../../utils/systemNotification.js';
 import { buildSuspensionResetUpdate } from '../../utils/userAccess.js';
 import { normalizeReportStatus } from '../../utils/reportStatus.js';
 
-import Like from '../../models/Like.js';
-import Follow from '../../models/Follow.js';
-import SavePost from '../../models/SavePost.js';
-import UserInteraction from '../../models/UserInteraction.js';
 
 const POST_ACTION_ALIASES = {
   delete: 'remove',
@@ -112,13 +102,13 @@ class AdminService {
     sortOptions[userSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [users, total] = await Promise.all([
-      User.find(query)
+      adminRepository.userFind(query)
         .select('-loginAttempts -security')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      User.countDocuments(query),
+      adminRepository.userCountDocuments(query),
     ]);
 
     return {
@@ -137,15 +127,15 @@ class AdminService {
    * @throws {Error} If user not found
    */
   static async getUserById(userId) {
-    const user = await User.findById(userId).select('-loginAttempts').lean();
+    const user = await adminRepository.userFindById(userId).select('-loginAttempts').lean();
 
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    const settings = await UserSettings.findOne({ user: userId }).lean();
+    const settings = await adminRepository.userSettingsFindOne({ user: userId }).lean();
 
-    const recentReports = await Report.find({
+    const recentReports = await adminRepository.reportFind({
       targetUser: userId,
       status: { $in: ['pending', 'reviewing'] },
     })
@@ -171,13 +161,13 @@ class AdminService {
     const { page = 1, limit = 20 } = options;
 
     const [posts, total] = await Promise.all([
-      Post.find({ user: userId })
+      adminRepository.postFind({ user: userId })
         .populate('user', 'username name avatar verified')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Post.countDocuments({ user: userId }),
+      adminRepository.postCountDocuments({ user: userId }),
     ]);
 
     return {
@@ -199,14 +189,14 @@ class AdminService {
     const { page = 1, limit = 20 } = options;
 
     const [reports, total] = await Promise.all([
-      Report.find({ targetUser: userId })
+      adminRepository.reportFind({ targetUser: userId })
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments({ targetUser: userId }),
+      adminRepository.reportCountDocuments({ targetUser: userId }),
     ]);
 
     return {
@@ -228,13 +218,13 @@ class AdminService {
     const { page = 1, limit = 20 } = options;
 
     const [reports, total] = await Promise.all([
-      Report.find({ targetId: postId, targetType: 'post' })
+      adminRepository.reportFind({ targetId: postId, targetType: 'post' })
         .populate('reporter', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments({ targetId: postId, targetType: 'post' }),
+      adminRepository.reportCountDocuments({ targetId: postId, targetType: 'post' }),
     ]);
 
     return {
@@ -277,7 +267,7 @@ class AdminService {
       delete normalizedData.status;
     }
 
-    const user = await User.findByIdAndUpdate(
+    const user = await adminRepository.userFindByIdAndUpdate(
       userId,
       { $set: normalizedData },
       { new: true }
@@ -307,7 +297,7 @@ class AdminService {
     session.startTransaction();
 
     try {
-      const user = await User.findByIdAndUpdate(
+      const user = await adminRepository.userFindByIdAndUpdate(
         userId,
         {
           $set: {
@@ -324,7 +314,7 @@ class AdminService {
         throw ApiError.notFound('User not found');
       }
 
-      await RefreshToken.updateMany(
+      await adminRepository.refreshTokenUpdateMany(
         { user: userId },
         { isRevoked: true, revokedReason: 'user_banned' }
       ).session(session);
@@ -355,7 +345,7 @@ class AdminService {
    */
   static async unbanUser(userId, adminId) {
     const suspensionResetSet = buildSuspensionResetUpdate().$set;
-    const user = await User.findByIdAndUpdate(
+    const user = await adminRepository.userFindByIdAndUpdate(
       userId,
       {
         $set: {
@@ -398,7 +388,7 @@ class AdminService {
     session.startTransaction();
 
     try {
-      const user = await User.findByIdAndUpdate(
+      const user = await adminRepository.userFindByIdAndUpdate(
         userId,
         {
           $set: {
@@ -417,7 +407,7 @@ class AdminService {
         throw ApiError.notFound('User not found');
       }
 
-      await RefreshToken.updateMany(
+      await adminRepository.refreshTokenUpdateMany(
         { user: userId },
         { isRevoked: true, revokedReason: 'user_suspended' }
       ).session(session);
@@ -454,7 +444,7 @@ class AdminService {
    * @throws {Error} If user not found
    */
   static async warnUser(userId, adminId, reason) {
-    const user = await User.findByIdAndUpdate(
+    const user = await adminRepository.userFindByIdAndUpdate(
       userId,
       {
         $inc: { 'moderation.warnings': 1 },
@@ -559,13 +549,13 @@ class AdminService {
     sortOptions[postSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [posts, total] = await Promise.all([
-      Post.find(query)
+      adminRepository.postFind(query)
         .populate('user', 'username name avatar verified')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Post.countDocuments(query),
+      adminRepository.postCountDocuments(query),
     ]);
 
     return {
@@ -603,7 +593,7 @@ class AdminService {
       hide: 'removed',
     };
 
-    const existingPost = await Post.findById(postId).select('isDeleted user').lean();
+    const existingPost = await adminRepository.postFindById(postId).select('isDeleted user').lean();
     if (!existingPost) {
       throw ApiError.notFound('Post not found');
     }
@@ -628,7 +618,7 @@ class AdminService {
         updateData.isDeleted = false;
       }
 
-      const post = await Post.findByIdAndUpdate(
+      const post = await adminRepository.postFindByIdAndUpdate(
         postId,
         { $set: updateData },
         { new: true, session }
@@ -645,7 +635,7 @@ class AdminService {
       const isNowRestored = normalizedAction === 'approve' && wasDeleted;
 
       if (isNowRemoved && !wasDeleted) {
-        await User.findByIdAndUpdate(post.user._id, {
+        await adminRepository.userFindByIdAndUpdate(post.user._id, {
           $inc: { postsCount: -1 },
         }).session(session);
 
@@ -656,7 +646,7 @@ class AdminService {
           session,
         });
       } else if (isNowRestored) {
-        await User.findByIdAndUpdate(post.user._id, {
+        await adminRepository.userFindByIdAndUpdate(post.user._id, {
           $inc: { postsCount: 1 },
         }).session(session);
       }
@@ -749,14 +739,14 @@ class AdminService {
     sortOptions[commentSortFieldMap[sortBy] || sortBy] = sortOrder;
 
     const [comments, total] = await Promise.all([
-      Comment.find(query)
+      adminRepository.commentFind(query)
         .populate('user', 'username name avatar')
         .populate('post', 'caption')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Comment.countDocuments(query),
+      adminRepository.commentCountDocuments(query),
     ]);
 
     return {
@@ -788,7 +778,7 @@ class AdminService {
 
     }
 
-    const comment = await Comment.findById(commentId);
+    const comment = await adminRepository.commentFindById(commentId);
 
     if (!comment) {
       throw ApiError.notFound('Comment not found');
@@ -810,7 +800,7 @@ class AdminService {
       await comment.save();
 
       if (!wasDeleted) {
-        await Post.findByIdAndUpdate(comment.post, {
+        await adminRepository.postFindByIdAndUpdate(comment.post, {
           $inc: { commentsCount: -1 },
         });
       }
@@ -832,7 +822,7 @@ class AdminService {
       };
       await comment.save();
 
-      await Post.findByIdAndUpdate(comment.post, {
+      await adminRepository.postFindByIdAndUpdate(comment.post, {
         $inc: { commentsCount: 1 },
       });
     }
@@ -880,7 +870,7 @@ class AdminService {
     sortOptions[sortBy] = sortOrder;
 
     const [reports, total] = await Promise.all([
-      Report.find(query)
+      adminRepository.reportFind(query)
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar')
         .populate('reviewedBy', 'username name')
@@ -888,7 +878,7 @@ class AdminService {
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments(query),
+      adminRepository.reportCountDocuments(query),
     ]);
 
     return {
@@ -982,16 +972,16 @@ class AdminService {
       pendingReports,
       totalReports,
     ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ lastActiveAt: { $gte: thisWeek } }),
-      User.countDocuments({ createdAt: { $gte: today } }),
-      User.countDocuments({ createdAt: { $gte: thisWeek } }),
-      User.countDocuments({ 'moderation.status': 'banned' }),
-      Post.countDocuments({ isDeleted: false }),
-      Post.countDocuments({ createdAt: { $gte: today }, isDeleted: false }),
-      Post.countDocuments({ createdAt: { $gte: thisWeek }, isDeleted: false }),
-      Report.countDocuments({ status: 'pending' }),
-      Report.countDocuments(),
+      adminRepository.userCountDocuments(),
+      adminRepository.userCountDocuments({ lastActiveAt: { $gte: thisWeek } }),
+      adminRepository.userCountDocuments({ createdAt: { $gte: today } }),
+      adminRepository.userCountDocuments({ createdAt: { $gte: thisWeek } }),
+      adminRepository.userCountDocuments({ 'moderation.status': 'banned' }),
+      adminRepository.postCountDocuments({ isDeleted: false }),
+      adminRepository.postCountDocuments({ createdAt: { $gte: today }, isDeleted: false }),
+      adminRepository.postCountDocuments({ createdAt: { $gte: thisWeek }, isDeleted: false }),
+      adminRepository.reportCountDocuments({ status: 'pending' }),
+      adminRepository.reportCountDocuments(),
     ]);
 
     return {
@@ -1027,7 +1017,7 @@ class AdminService {
       startDate.getTime() - days * 24 * 60 * 60 * 1000
     );
 
-    const stats = await User.aggregate([
+    const stats = await adminRepository.userAggregate([
       {
         $match: { createdAt: { $gte: startDate, $lte: endDate } },
       },
@@ -1058,7 +1048,7 @@ class AdminService {
 
     const totalGrowth = filledStats.reduce((acc, curr) => acc + curr.users, 0);
 
-    const previousPeriodCount = await User.countDocuments({
+    const previousPeriodCount = await adminRepository.userCountDocuments({
       createdAt: { $gte: previousStartDate, $lt: startDate },
     });
 
@@ -1085,7 +1075,7 @@ class AdminService {
   static async getPostStats(days = 30) {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const stats = await Post.aggregate([
+    const stats = await adminRepository.postAggregate([
       {
         $match: { createdAt: { $gte: startDate }, isDeleted: false },
       },
@@ -1111,7 +1101,7 @@ class AdminService {
    * @returns {Promise<Array>} List of top users
    */
   static async getTopEngagedUsers(limit = 10) {
-    return User.find({ isActive: true, 'moderation.status': 'active' })
+    return adminRepository.userFind({ isActive: true, 'moderation.status': 'active' })
       .sort({ 'metrics.engagementRate': -1 })
       .limit(limit)
       .select('username name avatar verified followersCount postsCount metrics')
@@ -1132,22 +1122,22 @@ class AdminService {
     );
 
     const statsPromise = Promise.all([
-      Like.countDocuments(),
-      Comment.countDocuments({ isDeleted: false }),
-      Follow.countDocuments({ status: 'active' }),
-      SavePost.countDocuments(),
-      UserInteraction.countDocuments({
+      adminRepository.likeCountDocuments(),
+      adminRepository.commentCountDocuments({ isDeleted: false }),
+      adminRepository.followCountDocuments({ status: 'active' }),
+      adminRepository.savePostCountDocuments(),
+      adminRepository.userInteractionCountDocuments({
         interactionType: 'share',
         targetType: 'post',
       }),
-      Report.countDocuments(),
+      adminRepository.reportCountDocuments(),
     ]);
 
     const interactionTasks = [];
 
     if (!type || type === 'like') {
       interactionTasks.push(
-        Like.find()
+        adminRepository.likeFind()
           .select('user post createdAt')
           .sort({ createdAt: -1 })
           .skip(type === 'like' ? skip : 0)
@@ -1179,7 +1169,7 @@ class AdminService {
 
     if (!type || type === 'comment') {
       interactionTasks.push(
-        Comment.find({ isDeleted: false })
+        adminRepository.commentFind({ isDeleted: false })
           .select('user post content createdAt')
           .sort({ createdAt: -1 })
           .skip(type === 'comment' ? skip : 0)
@@ -1212,7 +1202,7 @@ class AdminService {
 
     if (!type || type === 'follow') {
       interactionTasks.push(
-        Follow.find({ status: 'active' })
+        adminRepository.followFind({ status: 'active' })
           .select('follower following createdAt')
           .sort({ createdAt: -1 })
           .skip(type === 'follow' ? skip : 0)
@@ -1240,7 +1230,7 @@ class AdminService {
 
     if (!type || type === 'save') {
       interactionTasks.push(
-        SavePost.find()
+        adminRepository.savePostFind()
           .select('user post createdAt')
           .sort({ createdAt: -1 })
           .skip(type === 'save' ? skip : 0)
@@ -1272,7 +1262,7 @@ class AdminService {
 
     if (!type || type === 'share') {
       interactionTasks.push(
-        UserInteraction.find({
+        adminRepository.userInteractionFind({
           interactionType: 'share',
           targetType: 'post',
         })
@@ -1285,7 +1275,7 @@ class AdminService {
           .then(async shares => {
             const postIds = shares.map(share => share.targetId).filter(Boolean);
             const sharedPosts = postIds.length
-              ? await Post.find({ _id: { $in: postIds } })
+              ? await adminRepository.postFind({ _id: { $in: postIds } })
                   .select('caption user')
                   .populate('user', 'username name')
                   .lean()
@@ -1319,7 +1309,7 @@ class AdminService {
 
     if (!type || type === 'report') {
       interactionTasks.push(
-        Report.find()
+        adminRepository.reportFind()
           .select('reporter targetUser targetType description reason createdAt')
           .sort({ createdAt: -1 })
           .skip(type === 'report' ? skip : 0)
@@ -1464,11 +1454,11 @@ class AdminService {
 
     switch (targetGroup) {
       case 'all':
-        users = await User.find({ isActive: true }).select('_id').lean();
+        users = await adminRepository.userFind({ isActive: true }).select('_id').lean();
         break;
       case 'active':
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        users = await User.find({
+        users = await adminRepository.userFind({
           isActive: true,
           lastActiveAt: { $gte: weekAgo },
         })
@@ -1476,13 +1466,13 @@ class AdminService {
           .lean();
         break;
       case 'verified':
-        users = await User.find({ isActive: true, verified: true })
+        users = await adminRepository.userFind({ isActive: true, verified: true })
           .select('_id')
           .lean();
         break;
       case 'new_users':
         const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        users = await User.find({
+        users = await adminRepository.userFind({
           isActive: true,
           createdAt: { $gte: monthAgo },
         })
@@ -1495,7 +1485,7 @@ class AdminService {
     }
 
     const userIds = users.map(user => user._id);
-    const settingsList = await UserSettings.find({ user: { $in: userIds } })
+    const settingsList = await adminRepository.userSettingsFind({ user: { $in: userIds } })
       .select('user notifications')
       .lean();
     const settingsMap = new Map(
@@ -1528,7 +1518,7 @@ class AdminService {
     }));
 
     if (notifications.length > 0) {
-      await Notification.insertMany(notifications, { ordered: false });
+      await adminRepository.notificationInsertMany(notifications, { ordered: false });
     }
 
     await this._logAdminAction(

@@ -1,10 +1,5 @@
+import reportRepository from './report.repository.js';
 import mongoose from 'mongoose';
-import Report from '../../models/Report.js';
-import User from '../../models/User.js';
-import Post from '../../models/Post.js';
-import Comment from '../../models/Comment.js';
-import Message from '../../models/Message.js';
-import RefreshToken from '../../models/RefreshToken.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
 import { createSystemNotification } from '../../utils/systemNotification.js';
@@ -71,7 +66,7 @@ class ReportService {
     }
 
 
-    const existingReport = await Report.findOne({
+    const existingReport = await reportRepository.reportFindOne({
       reporter: reporterId,
       targetType,
       targetId,
@@ -88,7 +83,7 @@ class ReportService {
 
     switch (targetType) {
       case 'post': {
-        const post = await Post.findById(targetId).lean();
+        const post = await reportRepository.postFindById(targetId).lean();
         if (!post) throw ApiError.notFound('Bài viết không tồn tại');
         targetUser = post.user;
         contentSnapshot = {
@@ -100,7 +95,7 @@ class ReportService {
       }
 
       case 'comment': {
-        const comment = await Comment.findById(targetId).lean();
+        const comment = await reportRepository.commentFindById(targetId).lean();
         if (!comment) throw ApiError.notFound('Bình luận không tồn tại');
         targetUser = comment.user;
         contentSnapshot = {
@@ -112,7 +107,7 @@ class ReportService {
       }
 
       case 'user': {
-        const user = await User.findById(targetId).lean();
+        const user = await reportRepository.userFindById(targetId).lean();
         if (!user) throw ApiError.notFound('Người dùng không tồn tại');
         targetUser = targetId;
         contentSnapshot = {
@@ -125,7 +120,7 @@ class ReportService {
       }
 
       case 'message': {
-        const message = await Message.findById(targetId).lean();
+        const message = await reportRepository.messageFindById(targetId).lean();
         if (!message) throw ApiError.notFound('Tin nhắn không tồn tại');
         const normalizedMessageType =
           message.messageType || message.type || 'text';
@@ -146,7 +141,7 @@ class ReportService {
     }
 
 
-    const report = await Report.create({
+    const report = await reportRepository.reportCreate({
       reporter: reporterId,
       targetType,
       targetId,
@@ -157,7 +152,7 @@ class ReportService {
       contentSnapshot,
     });
 
-    const populatedReport = await Report.findById(report._id)
+    const populatedReport = await reportRepository.reportFindById(report._id)
       .populate('reporter', 'username name avatar')
       .populate('targetUser', 'username name avatar')
       .lean();
@@ -218,7 +213,7 @@ class ReportService {
    * @throws {Error} If report not found
    */
   static async getReportById(reportId) {
-    const report = await Report.findById(reportId)
+    const report = await reportRepository.reportFindById(reportId)
       .populate('reporter', 'username name avatar')
       .populate('targetUser', 'username name avatar')
       .populate('reviewedBy', 'username name')
@@ -246,13 +241,13 @@ class ReportService {
     }
 
     const [reports, total] = await Promise.all([
-      Report.find(query)
+      reportRepository.reportFind(query)
         .populate('targetUser', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments(query),
+      reportRepository.reportCountDocuments(query),
     ]);
 
     return {
@@ -277,13 +272,13 @@ class ReportService {
     }
 
     const [reports, total] = await Promise.all([
-      Report.find(query)
+      reportRepository.reportFind(query)
         .populate('reporter', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments(query),
+      reportRepository.reportCountDocuments(query),
     ]);
 
     return {
@@ -320,14 +315,14 @@ class ReportService {
     const sortOptions = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
 
     const [reports, total] = await Promise.all([
-      Report.find(query)
+      reportRepository.reportFind(query)
         .populate('reporter', 'username name avatar')
         .populate('targetUser', 'username name avatar')
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Report.countDocuments(query),
+      reportRepository.reportCountDocuments(query),
     ]);
 
     return {
@@ -364,7 +359,7 @@ class ReportService {
    * @throws {Error} If report not found
    */
   static async startReview(reportId, adminId) {
-    const report = await Report.findByIdAndUpdate(
+    const report = await reportRepository.reportFindByIdAndUpdate(
       reportId,
       {
         $set: {
@@ -416,7 +411,7 @@ class ReportService {
     session.startTransaction();
 
     try {
-      const report = await Report.findByIdAndUpdate(
+      const report = await reportRepository.reportFindByIdAndUpdate(
         reportId,
         {
           $set: {
@@ -503,7 +498,7 @@ class ReportService {
       };
     }
 
-    const report = await Report.findByIdAndUpdate(
+    const report = await reportRepository.reportFindByIdAndUpdate(
       reportId,
       { $set: update },
       { new: true }
@@ -544,7 +539,7 @@ class ReportService {
         if (!targetUserId) break;
 
         {
-          const warnedUser = await User.findByIdAndUpdate(
+          const warnedUser = await reportRepository.userFindByIdAndUpdate(
             targetUserId,
             {
               $inc: { 'moderation.warnings': 1 },
@@ -572,11 +567,11 @@ class ReportService {
 
       case 'remove_content':
         if (report.targetType === 'post') {
-          const existingPost = await Post.findById(report.targetId)
+          const existingPost = await reportRepository.postFindById(report.targetId)
             .select('isDeleted user')
             .session(session);
 
-          await Post.findByIdAndUpdate(report.targetId, {
+          await reportRepository.postFindByIdAndUpdate(report.targetId, {
             $set: {
               isDeleted: true,
               'moderation.status': 'removed',
@@ -587,7 +582,7 @@ class ReportService {
           }).session(session);
 
           if (existingPost && !existingPost.isDeleted && existingPost.user) {
-            await User.findByIdAndUpdate(existingPost.user, {
+            await reportRepository.userFindByIdAndUpdate(existingPost.user, {
               $inc: { postsCount: -1 },
             }).session(session);
 
@@ -601,11 +596,11 @@ class ReportService {
             });
           }
         } else if (report.targetType === 'comment') {
-          const existingComment = await Comment.findById(report.targetId)
+          const existingComment = await reportRepository.commentFindById(report.targetId)
             .select('isDeleted post user')
             .session(session);
 
-          await Comment.findByIdAndUpdate(report.targetId, {
+          await reportRepository.commentFindByIdAndUpdate(report.targetId, {
             $set: {
               isDeleted: true,
               content: '[Nội dung đã bị xóa bởi quản trị viên]',
@@ -615,7 +610,7 @@ class ReportService {
           }).session(session);
 
           if (existingComment && !existingComment.isDeleted && existingComment.post) {
-            await Post.findByIdAndUpdate(existingComment.post, {
+            await reportRepository.postFindByIdAndUpdate(existingComment.post, {
               $inc: { commentsCount: -1 },
             }).session(session);
 
@@ -641,7 +636,7 @@ class ReportService {
             Date.now() + 7 * 24 * 60 * 60 * 1000
           );
 
-          await User.findByIdAndUpdate(
+          await reportRepository.userFindByIdAndUpdate(
             targetUserId,
             {
               $set: {
@@ -656,7 +651,7 @@ class ReportService {
             { session }
           );
 
-          await RefreshToken.updateMany(
+          await reportRepository.refreshTokenUpdateMany(
             { user: targetUserId },
             { isRevoked: true, revokedReason: 'user_suspended' },
             { session }
@@ -674,7 +669,7 @@ class ReportService {
       case 'ban_user':
         if (!targetUserId) break;
 
-        await User.findByIdAndUpdate(
+        await reportRepository.userFindByIdAndUpdate(
           targetUserId,
           {
             $set: {
@@ -687,7 +682,7 @@ class ReportService {
           { session }
         );
 
-        await RefreshToken.updateMany(
+        await reportRepository.refreshTokenUpdateMany(
           { user: targetUserId },
           { isRevoked: true, revokedReason: 'user_banned' },
           { session }

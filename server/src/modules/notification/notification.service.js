@@ -1,7 +1,5 @@
+import notificationRepository from './notification.repository.js';
 import mongoose from 'mongoose';
-import Notification from '../../models/Notification.js';
-import UserSettings from '../../models/UserSettings.js';
-import User from '../../models/User.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
 import socketService from '../shared/socket/socket.service.js';
@@ -124,7 +122,7 @@ class NotificationService {
       return null;
     }
 
-    const settings = await UserSettings.findOne({ user: recipient })
+    const settings = await notificationRepository.userSettingsFindOne({ user: recipient })
       .select('notifications blockedUsers mutedUsers')
       .lean();
 
@@ -133,7 +131,7 @@ class NotificationService {
     }
 
     if (groupKey) {
-      const existingGroup = await Notification.findOne({
+      const existingGroup = await notificationRepository.notificationFindOne({
         recipient,
         groupKey,
         isRead: false,
@@ -146,11 +144,11 @@ class NotificationService {
         );
 
         if (!senderExists && sender) {
-          const senderUser = await User.findById(sender)
+          const senderUser = await notificationRepository.userFindById(sender)
             .select('username avatar')
             .lean();
 
-          const updatedGroup = await Notification.findByIdAndUpdate(existingGroup._id, {
+          const updatedGroup = await notificationRepository.notificationFindByIdAndUpdate(existingGroup._id, {
             $push: {
               groupedSenders: {
                 user: sender,
@@ -171,7 +169,7 @@ class NotificationService {
           return updatedGroup || existingGroup;
         }
 
-        const hydratedGroup = await Notification.findById(existingGroup._id)
+        const hydratedGroup = await notificationRepository.notificationFindById(existingGroup._id)
           .populate('sender', 'username name avatar verified')
           .populate('post', '_id caption media')
           .populate('relatedPost', '_id caption media')
@@ -187,7 +185,7 @@ class NotificationService {
         // If sender info was fetched in group check (but not used because no group found), we might need to fetch it here.
         // Or if we didn't check group.
         // Let's just do a clean fetch if not available, but usually caller might pass populated data? No, data is raw.
-        const senderUser = await User.findById(sender)
+        const senderUser = await notificationRepository.userFindById(sender)
             .select('username avatar')
             .lean();
         
@@ -200,7 +198,7 @@ class NotificationService {
         }
     }
 
-    const notification = await Notification.create({
+    const notification = await notificationRepository.notificationCreate({
       recipient,
       sender,
       type,
@@ -216,7 +214,7 @@ class NotificationService {
       expiresAt: this._buildDefaultExpiryDate(),
     });
 
-    const populatedNotification = await Notification.findById(notification._id)
+    const populatedNotification = await notificationRepository.notificationFindById(notification._id)
       .populate('sender', 'username name avatar verified')
       .populate('post', 'caption media')
       .populate('relatedPost', 'caption media')
@@ -265,7 +263,7 @@ class NotificationService {
     }
 
     const [notifications, total, unreadCount] = await Promise.all([
-      Notification.find(query)
+      notificationRepository.notificationFind(query)
         .populate('sender', 'username name avatar verified')
         .populate('post', '_id caption media')
         .populate('relatedPost', '_id caption media')
@@ -273,8 +271,8 @@ class NotificationService {
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Notification.countDocuments(query),
-      Notification.countDocuments({ recipient: userId, isRead: false }),
+      notificationRepository.notificationCountDocuments(query),
+      notificationRepository.notificationCountDocuments({ recipient: userId, isRead: false }),
     ]);
 
     const formattedNotifications = notifications.map(notif =>
@@ -332,7 +330,7 @@ class NotificationService {
    * @returns {Promise<Object|null>} Formatted notification or null
    */
   static async getNotificationById(notificationId, userId) {
-    const notification = await Notification.findOne({
+    const notification = await notificationRepository.notificationFindOne({
       _id: notificationId,
       recipient: userId,
     })
@@ -352,7 +350,7 @@ class NotificationService {
    */
   static async markAsRead(notificationId, userId) {
     const notification = await retryOperation(() =>
-      Notification.findOneAndUpdate(
+      notificationRepository.notificationFindOneAndUpdate(
         { _id: notificationId, recipient: userId },
         { isRead: true, readAt: new Date() },
         { new: true }
@@ -375,7 +373,7 @@ class NotificationService {
       query.type = type;
     }
 
-    const result = await Notification.updateMany(query, {
+    const result = await notificationRepository.notificationUpdateMany(query, {
       isRead: true,
       readAt: new Date(),
     });
@@ -390,7 +388,7 @@ class NotificationService {
    * @returns {Promise<{success: boolean, error?: string}>} Delete result
    */
   static async deleteNotification(notificationId, userId) {
-    const result = await Notification.findOneAndDelete({
+    const result = await notificationRepository.notificationFindOneAndDelete({
       _id: notificationId,
       recipient: userId,
     });
@@ -413,7 +411,7 @@ class NotificationService {
       query.type = type;
     }
 
-    const result = await Notification.deleteMany(query);
+    const result = await notificationRepository.notificationDeleteMany(query);
 
     return { deletedCount: result.deletedCount };
   }
@@ -424,7 +422,7 @@ class NotificationService {
    * @returns {Promise<number>} Number of unread notifications
    */
   static async getUnreadCount(userId) {
-    const count = await Notification.countDocuments({
+    const count = await notificationRepository.notificationCountDocuments({
       recipient: userId,
       isRead: false,
       $or: [
@@ -442,7 +440,7 @@ class NotificationService {
    * @returns {Promise<Object>} Object with type as key and count as value
    */
   static async getUnreadCountByType(userId) {
-    const counts = await Notification.aggregate([
+    const counts = await notificationRepository.notificationAggregate([
       {
         $match: {
           recipient: new mongoose.Types.ObjectId(userId),
@@ -519,11 +517,11 @@ class NotificationService {
     }
 
     if (Object.keys(updateOps).length === 0) {
-      const settings = await UserSettings.findOne({ user: userId }).lean();
+      const settings = await notificationRepository.userSettingsFindOne({ user: userId }).lean();
       return this._formatPreferences(settings);
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
+    const settings = await notificationRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $set: updateOps },
       { new: true, upsert: true }
@@ -538,7 +536,7 @@ class NotificationService {
    * @returns {Promise<Object>} Notification preferences
    */
   static async getNotificationPreferences(userId) {
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await notificationRepository.userSettingsFindOne({ user: userId })
       .select('notifications')
       .lean();
 

@@ -1,90 +1,56 @@
-import Post from '../../models/Post.js';
-import Comment from '../../models/Comment.js';
-import Like from '../../models/Like.js';
-import SavePost from '../../models/SavePost.js';
-import Hashtag from '../../models/Hashtag.js';
+import PostModel from '../../models/Post.js';
+import UserModel from '../../models/User.js';
+import UserSettingsModel from '../../models/UserSettings.js';
+import CommentModel from '../../models/Comment.js';
+import LikeModel from '../../models/Like.js';
+import SavePostModel from '../../models/SavePost.js';
+import HashtagModel from '../../models/Hashtag.js';
+import UserInteractionModel from '../../models/UserInteraction.js';
+import FollowModel from '../../models/Follow.js';
+import NotificationModel from '../../models/Notification.js';
+import ReportModel from '../../models/Report.js';
 
-const findPostById = id => Post.findById(id);
-
-const findPostByIdLean = id => Post.findById(id).lean();
-
-const createPost = payload => Post.create(payload);
-
-const updatePost = (id, update, options = {}) => {
-  return Post.findByIdAndUpdate(id, update, { new: true, ...options });
+const postRepository = {
+  commentCountDocuments: (...args) => CommentModel.countDocuments(...args),
+  commentCreate: (...args) => CommentModel.create(...args),
+  commentFind: (...args) => CommentModel.find(...args),
+  commentFindById: (...args) => CommentModel.findById(...args),
+  commentFindByIdAndUpdate: (...args) => CommentModel.findByIdAndUpdate(...args),
+  commentFindOne: (...args) => CommentModel.findOne(...args),
+  commentGetCommentsForPost: (...args) => CommentModel.getCommentsForPost(...args),
+  followGetFollowingIds: (...args) => FollowModel.getFollowingIds(...args),
+  followIsFollowing: (...args) => FollowModel.isFollowing(...args),
+  hashtagFindOneAndUpdate: (...args) => HashtagModel.findOneAndUpdate(...args),
+  hashtagGetTrending: (...args) => HashtagModel.getTrending(...args),
+  hashtagIncrementMany: (...args) => HashtagModel.incrementMany(...args),
+  hashtagUpdateMany: (...args) => HashtagModel.updateMany(...args),
+  likeCountDocuments: (...args) => LikeModel.countDocuments(...args),
+  likeCreate: (...args) => LikeModel.create(...args),
+  likeExists: (...args) => LikeModel.exists(...args),
+  likeFind: (...args) => LikeModel.find(...args),
+  likeFindOne: (...args) => LikeModel.findOne(...args),
+  likeFindOneAndDelete: (...args) => LikeModel.findOneAndDelete(...args),
+  notificationCreateNotification: (...args) => NotificationModel.createNotification(...args),
+  postCountDocuments: (...args) => PostModel.countDocuments(...args),
+  postCreate: (...args) => PostModel.create(...args),
+  postFind: (...args) => PostModel.find(...args),
+  postFindById: (...args) => PostModel.findById(...args),
+  postFindByIdAndUpdate: (...args) => PostModel.findByIdAndUpdate(...args),
+  postFindOne: (...args) => PostModel.findOne(...args),
+  reportCreate: (...args) => ReportModel.create(...args),
+  reportFindOne: (...args) => ReportModel.findOne(...args),
+  savePostCreate: (...args) => SavePostModel.create(...args),
+  savePostExists: (...args) => SavePostModel.exists(...args),
+  savePostFind: (...args) => SavePostModel.find(...args),
+  savePostFindOne: (...args) => SavePostModel.findOne(...args),
+  savePostFindOneAndDelete: (...args) => SavePostModel.findOneAndDelete(...args),
+  savePostGetCollections: (...args) => SavePostModel.getCollections(...args),
+  userFindById: (...args) => UserModel.findById(...args),
+  userFindByIdAndUpdate: (...args) => UserModel.findByIdAndUpdate(...args),
+  userInteractionCountDocuments: (...args) => UserInteractionModel.countDocuments(...args),
+  userInteractionFind: (...args) => UserInteractionModel.find(...args),
+  userInteractionRecord: (...args) => UserInteractionModel.record(...args),
+  userSettingsFindOne: (...args) => UserSettingsModel.findOne(...args),
 };
 
-const deletePost = id => Post.findByIdAndDelete(id);
-
-const findPosts = (query, options = {}) => {
-  return Post.find(query)
-    .populate(options.populate || [])
-    .sort(options.sort || { createdAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 0);
-};
-
-const countPosts = query => Post.countDocuments(query);
-
-const createComment = payload => Comment.create(payload);
-
-const updateComment = (id, update, options = {}) => {
-  return Comment.findByIdAndUpdate(id, update, { new: true, ...options });
-};
-
-const deleteComment = id => Comment.findByIdAndDelete(id);
-
-const findCommentById = id => Comment.findById(id);
-
-const findComments = (query, options = {}) => {
-  return Comment.find(query)
-    .populate(options.populate || [])
-    .sort(options.sort || { createdAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 0);
-};
-
-const countComments = query => Comment.countDocuments(query);
-
-const findLike = (userId, postId) => Like.findOne({ user: userId, post: postId });
-
-const createLike = payload => Like.create(payload);
-
-const deleteLike = (userId, postId) => Like.findOneAndDelete({ user: userId, post: postId });
-
-const findSave = (userId, postId) => SavePost.findOne({ user: userId, post: postId });
-
-const createSave = payload => SavePost.create(payload);
-
-const deleteSave = (userId, postId) => SavePost.findOneAndDelete({ user: userId, post: postId });
-
-const findHashtag = query => Hashtag.findOne(query);
-
-const createHashtag = payload => Hashtag.create(payload);
-
-const updateHashtag = (query, update) => Hashtag.findOneAndUpdate(query, update, { new: true });
-
-export default {
-  findPostById,
-  findPostByIdLean,
-  createPost,
-  updatePost,
-  deletePost,
-  findPosts,
-  countPosts,
-  createComment,
-  updateComment,
-  deleteComment,
-  findCommentById,
-  findComments,
-  countComments,
-  findLike,
-  createLike,
-  deleteLike,
-  findSave,
-  createSave,
-  deleteSave,
-  findHashtag,
-  createHashtag,
-  updateHashtag,
-};
+export default postRepository;

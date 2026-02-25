@@ -1,6 +1,4 @@
-import User from '../../models/User.js';
-import RefreshToken from '../../models/RefreshToken.js';
-import UserSettings from '../../models/UserSettings.js';
+import authRepository from './auth.repository.js';
 import { hashPassword, comparePassword } from '../../utils/HashPassword.js';
 import { generateAccessToken } from '../../utils/GenerateTokens.js';
 import crypto from 'crypto';
@@ -25,7 +23,7 @@ class AuthService {
   static async register(userData) {
     const { email, username, password, name } = userData;
 
-    const existingUser = await User.findOne({
+    const existingUser = await authRepository.userFindOne({
       $or: [
         { email: email.toLowerCase() },
         { username: username.toLowerCase() },
@@ -42,14 +40,14 @@ class AuthService {
 
     const hashedPassword = await hashPassword(password);
 
-    const user = await User.create({
+    const user = await authRepository.userCreate({
       name,
       email: email.toLowerCase(),
       username: username.toLowerCase(),
       password: hashedPassword,
     });
 
-    await UserSettings.create({ user: user._id });
+    await authRepository.userSettingsCreate({ user: user._id });
 
     const accessToken = generateAccessToken({
       id: user._id,
@@ -82,7 +80,7 @@ class AuthService {
   static async login(credentials, deviceInfo = {}) {
     const { email, password, twoFactorToken } = credentials;
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select(
+    const user = await authRepository.userFindOne({ email: email.toLowerCase() }).select(
       '+password +loginAttempts'
     );
 
@@ -106,7 +104,7 @@ class AuthService {
         );
       }
 
-      await User.findByIdAndUpdate(user._id, buildSuspensionResetUpdate());
+      await authRepository.userFindByIdAndUpdate(user._id, buildSuspensionResetUpdate());
     }
 
 
@@ -132,7 +130,7 @@ class AuthService {
     }
 
 
-    const userSettings = await UserSettings.findOne({ user: user._id }).select(
+    const userSettings = await authRepository.userSettingsFindOne({ user: user._id }).select(
       '+security.twoFactorSecret +security.twoFactorEnabled'
     );
 
@@ -161,7 +159,7 @@ class AuthService {
 
     const [refreshTokenData] = await Promise.all([
       this._createRefreshToken(user._id, deviceInfo),
-      User.findByIdAndUpdate(user._id, {
+      authRepository.userFindByIdAndUpdate(user._id, {
         lastActiveAt: new Date(),
         lastLoginAt: new Date(),
       })
@@ -200,7 +198,7 @@ class AuthService {
     const attempts = currentCount + 1;
 
     if (typeof user.loginAttempts === 'number') {
-      await User.findByIdAndUpdate(user._id, {
+      await authRepository.userFindByIdAndUpdate(user._id, {
         $set: {
           loginAttempts: {
             count: attempts,
@@ -234,12 +232,12 @@ class AuthService {
       );
     }
 
-    await User.findByIdAndUpdate(user._id, { $set: update });
+    await authRepository.userFindByIdAndUpdate(user._id, { $set: update });
   }
 
   static async _resetLoginAttempts(user) {
     if (typeof user.loginAttempts === 'number' && user.loginAttempts > 0) {
-      await User.findByIdAndUpdate(user._id, {
+      await authRepository.userFindByIdAndUpdate(user._id, {
         $set: {
           loginAttempts: { count: 0, lockUntil: null },
         },
@@ -248,7 +246,7 @@ class AuthService {
     }
 
     if (user.loginAttempts?.count > 0) {
-      await User.findByIdAndUpdate(user._id, {
+      await authRepository.userFindByIdAndUpdate(user._id, {
         $set: {
           'loginAttempts.count': 0,
           'loginAttempts.lockUntil': null,
@@ -262,7 +260,7 @@ class AuthService {
     const token = crypto.randomBytes(40).toString('hex'); // raw token for client
     const tokenHash = hashRefreshToken(token);
 
-    const refreshToken = await RefreshToken.create({
+    const refreshToken = await authRepository.refreshTokenCreate({
       user: userId,
       // Persist only the hash so DB leaks don't immediately grant session access.
       token: tokenHash,
@@ -281,19 +279,19 @@ class AuthService {
     const tokenHash = hashRefreshToken(token);
 
     // Prefer hashed lookup; fall back to legacy plaintext tokens for backward compatibility.
-    let refreshTokenDoc = await RefreshToken.findOne({ token: tokenHash, isRevoked: false });
+    let refreshTokenDoc = await authRepository.refreshTokenFindOne({ token: tokenHash, isRevoked: false });
     const matchedLegacyPlaintext = !refreshTokenDoc;
     if (!refreshTokenDoc) {
-      refreshTokenDoc = await RefreshToken.findOne({ token, isRevoked: false });
+      refreshTokenDoc = await authRepository.refreshTokenFindOne({ token, isRevoked: false });
     }
 
     if (!refreshTokenDoc) {
       const compromisedToken =
-        (await RefreshToken.findOne({ token: tokenHash })) ||
-        (await RefreshToken.findOne({ token }));
+        (await authRepository.refreshTokenFindOne({ token: tokenHash })) ||
+        (await authRepository.refreshTokenFindOne({ token }));
 
       if (compromisedToken) {
-        await RefreshToken.updateMany(
+        await authRepository.refreshTokenUpdateMany(
           { family: compromisedToken.family },
           { isRevoked: true, revokedReason: 'token_reuse_detected' }
         );
@@ -318,7 +316,7 @@ class AuthService {
 
     }
 
-    const user = await User.findById(refreshTokenDoc.user);
+    const user = await authRepository.userFindById(refreshTokenDoc.user);
     if (!user || user.moderation?.status === 'banned') {
       throw ApiError.forbidden('User not found or banned');
     }
@@ -334,7 +332,7 @@ class AuthService {
 
     const newToken = crypto.randomBytes(40).toString('hex');
     const newTokenHash = hashRefreshToken(newToken);
-    await RefreshToken.create({
+    await authRepository.refreshTokenCreate({
       user: user._id,
       token: newTokenHash,
       family: refreshTokenDoc.family,
@@ -364,10 +362,10 @@ class AuthService {
     }
 
     const refreshTokenHash = hashRefreshToken(refreshToken);
-    let tokenDoc = await RefreshToken.findOne({ token: refreshTokenHash });
+    let tokenDoc = await authRepository.refreshTokenFindOne({ token: refreshTokenHash });
     const matchedLegacyPlaintext = !tokenDoc;
     if (!tokenDoc) {
-      tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+      tokenDoc = await authRepository.refreshTokenFindOne({ token: refreshToken });
     }
 
     if (tokenDoc) {
@@ -383,7 +381,7 @@ class AuthService {
   }
 
   static async logoutAllDevices(userId) {
-    await RefreshToken.updateMany(
+    await authRepository.refreshTokenUpdateMany(
       { user: userId, isRevoked: false },
       { isRevoked: true, revokedReason: 'logout_all' }
     );
@@ -392,7 +390,7 @@ class AuthService {
   }
 
   static async changePassword(userId, currentPassword, newPassword) {
-    const user = await User.findById(userId).select('+password');
+    const user = await authRepository.userFindById(userId).select('+password');
 
     if (!user) {
       throw ApiError.notFound('User not found');
@@ -415,7 +413,7 @@ class AuthService {
     user.password = await hashPassword(newPassword);
     await user.save();
 
-    await RefreshToken.updateMany(
+    await authRepository.refreshTokenUpdateMany(
       { user: userId, isRevoked: false },
       { isRevoked: true, revokedReason: 'password_changed' }
     );
@@ -426,7 +424,7 @@ class AuthService {
   static async requestPasswordReset(email) {
     logger.info('Password reset requested', { module: 'auth', emailHash: hashPII(email) });
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await authRepository.userFindOne({ email: email.toLowerCase() });
 
     if (!user) {
       return { success: true };
@@ -438,7 +436,7 @@ class AuthService {
       .update(resetToken)
       .digest('hex');
 
-    await User.findByIdAndUpdate(user._id, {
+    await authRepository.userFindByIdAndUpdate(user._id, {
       'security.passwordResetToken': resetTokenHash,
       'security.passwordResetExpires': new Date(Date.now() + 60 * 60 * 1000),
     });
@@ -461,7 +459,7 @@ class AuthService {
       .update(resetToken)
       .digest('hex');
 
-    const user = await User.findOne({
+    const user = await authRepository.userFindOne({
       'security.passwordResetToken': resetTokenHash,
       'security.passwordResetExpires': { $gt: new Date() },
     });
@@ -476,7 +474,7 @@ class AuthService {
     user.security.passwordResetExpires = undefined;
     await user.save();
 
-    await RefreshToken.updateMany(
+    await authRepository.refreshTokenUpdateMany(
       { user: user._id, isRevoked: false },
       { isRevoked: true, revokedReason: 'password_reset' }
     );
@@ -493,7 +491,7 @@ class AuthService {
       length: 20,
     });
 
-    await UserSettings.findOneAndUpdate(
+    await authRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       {
         'security.twoFactorSecret': secret.base32,
@@ -510,7 +508,7 @@ class AuthService {
   static async verifyAndEnableTwoFactor(userId, token) {
     const speakeasy = (await import('speakeasy')).default;
 
-    const userSettings = await UserSettings.findOne({ user: userId }).select(
+    const userSettings = await authRepository.userSettingsFindOne({ user: userId }).select(
       '+security.twoFactorSecret'
     );
 
@@ -539,7 +537,7 @@ class AuthService {
       backupCodes.map(code => hashPassword(code))
     );
 
-    await UserSettings.findOneAndUpdate(
+    await authRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       {
         'security.twoFactorEnabled': true,
@@ -552,7 +550,7 @@ class AuthService {
   }
 
   static async disableTwoFactor(userId, password) {
-    const user = await User.findById(userId).select('+password');
+    const user = await authRepository.userFindById(userId).select('+password');
 
     if (!user) {
       throw ApiError.notFound('User not found');
@@ -564,7 +562,7 @@ class AuthService {
     }
 
 
-    await UserSettings.findOneAndUpdate(
+    await authRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       {
         'security.twoFactorEnabled': false,
@@ -579,7 +577,7 @@ class AuthService {
   static async verifyTwoFactorToken(userId, token) {
     const speakeasy = (await import('speakeasy')).default;
 
-    const userSettings = await UserSettings.findOne({ user: userId }).select(
+    const userSettings = await authRepository.userSettingsFindOne({ user: userId }).select(
       '+security.twoFactorSecret'
     );
 
@@ -600,7 +598,7 @@ class AuthService {
 
   static async getActiveSessions(userId, currentRefreshToken = null) {
     const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null;
-    const sessions = await RefreshToken.find({
+    const sessions = await authRepository.refreshTokenFind({
       user: userId,
       isRevoked: false,
       expiresAt: { $gt: new Date() },
@@ -629,7 +627,7 @@ class AuthService {
   }
 
   static async revokeSession(userId, sessionId) {
-    const result = await RefreshToken.findOneAndUpdate(
+    const result = await authRepository.refreshTokenFindOneAndUpdate(
       { _id: sessionId, user: userId },
       { isRevoked: true, revokedReason: 'manual_revoke' }
     );
@@ -643,10 +641,10 @@ class AuthService {
   }
 
   static async googleAuth(profile) {
-    let user = await User.findOne({ email: profile.email.toLowerCase() });
+    let user = await authRepository.userFindOne({ email: profile.email.toLowerCase() });
 
     if (!user) {
-      user = await User.create({
+      user = await authRepository.userCreate({
         name: profile.name,
         email: profile.email.toLowerCase(),
         username: `user_${crypto.randomBytes(4).toString('hex')}`,
@@ -658,7 +656,7 @@ class AuthService {
         },
       });
 
-      await UserSettings.create({ user: user._id });
+      await authRepository.userSettingsCreate({ user: user._id });
     }
 
     if (user.moderation?.status === 'banned') {
@@ -674,7 +672,7 @@ class AuthService {
       platform: 'google_oauth',
     });
 
-    await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+    await authRepository.userFindByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
     return {
       user: {

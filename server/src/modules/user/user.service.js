@@ -1,14 +1,5 @@
+import userRepository from './user.repository.js';
 import mongoose from 'mongoose';
-import User from '../../models/User.js';
-import UserSettings from '../../models/UserSettings.js';
-import Follow from '../../models/Follow.js';
-import UserInteraction from '../../models/UserInteraction.js';
-import Post from '../../models/Post.js';
-import Comment from '../../models/Comment.js';
-import Like from '../../models/Like.js';
-import SavePost from '../../models/SavePost.js';
-import Message from '../../models/Message.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
 import { escapeRegExp } from '../../utils/escapeRegExp.js';
@@ -44,11 +35,11 @@ class UserService {
     if (!identifier) return null;
 
     if (this.isValidObjectId(identifier)) {
-      const user = await User.findById(identifier).select('_id').lean();
+      const user = await userRepository.userFindById(identifier).select('_id').lean();
       return user ? user._id.toString() : null;
     }
 
-    const user = await User.findOne({ username: identifier.toLowerCase() })
+    const user = await userRepository.userFindOne({ username: identifier.toLowerCase() })
       .select('_id')
       .lean();
 
@@ -67,11 +58,11 @@ class UserService {
       throw ApiError.badRequest('User ID is required');
     }
 
-    const userPromise = User.findById(userId).select('-loginAttempts').lean();
+    const userPromise = userRepository.userFindById(userId).select('-loginAttempts').lean();
     let followStatusPromise = Promise.resolve('none');
 
     if (requesterId && requesterId !== userId.toString()) {
-      followStatusPromise = Follow.getFollowStatus(requesterId, userId);
+      followStatusPromise = userRepository.followGetFollowStatus(requesterId, userId);
     }
 
     const [user, followStatusRaw] = await Promise.all([
@@ -123,7 +114,7 @@ class UserService {
       return user;
     }
 
-    const posts = await Post.find({
+    const posts = await userRepository.postFind({
       user: userId,
       isDeleted: false,
       visibility:
@@ -155,7 +146,7 @@ class UserService {
     if (this.isValidObjectId(identifier)) {
       userId = identifier;
     } else {
-      const user = await User.findOne({ username: identifier.toLowerCase() })
+      const user = await userRepository.userFindOne({ username: identifier.toLowerCase() })
         .select('_id')
         .lean();
     if (!user) {
@@ -212,7 +203,7 @@ class UserService {
 
     let user;
     try {
-      user = await User.findByIdAndUpdate(
+      user = await userRepository.userFindByIdAndUpdate(
         userId,
         { $set: updateData },
         { new: true, runValidators: true }
@@ -246,38 +237,38 @@ class UserService {
     session.startTransaction();
 
     try {
-      const user = await User.findById(userId).session(session);
+      const user = await userRepository.userFindById(userId).session(session);
       if (!user) {
         throw ApiError.notFound('User not found');
       }
 
-      const userPosts = await Post.find({ user: userId })
+      const userPosts = await userRepository.postFind({ user: userId })
         .select('_id')
         .session(session);
       const postIds = userPosts.map(p => p._id);
 
       await Promise.all([
-        Post.updateMany({ user: userId }, { isDeleted: true }).session(session),
-        Comment.updateMany({ user: userId }, { isDeleted: true }).session(
+        userRepository.postUpdateMany({ user: userId }, { isDeleted: true }).session(session),
+        userRepository.commentUpdateMany({ user: userId }, { isDeleted: true }).session(
           session
         ),
-        Like.deleteMany({ user: userId }).session(session),
-        SavePost.deleteMany({ user: userId }).session(session),
-        Follow.deleteMany({
+        userRepository.likeDeleteMany({ user: userId }).session(session),
+        userRepository.savePostDeleteMany({ user: userId }).session(session),
+        userRepository.followDeleteMany({
           $or: [{ follower: userId }, { following: userId }],
         }).session(session),
-        UserInteraction.deleteMany({ user: userId }).session(session),
-        Message.deleteMany({
+        userRepository.userInteractionDeleteMany({ user: userId }).session(session),
+        userRepository.messageDeleteMany({
           $or: [{ sender: userId }, { receiver: userId }],
         }).session(session),
-        Notification.deleteMany({
+        userRepository.notificationDeleteMany({
           $or: [{ recipient: userId }, { sender: userId }],
         }).session(session),
-        UserSettings.deleteOne({ user: userId }).session(session),
+        userRepository.userSettingsDeleteOne({ user: userId }).session(session),
         this._updateFollowCountsOnDelete(userId, session),
       ]);
 
-      await User.findByIdAndDelete(userId).session(session);
+      await userRepository.userFindByIdAndDelete(userId).session(session);
       await session.commitTransaction();
 
       logger.info(`User ${userId} deleted successfully`);
@@ -292,16 +283,16 @@ class UserService {
   }
 
   static async _updateFollowCountsOnDelete(userId, session) {
-    const followers = await Follow.find({ following: userId })
+    const followers = await userRepository.followFind({ following: userId })
       .select('follower')
       .session(session);
-    const following = await Follow.find({ follower: userId })
+    const following = await userRepository.followFind({ follower: userId })
       .select('following')
       .session(session);
 
     if (followers.length > 0) {
       const followerIds = followers.map(f => f.follower);
-      await User.updateMany(
+      await userRepository.userUpdateMany(
         { _id: { $in: followerIds } },
         { $inc: { followingCount: -1 } }
       ).session(session);
@@ -309,7 +300,7 @@ class UserService {
 
     if (following.length > 0) {
       const followingIds = following.map(f => f.following);
-      await User.updateMany(
+      await userRepository.userUpdateMany(
         { _id: { $in: followingIds } },
         { $inc: { followersCount: -1 } }
       ).session(session);
@@ -333,7 +324,7 @@ class UserService {
     const normalizedQuery = query.trim();
     const safePattern = escapeRegExp(normalizedQuery);
 
-    const settings = await UserSettings.findOne({ user: currentUserId })
+    const settings = await userRepository.userSettingsFindOne({ user: currentUserId })
       .select('blockedUsers mutedUsers')
       .lean();
 
@@ -352,18 +343,18 @@ class UserService {
     };
 
     const [users, total] = await Promise.all([
-      User.find(searchQuery)
+      userRepository.userFind(searchQuery)
         .select('username name avatar verified followersCount bio')
         .sort({ 'metrics.engagementRate': -1, followersCount: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      User.countDocuments(searchQuery),
+      userRepository.userCountDocuments(searchQuery),
     ]);
 
     // Batch fetch follow status
     const userIds = users.map(u => u._id);
-    const followingList = await Follow.find({
+    const followingList = await userRepository.followFind({
       follower: currentUserId,
       following: { $in: userIds },
       status: 'active'
@@ -386,7 +377,7 @@ class UserService {
    * @returns {Promise<Array>} List of recommended users
    */
   static async getRecommendedUsers(userId, limit = 10) {
-    return User.getRecommendedUsers(userId, limit);
+    return userRepository.userGetRecommendedUsers(userId, limit);
   }
 
   /**
@@ -396,14 +387,14 @@ class UserService {
    * @returns {Promise<Object>} Follow result {success, status}
    */
   static async followUser(currentUserId, targetUserId) {
-    const result = await Follow.follow(currentUserId, targetUserId);
+    const result = await userRepository.followFollow(currentUserId, targetUserId);
 
     if (result.success && result.status === 'active') {
-      const currentUser = await User.findById(currentUserId)
+      const currentUser = await userRepository.userFindById(currentUserId)
         .select('username name avatar')
         .lean();
 
-      await Notification.createNotification({
+      await userRepository.notificationCreateNotification({
         recipient: targetUserId,
         sender: currentUserId,
         type: 'follow',
@@ -422,7 +413,7 @@ class UserService {
    * @returns {Promise<Object>} Unfollow result
    */
   static async unfollowUser(currentUserId, targetUserId) {
-    return Follow.unfollow(currentUserId, targetUserId);
+    return userRepository.followUnfollow(currentUserId, targetUserId);
   }
 
   /**
@@ -432,7 +423,7 @@ class UserService {
    * @returns {Promise<string>} Follow status (active, pending, none)
    */
   static async checkFollowStatus(currentUserId, targetUserId) {
-    return Follow.getFollowStatus(currentUserId, targetUserId);
+    return userRepository.followGetFollowStatus(currentUserId, targetUserId);
   }
 
   /**
@@ -442,11 +433,11 @@ class UserService {
    * @returns {Promise<Array>} List of followers with isFollowing status
    */
   static async getFollowers(userId, options = {}) {
-    const users = await Follow.getFollowers(userId, options);
+    const users = await userRepository.followGetFollowers(userId, options);
 
     if (options.requesterId && users.length > 0) {
       const userIds = users.map(u => u._id);
-      const follows = await Follow.find({
+      const follows = await userRepository.followFind({
         follower: options.requesterId,
         following: { $in: userIds },
         status: 'active',
@@ -472,11 +463,11 @@ class UserService {
    * @returns {Promise<Array>} List of following with isFollowing status
    */
   static async getFollowing(userId, options = {}) {
-    const users = await Follow.getFollowing(userId, options);
+    const users = await userRepository.followGetFollowing(userId, options);
 
     if (options.requesterId && users.length > 0) {
       const userIds = users.map(u => u._id);
-      const follows = await Follow.find({
+      const follows = await userRepository.followFind({
         follower: options.requesterId,
         following: { $in: userIds },
         status: 'active',
@@ -503,7 +494,7 @@ class UserService {
    * @returns {Promise<Array>} List of mutual followers
    */
   static async getMutualFollowers(userId1, userId2, limit = 10) {
-    return Follow.getMutualFollowers(userId1, userId2, limit);
+    return userRepository.followGetMutualFollowers(userId1, userId2, limit);
   }
 
   /**
@@ -513,11 +504,11 @@ class UserService {
    * @returns {Promise<Object>} Accept result
    */
   static async acceptFollowRequest(userId, requestIdentifier) {
-    const result = await Follow.acceptFollowRequest(userId, requestIdentifier);
+    const result = await userRepository.followAcceptFollowRequest(userId, requestIdentifier);
 
     if (result.success) {
       const recipientId = result.follow?.follower || requestIdentifier;
-      await Notification.createNotification({
+      await userRepository.notificationCreateNotification({
         recipient: recipientId,
         sender: userId,
         type: 'follow',
@@ -535,7 +526,7 @@ class UserService {
    * @returns {Promise<Object>} Reject result
    */
   static async rejectFollowRequest(userId, requestIdentifier) {
-    return Follow.rejectFollowRequest(userId, requestIdentifier);
+    return userRepository.followRejectFollowRequest(userId, requestIdentifier);
   }
 
   /**
@@ -545,7 +536,7 @@ class UserService {
    * @returns {Promise<Array>} List of pending requests
    */
   static async getPendingFollowRequests(userId, options = {}) {
-    return Follow.getPendingRequests(userId, options);
+    return userRepository.followGetPendingRequests(userId, options);
   }
 
   /**
@@ -554,12 +545,12 @@ class UserService {
    * @returns {Promise<Object>} Settings object including privacy, notifications, security, appearance
    */
   static async getUserSettings(userId) {
-    const user = await User.findById(userId).select('privacy').lean();
+    const user = await userRepository.userFindById(userId).select('privacy').lean();
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    const userSettings = await UserSettings.getOrCreate(userId);
+    const userSettings = await userRepository.userSettingsGetOrCreate(userId);
 
     const settings = userSettings.toObject();
 
@@ -617,7 +608,7 @@ class UserService {
     if (showActivity !== undefined)
       updateData['privacy.showActivity'] = showActivity;
 
-    const user = await User.findByIdAndUpdate(
+    const user = await userRepository.userFindByIdAndUpdate(
       userId,
       { $set: updateData },
       { new: true }
@@ -653,14 +644,14 @@ class UserService {
       settingsUpdate['privacy.whoCanSeeLikes'] = privacySettings.whoCanSeeLikes;
 
     if (Object.keys(settingsUpdate).length > 0) {
-      await UserSettings.findOneAndUpdate(
+      await userRepository.userSettingsFindOneAndUpdate(
         { user: userId },
         { $set: settingsUpdate },
         { upsert: true }
       );
     }
 
-    const latestUserSettings = await UserSettings.findOne({ user: userId });
+    const latestUserSettings = await userRepository.userSettingsFindOne({ user: userId });
 
     return {
       profileVisibility: user.privacy?.profileVisibility || 'public',
@@ -737,7 +728,7 @@ class UserService {
       }
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
+    const settings = await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $set: updateOps },
       { new: true, upsert: true }
@@ -780,7 +771,7 @@ class UserService {
     if (loginAlerts !== undefined)
       updateData['security.loginAlerts'] = loginAlerts;
 
-    const settings = await UserSettings.findOneAndUpdate(
+    const settings = await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $set: updateData },
       { new: true, upsert: true }
@@ -806,11 +797,11 @@ class UserService {
     });
 
     if (Object.keys(updateOps).length === 0) {
-      const existing = await UserSettings.getOrCreate(userId);
+      const existing = await userRepository.userSettingsGetOrCreate(userId);
       return existing.appearance;
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
+    const settings = await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $set: updateOps },
       { new: true, upsert: true }
@@ -841,11 +832,11 @@ class UserService {
     });
 
     if (Object.keys(updateOps).length === 0) {
-      const existing = await UserSettings.getOrCreate(userId);
+      const existing = await userRepository.userSettingsGetOrCreate(userId);
       return existing.content;
     }
 
-    const settings = await UserSettings.findOneAndUpdate(
+    const settings = await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $set: updateOps },
       { new: true, upsert: true }
@@ -866,25 +857,25 @@ class UserService {
       throw ApiError.badRequest('Cannot block yourself');
     }
 
-    const targetUser = await User.findById(targetUserId);
+    const targetUser = await userRepository.userFindById(targetUserId);
     if (!targetUser) {
       throw ApiError.notFound('User not found');
     }
 
 
 
-    await UserSettings.findOneAndUpdate(
+    await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $addToSet: { blockedUsers: targetUserId } },
       { upsert: true }
     );
 
     await Promise.all([
-      Follow.unfollow(userId, targetUserId),
-      Follow.unfollow(targetUserId, userId),
+      userRepository.followUnfollow(userId, targetUserId),
+      userRepository.followUnfollow(targetUserId, userId),
     ]);
 
-    await UserInteraction.record({
+    await userRepository.userInteractionRecord({
       user: userId,
       targetType: 'user',
       targetId: targetUserId,
@@ -901,7 +892,7 @@ class UserService {
    * @returns {Promise<{success: boolean}>} Unblock result
    */
   static async unblockUser(userId, targetUserId) {
-    await UserSettings.findOneAndUpdate(
+    await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $pull: { blockedUsers: targetUserId } }
     );
@@ -922,13 +913,13 @@ class UserService {
     }
 
 
-    await UserSettings.findOneAndUpdate(
+    await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $addToSet: { mutedUsers: targetUserId } },
       { upsert: true }
     );
 
-    await UserInteraction.record({
+    await userRepository.userInteractionRecord({
       user: userId,
       targetType: 'user',
       targetId: targetUserId,
@@ -945,7 +936,7 @@ class UserService {
    * @returns {Promise<{success: boolean}>} Unmute result
    */
   static async unmuteUser(userId, targetUserId) {
-    await UserSettings.findOneAndUpdate(
+    await userRepository.userSettingsFindOneAndUpdate(
       { user: userId },
       { $pull: { mutedUsers: targetUserId } }
     );
@@ -959,7 +950,7 @@ class UserService {
    * @returns {Promise<Array>} List of blocked users with basic info
    */
   static async getBlockedUsers(userId) {
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await userRepository.userSettingsFindOne({ user: userId })
       .populate('blockedUsers', 'username name avatar')
       .lean();
 
@@ -972,7 +963,7 @@ class UserService {
    * @returns {Promise<Array>} List of muted users with basic info
    */
   static async getMutedUsers(userId) {
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await userRepository.userSettingsFindOne({ user: userId })
       .populate('mutedUsers', 'username name avatar')
       .lean();
 

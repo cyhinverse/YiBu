@@ -1,57 +1,27 @@
-import Conversation from '../../models/Conversation.js';
-import Message from '../../models/Message.js';
+import MessageModel from '../../models/Message.js';
+import UserModel from '../../models/User.js';
+import UserSettingsModel from '../../models/UserSettings.js';
+import FollowModel from '../../models/Follow.js';
+import ConversationModel from '../../models/Conversation.js';
 
-const findConversationById = id => Conversation.findById(id);
-
-const findConversationByIdLean = id => Conversation.findById(id).lean();
-
-const findConversation = query => Conversation.findOne(query);
-
-const createConversation = payload => Conversation.create(payload);
-
-const updateConversation = (id, update, options = {}) => {
-  return Conversation.findByIdAndUpdate(id, update, { new: true, ...options });
+const messageRepository = {
+  conversationAggregate: (...args) => ConversationModel.aggregate(...args),
+  conversationCreate: (...args) => ConversationModel.create(...args),
+  conversationFind: (...args) => ConversationModel.find(...args),
+  conversationFindById: (...args) => ConversationModel.findById(...args),
+  conversationFindOne: (...args) => ConversationModel.findOne(...args),
+  followIsFollowing: (...args) => FollowModel.isFollowing(...args),
+  messageAggregate: (...args) => MessageModel.aggregate(...args),
+  messageCountDocuments: (...args) => MessageModel.countDocuments(...args),
+  messageCreate: (...args) => MessageModel.create(...args),
+  messageFind: (...args) => MessageModel.find(...args),
+  messageFindById: (...args) => MessageModel.findById(...args),
+  messageFindByIdAndUpdate: (...args) => MessageModel.findByIdAndUpdate(...args),
+  messageFindOne: (...args) => MessageModel.findOne(...args),
+  messageFindOneAndUpdate: (...args) => MessageModel.findOneAndUpdate(...args),
+  messageUpdateMany: (...args) => MessageModel.updateMany(...args),
+  userFindById: (...args) => UserModel.findById(...args),
+  userSettingsFindOne: (...args) => UserSettingsModel.findOne(...args),
 };
 
-const deleteConversation = id => Conversation.findByIdAndDelete(id);
-
-const findConversations = (query, options = {}) => {
-  return Conversation.find(query)
-    .populate(options.populate || [])
-    .sort(options.sort || { updatedAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 0);
-};
-
-const createMessage = payload => Message.create(payload);
-
-const findMessageById = id => Message.findById(id);
-
-const findMessages = (query, options = {}) => {
-  return Message.find(query)
-    .populate(options.populate || [])
-    .sort(options.sort || { createdAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 0);
-};
-
-const updateMessage = (id, update, options = {}) => {
-  return Message.findByIdAndUpdate(id, update, { new: true, ...options });
-};
-
-const deleteMessage = id => Message.findByIdAndDelete(id);
-
-export default {
-  findConversationById,
-  findConversationByIdLean,
-  findConversation,
-  createConversation,
-  updateConversation,
-  deleteConversation,
-  findConversations,
-  createMessage,
-  findMessageById,
-  findMessages,
-  updateMessage,
-  deleteMessage,
-};
+export default messageRepository;

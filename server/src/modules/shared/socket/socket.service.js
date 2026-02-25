@@ -1,6 +1,4 @@
-import User from '../../../models/User.js';
-import UserSettings from '../../../models/UserSettings.js';
-import Message from '../../../models/Message.js';
+import socketRepository from './socket.repository.js';
 import logger from '../../../configs/logger.js';
 
 /**
@@ -147,7 +145,7 @@ class SocketService {
 
     this.onlineUsers.set(socketId, userIdStr);
 
-    User.findByIdAndUpdate(userId, { lastActiveAt: new Date() }).exec();
+    socketRepository.userFindByIdAndUpdate(userId, { lastActiveAt: new Date() }).exec();
 
     logger.debug(`User ${userIdStr} connected with socket ${socketId}`);
   }
@@ -167,7 +165,7 @@ class SocketService {
 
         if (userSockets.size === 0) {
           this.userSockets.delete(userId);
-          User.findByIdAndUpdate(userId, { lastActiveAt: new Date() }).exec();
+          socketRepository.userFindByIdAndUpdate(userId, { lastActiveAt: new Date() }).exec();
         }
       }
 
@@ -222,7 +220,7 @@ class SocketService {
    * @returns {Promise<{delivered: boolean, reason?: string, socketCount?: number}>} Send result
    */
   async sendMessage(senderId, receiverId, message) {
-    const settings = await UserSettings.findOne({ user: receiverId })
+    const settings = await socketRepository.userSettingsFindOne({ user: receiverId })
       .select('blockedUsers')
       .lean();
 
@@ -242,7 +240,7 @@ class SocketService {
         });
       });
 
-      await Message.findByIdAndUpdate(message._id, {
+      await socketRepository.messageFindByIdAndUpdate(message._id, {
         status: 'delivered',
         deliveredAt: new Date(),
       });
@@ -330,7 +328,7 @@ class SocketService {
    * @returns {Promise<{sent: boolean, reason?: string, socketCount?: number}>} Send result
    */
   async sendNotification(userId, notification) {
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await socketRepository.userSettingsFindOne({ user: userId })
       .select('notifications')
       .lean();
 
@@ -361,7 +359,7 @@ class SocketService {
     const results = { sent: 0, failed: 0 };
 
     // Batch fetch user settings to avoid N+1 query
-    const settings = await UserSettings.find({ user: { $in: userIds } })
+    const settings = await socketRepository.userSettingsFind({ user: { $in: userIds } })
       .select('user notifications')
       .lean();
 
@@ -445,7 +443,7 @@ class SocketService {
       };
     }
 
-    const user = await User.findById(userId).select('lastActiveAt').lean();
+    const user = await socketRepository.userFindById(userId).select('lastActiveAt').lean();
 
     return {
       userId,
@@ -472,7 +470,7 @@ class SocketService {
     }
 
     if (offlineUserIds.length > 0) {
-      const users = await User.find({ _id: { $in: offlineUserIds } })
+      const users = await socketRepository.userFind({ _id: { $in: offlineUserIds } })
         .select('lastActiveAt')
         .lean();
       const userMap = new Map(users.map(u => [u._id.toString(), u.lastActiveAt]));

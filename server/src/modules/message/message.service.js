@@ -1,13 +1,9 @@
+import messageRepository from './message.repository.js';
 import mongoose from 'mongoose';
-import Message from '../../models/Message.js';
-import User from '../../models/User.js';
-import UserSettings from '../../models/UserSettings.js';
-import Follow from '../../models/Follow.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
 import { escapeRegExp } from '../../utils/escapeRegExp.js';
 import socketService from '../shared/socket/socket.service.js';
-import Conversation from '../../models/Conversation.js';
 import ApiError from '../../helpers/ApiError.js';
 
 const LEGACY_MEDIA_MESSAGE_TYPES = new Set(['image', 'video', 'audio', 'file']);
@@ -59,13 +55,13 @@ class MessageService {
   static async getConversations(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
 
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await messageRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers mutedUsers')
       .lean();
 
     const blockedUsers = settings?.blockedUsers?.map(id => id.toString()) || [];
 
-    const conversations = await Conversation.find({
+    const conversations = await messageRepository.conversationFind({
       members: userId,
       $or: [
         { isGroup: true },
@@ -85,7 +81,7 @@ class MessageService {
 
     // Prepare batch unread count query
     const conversationIds = conversations.map(c => c._id.toString());
-    const unreadCounts = await Message.aggregate([
+    const unreadCounts = await messageRepository.messageAggregate([
       {
         $match: {
           conversationId: { $in: conversationIds },
@@ -165,17 +161,17 @@ class MessageService {
 
     const directId = this.generateConversationId(userId, participantId);
 
-    let conversation = await Conversation.findOne({ directId })
+    let conversation = await messageRepository.conversationFindOne({ directId })
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
 
     if (!conversation) {
-      conversation = await Conversation.create({
+      conversation = await messageRepository.conversationCreate({
         directId,
         members: [userId, participantId],
         isGroup: false,
       });
-      conversation = await Conversation.findById(conversation._id)
+      conversation = await messageRepository.conversationFindById(conversation._id)
         .populate('members', 'username name avatar lastActiveAt')
         .lean();
     }
@@ -184,7 +180,7 @@ class MessageService {
       m => m._id.toString() !== userId.toString()
     );
 
-    const unreadCount = await Message.countDocuments({
+    const unreadCount = await messageRepository.messageCountDocuments({
       conversationId: conversation._id.toString(),
       receiver: userId,
       status: { $ne: 'read' },
@@ -213,7 +209,7 @@ class MessageService {
 
     const members = [...new Set([userId, ...participantIds])];
 
-    const conversation = await Conversation.create({
+    const conversation = await messageRepository.conversationCreate({
       name: finalGroupName,
       avatar: finalGroupAvatar,
       isGroup: true,
@@ -221,7 +217,7 @@ class MessageService {
       admin: userId,
     });
 
-    return Conversation.findById(conversation._id)
+    return messageRepository.conversationFindById(conversation._id)
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
   }
@@ -235,7 +231,7 @@ class MessageService {
    * @throws {Error} If conversation not found or unauthorized
    */
   static async updateGroup(conversationId, userId, data) {
-    const conversation = await Conversation.findOne({
+    const conversation = await messageRepository.conversationFindOne({
       _id: conversationId,
       members: userId,
     });
@@ -252,7 +248,7 @@ class MessageService {
     if (finalGroupAvatar) conversation.avatar = finalGroupAvatar;
 
     await conversation.save();
-    return Conversation.findById(conversationId)
+    return messageRepository.conversationFindById(conversationId)
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
   }
@@ -266,7 +262,7 @@ class MessageService {
    * @throws {Error} If not a group or unauthorized
    */
   static async addGroupMembers(conversationId, userId, memberIds) {
-    const conversation = await Conversation.findOne({
+    const conversation = await messageRepository.conversationFindOne({
       _id: conversationId,
       members: userId,
     });
@@ -291,7 +287,7 @@ class MessageService {
       await conversation.save();
     }
 
-    return Conversation.findById(conversationId)
+    return messageRepository.conversationFindById(conversationId)
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
   }
@@ -305,7 +301,7 @@ class MessageService {
    * @throws {Error} If unauthorized to remove
    */
   static async removeGroupMember(conversationId, userId, memberId) {
-    const conversation = await Conversation.findOne({
+    const conversation = await messageRepository.conversationFindOne({
       _id: conversationId,
       members: userId,
     });
@@ -333,7 +329,7 @@ class MessageService {
     }
 
     await conversation.save();
-    return Conversation.findById(conversationId)
+    return messageRepository.conversationFindById(conversationId)
       .populate('members', 'username name avatar lastActiveAt')
       .lean();
   }
@@ -353,13 +349,13 @@ class MessageService {
       ? { directId: conversationId, members: userId }
       : { _id: conversationId, members: userId };
 
-    let conversation = await Conversation.findOne(query);
+    let conversation = await messageRepository.conversationFindOne(query);
 
     if (!conversation && isCompound && autoCreate) {
       const [u1, u2] = conversationId.split('_');
       const targetId = u1 === userId.toString() ? u2 : u1;
       const result = await this.getOrCreateDirectConversation(userId, targetId);
-      conversation = await Conversation.findById(result._id);
+      conversation = await messageRepository.conversationFindById(result._id);
     }
 
     return conversation;
@@ -383,7 +379,7 @@ class MessageService {
 
     }
 
-    const populated = await Conversation.findById(conversation._id)
+    const populated = await messageRepository.conversationFindById(conversation._id)
       .populate('members', 'username name avatar lastActiveAt')
       .populate('lastMessage')
       .lean();
@@ -394,7 +390,7 @@ class MessageService {
           m => m._id.toString() !== currentUserId.toString()
         );
 
-    const unreadCount = await Message.countDocuments({
+    const unreadCount = await messageRepository.messageCountDocuments({
       conversationId: populated._id.toString(),
       receiver: currentUserId,
       status: { $ne: 'read' },
@@ -451,13 +447,13 @@ class MessageService {
     }
 
     const [messages, total] = await Promise.all([
-      Message.find(query)
+      messageRepository.messageFind(query)
         .populate('sender', 'username name avatar')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Message.countDocuments(query),
+      messageRepository.messageCountDocuments(query),
     ]);
 
     const formattedMessages = messages.reverse().map(msg => ({
@@ -490,14 +486,14 @@ class MessageService {
       };
     }
 
-    const receiver = await User.findById(receiverId).select('privacy').lean();
+    const receiver = await messageRepository.userFindById(receiverId).select('privacy').lean();
     if (!receiver) {
       return { allowed: false, reason: 'Người dùng không tồn tại' };
     }
 
     const [senderSettings, receiverSettings] = await Promise.all([
-      UserSettings.findOne({ user: senderId }).select('blockedUsers').lean(),
-      UserSettings.findOne({ user: receiverId }).select('blockedUsers').lean(),
+      messageRepository.userSettingsFindOne({ user: senderId }).select('blockedUsers').lean(),
+      messageRepository.userSettingsFindOne({ user: receiverId }).select('blockedUsers').lean(),
     ]);
 
     if (
@@ -524,7 +520,7 @@ class MessageService {
     }
 
     if (receiver.privacy?.allowMessages === 'following') {
-      const isFollowing = await Follow.isFollowing(receiverId, senderId);
+      const isFollowing = await messageRepository.followIsFollowing(receiverId, senderId);
       if (!isFollowing) {
         return {
           allowed: false,
@@ -578,7 +574,7 @@ class MessageService {
 
     let replyToMessage = null;
     if (replyTo) {
-      replyToMessage = await Message.findOne({
+      replyToMessage = await messageRepository.messageFindOne({
         _id: replyTo,
         conversationId: conversation._id.toString(),
         isDeleted: false,
@@ -591,7 +587,7 @@ class MessageService {
       ? senderId
       : conversation.members.find(m => m.toString() !== senderId.toString());
 
-    const message = await Message.create({
+    const message = await messageRepository.messageCreate({
       sender: senderId,
       receiver: receiver || senderId,
       conversationId: conversation._id.toString(),
@@ -605,12 +601,12 @@ class MessageService {
     conversation.lastMessage = message._id;
     await conversation.save();
 
-    const populatedMessage = await Message.findById(message._id)
+    const populatedMessage = await messageRepository.messageFindById(message._id)
       .populate('sender', 'username name avatar')
       .populate('replyTo', 'content sender messageType')
       .lean();
 
-    await Message.findByIdAndUpdate(message._id, {
+    await messageRepository.messageFindByIdAndUpdate(message._id, {
       $push: { seenBy: { user: senderId, at: new Date() } },
     });
 
@@ -686,7 +682,7 @@ class MessageService {
 
     const convId = conversation._id.toString();
     const result = await retryOperation(() =>
-      Message.updateMany(
+      messageRepository.messageUpdateMany(
         {
           conversationId: {
             $in: [convId, conversation.directId].filter(Boolean),
@@ -726,7 +722,7 @@ class MessageService {
    */
   static async markMessageAsRead(messageId, userId) {
     const message = await retryOperation(() =>
-      Message.findOneAndUpdate(
+      messageRepository.messageFindOneAndUpdate(
         {
           _id: messageId,
           receiver: userId,
@@ -761,7 +757,7 @@ class MessageService {
    * @throws {Error} If message not found, unauthorized, or past 15 minutes
    */
   static async deleteMessage(messageId, userId, forEveryone = false) {
-    const message = await Message.findOne({ _id: messageId, sender: userId });
+    const message = await messageRepository.messageFindOne({ _id: messageId, sender: userId });
 
     if (!message) {
       throw ApiError.forbidden('Tin nhắn không tồn tại hoặc bạn không có quyền xóa');
@@ -809,7 +805,7 @@ class MessageService {
 
     const convId = conversation._id.toString();
 
-    await Message.updateMany(
+    await messageRepository.messageUpdateMany(
       {
         conversationId: {
           $in: [convId, conversation.directId].filter(Boolean),
@@ -828,13 +824,13 @@ class MessageService {
    * @returns {Promise<number>} Number of unread messages
    */
   static async getUnreadCount(userId) {
-    const settings = await UserSettings.findOne({ user: userId })
+    const settings = await messageRepository.userSettingsFindOne({ user: userId })
       .select('blockedUsers')
       .lean();
 
     const blockedUsers = settings?.blockedUsers || [];
     const excludedSenders = [userId, ...blockedUsers];
-    const groupConversationIds = await Conversation.find({
+    const groupConversationIds = await messageRepository.conversationFind({
       members: userId,
       isGroup: true,
     })
@@ -857,7 +853,7 @@ class MessageService {
       });
     }
 
-    const count = await Message.countDocuments({
+    const count = await messageRepository.messageCountDocuments({
       $or: unreadFilters,
       sender: { $nin: excludedSenders },
       isDeleted: false,
@@ -896,7 +892,7 @@ class MessageService {
       }
       messageQuery.conversationId = conversation._id.toString();
     } else {
-      const conversations = await Conversation.find({ members: userId })
+      const conversations = await messageRepository.conversationFind({ members: userId })
         .select('_id')
         .lean();
       const conversationIds = conversations.map(item => item._id.toString());
@@ -906,7 +902,7 @@ class MessageService {
       messageQuery.conversationId = { $in: conversationIds };
     }
 
-    const messages = await Message.find(messageQuery)
+    const messages = await messageRepository.messageFind(messageQuery)
       .populate('sender', 'username name avatar')
       .populate('receiver', 'username name avatar')
       .sort({ createdAt: -1 })
@@ -914,7 +910,7 @@ class MessageService {
       .limit(limit)
       .lean();
 
-    const total = await Message.countDocuments(messageQuery);
+    const total = await messageRepository.messageCountDocuments(messageQuery);
 
     return {
       messages: messages.map(msg => ({
@@ -936,7 +932,7 @@ class MessageService {
    * @throws {Error} If message not found
    */
   static async addReaction(messageId, userId, emoji) {
-    const message = await Message.findOne({
+    const message = await messageRepository.messageFindOne({
       _id: messageId,
       isDeleted: false,
     });
@@ -989,7 +985,7 @@ class MessageService {
    * @throws {Error} If message not found
    */
   static async removeReaction(messageId, userId) {
-    const message = await Message.findOne({
+    const message = await messageRepository.messageFindOne({
       _id: messageId,
       isDeleted: false,
     });
@@ -1076,7 +1072,7 @@ class MessageService {
       },
     ];
 
-    const [result] = await Conversation.aggregate(pipeline).collation({
+    const [result] = await messageRepository.conversationAggregate(pipeline).collation({
       locale: 'en',
       strength: 2,
     });
