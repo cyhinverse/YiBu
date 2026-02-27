@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { login, googleAuth } from '@/redux/actions/authActions';
@@ -7,12 +7,9 @@ import { notify } from '@/utils/notify';
 
 const Login = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const googleButtonRef = useRef(null);
   const googleInitialized = useRef(false);
-  const { loading, error, isAuthenticated, user } = useSelector(
-    state => state.auth
-  );
+  const { loading, error } = useSelector(state => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,13 +19,6 @@ const Login = () => {
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
-
-  // Redirect if already authenticated AND user data is loaded
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     if (!error?.errorCode || error.errorCode === '2FA_REQUIRED') {
@@ -145,12 +135,6 @@ const Login = () => {
       return;
     }
   };
-
-
-  // No longer needed due to useEffect redirect above
-  // if (isAuthenticated && user) {
-  //   return <Navigate to="/" replace />;
-  // }
 
   return (
     <div className="min-h-[100dvh] flex">

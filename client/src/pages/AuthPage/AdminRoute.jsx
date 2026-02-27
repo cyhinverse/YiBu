@@ -1,28 +1,23 @@
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useSelector } from 'react-redux';
+import { Navigate, Outlet } from 'react-router-dom';
 
 const AdminRoute = () => {
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector(state => state.auth);
+  const isRehydrated = useSelector(state => state._persist?.rehydrated);
 
-  useEffect(() => {
-    // Nếu chưa xác định tình trạng xác thực, đợi
-    if (isAuthenticated === undefined) return;
+  if (!isRehydrated) {
+    return null;
+  }
 
-    // Nếu chưa đăng nhập, chuyển về đăng nhập
-    if (!isAuthenticated || !user) {
-      navigate("/auth/login", { replace: true });
-      return;
-    }
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/auth/login" replace />;
+  }
 
-    // Kiểm tra quyền admin
-    const isUserAdmin = user.isAdmin || user.role === "admin";
+  const isUserAdmin = user.isAdmin || user.role === 'admin';
 
-    if (!isUserAdmin) {
-      navigate("/access-denied", { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
+  if (!isUserAdmin) {
+    return <Navigate to="/access-denied" replace />;
+  }
 
   return <Outlet />;
 };

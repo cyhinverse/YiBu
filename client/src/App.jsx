@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom';
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSettings } from './hooks/useUserQuery';
 import { SocketProvider } from './contexts/SocketContext';
@@ -8,6 +8,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './pages/AuthPage/ProtectedRoute';
 import AdminRoute from './pages/AuthPage/AdminRoute';
 import { resetAuthState } from './redux/slices/AuthSlice';
+import { verifySession } from './redux/actions/authActions';
 import AppToaster from './components/Common/AppToaster';
 
 // Lazy Load Pages & Components
@@ -74,8 +75,31 @@ const AccessDenied = lazy(() => import('./pages/ErrorPages/AccessDenied'));
 
 const App = () => {
   const dispatch = useDispatch();
-  const authUser = useSelector(state => state.auth?.user);
-  useSettings({ enabled: !!authUser });
+  const { user: authUser } = useSelector(state => state.auth);
+  const isRehydrated = useSelector(state => state._persist?.rehydrated);
+  const [isSessionReady, setIsSessionReady] = useState(false);
+  const hasBootstrappedSession = useRef(false);
+
+  useSettings({ enabled: isSessionReady && !!authUser });
+
+  // Verify persisted auth state with server once after redux-persist rehydration.
+  useEffect(() => {
+    if (!isRehydrated || hasBootstrappedSession.current) {
+      return;
+    }
+
+    hasBootstrappedSession.current = true;
+
+    const bootstrapSession = async () => {
+      try {
+        await dispatch(verifySession());
+      } finally {
+        setIsSessionReady(true);
+      }
+    };
+
+    bootstrapSession();
+  }, [dispatch, isRehydrated]);
 
   // Listen for auth logout events from axios interceptor
   useEffect(() => {
@@ -90,6 +114,14 @@ const App = () => {
     window.addEventListener('auth-logout', handleAuthLogout);
     return () => window.removeEventListener('auth-logout', handleAuthLogout);
   }, [dispatch]);
+
+  if (!isRehydrated || !isSessionReady) {
+    return (
+      <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-black">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <>

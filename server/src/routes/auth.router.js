@@ -70,6 +70,9 @@ router.post(
 
 router.use(verifyToken);
 
+/* GET /me - Get current authenticated user */
+router.get('/me', AuthController.GetMe);
+
 /* POST /logout - Logout user */
 router.post('/logout', AuthController.Logout);
 /* POST /logout-all - Logout from all devices */

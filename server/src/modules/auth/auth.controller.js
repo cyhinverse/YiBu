@@ -134,6 +134,25 @@ const AuthController = {
   }),
 
   /**
+   * Get current authenticated user
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user from access token
+   * @param {string} req.user.id - Current user's ID
+   * @param {Object} res - Express response object
+   * @returns {Object} Response with current user profile
+   */
+  GetMe: CatchError(async (req, res) => {
+    const userId = req.user.id;
+    const user = await AuthService.getCurrentUser(userId);
+
+    return sendOk(res, {
+      message: 'Success',
+      data: user,
+    });
+
+  }),
+
+  /**
    * Logout user and invalidate tokens
    * @param {Object} req - Express request object
    * @param {Object} [req.cookies] - Request cookies

@@ -3,6 +3,7 @@ import {
   login,
   register,
   googleAuth,
+  verifySession,
   logout,
   logoutAll,
   updatePassword,
@@ -90,6 +91,20 @@ const authSlice = createSlice({
       .addCase(googleAuth.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Session bootstrap verification
+      .addCase(verifySession.pending, state => {
+        state.error = null;
+      })
+      .addCase(verifySession.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(verifySession.rejected, state => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
       })
       // Logout
       .addCase(logout.fulfilled, () => initialState)

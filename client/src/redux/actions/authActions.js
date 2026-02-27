@@ -66,6 +66,39 @@ export const googleAuth = createAsyncThunk(
   }
 );
 
+export const verifySession = createAsyncThunk(
+  'auth/verifySession',
+  async (_, { rejectWithValue }) => {
+    const getCurrentUser = async () => {
+      const response = await api.get(AUTH_API.ME, { _skipAuthRefresh: true });
+      return extractData(response);
+    };
+
+    try {
+      return await getCurrentUser();
+    } catch (error) {
+      if (error.response?.status === 401) {
+        try {
+          await api.post(AUTH_API.REFRESH_TOKEN, null, {
+            _skipAuthRefresh: true,
+          });
+          return await getCurrentUser();
+        } catch (refreshError) {
+          return rejectWithValue({
+            message: refreshError.response?.data?.message || 'Phiên đăng nhập hết hạn',
+            status: refreshError.response?.status,
+          });
+        }
+      }
+
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Xác thực phiên đăng nhập thất bại',
+        status: error.response?.status,
+      });
+    }
+  }
+);
+
 export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {

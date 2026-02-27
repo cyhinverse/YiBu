@@ -187,14 +187,42 @@ class AuthService {
     };
   }
 
+  static async getCurrentUser(userId) {
+    const user = await authRepository
+      .userFindById(userId)
+      .select(
+        '_id name email username avatar verified isAdmin bio followersCount followingCount postsCount'
+      );
+
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      avatar: user.avatar,
+      verified: user.verified,
+      isAdmin: user.isAdmin,
+      bio: user.bio,
+      followersCount: user.followersCount,
+      followingCount: user.followingCount,
+      postsCount: user.postsCount,
+    };
+  }
+
   static async _handleFailedLogin(user) {
     const maxAttempts = 5;
     const lockDurationMinutes = 15;
 
     const currentCount =
-      typeof user.loginAttempts === 'object'
-        ? user.loginAttempts?.count || 0
-        : 0;
+      typeof user.loginAttempts === 'number'
+        ? user.loginAttempts
+        : typeof user.loginAttempts === 'object'
+          ? user.loginAttempts?.count || 0
+          : 0;
     const attempts = currentCount + 1;
 
     if (typeof user.loginAttempts === 'number') {

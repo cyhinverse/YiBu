@@ -9,6 +9,7 @@ export const AUTH_API = {
   REQUEST_PASSWORD_RESET: '/api/v2/auth/password/reset-request',
   RESET_PASSWORD: '/api/v2/auth/password/reset',
   REFRESH_TOKEN: '/api/v2/auth/refresh',
+  ME: '/api/v2/auth/me',
   LOGOUT: '/api/v2/auth/logout',
   LOGOUT_ALL: '/api/v2/auth/logout-all',
   UPDATE_PASSWORD: '/api/v2/auth/password',

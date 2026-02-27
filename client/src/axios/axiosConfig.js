@@ -61,7 +61,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config || {};
 
     // Network error
     if (!error.response) {
@@ -70,6 +70,11 @@ api.interceptors.response.use(
     }
 
     const status = error.response.status;
+
+    // Allow selected calls (e.g. session bootstrap) to handle refresh manually.
+    if (originalRequest._skipAuthRefresh) {
+      return Promise.reject(error);
+    }
 
     // If error is 401 and it's not a retry and not the refresh token call itself
     if (
