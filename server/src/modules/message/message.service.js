@@ -515,7 +515,10 @@ class MessageService {
       };
     }
 
-    if (receiver.privacy?.allowMessages === 'no-one') {
+    if (
+      receiver.privacy?.allowMessages === 'no-one' ||
+      receiver.privacy?.allowMessages === 'none'
+    ) {
       return { allowed: false, reason: 'Người dùng không nhận tin nhắn' };
     }
 

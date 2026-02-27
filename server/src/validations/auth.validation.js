@@ -132,13 +132,11 @@ export const resetPasswordBody = Joi.object({
     .min(6)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .required()
     .messages({
       'string.empty': 'Mật khẩu không được để trống',
       'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
       'string.pattern.base':
         'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
-      'any.required': 'Mật khẩu mới là bắt buộc',
     }),
   confirmPassword: Joi.string()
     .valid(Joi.ref('newPassword'), Joi.ref('password'))

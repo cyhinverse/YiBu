@@ -132,14 +132,11 @@ app.get('/api/health', (req, res) => {
 // Routes (v2)
 app.use('/api/v2/auth', authRoutes);
 app.use('/api/v2/user', userRoutes);
-
 app.use('/api/v2/posts', postRoutes);
-
 app.use('/api/v2/comments', commentRoutes);
 app.use('/api/v2/admin', adminRoutes);
-app.use('/api/v2/reports', reportRoutes); // check filename
+app.use('/api/v2/reports', reportRoutes); 
 app.use('/api/v2/like', likeRoutes);
-
 app.use('/api/v2/messages', messageRoutes);
 app.use('/api/v2/savepost', savePostRoutes);
 app.use('/api/v2/notifications', notificationRoutes);
