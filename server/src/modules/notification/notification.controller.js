@@ -24,7 +24,7 @@ const NotificationController = {
    * @param {Object} req.body - Request body
    * @param {string} req.body.recipient - ID of the notification recipient
    * @param {string} req.body.type - Type of notification
-   * @param {string} [req.body.content] - Notification content
+   * @param {string} req.body.content - Notification content
    * @param {string} [req.body.relatedPost] - ID of related post
    * @param {string} [req.body.relatedComment] - ID of related comment
    * @param {string} [req.body.groupKey] - Group key for notification grouping
@@ -36,26 +36,20 @@ const NotificationController = {
    * @returns {Object} Response with created notification data
    */
   createNotification: CatchError(async (req, res) => {
-    const recipient = req.body.recipient || req.body.userId;
     const {
+      recipient,
       type,
       content,
       title,
-      message,
       relatedPost,
       relatedComment,
       groupKey,
       metadata,
-      data,
     } = req.body;
-    const finalContent = content || message;
-    const finalMetadata = metadata || data;
-    const finalRelatedPost = relatedPost || data?.postId;
-    const finalRelatedComment = relatedComment || data?.commentId;
     const sender =
       req.user.isAdmin && req.body.sender ? req.body.sender : req.user.id;
 
-    if (!recipient || !type || !finalContent) {
+    if (!recipient || !type || !content) {
       throw ApiError.badRequest("Recipient, type and content are required");
     }
 
@@ -65,13 +59,13 @@ const NotificationController = {
       recipient,
       sender,
       type,
-      content: finalContent,
-      relatedPost: finalRelatedPost,
-      relatedComment: finalRelatedComment,
+      content,
+      relatedPost,
+      relatedComment,
       groupKey,
       metadata: {
         ...(title ? { title } : {}),
-        ...(finalMetadata || {}),
+        ...(metadata || {}),
       },
     });
 
@@ -195,7 +189,7 @@ const NotificationController = {
    */
   markAllAsRead: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { type } = req.body || {};
+    const type = req.body?.type;
 
     const result = await NotificationService.markAllAsRead(userId, type);
     return sendOk(res, {
@@ -246,7 +240,7 @@ const NotificationController = {
    */
   deleteAllNotifications: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { type } = req.body || {};
+    const type = req.body?.type;
 
     const result = await NotificationService.deleteAllNotifications(
       userId,

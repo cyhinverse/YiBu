@@ -59,7 +59,6 @@ const UserController = {
    * @param {Object} req - Express request object
    * @param {Object} req.query - Query parameters
    * @param {string} [req.query.q] - Search query string
-   * @param {string} [req.query.query] - Alternative search query string
    * @param {number} [req.query.page=1] - Page number for pagination
    * @param {number} [req.query.limit=20] - Number of results per page
    * @param {Object} req.user - Authenticated user object
@@ -68,9 +67,8 @@ const UserController = {
    * @returns {Object} Response with paginated search results
    */
   searchUsers: CatchError(async (req, res) => {
-    const { q, query, page = 1, limit = 20 } = req.query;
+    const { q: searchQuery, page = 1, limit = 20 } = req.query;
     const currentUserId = req.user.id;
-    const searchQuery = q || query;
 
     if (!searchQuery || searchQuery.trim().length < 2) {
       return formatResponse(
@@ -197,7 +195,7 @@ const UserController = {
   getFollowers: CatchError(async (req, res) => {
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
-    const requesterId = req.user?._id || req.user?.id;
+    const requesterId = req.user?.id;
 
     const result = await UserService.getFollowers(userId, {
       page: parseInt(page),
@@ -223,7 +221,7 @@ const UserController = {
   getFollowing: CatchError(async (req, res) => {
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
-    const requesterId = req.user?._id || req.user?.id;
+    const requesterId = req.user?.id;
 
     const result = await UserService.getFollowing(userId, {
       page: parseInt(page),
@@ -290,8 +288,8 @@ const UserController = {
   /**
    * Accept a follow request
    * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.followerId - ID of the user who sent the follow request
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.requestId - Follow request ID
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -299,10 +297,10 @@ const UserController = {
    */
   acceptFollowRequest: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const followerId = req.body?.followerId || req.params?.requestId;
+    const { requestId: followerId } = req.params;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, 'Request ID or follower ID is required');
+      return formatResponse(res, 400, 0, 'Request ID is required');
     }
 
     const result = await UserService.acceptFollowRequest(userId, followerId);
@@ -312,8 +310,8 @@ const UserController = {
   /**
    * Reject a follow request
    * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.followerId - ID of the user who sent the follow request
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.requestId - Follow request ID
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -321,10 +319,10 @@ const UserController = {
    */
   rejectFollowRequest: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const followerId = req.body?.followerId || req.params?.requestId;
+    const { requestId: followerId } = req.params;
 
     if (!followerId) {
-      return formatResponse(res, 400, 0, 'Request ID or follower ID is required');
+      return formatResponse(res, 400, 0, 'Request ID is required');
     }
 
     const result = await UserService.rejectFollowRequest(userId, followerId);
@@ -425,12 +423,9 @@ const UserController = {
    * @param {Object} req.body - Request body with privacy settings
    * @param {string} [req.body.profileVisibility] - Profile visibility (public/private/followers)
    * @param {string} [req.body.allowMessages] - Who can send messages
-   * @param {string} [req.body.messagePermission] - Alternative for allowMessages
    * @param {boolean} [req.body.showActivity] - Show activity status
-   * @param {boolean} [req.body.activityStatus] - Alternative for showActivity
    * @param {string} [req.body.postVisibility] - Default post visibility
    * @param {boolean} [req.body.searchable] - Allow profile to be searchable
-   * @param {boolean} [req.body.searchVisibility] - Alternative for searchable
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -438,10 +433,7 @@ const UserController = {
    */
   updatePrivacySettings: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const rawAllowMessages =
-      req.body.allowMessages ??
-      req.body.messagePermission ??
-      req.body.whoCanMessage;
+    const rawAllowMessages = req.body.allowMessages;
     let normalizedAllowMessages = rawAllowMessages;
     if (rawAllowMessages === 'nobody') {
       normalizedAllowMessages = 'none';
@@ -449,19 +441,12 @@ const UserController = {
       normalizedAllowMessages = 'followers';
     }
 
-    let profileVisibility = req.body.profileVisibility;
-    if (!profileVisibility && req.body.isPrivate === true) {
-      profileVisibility = 'private';
-    } else if (!profileVisibility && req.body.isPrivate === false) {
-      profileVisibility = 'public';
-    }
-
     const privacySettings = {
-      profileVisibility,
+      profileVisibility: req.body.profileVisibility,
       allowMessages: normalizedAllowMessages,
-      showActivity: req.body.showActivity ?? req.body.activityStatus,
+      showActivity: req.body.showActivity,
       postVisibility: req.body.postVisibility,
-      searchable: req.body.searchable ?? req.body.searchVisibility,
+      searchable: req.body.searchable,
       showOnlineStatus: req.body.showOnlineStatus,
       allowTagging: req.body.allowTagging,
       allowMentions: req.body.allowMentions,
@@ -493,10 +478,8 @@ const UserController = {
    * @param {boolean} [req.body.likes] - Notify on likes
    * @param {boolean} [req.body.comments] - Notify on comments
    * @param {boolean} [req.body.follows] - Notify on new followers
-   * @param {boolean} [req.body.newFollower] - Alternative for follows
    * @param {boolean} [req.body.mentions] - Notify on mentions
    * @param {boolean} [req.body.messages] - Notify on messages
-   * @param {boolean} [req.body.directMessages] - Alternative for messages
    * @param {boolean} [req.body.shares] - Notify on shares
    * @param {boolean} [req.body.email] - Enable email notifications
    * @param {boolean} [req.body.push] - Enable push notifications
@@ -511,9 +494,9 @@ const UserController = {
     const settings = {
       likes: req.body.likes,
       comments: req.body.comments,
-      follows: req.body.follows ?? req.body.newFollower,
+      follows: req.body.follows,
       mentions: req.body.mentions,
-      messages: req.body.messages ?? req.body.directMessages,
+      messages: req.body.messages,
       shares: req.body.shares,
       saves: req.body.saves,
       tags: req.body.tags,
@@ -570,10 +553,8 @@ const UserController = {
    * @param {Object} req - Express request object
    * @param {Object} req.body - Request body with content settings
    * @param {string} [req.body.language] - Preferred language
-   * @param {boolean} [req.body.autoplay] - Enable video autoplay
-   * @param {boolean} [req.body.autoplayEnabled] - Alternative for autoplay
-   * @param {string} [req.body.quality] - Preferred video quality
-   * @param {Array} [req.body.contentFilters] - Content filter preferences
+   * @param {boolean} [req.body.autoplayVideos] - Enable video autoplay
+   * @param {string} [req.body.contentFilter] - Content filter preference
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -593,12 +574,8 @@ const UserController = {
 
     const settings = {
       language: req.body.language,
-      autoplayVideos:
-        req.body.autoplayVideos ??
-        req.body.autoplay ??
-        req.body.autoplayEnabled,
-      showSensitiveContent:
-        req.body.showSensitiveContent ?? req.body.sensitiveContent,
+      autoplayVideos: req.body.autoplayVideos,
+      showSensitiveContent: req.body.showSensitiveContent,
       contentFilter,
     };
 
@@ -617,10 +594,8 @@ const UserController = {
    * @param {Object} req - Express request object
    * @param {Object} req.body - Request body with theme settings
    * @param {string} [req.body.theme] - Theme preference (light/dark/system)
-   * @param {string} [req.body.appearance] - Alternative for theme
    * @param {string} [req.body.fontSize] - Font size preference
-   * @param {string} [req.body.colorScheme] - Color scheme preference
-   * @param {string} [req.body.primaryColor] - Alternative for colorScheme
+   * @param {boolean} [req.body.compactMode] - Compact layout toggle
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -629,9 +604,9 @@ const UserController = {
   updateThemeSettings: CatchError(async (req, res) => {
     const userId = req.user.id;
     const settings = {
-      theme: req.body.theme ?? req.body.appearance,
+      theme: req.body.theme,
       fontSize: req.body.fontSize,
-      compactMode: req.body.compactMode ?? req.body.reducedMotion,
+      compactMode: req.body.compactMode,
     };
 
     const updated = await UserService.updateAppearanceSettings(
@@ -657,8 +632,8 @@ const UserController = {
   /**
    * Block a user
    * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.blockedUserId - ID of user to block
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.userId - ID of user to block
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -666,8 +641,7 @@ const UserController = {
    */
   blockUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const blockedUserId =
-      req.params?.userId || req.body?.blockedUserId || req.body?.targetUserId;
+    const { userId: blockedUserId } = req.params;
 
     if (!blockedUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần chặn');
@@ -681,7 +655,7 @@ const UserController = {
    * Unblock a user
    * @param {Object} req - Express request object
    * @param {Object} req.params - Route parameters
-   * @param {string} req.params.blockedUserId - ID of user to unblock
+   * @param {string} req.params.userId - ID of user to unblock
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -689,8 +663,7 @@ const UserController = {
    */
   unblockUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const blockedUserId =
-      req.params?.userId || req.params?.blockedUserId || req.body?.blockedUserId;
+    const { userId: blockedUserId } = req.params;
 
     if (!blockedUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần bỏ chặn');
@@ -703,8 +676,8 @@ const UserController = {
   /**
    * Mute a user
    * @param {Object} req - Express request object
-   * @param {Object} req.body - Request body
-   * @param {string} req.body.targetUserId - ID of user to mute
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.userId - ID of user to mute
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -712,8 +685,7 @@ const UserController = {
    */
   muteUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const targetUserId =
-      req.params?.userId || req.body?.targetUserId || req.body?.mutedUserId;
+    const { userId: targetUserId } = req.params;
 
     if (!targetUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần ẩn');
@@ -727,7 +699,7 @@ const UserController = {
    * Unmute a user
    * @param {Object} req - Express request object
    * @param {Object} req.params - Route parameters
-   * @param {string} req.params.targetUserId - ID of user to unmute
+   * @param {string} req.params.userId - ID of user to unmute
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} res - Express response object
@@ -735,8 +707,7 @@ const UserController = {
    */
   unmuteUser: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const targetUserId =
-      req.params?.userId || req.params?.targetUserId || req.body?.targetUserId;
+    const { userId: targetUserId } = req.params;
 
     if (!targetUserId) {
       return formatResponse(res, 400, 0, 'Thiếu ID người dùng cần bỏ ẩn');

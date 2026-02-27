@@ -41,29 +41,19 @@ export const notificationIdParam = Joi.object({
 
 // ======================================
 // POST / (createNotification - Admin/Internal)
-// Body: { userId, type, title, message, data? }
+// Body: { recipient, type, content, title?, metadata? }
 // ======================================
 export const createNotificationBody = Joi.object({
-  recipient: objectId,
-  userId: objectId, // For fallback
+  recipient: objectId.required(),
   sender: objectId,
   type: notificationType.required(),
-  content: Joi.string().trim().max(500),
-  title: Joi.string().trim().max(100), // Legacy
-  message: Joi.string().trim().max(500), // Legacy
+  content: Joi.string().trim().max(500).required(),
+  title: Joi.string().trim().max(100),
   relatedPost: objectId,
   relatedComment: objectId,
   groupKey: Joi.string(),
   metadata: Joi.object(),
-  data: Joi.object({
-    postId: objectId,
-    commentId: objectId,
-    userId: objectId,
-    link: Joi.string().uri(),
-  }),
-})
-  .or('recipient', 'userId')
-  .or('content', 'message');
+});
 
 export const bulkNotificationActionBody = Joi.object({
   type: notificationType.optional(),

@@ -6,6 +6,9 @@ import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
 
 
+const getRefreshTokenFromRequest = req =>
+  req.cookies?.refreshToken ?? req.body?.refreshToken;
+
 /**
  * Auth Controller
  * Handle all authentication-related requests
@@ -109,7 +112,7 @@ const AuthController = {
    * @returns {Object} Response with new HttpOnly cookies for tokens
    */
   RefreshToken: CatchError(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    const refreshToken = getRefreshTokenFromRequest(req);
 
     if (!refreshToken) {
       throw ApiError.unauthorized('Refresh token không hợp lệ');
@@ -163,7 +166,7 @@ const AuthController = {
    * @returns {Object} Response with logout success message
    */
   Logout: CatchError(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    const refreshToken = getRefreshTokenFromRequest(req);
 
     await AuthService.logout(refreshToken);
 
@@ -371,7 +374,7 @@ const AuthController = {
   GetActiveSessions: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    const refreshToken = getRefreshTokenFromRequest(req);
     const sessions = await AuthService.getActiveSessions(userId, refreshToken);
 
     return sendOk(res, {

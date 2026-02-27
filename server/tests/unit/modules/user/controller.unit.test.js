@@ -112,7 +112,7 @@ describe('UserController', () => {
     try {
       const req = {
         user: { id: TEST_USER_ID },
-        query: { query: 'john', page: '2', limit: '5' },
+        query: { q: 'john', page: '2', limit: '5' },
       };
       const res = createMockResponse();
 
@@ -271,7 +271,7 @@ describe('UserController', () => {
     }
   });
 
-  it('updatePrivacySettings should normalize legacy aliases', async () => {
+  it('updatePrivacySettings should normalize canonical privacy settings', async () => {
     const originalUpdatePrivacySettings = UserService.updatePrivacySettings;
     let receivedArgs;
 
@@ -284,10 +284,10 @@ describe('UserController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         body: {
-          messagePermission: 'nobody',
-          isPrivate: true,
-          activityStatus: false,
-          searchVisibility: true,
+          allowMessages: 'nobody',
+          profileVisibility: 'private',
+          showActivity: false,
+          searchable: true,
         },
       };
       const res = createMockResponse();
@@ -310,7 +310,7 @@ describe('UserController', () => {
     }
   });
 
-  it('acceptFollowRequest should accept requestId from params alias', async () => {
+  it('acceptFollowRequest should accept requestId from params', async () => {
     const originalAcceptFollowRequest = UserService.acceptFollowRequest;
     let receivedArgs;
 
@@ -341,7 +341,7 @@ describe('UserController', () => {
     }
   });
 
-  it('rejectFollowRequest should validate follower id', async () => {
+  it('rejectFollowRequest should validate request id', async () => {
     const req = {
       user: { id: TEST_USER_ID },
       params: {},
@@ -353,10 +353,7 @@ describe('UserController', () => {
 
     assert.equal(error, undefined);
     assert.equal(res.statusCode, 400);
-    assert.equal(
-      res.jsonPayload.message,
-      'Request ID or follower ID is required'
-    );
+    assert.equal(res.jsonPayload.message, 'Request ID is required');
   });
 
   it('getFollowers should delegate with parsed pagination', async () => {
@@ -370,7 +367,7 @@ describe('UserController', () => {
 
     try {
       const req = {
-        user: { _id: TEST_USER_ID },
+        user: { id: TEST_USER_ID },
         params: { userId: '507f191e810c19729de860eb' },
         query: { page: '2', limit: '4' },
       };
@@ -449,7 +446,7 @@ describe('UserController', () => {
     }
   });
 
-  it('updateNotificationSettings should map legacy keys', async () => {
+  it('updateNotificationSettings should map notification settings payload', async () => {
     const originalUpdateNotificationSettings =
       UserService.updateNotificationSettings;
     let receivedArgs;
@@ -463,8 +460,8 @@ describe('UserController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         body: {
-          newFollower: true,
-          directMessages: false,
+          follows: true,
+          messages: false,
           likes: true,
         },
       };
@@ -542,7 +539,7 @@ describe('UserController', () => {
     }
   });
 
-  it('updateContentSettings should map dataUsage and autoplay aliases', async () => {
+  it('updateContentSettings should map dataUsage and canonical content keys', async () => {
     const originalUpdateContentSettings = UserService.updateContentSettings;
     let receivedArgs;
 
@@ -556,8 +553,8 @@ describe('UserController', () => {
         user: { id: TEST_USER_ID },
         body: {
           dataUsage: 'low',
-          autoplayEnabled: true,
-          sensitiveContent: false,
+          autoplayVideos: true,
+          showSensitiveContent: false,
         },
       };
       const res = createMockResponse();
@@ -578,7 +575,7 @@ describe('UserController', () => {
     }
   });
 
-  it('updateThemeSettings should update appearance and optional language', async () => {
+  it('updateThemeSettings should update theme and optional language', async () => {
     const originalUpdateAppearanceSettings = UserService.updateAppearanceSettings;
     const originalUpdateContentSettings = UserService.updateContentSettings;
     let appearanceArgs;
@@ -597,8 +594,8 @@ describe('UserController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         body: {
-          appearance: 'dark',
-          reducedMotion: true,
+          theme: 'dark',
+          compactMode: true,
           language: 'vi',
         },
       };
@@ -637,7 +634,7 @@ describe('UserController', () => {
     assert.equal(res.jsonPayload.message, 'Thiếu ID người dùng cần chặn');
   });
 
-  it('unblockUser/muteUser/unmuteUser should delegate with id aliases', async () => {
+  it('unblockUser/muteUser/unmuteUser should delegate with params.userId', async () => {
     const originalUnblockUser = UserService.unblockUser;
     const originalMuteUser = UserService.muteUser;
     const originalUnmuteUser = UserService.unmuteUser;
@@ -658,17 +655,17 @@ describe('UserController', () => {
     try {
       const unblockReq = {
         user: { id: TEST_USER_ID },
-        params: { blockedUserId: '507f191e810c19729de860eb' },
+        params: { userId: '507f191e810c19729de860eb' },
         body: {},
       };
       const muteReq = {
         user: { id: TEST_USER_ID },
-        params: {},
-        body: { mutedUserId: '507f191e810c19729de860ec' },
+        params: { userId: '507f191e810c19729de860ec' },
+        body: {},
       };
       const unmuteReq = {
         user: { id: TEST_USER_ID },
-        params: { targetUserId: '507f191e810c19729de860ed' },
+        params: { userId: '507f191e810c19729de860ed' },
         body: {},
       };
 
@@ -780,7 +777,7 @@ describe('UserController', () => {
     }
   });
 
-  it('acceptFollowRequest should return 400 when follower id is missing', async () => {
+  it('acceptFollowRequest should return 400 when request id is missing', async () => {
     const req = {
       user: { id: TEST_USER_ID },
       params: {},
@@ -792,13 +789,10 @@ describe('UserController', () => {
 
     assert.equal(error, undefined);
     assert.equal(res.statusCode, 400);
-    assert.equal(
-      res.jsonPayload.message,
-      'Request ID or follower ID is required'
-    );
+    assert.equal(res.jsonPayload.message, 'Request ID is required');
   });
 
-  it('rejectFollowRequest should delegate when follower id exists', async () => {
+  it('rejectFollowRequest should delegate when request id exists', async () => {
     const originalRejectFollowRequest = UserService.rejectFollowRequest;
     let receivedArgs;
 
@@ -810,8 +804,8 @@ describe('UserController', () => {
     try {
       const req = {
         user: { id: TEST_USER_ID },
-        params: {},
-        body: { followerId: '507f191e810c19729de860eb' },
+        params: { requestId: '507f191e810c19729de860eb' },
+        body: {},
       };
       const res = createMockResponse();
 
@@ -936,7 +930,7 @@ describe('UserController', () => {
     }
   });
 
-  it('updatePrivacySettings should map following and isPrivate=false aliases', async () => {
+  it('updatePrivacySettings should normalize allowMessages aliases', async () => {
     const originalUpdatePrivacySettings = UserService.updatePrivacySettings;
     let receivedArgs;
 
@@ -949,8 +943,8 @@ describe('UserController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         body: {
-          messagePermission: 'following',
-          isPrivate: false,
+          allowMessages: 'following',
+          profileVisibility: 'public',
         },
       };
       const res = createMockResponse();
@@ -982,8 +976,8 @@ describe('UserController', () => {
       {
         const req = {
           user: { id: TEST_USER_ID },
-          params: {},
-          body: { targetUserId: '507f191e810c19729de860eb' },
+          params: { userId: '507f191e810c19729de860eb' },
+          body: {},
         };
         const res = createMockResponse();
         const error = await runMiddleware(UserController.blockUser, req, res);

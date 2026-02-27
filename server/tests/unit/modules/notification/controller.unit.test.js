@@ -10,7 +10,7 @@ import {
 describe('NotificationController', () => {
   const USER_ID = '507f191e810c19729de860ea';
 
-  it('createNotification should map legacy payload fields before calling service', async () => {
+  it('createNotification should pass canonical payload fields to service', async () => {
     const originalCreateNotification = NotificationService.createNotification;
     let receivedPayload;
 
@@ -22,11 +22,11 @@ describe('NotificationController', () => {
     try {
       const req = {
         body: {
-          userId: '507f191e810c19729de860ea',
+          recipient: '507f191e810c19729de860ea',
           type: 'system',
-          message: 'hello',
+          content: 'hello',
           title: 'System title',
-          data: { postId: '507f191e810c19729de860eb' },
+          relatedPost: '507f191e810c19729de860eb',
         },
         user: { id: '507f191e810c19729de860ed', isAdmin: false },
       };

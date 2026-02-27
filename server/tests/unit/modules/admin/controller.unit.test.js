@@ -141,7 +141,7 @@ describe('AdminController', () => {
     }
   });
 
-  it('getReports should normalize status/type/priority fields', async () => {
+  it('getReports should normalize status/priority fields with canonical targetType', async () => {
     const originalGetReports = AdminService.getReports;
     let receivedFilter;
 
@@ -160,7 +160,7 @@ describe('AdminController', () => {
       const req = {
         query: {
           status: 'in_review',
-          type: 'post',
+          targetType: 'post',
           priority: 'high',
           sortOrder: 'desc',
         },
@@ -179,7 +179,7 @@ describe('AdminController', () => {
     }
   });
 
-  it('suspendUser should map duration alias to service days parameter', async () => {
+  it('suspendUser should pass duration to service days parameter', async () => {
     const originalSuspendUser = AdminService.suspendUser;
     let receivedArgs;
 
@@ -222,7 +222,7 @@ describe('AdminController', () => {
     assert.equal(error.statusCode, 400);
   });
 
-  it('broadcastNotification should build final content from title + message', async () => {
+  it('broadcastNotification should use canonical content and targetGroup fields', async () => {
     const originalBroadcastNotification = AdminService.broadcastNotification;
     let receivedPayload;
 
@@ -235,8 +235,8 @@ describe('AdminController', () => {
       const req = {
         body: {
           title: 'System',
-          message: 'Maintenance tonight',
-          targetAudience: 'active',
+          content: 'Maintenance tonight',
+          targetGroup: 'active',
         },
         user: { id: '507f191e810c19729de860eb' },
       };
@@ -249,7 +249,7 @@ describe('AdminController', () => {
       );
 
       assert.equal(error, undefined);
-      assert.equal(receivedPayload.content, 'System: Maintenance tonight');
+      assert.equal(receivedPayload.content, 'Maintenance tonight');
       assert.equal(receivedPayload.targetGroup, 'active');
       assert.equal(receivedPayload.type, 'system');
       assert.equal(res.statusCode, 200);

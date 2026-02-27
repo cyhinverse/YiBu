@@ -355,7 +355,7 @@ describe('MessageController', () => {
     }
   });
 
-  it('UpdateGroupConversation should map name/avatar aliases', async () => {
+  it('UpdateGroupConversation should pass canonical group fields', async () => {
     const originalUpdateGroup = MessageService.updateGroup;
     let receivedArgs;
 
@@ -368,7 +368,7 @@ describe('MessageController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         params: { conversationId: '507f191e810c19729de860eb' },
-        body: { name: 'New Group Name', avatar: 'new-avatar.png' },
+        body: { groupName: 'New Group Name', groupAvatar: 'new-avatar.png' },
       };
       const res = createMockResponse();
 
@@ -543,7 +543,7 @@ describe('MessageController', () => {
     assert.equal(error.message, 'Message content or attachment is required');
   });
 
-  it('SendMessage should map type alias and pass uploaded attachments', async () => {
+  it('SendMessage should pass canonical messageType and uploaded attachments', async () => {
     const originalUploadAttachments = MessageService.uploadAttachments;
     const originalSendMessage = MessageService.sendMessage;
     let receivedSendArgs;
@@ -559,7 +559,7 @@ describe('MessageController', () => {
         user: { id: TEST_USER_ID },
         body: {
           conversationId: '507f191e810c19729de860eb',
-          type: 'image',
+          messageType: 'image',
         },
         files: [{ originalname: 'file.jpg' }],
       };
@@ -812,7 +812,7 @@ describe('MessageController', () => {
   it('SearchMessages should require query with at least 2 characters', async () => {
     const req = {
       user: { id: TEST_USER_ID },
-      query: { query: 'a' },
+      query: { q: 'a' },
     };
     const res = createMockResponse();
 
@@ -822,7 +822,7 @@ describe('MessageController', () => {
     assert.equal(error.message, 'Query must be at least 2 characters');
   });
 
-  it('GetUsersForChat should pass search alias and pagination', async () => {
+  it('GetUsersForChat should pass search query and pagination', async () => {
     const originalGetUsersForChat = MessageService.getUsersForChat;
     let receivedArgs;
 
@@ -866,7 +866,7 @@ describe('MessageController', () => {
       const req = {
         user: { id: TEST_USER_ID },
         query: {
-          query: 'hello',
+          q: 'hello',
           conversationId: '507f191e810c19729de860eb',
           page: '2',
           limit: '4',

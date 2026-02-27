@@ -52,7 +52,7 @@ describe('validation schemas', () => {
     expectInvalid(createConversationBody, {});
   });
 
-  it('notification.createNotificationBody should require recipient/user and content/message', () => {
+  it('notification.createNotificationBody should require recipient and content', () => {
     expectValid(createNotificationBody, {
       recipient: OBJECT_ID,
       type: 'system',

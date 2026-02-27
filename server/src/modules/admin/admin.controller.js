@@ -59,8 +59,8 @@ export const AdminController = {
    * @returns {Object} Response with user growth statistics over the specified period
    */
   getUserGrowthStats: CatchError(async (req, res) => {
-    const days = parseInt(req.query.days) || 30;
-    const stats = await AdminService.getUserGrowthStats(days);
+    const { days = 30 } = req.query;
+    const stats = await AdminService.getUserGrowthStats(Number(days));
     return sendOk(res, {
       message: 'User growth stats retrieved',
       data: stats,
@@ -77,8 +77,8 @@ export const AdminController = {
    * @returns {Object} Response with post statistics over the specified period
    */
   getPostStats: CatchError(async (req, res) => {
-    const days = parseInt(req.query.days) || 30;
-    const stats = await AdminService.getPostStats(days);
+    const { days = 30 } = req.query;
+    const stats = await AdminService.getPostStats(Number(days));
     return sendOk(res, {
       message: 'Post stats retrieved',
       data: stats,
@@ -95,8 +95,8 @@ export const AdminController = {
    * @returns {Object} Response with array of top engaged users sorted by engagement metrics
    */
   getTopEngagedUsers: CatchError(async (req, res) => {
-    const limit = parseInt(req.query.limit) || 10;
-    const users = await AdminService.getTopEngagedUsers(limit);
+    const { limit = 10 } = req.query;
+    const users = await AdminService.getTopEngagedUsers(Number(limit));
     return sendOk(res, {
       message: 'Top engaged users retrieved',
       data: users,
@@ -386,7 +386,7 @@ export const AdminController = {
    * @param {Object} req - Express request object
    * @param {Object} req.body - Request body
    * @param {string} req.body.userId - ID of the user to suspend
-   * @param {number} [req.body.days] - Number of days to suspend the user
+   * @param {number} req.body.duration - Number of days to suspend the user
    * @param {string} [req.body.reason] - Reason for suspending the user
    * @param {Object} req.user - Authenticated admin user object
    * @param {string} req.user.id - Admin user's ID
@@ -394,9 +394,9 @@ export const AdminController = {
    * @returns {Object} Response with suspended user data, or 400 if invalid user ID
    */
   suspendUser: CatchError(async (req, res) => {
-    const { userId, days, duration, reason } = req.body;
+    const { userId, duration, reason } = req.body;
     const adminId = req.user.id;
-    const suspendDays = Number(days ?? duration);
+    const suspendDays = Number(duration);
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       throw ApiError.badRequest('Valid user ID is required');
@@ -565,7 +565,7 @@ export const AdminController = {
    */
   moderatePost: CatchError(async (req, res) => {
     const { postId } = req.params;
-    const { action, reason } = req.body || {};
+    const { action, reason } = req.body;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -632,7 +632,7 @@ export const AdminController = {
    */
   deletePost: CatchError(async (req, res) => {
     const { postId } = req.params;
-    const { reason } = req.body || {};
+    const reason = req.body?.reason;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -703,7 +703,7 @@ export const AdminController = {
    */
   moderateComment: CatchError(async (req, res) => {
     const { commentId } = req.params;
-    const { action, reason } = req.body || {};
+    const { action, reason } = req.body;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
@@ -740,7 +740,7 @@ export const AdminController = {
    */
   deleteComment: CatchError(async (req, res) => {
     const { commentId } = req.params;
-    const { reason } = req.body || {};
+    const reason = req.body?.reason;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(commentId)) {
@@ -775,7 +775,7 @@ export const AdminController = {
    */
   getReports: CatchError(async (req, res) => {
     const { page, limit } = getPaginationParams(req.query);
-    const { status, category, priority, type, targetType, sortBy, sortOrder } =
+    const { status, category, priority, targetType, sortBy, sortOrder } =
       req.query;
     let normalizedStatus = status;
     if (status === 'in_review') {
@@ -783,7 +783,6 @@ export const AdminController = {
     } else if (status === 'dismissed') {
       normalizedStatus = 'rejected';
     }
-    const normalizedTargetType = targetType || type;
     const normalizedPriority =
       typeof priority === 'string' && REPORT_PRIORITY_MAP[priority] !== undefined
         ? REPORT_PRIORITY_MAP[priority]
@@ -794,7 +793,7 @@ export const AdminController = {
       limit,
       status: normalizedStatus,
       category,
-      targetType: normalizedTargetType,
+      targetType,
       priority: normalizedPriority,
       sortBy,
       sortOrder: sortOrder === 'asc' ? 1 : -1,
@@ -823,6 +822,7 @@ export const AdminController = {
    * @param {Object} req.body - Request body
    * @param {string} req.body.decision - Decision for the report (resolved/rejected/escalated)
    * @param {string} [req.body.actionTaken] - Action taken on the report
+   * @param {string} [req.body.notes] - Additional review notes
    * @param {Object} req.user - Authenticated admin user object
    * @param {string} req.user.id - Admin user's ID
    * @param {Object} res - Express response object
@@ -830,15 +830,15 @@ export const AdminController = {
    */
   reviewReport: CatchError(async (req, res) => {
     const { reportId } = req.params;
-    const { action, decision, actionTaken, resolution, notes } = req.body || {};
+    const { decision, actionTaken, notes } = req.body;
     const adminId = req.user.id;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
       throw ApiError.badRequest('Invalid report ID format');
     }
 
-    if (!action && !decision && !actionTaken && !resolution) {
-      throw ApiError.badRequest('Review input is required');
+    if (!decision) {
+      throw ApiError.badRequest('Decision is required');
     }
 
 
@@ -846,10 +846,8 @@ export const AdminController = {
       reportId,
       adminId,
       {
-        action,
         decision,
         actionTaken,
-        resolution,
         notes,
       }
     );
@@ -865,11 +863,9 @@ export const AdminController = {
    * @param {Object} req - Express request object
    * @param {Object} req.body - Request body
    * @param {string} [req.body.title] - Notification title
-   * @param {string} [req.body.message] - Notification message
-   * @param {string} [req.body.content] - Notification content (alternative to title+message)
-   * @param {string} [req.body.targetAudience] - Target audience for the notification
-   * @param {string} [req.body.targetGroup] - Target group for the notification (defaults to 'all')
-   * @param {string} [req.body.type] - Type of notification
+   * @param {string} req.body.content - Notification content
+   * @param {string} [req.body.targetGroup='all'] - Target group for the notification
+   * @param {string} [req.body.type='system'] - Type of notification
    * @param {string} [req.body.priority] - Priority level of the notification
    * @param {string} [req.body.link] - Link associated with the notification
    * @param {Object} req.user - Authenticated admin user object
@@ -880,29 +876,24 @@ export const AdminController = {
   broadcastNotification: CatchError(async (req, res) => {
     const {
       title,
-      message,
       content,
-      targetAudience,
       targetGroup,
-      type,
+      type = 'system',
       priority,
       link,
     } = req.body;
     const adminId = req.user.id;
 
-    const finalContent = content || (title ? `${title}: ${message}` : message);
-    const finalTargetGroup = targetGroup || targetAudience || 'all';
-
-    if (!finalContent) {
+    if (!content) {
       throw ApiError.badRequest('Notification content is required');
     }
 
     const result = await AdminService.broadcastNotification(
       adminId,
       {
-        content: finalContent,
-        targetGroup: finalTargetGroup,
-        type: type || 'system',
+        content,
+        targetGroup,
+        type,
         title,
         priority,
         link,

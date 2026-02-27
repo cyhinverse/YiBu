@@ -14,44 +14,6 @@ import ApiError from '../../helpers/ApiError.js';
  * - Get user's report list
  * - Admin: Manage and process reports
  */
-const LEGACY_ACTION_TO_RESOLUTION = {
-  dismiss: { decision: 'rejected', actionTaken: null },
-  warn: { decision: 'resolved', actionTaken: 'warn_user' },
-  hide_content: { decision: 'resolved', actionTaken: 'remove_content' },
-  remove_content: { decision: 'resolved', actionTaken: 'remove_content' },
-  suspend_user: { decision: 'resolved', actionTaken: 'suspend_user' },
-  ban_user: { decision: 'resolved', actionTaken: 'ban_user' },
-};
-
-const LEGACY_RESOLUTION_TO_RESOLUTION = {
-  dismissed: { decision: 'rejected', actionTaken: null },
-  content_removed: { decision: 'resolved', actionTaken: 'remove_content' },
-  user_warned: { decision: 'resolved', actionTaken: 'warn_user' },
-  user_suspended: { decision: 'resolved', actionTaken: 'suspend_user' },
-  user_banned: { decision: 'resolved', actionTaken: 'ban_user' },
-};
-
-const normalizeResolutionPayload = payload => {
-  const { decision, actionTaken, action, resolution, notes } = payload;
-
-  if (decision) {
-    return { decision, actionTaken: actionTaken || null, notes };
-  }
-
-  if (action && LEGACY_ACTION_TO_RESOLUTION[action]) {
-    return { ...LEGACY_ACTION_TO_RESOLUTION[action], notes };
-  }
-
-  if (resolution && LEGACY_RESOLUTION_TO_RESOLUTION[resolution]) {
-    return { ...LEGACY_RESOLUTION_TO_RESOLUTION[resolution], notes };
-  }
-
-  if (actionTaken) {
-    return { decision: 'resolved', actionTaken, notes };
-  }
-
-  return { decision: null, actionTaken: null, notes };
-};
 
 const getReporterId = report => {
   if (!report?.reporter) return null;
@@ -490,12 +452,10 @@ const ReportController = {
 
     const { reportId } = req.params;
     const adminId = req.user.id;
-    const { decision, actionTaken, notes } = normalizeResolutionPayload(
-      req.body || {}
-    );
+    const { decision, actionTaken, notes } = req.body;
 
     if (!decision) {
-      throw ApiError.badRequest('Resolution input is required');
+      throw ApiError.badRequest('Decision is required');
     }
 
     const report = await ReportService.resolveReport(reportId, adminId, {

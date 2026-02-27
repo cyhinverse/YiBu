@@ -302,7 +302,6 @@ const PostController = {
    * @param {string} [req.user.id] - Current user's ID for context
    * @param {Object} req.query - Query parameters
    * @param {string} [req.query.q] - Search query string
-   * @param {string} [req.query.query] - Alternative search query string
    * @param {number} [req.query.page=1] - Page number for pagination
    * @param {number} [req.query.limit=20] - Number of results per page
    * @param {Object} res - Express response object
@@ -310,8 +309,7 @@ const PostController = {
    */
   SearchPosts: CatchError(async (req, res) => {
     const userId = req.user?.id;
-    const { q, query, page = 1, limit = 20 } = req.query;
-    const searchQuery = q || query;
+    const { q: searchQuery, page = 1, limit = 20 } = req.query;
 
     if (!searchQuery || searchQuery.trim().length < 2) {
       throw ApiError.badRequest('Query must be at least 2 characters');
@@ -560,12 +558,10 @@ const PostController = {
    * Get shared posts by user
    * @param {Object} req - Express request object
    * @param {Object} req.params - Route parameters
-   * @param {string} [req.params.id] - User ID to get shared posts for (defaults to current user)
+   * @param {string} req.params.id - User ID to get shared posts for
    * @param {Object} req.query - Query parameters
    * @param {number} [req.query.page=1] - Page number for pagination
    * @param {number} [req.query.limit=20] - Number of posts per page
-   * @param {Object} req.user - Authenticated user object
-   * @param {string} req.user.id - Current user's ID (fallback)
    * @param {Object} res - Express response object
    * @returns {Object} Response with paginated shared posts
    */
@@ -573,9 +569,7 @@ const PostController = {
     const { id } = req.params;
     const { page = 1, limit = 20 } = req.query;
 
-    const targetUserId = id || req.user.id;
-
-    const result = await PostService.getSharedPosts(targetUserId, {
+    const result = await PostService.getSharedPosts(id, {
       page: parseInt(page),
       limit: parseInt(limit),
     });

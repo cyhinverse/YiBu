@@ -166,36 +166,28 @@ const MessageController = {
    */
   CreateGroupConversation: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const {
-      participantIds,
-      groupName,
-      groupAvatar,
-      name,
-      avatar,
-    } = req.body;
-    const finalGroupName = groupName || name;
-    const finalGroupAvatar = groupAvatar || avatar;
+    const { participantIds, groupName, groupAvatar } = req.body;
 
     if (!participantIds || participantIds.length < 2) {
       throw ApiError.badRequest('Group requires at least 2 participants');
     }
 
-    if (!finalGroupName) {
+    if (!groupName) {
       throw ApiError.badRequest('Group name is required');
     }
 
 
     const conversation = await MessageService.createGroupConversation(userId, {
       participantIds,
-      groupName: finalGroupName,
-      groupAvatar: finalGroupAvatar,
+      groupName,
+      groupAvatar,
     });
 
     participantIds.forEach(participantId => {
       if (participantId !== userId) {
         socketService.emitGroupCreated(participantId, {
           conversationId: conversation._id,
-          groupName: finalGroupName,
+          groupName,
           createdBy: userId,
         });
       }
@@ -224,14 +216,14 @@ const MessageController = {
   UpdateGroupConversation: CatchError(async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user.id;
-    const { groupName, groupAvatar, name, avatar } = req.body;
+    const { groupName, groupAvatar } = req.body;
 
     const conversation = await MessageService.updateGroup(
       conversationId,
       userId,
       {
-        groupName: groupName || name,
-        groupAvatar: groupAvatar || avatar,
+        groupName,
+        groupAvatar,
       }
     );
 
@@ -406,13 +398,7 @@ const MessageController = {
    */
   SendMessage: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const {
-      conversationId,
-      content,
-      messageType = 'text',
-      type,
-      replyTo,
-    } = req.body;
+    const { conversationId, content, messageType = 'text', replyTo } = req.body;
 
     let attachments = [];
     if (req.files && req.files.length > 0) {
@@ -425,7 +411,7 @@ const MessageController = {
 
     const message = await MessageService.sendMessage(conversationId, userId, {
       content,
-      messageType: type || messageType,
+      messageType,
       media: attachments,
       replyTo,
     });
@@ -452,7 +438,7 @@ const MessageController = {
   DeleteMessage: CatchError(async (req, res) => {
     const { messageId } = req.params;
     const userId = req.user.id;
-    const { forEveryone = false } = req.body || {};
+    const forEveryone = req.body?.forEveryone ?? false;
 
     const message = await MessageService.deleteMessage(
       messageId,
@@ -601,7 +587,7 @@ const MessageController = {
    * @param {Object} req.user - Authenticated user object
    * @param {string} req.user.id - Current user's ID
    * @param {Object} req.query - Query parameters
-   * @param {string} req.query.query - Search query string (min 2 characters)
+   * @param {string} req.query.q - Search query string (min 2 characters)
    * @param {string} [req.query.conversationId] - Filter by conversation ID
    * @param {number} [req.query.page=1] - Page number for pagination
    * @param {number} [req.query.limit=20] - Number of results per page
@@ -610,8 +596,7 @@ const MessageController = {
    */
   SearchMessages: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { q, query, conversationId, page = 1, limit = 20 } = req.query;
-    const searchQuery = q || query;
+    const { q: searchQuery, conversationId, page = 1, limit = 20 } = req.query;
 
     if (!searchQuery || searchQuery.trim().length < 2) {
       throw ApiError.badRequest('Query must be at least 2 characters');
@@ -637,18 +622,18 @@ const MessageController = {
    * @param {Object} req.query - Query parameters
    * @param {number} [req.query.page=1] - Page number for pagination
    * @param {number} [req.query.limit=20] - Number of users per page
-   * @param {string} [req.query.search] - Search query to filter users
+   * @param {string} [req.query.q] - Search query to filter users
    * @param {Object} res - Express response object
    * @returns {Object} Response with paginated users list
    */
   GetUsersForChat: CatchError(async (req, res) => {
     const userId = req.user.id;
-    const { page = 1, limit = 20, q, search } = req.query;
+    const { page = 1, limit = 20, q } = req.query;
 
     const result = await MessageService.getUsersForChat(userId, {
       page: parseInt(page),
       limit: parseInt(limit),
-      search: q || search,
+      search: q,
     });
     return sendOk(res, {
       message: 'Success',

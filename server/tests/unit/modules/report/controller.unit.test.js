@@ -566,7 +566,7 @@ describe('ReportController', () => {
     }
   });
 
-  it('resolveReport should map legacy action payload', async () => {
+  it('resolveReport should delegate canonical decision payload', async () => {
     const originalResolveReport = ReportService.resolveReport;
     let receivedArgs;
 
@@ -579,7 +579,11 @@ describe('ReportController', () => {
       const req = {
         params: { reportId: '507f191e810c19729de860ef' },
         user: { id: TEST_ADMIN_ID, isAdmin: true },
-        body: { action: 'warn', notes: 'first warning' },
+        body: {
+          decision: 'resolved',
+          actionTaken: 'warn_user',
+          notes: 'first warning',
+        },
       };
       const res = createMockResponse();
 
@@ -623,10 +627,10 @@ describe('ReportController', () => {
     const error = await runMiddleware(ReportController.resolveReport, req, res);
 
     assert.equal(error.statusCode, 400);
-    assert.equal(error.message, 'Resolution input is required');
+    assert.equal(error.message, 'Decision is required');
   });
 
-  it('resolveReport should map legacy resolution payload', async () => {
+  it('resolveReport should delegate canonical rejected payload', async () => {
     const originalResolveReport = ReportService.resolveReport;
     let receivedArgs;
 
@@ -639,7 +643,7 @@ describe('ReportController', () => {
       const req = {
         params: { reportId: '507f191e810c19729de860ef' },
         user: { id: TEST_ADMIN_ID, isAdmin: true },
-        body: { resolution: 'dismissed', notes: 'no violation' },
+        body: { decision: 'rejected', notes: 'no violation' },
       };
       const res = createMockResponse();
 
@@ -649,7 +653,7 @@ describe('ReportController', () => {
       assert.deepEqual(receivedArgs, [
         '507f191e810c19729de860ef',
         TEST_ADMIN_ID,
-        { decision: 'rejected', actionTaken: null, notes: 'no violation' },
+        { decision: 'rejected', actionTaken: undefined, notes: 'no violation' },
       ]);
       assert.equal(res.statusCode, 200);
       assert.equal(res.jsonPayload.message, 'Report rejected');
@@ -658,7 +662,7 @@ describe('ReportController', () => {
     }
   });
 
-  it('resolveReport should keep explicit decision and normalize missing actionTaken to null', async () => {
+  it('resolveReport should pass explicit decision and optional actionTaken', async () => {
     const originalResolveReport = ReportService.resolveReport;
     let receivedArgs;
 
@@ -681,7 +685,7 @@ describe('ReportController', () => {
       assert.deepEqual(receivedArgs, [
         '507f191e810c19729de860ef',
         TEST_ADMIN_ID,
-        { decision: 'resolved', actionTaken: null, notes: 'handled manually' },
+        { decision: 'resolved', actionTaken: undefined, notes: 'handled manually' },
       ]);
       assert.equal(res.statusCode, 200);
       assert.equal(res.jsonPayload.message, 'Report resolved');
@@ -690,40 +694,18 @@ describe('ReportController', () => {
     }
   });
 
-  it('resolveReport should map actionTaken-only payload to resolved decision', async () => {
-    const originalResolveReport = ReportService.resolveReport;
-    let receivedArgs;
-
-    ReportService.resolveReport = async (...args) => {
-      receivedArgs = args;
-      return { _id: '507f191e810c19729de860ef' };
+  it('resolveReport should reject payload without decision', async () => {
+    const req = {
+      params: { reportId: '507f191e810c19729de860ef' },
+      user: { id: TEST_ADMIN_ID, isAdmin: true },
+      body: { actionTaken: 'remove_content', notes: 'content removed' },
     };
+    const res = createMockResponse();
 
-    try {
-      const req = {
-        params: { reportId: '507f191e810c19729de860ef' },
-        user: { id: TEST_ADMIN_ID, isAdmin: true },
-        body: { actionTaken: 'remove_content', notes: 'content removed' },
-      };
-      const res = createMockResponse();
+    const error = await runMiddleware(ReportController.resolveReport, req, res);
 
-      const error = await runMiddleware(ReportController.resolveReport, req, res);
-
-      assert.equal(error, undefined);
-      assert.deepEqual(receivedArgs, [
-        '507f191e810c19729de860ef',
-        TEST_ADMIN_ID,
-        {
-          decision: 'resolved',
-          actionTaken: 'remove_content',
-          notes: 'content removed',
-        },
-      ]);
-      assert.equal(res.statusCode, 200);
-      assert.equal(res.jsonPayload.message, 'Report resolved');
-    } finally {
-      ReportService.resolveReport = originalResolveReport;
-    }
+    assert.equal(error.statusCode, 400);
+    assert.equal(error.message, 'Decision is required');
   });
 
   it('updateReportStatus should delegate status update to service', async () => {
