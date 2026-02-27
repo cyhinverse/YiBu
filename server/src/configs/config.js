@@ -2,10 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || 'development';
-const envFile =
-  nodeEnv === 'production' ? '.env.production' : '.env.development';
 
 const serverRootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -13,9 +10,8 @@ const serverRootDir = path.resolve(
   '..'
 );
 
-// Load base .env (if present) then overlay env-specific file.
+// Load only .env from backend project root.
 dotenv.config({ path: path.join(serverRootDir, '.env') });
-dotenv.config({ path: path.join(serverRootDir, envFile) });
 
 const parseCsv = (value, fallback = []) => {
   if (!value) return fallback;

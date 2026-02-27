@@ -4,15 +4,12 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test --test-isolation=none",
+    "test:unit": "node --test --test-isolation=none \"tests/unit/**/*.test.js\"",
+    "test:integration": "node --test --test-isolation=none \"tests/integration/**/*.test.js\"",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "dev:docker": "cross-env NODE_ENV=development MONGODB_URI=mongodb://localhost:27018/socialmedia?directConnection=true nodemon src/server.js",
-    "production": "cross-env NODE_ENV=production node src/server.js",
-    "seed": "cross-env NODE_ENV=development node scripts/seed.js",
-    "seed:drop": "cross-env NODE_ENV=development node scripts/seed.js --drop",
-    "migrate:refresh-tokens-hash": "cross-env NODE_ENV=production node scripts/migrate-refresh-tokens-hash.js",
-    "hashtags:sync": "cross-env NODE_ENV=development node scripts/sync-hashtags.js",
-    "hashtags:sync:prune": "cross-env NODE_ENV=development node scripts/sync-hashtags.js --prune"
+    "production": "cross-env NODE_ENV=production node src/server.js"
   },
   "keywords": [],
   "author": "Making by Cyhin",
