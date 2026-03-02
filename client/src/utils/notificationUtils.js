@@ -12,16 +12,6 @@ import {
   Megaphone,
 } from 'lucide-react';
 import React from 'react';
-import { formatRelativeShortTime } from './dateUtils';
-
-/**
- * Format time to relative string (e.g., "5m", "2h", "3d")
- * @param {string|Date} dateStr - Date string or Date object
- * @returns {string} Formatted relative time
- */
-export const formatNotificationTime = dateStr => {
-  return formatRelativeShortTime(dateStr);
-};
 
 /**
  * Get notification icon component based on notification type

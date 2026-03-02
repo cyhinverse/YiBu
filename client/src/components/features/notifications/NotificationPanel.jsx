@@ -16,8 +16,8 @@ import {
 } from '@/hooks/useNotificationQuery';
 import { notify } from '@/utils/notify';
 import { useInView } from 'react-intersection-observer';
+import { formatRelativeShortTime as formatTime } from '@/utils/dateUtils';
 import {
-  formatNotificationTime as formatTime,
   getNotificationIcon,
   getNotificationContent,
 } from '@/utils/notificationUtils';

@@ -1,7 +1,6 @@
 import { Image, Video, FileText } from 'lucide-react';
 import React from 'react';
 import { formatNumber } from './numberUtils';
-import { formatRelativeShortTime } from './dateUtils';
 
 /**
  * Format count to human-readable string (e.g., "1.5K", "2.3M")
@@ -10,15 +9,6 @@ import { formatRelativeShortTime } from './dateUtils';
  */
 export const formatCount = count => {
   return formatNumber(count, { trimTrailingZero: true, fallback: '0' });
-};
-
-/**
- * Format post time to relative string (e.g., "5m", "2h", "3d")
- * @param {string|Date} date - Date string or Date object
- * @returns {string} Formatted relative time
- */
-export const formatPostTime = date => {
-  return formatRelativeShortTime(date);
 };
 
 /**

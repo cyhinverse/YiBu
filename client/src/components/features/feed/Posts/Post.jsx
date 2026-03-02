@@ -35,7 +35,8 @@ import {
   useSharePost,
 } from '@/hooks/usePostsQuery';
 import UserProfilePreview from '@/components/Common/UserProfilePreview';
-import { formatCount, formatPostTime as formatTime } from '@/utils/postUtils';
+import { formatRelativeShortTime as formatTime } from '@/utils/dateUtils';
+import { formatCount } from '@/utils/postUtils';
 import VideoPlayer from './VideoPlayer';
 
 // Lazy load modals
