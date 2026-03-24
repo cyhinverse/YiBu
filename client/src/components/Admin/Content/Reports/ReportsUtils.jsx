@@ -4,7 +4,7 @@ export {
   getReportStatusStyle as getStatusStyle,
   getReportStatusText as getStatusText,
   getTargetTypeText,
-} from '@/utils/reportUtils';
+} from './reportPresentation.utils';
 
 /**
  * Get target icon component based on type

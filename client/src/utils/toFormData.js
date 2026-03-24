@@ -8,32 +8,53 @@ const isFileLike = value => {
   return false;
 };
 
+const isFileList = value =>
+  typeof FileList !== 'undefined' && value instanceof FileList;
+
+const appendValue = (fd, key, value) => {
+  if (value === undefined || value === null) return;
+
+  if (isFileList(value)) {
+    Array.from(value).forEach(file => fd.append(key, file));
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return;
+
+    if (value.every(isFileLike)) {
+      value.forEach(file => fd.append(key, file));
+      return;
+    }
+
+    fd.append(key, JSON.stringify(value));
+    return;
+  }
+
+  if (isFileLike(value)) {
+    fd.append(key, value);
+    return;
+  }
+
+  if (value instanceof Date) {
+    fd.append(key, value.toISOString());
+    return;
+  }
+
+  if (typeof value === 'object') {
+    fd.append(key, JSON.stringify(value));
+    return;
+  }
+
+  fd.append(key, String(value));
+};
+
 export const toFormData = (obj = {}) => {
   const fd = new FormData();
 
   Object.entries(obj).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-
-    // Support FileList/array wrappers
-    if (Array.isArray(value) && value.length === 1 && isFileLike(value[0])) {
-      fd.append(key, value[0]);
-      return;
-    }
-
-    if (isFileLike(value)) {
-      fd.append(key, value);
-      return;
-    }
-
-    if (value instanceof Date) {
-      fd.append(key, value.toISOString());
-      return;
-    }
-
-    // Everything else: send as string
-    fd.append(key, String(value));
+    appendValue(fd, key, value);
   });
 
   return fd;
 };
-

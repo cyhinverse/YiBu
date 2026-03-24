@@ -33,6 +33,10 @@ const Register = () => {
     password: '',
   });
 
+  const errorMessage =
+    (Array.isArray(error?.details) && error.details[0]?.message) ||
+    (typeof error === 'string' ? error : error?.message);
+
   // Only redirect if BOTH authenticated AND user data is loaded
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -121,10 +125,14 @@ const Register = () => {
   };
 
   const validateForm = () => {
+    const trimmedName = formData.name.trim();
+    const trimmedUsername = formData.username.trim();
+    const trimmedEmail = formData.email.trim();
+
     if (
-      !formData.name ||
-      !formData.username ||
-      !formData.email ||
+      !trimmedName ||
+      !trimmedUsername ||
+      !trimmedEmail ||
       !formData.password
     ) {
       notify.error('Vui lòng điền đầy đủ thông tin');
@@ -138,6 +146,18 @@ const Register = () => {
       notify.error('Username chỉ được chứa chữ cái, số và dấu gạch dưới');
       return false;
     }
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      notify.error('Username phải có từ 3 đến 30 ký tự');
+      return false;
+    }
+    if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
+      notify.error('Email không hợp lệ');
+      return false;
+    }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      notify.error('Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 số');
+      return false;
+    }
     return true;
   };
 
@@ -145,7 +165,14 @@ const Register = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const result = await dispatch(register(formData));
+    const payload = {
+      ...formData,
+      name: formData.name.trim(),
+      username: formData.username.trim().toLowerCase(),
+      email: formData.email.trim().toLowerCase(),
+    };
+
+    const result = await dispatch(register(payload));
     if (register.fulfilled.match(result)) {
       notify.success('Đăng ký thành công!');
       navigate('/');
@@ -306,10 +333,10 @@ const Register = () => {
             </p>
 
             {/* Error Message */}
-            {error?.message && (
+            {errorMessage && (
               <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
                 <AlertCircle size={16} />
-                {error.message}
+                {errorMessage}
               </div>
             )}
 

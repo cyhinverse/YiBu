@@ -8,15 +8,12 @@ services:
       - NODE_ENV=production
       - PORT=${PORT:-5000}
       - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
-      # Force Docker services to use Docker Mongo (avoid accidental Atlas/host env override).
       - MONGODB_URI=mongodb://mongo:27017/socialmedia
-      # Must be provided via environment (.env or deployment secrets).
-      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      # Local Docker runs are usually plain HTTP, so secure cookies would be dropped by the browser.
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-docker_local_access_token_secret_please_change_2026}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-docker_local_refresh_token_secret_please_change_2026}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://rabbitmq:5672}
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}
-      # Required for uploading images/videos (avatar/cover/post media) to Cloudinary.
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
@@ -27,6 +24,7 @@ services:
     depends_on:
       - mongo
       - redis
+      - rabbitmq
     networks:
       - social_network
 
@@ -49,8 +47,6 @@ services:
     image: mongo:latest
     container_name: social_mongo
     ports:
-      # Use 27018 by default to avoid conflicts with local MongoDB on 27017.
-      # Override via `MONGO_HOST_PORT=27017` if you want the default port.
       - "${MONGO_HOST_PORT:-27018}:27017"
     volumes:
       - mongo_data:/data/db
@@ -71,9 +67,30 @@ services:
     networks:
       - social_network
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: social_rabbitmq
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - social_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 networks:
   social_network:
     driver: bridge
 
 volumes:
   mongo_data:
+  rabbitmq_data:

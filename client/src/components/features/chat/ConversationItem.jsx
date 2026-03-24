@@ -1,6 +1,5 @@
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import { useSocketContext } from '@/contexts/useSocketContext';
+import { formatDistanceToNow } from '@/utils/dateUtils';
 
 const ConversationItem = ({
   conversation,
@@ -88,20 +87,15 @@ const ConversationItem = ({
                 displayUser.fullName ||
                 displayUser.username}
           </span>
-          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-tighter">
-            {conversation.updatedAt || conversation.lastMessage?.createdAt
-              ? formatDistanceToNow(
-                  new Date(
+            <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-tighter">
+              {conversation.updatedAt || conversation.lastMessage?.createdAt
+                ? formatDistanceToNow(
                     conversation.updatedAt ||
-                      conversation.lastMessage?.createdAt
-                  ),
-                  {
-                    addSuffix: false,
-                    locale: vi,
-                  }
-                )
-              : ''}
-          </span>
+                      conversation.lastMessage?.createdAt,
+                    { addSuffix: false }
+                  )
+                : ''}
+            </span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <p

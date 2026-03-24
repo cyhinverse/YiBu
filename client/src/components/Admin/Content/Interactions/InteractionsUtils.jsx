@@ -7,11 +7,10 @@ import {
   Bookmark,
   Activity,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { formatDistanceToNow } from '@/utils/dateUtils';
 
 // Re-export from utils for backward compatibility
-export { getInteractionText } from '@/utils/interactionUtils';
+export { getInteractionText } from './interactionText.utils';
 
 /**
  * Get interaction icon component based on type
@@ -45,9 +44,6 @@ export const getInteractionIcon = type => {
  * @returns {string} Formatted relative time
  */
 export const formatTime = date => {
-  try {
-    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
-  } catch {
-    return 'vừa xong';
-  }
+  const formatted = formatDistanceToNow(date);
+  return formatted || 'vừa xong';
 };

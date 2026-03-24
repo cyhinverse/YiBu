@@ -46,7 +46,11 @@ const shutdown = async signal => {
     logger.info(`Shutdown complete (${signal})`, { module: 'system' });
     process.exit(0);
   } catch (err) {
-    logger.error('Shutdown failed', { module: 'system', message: err?.message, stack: err?.stack });
+    logger.error('Shutdown failed', {
+      module: 'system',
+      message: err?.message,
+      stack: err?.stack,
+    });
     process.exit(1);
   }
 };
@@ -60,7 +64,11 @@ process.on('unhandledRejection', reason => {
 });
 
 process.on('uncaughtException', err => {
-  logger.error('Uncaught exception', { module: 'system', message: err?.message, stack: err?.stack });
+  logger.error('Uncaught exception', {
+    module: 'system',
+    message: err?.message,
+    stack: err?.stack,
+  });
   shutdown('uncaughtException');
 });
 
@@ -91,7 +99,9 @@ const startServer = async () => {
     io = initSocket(server);
 
     server.listen(config.port, () => {
-      logger.info(`Server running in ${config.env} mode on port ${config.port}`);
+      logger.info(
+        `Server running in ${config.env} mode on port ${config.port}`
+      );
       logger.info('Server Started', {
         module: 'system',
         details: `Server started successfully on port ${config.port}`,

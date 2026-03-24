@@ -13,11 +13,6 @@ import {
 } from 'lucide-react';
 import React from 'react';
 
-/**
- * Get notification icon component based on notification type
- * @param {string} type - Notification type ('like' | 'comment' | 'follow' | 'repost' | 'share' | 'mention')
- * @returns {React.ReactElement} Icon component
- */
 export const getNotificationIcon = type => {
   switch (type) {
     case 'like':
@@ -57,11 +52,6 @@ export const getNotificationIcon = type => {
   }
 };
 
-/**
- * Get notification content text based on notification type (Vietnamese)
- * @param {Object} notification - Notification object
- * @returns {string} Notification content text
- */
 export const getNotificationContent = notification => {
   if (notification?.displayContent || notification?.content || notification?.message) {
     return (

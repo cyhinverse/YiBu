@@ -1,8 +1,3 @@
-/**
- * Get status style classes based on status
- * @param {string} status - Report status ('pending' | 'resolved' | 'rejected')
- * @returns {string} Tailwind CSS classes
- */
 export const getReportStatusStyle = status => {
   switch (status) {
     case 'pending':
@@ -20,11 +15,6 @@ export const getReportStatusStyle = status => {
   }
 };
 
-/**
- * Get status text based on status
- * @param {string} status - Report status
- * @returns {string} Status text in Vietnamese
- */
 export const getReportStatusText = status => {
   switch (status) {
     case 'pending':
@@ -42,11 +32,6 @@ export const getReportStatusText = status => {
   }
 };
 
-/**
- * Get target type text
- * @param {string} type - Target type ('post' | 'comment' | 'user')
- * @returns {string} Target type text in Vietnamese
- */
 export const getTargetTypeText = type => {
   switch (type) {
     case 'post':

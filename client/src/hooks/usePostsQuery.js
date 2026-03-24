@@ -9,6 +9,123 @@ import { POST_API, LIKE_API, SAVE_POST_API } from '@/axios/apiEndpoint';
 import { extractData } from '@/utils/apiUtils';
 import { invalidateQueryKeys, removeQueryKeys } from './queryClientUtils';
 
+const normalizeId = value => {
+  if (value === null || value === undefined) return '';
+  return String(value);
+};
+
+const toSafeNumber = value => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const getPostLikeCount = post => {
+  if (!post || typeof post !== 'object') return 0;
+  if (post.likesCount !== undefined) return toSafeNumber(post.likesCount);
+  if (post.likeCount !== undefined) return toSafeNumber(post.likeCount);
+  return 0;
+};
+
+const patchLikeOnPost = (post, postId, liked) => {
+  if (!post || typeof post !== 'object') return post;
+  const currentId = normalizeId(post._id || post.id);
+  if (!currentId || currentId !== normalizeId(postId)) return post;
+
+  const currentCount = getPostLikeCount(post);
+  const nextCount = liked
+    ? currentCount + 1
+    : Math.max(0, currentCount - 1);
+
+  return {
+    ...post,
+    isLiked: liked,
+    likesCount: nextCount,
+    likeCount: nextCount,
+  };
+};
+
+const patchLikeOnPostArray = (posts, postId, liked) => {
+  if (!Array.isArray(posts)) return posts;
+
+  let hasChanges = false;
+  const nextPosts = posts.map(post => {
+    const patched = patchLikeOnPost(post, postId, liked);
+    if (patched !== post) hasChanges = true;
+    return patched;
+  });
+
+  return hasChanges ? nextPosts : posts;
+};
+
+const patchLikeInQueryData = (oldData, postId, liked) => {
+  if (!oldData) return oldData;
+
+  if (Array.isArray(oldData)) {
+    return patchLikeOnPostArray(oldData, postId, liked);
+  }
+
+  if (oldData.pages && Array.isArray(oldData.pages)) {
+    let hasChanges = false;
+    const nextPages = oldData.pages.map(page => {
+      if (Array.isArray(page)) {
+        const nextPage = patchLikeOnPostArray(page, postId, liked);
+        if (nextPage !== page) hasChanges = true;
+        return nextPage;
+      }
+
+      if (!page || typeof page !== 'object') return page;
+      if (!Array.isArray(page.posts)) return page;
+
+      const nextPosts = patchLikeOnPostArray(page.posts, postId, liked);
+      if (nextPosts === page.posts) return page;
+
+      hasChanges = true;
+      return {
+        ...page,
+        posts: nextPosts,
+      };
+    });
+
+    return hasChanges
+      ? {
+          ...oldData,
+          pages: nextPages,
+        }
+      : oldData;
+  }
+
+  if (Array.isArray(oldData.posts)) {
+    const nextPosts = patchLikeOnPostArray(oldData.posts, postId, liked);
+    if (nextPosts === oldData.posts) return oldData;
+    return {
+      ...oldData,
+      posts: nextPosts,
+    };
+  }
+
+  return patchLikeOnPost(oldData, postId, liked);
+};
+
+const patchLikeStatusData = (oldData, liked) => {
+  if (!oldData || typeof oldData !== 'object') {
+    return { isLiked: liked, liked };
+  }
+
+  const existingCount =
+    oldData.count ?? oldData.likesCount ?? oldData.likeCount;
+  const baseCount = toSafeNumber(existingCount);
+  const nextCount = liked ? baseCount + 1 : Math.max(0, baseCount - 1);
+
+  return {
+    ...oldData,
+    isLiked: liked,
+    liked,
+    count: nextCount,
+    likesCount: nextCount,
+    likeCount: nextCount,
+  };
+};
+
 /**
  * Hook to fetch user posts with infinite scroll
  * @param {string} userId - User ID
@@ -156,12 +273,27 @@ export const useToggleLike = () => {
       const response = await api.post(LIKE_API.TOGGLE, { postId });
       return extractData(response);
     },
-    onSuccess: (_, postId) => {
-      invalidateQueryKeys(queryClient, [
-        { queryKey: ['post', postId] },
-        { queryKey: ['likeStatus', postId] },
-        { queryKey: ['feed'], refetchType: 'active' },
-      ]);
+    onSuccess: (result, postId) => {
+      const liked = Boolean(result?.liked);
+
+      queryClient.setQueryData(['post', postId], oldData =>
+        patchLikeInQueryData(oldData, postId, liked)
+      );
+      queryClient.setQueryData(['likeStatus', postId], oldData =>
+        patchLikeStatusData(oldData, liked)
+      );
+
+      queryClient.setQueriesData({ queryKey: ['feed'] }, oldData =>
+        patchLikeInQueryData(oldData, postId, liked)
+      );
+
+      queryClient.setQueriesData({ queryKey: ['posts'] }, oldData =>
+        patchLikeInQueryData(oldData, postId, liked)
+      );
+
+      queryClient.setQueriesData({ queryKey: ['sharedPosts'] }, oldData =>
+        patchLikeInQueryData(oldData, postId, liked)
+      );
     },
   });
 };

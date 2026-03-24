@@ -1,8 +1,10 @@
 import express from 'express';
 import AuthController from '../modules/auth/auth.controller.js';
-
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { authRateLimiter } from '../middlewares/security.middleware.js';
+import {
+  authRateLimiter,
+  authPasswordResetRateLimiter,
+} from '../middlewares/security.middleware.js';
 import {
   validateBody,
   validateParams,
@@ -20,16 +22,10 @@ import {
   disableTwoFactorBody,
 } from '../validations/auth.validation.js';
 
-
 const router = express.Router();
 
 /* POST /register - Register new user account */
-router.post(
-  '/register',
-  authRateLimiter,
-  validateBody(registerBody),
-  AuthController.Register
-);
+router.post('/register', validateBody(registerBody), AuthController.Register);
 /* POST /login - User login */
 router.post(
   '/login',
@@ -38,24 +34,19 @@ router.post(
   AuthController.Login
 );
 /* POST /google - Google OAuth authentication */
-router.post(
-  '/google',
-  authRateLimiter,
-  validateBody(googleAuthBody),
-  AuthController.GoogleAuth
-);
+router.post('/google', validateBody(googleAuthBody), AuthController.GoogleAuth);
 
 /* POST /password/reset-request - Request password reset email */
 router.post(
   '/password/reset-request',
-  authRateLimiter,
+  authPasswordResetRateLimiter,
   validateBody(forgotPasswordBody),
   AuthController.RequestPasswordReset
 );
 /* POST /password/reset - Reset password using token */
 router.post(
   '/password/reset',
-  authRateLimiter,
+  authPasswordResetRateLimiter,
   validateBody(resetPasswordBody),
   AuthController.ResetPassword
 );
@@ -63,7 +54,6 @@ router.post(
 /* POST /refresh - Refresh access token */
 router.post(
   '/refresh',
-  authRateLimiter,
   validateBody(refreshTokenBody),
   AuthController.RefreshToken
 );
@@ -99,7 +89,6 @@ router.post(
   validateBody(disableTwoFactorBody),
   AuthController.DisableTwoFactor
 );
-
 
 /* GET /sessions - Get all active login sessions */
 router.get('/sessions', AuthController.GetActiveSessions);

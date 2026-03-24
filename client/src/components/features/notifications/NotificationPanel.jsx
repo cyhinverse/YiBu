@@ -20,7 +20,7 @@ import { formatRelativeShortTime as formatTime } from '@/utils/dateUtils';
 import {
   getNotificationIcon,
   getNotificationContent,
-} from '@/utils/notificationUtils';
+} from './notificationPresentation.utils';
 
 const NotificationPanel = () => {
   const [filter, setFilter] = useState('all');

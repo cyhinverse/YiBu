@@ -1,24 +1,31 @@
-import rabbitMQ from 'amqplib';
+import amqplib from 'amqplib';
+import logger from './logger.js';
 
-const config_rabbitmq = {
-  url: 'http://localhost:5858',
+const rabbitmqConfig = {
+  url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+  queue: process.env.RABBITMQ_QUEUE || 'my_queue',
 };
 
-const messageQueue = 'my_queue';
-
-const connectRabbitMQ = async () => {
+export const connectRabbitMQ = async () => {
   try {
-    const connection = await rabbitMQ.connect(config_rabbitmq.url);
-    if (!connection) {
-      throw new Error('Failed to connect to RabbitMQ');
-    }
-    const chanel = await connection.createChannel();
-    await chanel.assertQueue(messageQueue);
-    console.log('Connected to RabbitMQ');
-    return { connection, chanel };
+    const connection = await amqplib.connect(rabbitmqConfig.url);
+    const channel = await connection.createChannel();
+    await channel.assertQueue(rabbitmqConfig.queue, { durable: true });
+
+    logger.info('Connected to RabbitMQ', {
+      module: 'rabbitmq',
+      queue: rabbitmqConfig.queue,
+      url: rabbitmqConfig.url,
+    });
+
+    return { connection, channel, queue: rabbitmqConfig.queue };
   } catch (error) {
-    console.error('Error connecting to RabbitMQ:', error);
+    logger.error('Error connecting to RabbitMQ', {
+      module: 'rabbitmq',
+      message: error?.message,
+      stack: error?.stack,
+      url: rabbitmqConfig.url,
+    });
+    throw error;
   }
 };
-
-export { connectRabbitMQ };

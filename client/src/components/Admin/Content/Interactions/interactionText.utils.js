@@ -1,8 +1,3 @@
-/**
- * Get interaction text based on type
- * @param {string} type - Interaction type ('like' | 'comment' | 'share' | 'follow' | 'save')
- * @returns {string} Interaction text in Vietnamese
- */
 export const getInteractionText = type => {
   switch (type) {
     case 'like':

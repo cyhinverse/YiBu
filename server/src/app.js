@@ -40,22 +40,20 @@ const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = config.cors?.origins || [config.CLIENT_URL];
 
-    // In production, reject requests with no origin (prevents null-origin attacks)
-    // In development, allow no-origin for Postman/mobile
+    // Allow requests without Origin header (same-origin GETs, server-to-server, health checks).
+    // We still enforce explicit checks whenever Origin is present.
     if (!origin) {
-      if (config.isProduction) {
-        const err = new Error('Not allowed by CORS');
-        err.statusCode = 403;
-        err.errorCode = 'CORS_BLOCKED';
-        return callback(err);
-      }
       return callback(null, true);
     }
 
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      logger.warn('CORS blocked origin', { origin });
+      logger.warn('CORS blocked origin', {
+        module: 'system',
+        origin,
+        allowedOrigins,
+      });
       const err = new Error('Not allowed by CORS');
       err.statusCode = 403;
       err.errorCode = 'CORS_BLOCKED';

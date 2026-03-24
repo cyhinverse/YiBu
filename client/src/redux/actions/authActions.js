@@ -38,9 +38,12 @@ export const register = createAsyncThunk(
       });
       return extractData(response);
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Đăng ký thất bại'
-      );
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Đăng ký thất bại',
+        details: error.response?.data?.details,
+        errorCode: error.response?.data?.errorCode,
+        status: error.response?.status,
+      });
     }
   }
 );

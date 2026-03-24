@@ -38,12 +38,13 @@ export const helmetMiddleware = helmet({
 
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000,
+  // Social app has many background requests (polling, counters, feed refresh).
+  // Keep protection but raise threshold to avoid false-positive 429 in normal usage/testing.
+  max: 5000,
   message: {
     success: false,
     code: 0,
-    message:
-      'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
+    message: 'Quá nhiều request từ IP này, vui lòng thử lại sau 15 phút.',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,12 +56,26 @@ export const globalRateLimiter = rateLimit({
 
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  // Apply only to sensitive auth flows (login), not all auth endpoints.
+  max: 50,
+  message: {
+    success: false,
+    code: 0,
+    message: 'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+export const authPasswordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     success: false,
     code: 0,
     message:
-      'Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút.',
+      'Bạn đã thử quá nhiều lần đặt lại mật khẩu. Vui lòng thử lại sau 15 phút.',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -118,7 +133,9 @@ const sanitizeObject = obj => {
 
     const value = obj[key];
     if (typeof value === 'string') {
-      sanitized[key] = SANITIZE_SKIP_FIELDS.has(key) ? value : sanitizeString(value);
+      sanitized[key] = SANITIZE_SKIP_FIELDS.has(key)
+        ? value
+        : sanitizeString(value);
       continue;
     }
 
@@ -146,9 +163,9 @@ export default {
   helmetMiddleware,
   globalRateLimiter,
   authRateLimiter,
+  authPasswordResetRateLimiter,
   apiRateLimiter,
   mongoSanitizeMiddleware,
   hppMiddleware,
   xssClean,
 };
-

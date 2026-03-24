@@ -217,7 +217,7 @@ UserInteractionSchema.statics.record = async function (data, options = {}) {
     }, { session });
   }
 
-  return this.create({
+  const interactionDoc = {
     user,
     targetType,
     targetId,
@@ -226,7 +226,13 @@ UserInteractionSchema.statics.record = async function (data, options = {}) {
     sentiment,
     context,
     metadata,
-  }, { session });
+  };
+
+  const [created] = await this.create(
+    [interactionDoc],
+    session ? { session } : {}
+  );
+  return created;
 };
 
 // Get user's interaction profile

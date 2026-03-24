@@ -16,7 +16,7 @@ import {
 import {
   getPostTypeIcon as getTypeIcon,
   getPostStatusStyle as getStatusStyle,
-} from '@/utils/postUtils';
+} from './postPresentation.utils';
 
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|m3u8|ogg)$/i;
 

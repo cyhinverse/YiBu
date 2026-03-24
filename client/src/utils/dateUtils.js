@@ -1,55 +1,35 @@
-/**
- * Format date to relative time string (Vietnamese)
- * @param {Date|string} date - Date to format
- * @param {Object} [options] - Format options
- * @returns {string} Relative time string
- * @example
- * formatDistanceToNow(new Date()) // "vừa xong"
- * formatDistanceToNow(new Date(Date.now() - 3600000)) // "1 giờ trước"
- */
-export const formatDistanceToNow = date => {
-  if (!date) return '';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
-  const now = new Date();
-  const past = new Date(date);
-  if (Number.isNaN(past.getTime())) return '';
-  const diffInSeconds = Math.floor((now - past) / 1000);
-
-  if (diffInSeconds < 60) return 'vừa xong';
-  if (diffInSeconds < 3600)
-    return `${Math.floor(diffInSeconds / 60)} phút trước`;
-  if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
-  if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
-  if (diffInSeconds < 2592000)
-    return `${Math.floor(diffInSeconds / 604800)} tuần trước`;
-  if (diffInSeconds < 31536000)
-    return `${Math.floor(diffInSeconds / 2592000)} tháng trước`;
-
-  return `${Math.floor(diffInSeconds / 31536000)} năm trước`;
+const toValidDate = value => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-/**
- * Format date to compact relative time (e.g. "5m", "2h", "3d")
- * @param {Date|string} date - Target date
- * @returns {string} Relative time string
- */
-export const formatRelativeShortTime = date => {
-  if (!date) return '';
+export const formatDistanceToNow = (date, options = {}) => {
+  const { addSuffix = true, fallback = '' } = options;
+  const target = toValidDate(date);
+  if (!target) return fallback;
 
-  const target = new Date(date);
-  if (Number.isNaN(target.getTime())) return '';
+  const diffInSeconds = Math.abs(
+    Math.floor((Date.now() - target.getTime()) / 1000)
+  );
+  if (diffInSeconds < 30) return 'vừa xong';
 
-  const now = Date.now();
-  const diffMs = now - target.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  return formatDistanceToNowStrict(target, { addSuffix, locale: vi });
+};
 
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return target.toLocaleDateString();
+export const formatRelativeShortTime = (date, options = {}) => {
+  const { fallback = '' } = options;
+  const target = toValidDate(date);
+  if (!target) return fallback;
+
+  const diffInSeconds = Math.floor((Date.now() - target.getTime()) / 1000);
+  if (diffInSeconds < 0) return target.toLocaleDateString('vi-VN');
+  if (diffInSeconds < 60) return 'vừa xong';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}p`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}g`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}n`;
+  return target.toLocaleDateString('vi-VN');
 };

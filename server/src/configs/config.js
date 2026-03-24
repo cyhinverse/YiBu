@@ -100,12 +100,16 @@ const DEFAULT_CLIENT_URL = 'http://localhost:3000';
 const clientUrl = process.env.CLIENT_URL || DEFAULT_CLIENT_URL;
 const defaultCorsOrigins = [
   clientUrl,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
   'http://localhost:9258',
   'http://localhost:9259',
   'http://localhost:5173',
   'http://127.0.0.1:9258',
   'http://127.0.0.1:9259',
+  'http://127.0.0.1:5173',
   'http://localhost:8080',
+  'http://127.0.0.1:8080',
 ];
 
 const config = {

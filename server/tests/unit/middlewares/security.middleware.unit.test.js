@@ -109,7 +109,7 @@ describe('security.middleware', () => {
 
     globalRateLimiter.resetKey(testIp);
 
-    for (let i = 0; i < 1005; i++) {
+    for (let i = 0; i < 5005; i++) {
       const req = {
         ip: testIp,
         path: '/api/posts',

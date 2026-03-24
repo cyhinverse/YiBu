@@ -2,4 +2,4 @@
 export {
   getCommentStatusStyle as getStatusStyle,
   getCommentStatusText as getStatusText,
-} from '@/utils/commentUtils';
+} from './commentStatus.utils';

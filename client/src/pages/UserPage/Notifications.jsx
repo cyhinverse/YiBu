@@ -7,13 +7,12 @@ import {
   useMarkAsRead,
   useMarkAllAsRead,
 } from '@/hooks/useNotificationQuery';
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { formatDistanceToNow } from '@/utils/dateUtils';
 import { notify } from '@/utils/notify';
 import {
   getNotificationIcon,
   getNotificationContent,
-} from '@/utils/notificationUtils';
+} from '@/components/features/notifications/notificationPresentation.utils';
 import LoadingSpinner from '@/components/Common/LoadingSpinner';
 
 const Notifications = () => {
@@ -215,10 +214,7 @@ const Notifications = () => {
                   )}
 
                   <p className="text-xs text-neutral-400 mt-1">
-                    {formatDistanceToNow(new Date(notif.createdAt), {
-                      addSuffix: true,
-                      locale: vi,
-                    })}
+                    {formatDistanceToNow(notif.createdAt)}
                   </p>
                 </div>
 
