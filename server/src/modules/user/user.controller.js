@@ -2,6 +2,7 @@ import { CatchError } from '../../configs/CatchError.js';
 import UserService from './user.service.js';
 import { formatResponse } from '../../helpers/formatResponse.js';
 import logger from '../../configs/logger.js';
+import MediaService from '../shared/media/media.service.js';
 
 /**
  * User Controller
@@ -362,40 +363,58 @@ const UserController = {
    * @returns {Object} Response with updated user profile
    */
   updateProfileSettings: CatchError(async (req, res) => {
-    const { uploadToCloudinary } = await import(
-      '../../middlewares/multerUpload.js'
-    );
     const userId = req.user.id;
     const profileData = { ...req.body };
+    const jobs = [];
 
-    if (req.files?.avatar && req.files.avatar[0]) {
-      const avatarFile = req.files.avatar[0];
-      const result = await uploadToCloudinary(avatarFile.buffer, {
-        folder: 'avatars',
-        publicId: `avatar_${userId}_${Date.now()}`,
-        transformation: [{ width: 400, height: 400, crop: 'fill' }],
-      });
-      profileData.avatar = result.secure_url;
+    try {
+      if (req.files?.avatar && req.files.avatar[0]) {
+        const avatarJob = await MediaService.makeAvatar(req.files.avatar[0], userId);
+        if (avatarJob) {
+          jobs.push({
+            ...avatarJob,
+            source: 'user.avatar',
+          });
+          profileData.avatarStatus = 'pending';
+        }
+      }
+
+      if (req.files?.cover && req.files.cover[0]) {
+        const coverJob = await MediaService.makeCover(req.files.cover[0], userId);
+        if (coverJob) {
+          jobs.push({
+            ...coverJob,
+            source: 'user.cover',
+          });
+          profileData.coverStatus = 'pending';
+        }
+      }
+
+      const user = await UserService.updateProfile(userId, profileData);
+
+      for (const job of jobs) {
+        try {
+          await MediaService.send(job.jobId, { source: job.source });
+        } catch (queueError) {
+          await MediaService.fail(job.jobId, queueError);
+          logger.error('Failed to queue profile media job', {
+            message: queueError?.message,
+            stack: queueError?.stack,
+          });
+        }
+      }
+
+      return formatResponse(
+        res,
+        200,
+        1,
+        'Cập nhật thông tin hồ sơ thành công',
+        user
+      );
+    } catch (error) {
+      await Promise.allSettled(jobs.map(job => MediaService.drop(job.jobId)));
+      throw error;
     }
-
-    if (req.files?.cover && req.files.cover[0]) {
-      const coverFile = req.files.cover[0];
-      const result = await uploadToCloudinary(coverFile.buffer, {
-        folder: 'covers',
-        publicId: `cover_${userId}_${Date.now()}`,
-        transformation: [{ width: 1500, height: 500, crop: 'fill' }],
-      });
-      profileData.cover = result.secure_url;
-    }
-
-    const user = await UserService.updateProfile(userId, profileData);
-    return formatResponse(
-      res,
-      200,
-      1,
-      'Cập nhật thông tin hồ sơ thành công',
-      user
-    );
   }),
 
   /**

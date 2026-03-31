@@ -5,9 +5,9 @@ import Comment from '../../models/Comment.js';
 import Report from '../../models/Report.js';
 import RefreshToken from '../../models/RefreshToken.js';
 import UserSettings from '../../models/UserSettings.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import NotificationService from '../notification/notification.service.js';
 
 import Like from '../../models/Like.js';
 import Follow from '../../models/Follow.js';
@@ -346,11 +346,12 @@ class AdminService {
         { isRevoked: true, revokedReason: 'user_suspended' }
       ).session(session);
 
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: userId,
         type: 'system',
         content: `Tài khoản của bạn đã bị tạm khóa ${days} ngày. Lý do: ${reason}`,
-      });
+        metadata: { actorId: adminId },
+      }, { source: 'admin.suspendUser' });
 
       await this._logAdminAction(adminId, 'suspend_user', 'user', userId, {
         days,
@@ -393,11 +394,12 @@ class AdminService {
       throw ApiError.notFound('User not found');
     }
 
-    await Notification.createNotification({
+    await NotificationService.publishCreate({
       recipient: userId,
       type: 'system',
       content: `Bạn đã nhận được cảnh báo từ quản trị viên. Lý do: ${reason}`,
-    });
+      metadata: { actorId: adminId },
+    }, { source: 'admin.warnUser' });
 
     await this._logAdminAction(adminId, 'warn_user', 'user', userId, {
       reason,
@@ -510,13 +512,14 @@ class AdminService {
           $inc: { postsCount: -1 },
         }).session(session);
 
-        await Notification.createNotification({
+        await NotificationService.publishCreate({
           recipient: post.user._id,
           type: 'system',
           content: `Bài viết của bạn đã bị ${
             action === 'remove' ? 'gỡ bỏ' : 'từ chối'
           }. Lý do: ${reason || 'Vi phạm quy định cộng đồng'}`,
-        });
+          metadata: { actorId: adminId, action },
+        }, { source: 'admin.moderatePost' });
       }
 
       await this._logAdminAction(adminId, `${action}_post`, 'post', postId, {
@@ -630,13 +633,14 @@ class AdminService {
         $inc: { commentsCount: -1 },
       });
 
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: comment.user,
         type: 'system',
         content: `Bình luận của bạn đã bị xóa. Lý do: ${
           reason || 'Vi phạm quy định cộng đồng'
         }`,
-      });
+        metadata: { actorId: adminId, action },
+      }, { source: 'admin.moderateComment' });
     } else if (action === 'approve' && comment.isDeleted) {
       comment.isDeleted = false;
       await comment.save();
@@ -1137,7 +1141,13 @@ class AdminService {
       metadata: { broadcastBy: adminId },
     }));
 
-    await Promise.all(notifications);
+    await Promise.all(
+      notifications.map(notification =>
+        NotificationService.publishCreate(notification, {
+          source: 'admin.broadcastNotification',
+        })
+      )
+    );
 
     await this._logAdminAction(
       adminId,

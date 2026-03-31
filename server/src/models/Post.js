@@ -29,8 +29,19 @@ const PostSchema = new Schema(
 
     media: [
       {
-        url: { type: String, required: true },
+        url: { type: String, default: '' },
         type: { type: String, enum: ["image", "video"], required: true },
+        status: {
+          type: String,
+          enum: ["pending", "ready", "failed"],
+          default: "ready",
+        },
+        jobId: { type: String, default: "" },
+        tempId: { type: String, default: "" },
+        publicId: { type: String, default: "" },
+        filename: { type: String, default: "" },
+        size: { type: Number },
+        mimeType: { type: String, default: "" },
         width: { type: Number },
         height: { type: Number },
         duration: { type: Number }, // For videos (seconds)

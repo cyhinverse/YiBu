@@ -38,12 +38,20 @@ const MessageSchema = new Schema(
     // Media attachments
     media: [
       {
-        url: { type: String, required: true },
+        url: { type: String, default: '' },
         type: {
           type: String,
           enum: ["image", "video", "audio", "file"],
           required: true,
         },
+        status: {
+          type: String,
+          enum: ["pending", "ready", "failed"],
+          default: "ready",
+        },
+        jobId: { type: String, default: '' },
+        tempId: { type: String, default: '' },
+        publicId: { type: String, default: '' },
         filename: { type: String },
         size: { type: Number }, // in bytes
         mimeType: { type: String },

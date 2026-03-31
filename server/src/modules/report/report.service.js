@@ -4,9 +4,9 @@ import User from '../../models/User.js';
 import Post from '../../models/Post.js';
 import Comment from '../../models/Comment.js';
 import Message from '../../models/Message.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import NotificationService from '../notification/notification.service.js';
 
 
 /**
@@ -387,13 +387,14 @@ class ReportService {
         await this._executeAction(report, actionTaken, adminId, session);
       }
 
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: report.reporter,
         type: 'system',
         content: `Báo cáo của bạn đã được xử lý. Kết quả: ${this._getDecisionText(
           decision
         )}`,
-      });
+        metadata: { actorId: adminId, reportId },
+      }, { source: 'report.resolveReport' });
 
       await session.commitTransaction();
 

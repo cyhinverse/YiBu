@@ -1,11 +1,14 @@
+import { randomUUID } from 'crypto';
 import nodemailer from 'nodemailer';
 import config from '../../../configs/config.js';
 import logger from '../../../configs/logger.js';
+import { getChannel, rabbit } from '../../../configs/rabbitmq.config.js';
+
+const JOB = 'email';
+const EVENT = 'email.send';
+const RETRY_LIMIT = 3;
 
 class EmailService {
-  /**
-   * Initialize Email Service with nodemailer configuration
-   */
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: config.email.host,
@@ -21,44 +24,103 @@ class EmailService {
     });
   }
 
-  /**
-   * Send email
-   * @param {string} to - Recipient email address
-   * @param {string} subject - Email subject
-   * @param {string} html - HTML content of the email
-   * @returns {Promise<Object|null>} Sent email info or null if error
-   */
-  async sendEmail(to, subject, html) {
-    try {
-      // Log email config for debugging
-      logger.info(
-        `Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`
-      );
-      logger.info(`Email user configured: ${config.email.user ? 'Yes' : 'No'}`);
-      logger.info(`Email pass configured: ${config.email.pass ? 'Yes' : 'No'}`);
+  static getRetryLimit() {
+    return RETRY_LIMIT;
+  }
 
-      const info = await this.transporter.sendMail({
-        from: `"YiBu Security" <${config.email.user}>`,
-        to,
-        subject,
-        html,
+  async sendEmail(to, subject, html, meta = {}) {
+    if (!to || !subject || !html) {
+      throw new Error('to, subject and html are required');
+    }
+
+    const id = randomUUID();
+    const queue = rabbit.email;
+    const channel = await getChannel(JOB);
+    const message = {
+      type: EVENT,
+      data: { to, subject, html },
+      meta: {
+        source: meta.source || 'email.service',
+        traceId: meta.traceId || id,
+        time: meta.time || new Date().toISOString(),
+      },
+      tries: 0,
+    };
+
+    await channel.publish(queue.exchange, queue.key, message, {
+      persistent: true,
+      messageId: id,
+      timestamp: Date.now(),
+      contentType: 'application/json',
+      type: message.type,
+      headers: {
+        traceId: message.meta.traceId,
+        source: message.meta.source,
+        tries: message.tries,
+      },
+    });
+
+    return { queued: true, id };
+  }
+
+  async sendNow(data) {
+    const { to, subject, html } = data;
+
+    logger.info(
+      `Attempting to send email to ${to} via ${config.email.host}:${config.email.port}`
+    );
+
+    const info = await this.transporter.sendMail({
+      from: `"YiBu Security" <${config.email.user}>`,
+      to,
+      subject,
+      html,
+    });
+
+    logger.info(`Email sent successfully to ${to}: ${info.messageId}`);
+    return info;
+  }
+
+  async handleMessage(msg, options = {}) {
+    const logModule = options.logModule || 'email-worker';
+    const data = this._read(msg, logModule);
+
+    if (!data) {
+      return { shouldAck: true };
+    }
+
+    if (data.type !== EVENT) {
+      logger.warn('Unsupported email event skipped', {
+        module: logModule,
+        type: data.type,
+        traceId: data.meta?.traceId,
       });
+      return { shouldAck: true };
+    }
 
-      logger.info(`Email sent successfully to ${to}: ${info.messageId}`);
-      return info;
+    if (!data.data?.to || !data.data?.subject || !data.data?.html) {
+      await this._publishDead(data, null, 'email_payload_missing');
+      logger.warn('Malformed email payload moved to DLQ', {
+        module: logModule,
+        traceId: data.meta?.traceId,
+      });
+      return { shouldAck: true };
+    }
+
+    try {
+      await this.sendNow(data.data);
+      logger.info('Email processed successfully', {
+        module: logModule,
+        traceId: data.meta?.traceId,
+        tries: data.tries ?? 0,
+      });
+      return { shouldAck: true };
     } catch (error) {
-      logger.error(`Error sending email to ${to}:`, error.message);
-      logger.error(`Full error:`, error);
-      return null;
+      await this._retryOrDead(data, error, logModule);
+      return { shouldAck: true };
     }
   }
 
-  /**
-   * Send password reset email
-   * @param {string} to - Recipient email address
-   * @param {string} resetLink - Password reset link
-   * @returns {Promise<Object|null>} Sent email info or null if error
-   */
   async sendPasswordReset(to, resetLink) {
     const subject = 'Yêu cầu đặt lại mật khẩu - YiBu';
     const html = `
@@ -74,15 +136,12 @@ class EmailService {
         <p style="font-size: 12px; color: #888;">YiBu Security Team</p>
       </div>
     `;
-    return this.sendEmail(to, subject, html);
+
+    return this.sendEmail(to, subject, html, {
+      source: 'email.passwordReset',
+    });
   }
 
-  /**
-   * Send account verification email
-   * @param {string} to - Recipient email address
-   * @param {string} verificationLink - Email verification link
-   * @returns {Promise<Object|null>} Sent email info or null if error
-   */
   async sendVerificationEmail(to, verificationLink) {
     const subject = 'Xác thực tài khoản - YiBu';
     const html = `
@@ -96,7 +155,111 @@ class EmailService {
         <p style="font-size: 12px; color: #888;">YiBu Team</p>
       </div>
     `;
-    return this.sendEmail(to, subject, html);
+
+    return this.sendEmail(to, subject, html, {
+      source: 'email.verification',
+    });
+  }
+
+  _read(message, logModule) {
+    try {
+      return JSON.parse(message.content.toString('utf8'));
+    } catch (error) {
+      logger.error('Failed to parse email message', {
+        module: logModule,
+        messageId: message.properties?.messageId,
+        content: message.content?.toString('utf8'),
+        parseError: error.message,
+      });
+      return null;
+    }
+  }
+
+  _options(message) {
+    return {
+      persistent: true,
+      contentType: 'application/json',
+      type: message.type,
+      messageId: randomUUID(),
+      timestamp: Date.now(),
+      headers: {
+        traceId: message.meta?.traceId,
+        source: message.meta?.source,
+        tries: message.tries ?? 0,
+      },
+    };
+  }
+
+  async _publish(exchange, key, message) {
+    const channel = await getChannel(JOB);
+    await channel.publish(exchange, key, message, this._options(message));
+  }
+
+  async _publishDead(message, error, reason) {
+    const queue = rabbit.email;
+    const dead = {
+      ...message,
+      meta: {
+        ...message.meta,
+        failedAt: new Date().toISOString(),
+        failureReason: reason,
+        lastError: error?.message,
+      },
+    };
+
+    await this._publish(queue.deadExchange, queue.deadKey, dead);
+  }
+
+  async _publishRetry(message, error) {
+    const queue = rabbit.email;
+    const retry = {
+      ...message,
+      tries: (Number(message.tries) || 0) + 1,
+      meta: {
+        ...message.meta,
+        lastRetryAt: new Date().toISOString(),
+        lastError: error?.message,
+      },
+    };
+
+    await this._publish(queue.retryExchange, queue.retryKey, retry);
+  }
+
+  async _retryOrDead(message, error, logModule) {
+    const tries = Number(message.tries) || 0;
+
+    if (tries >= RETRY_LIMIT) {
+      await this._publishDead(message, error, 'max_retries_exceeded');
+
+      logger.error('Email moved to DLQ after max retries', {
+        module: logModule,
+        tries,
+        traceId: message.meta?.traceId,
+        message: error?.message,
+        stack: error?.stack,
+      });
+      return;
+    }
+
+    try {
+      await this._publishRetry(message, error);
+
+      logger.warn('Email republished to retry exchange', {
+        module: logModule,
+        nextTry: tries + 1,
+        traceId: message.meta?.traceId,
+        message: error?.message,
+      });
+    } catch (retryError) {
+      logger.error('Retry republish failed, sending email to DLQ', {
+        module: logModule,
+        traceId: message.meta?.traceId,
+        message: retryError?.message,
+        stack: retryError?.stack,
+      });
+
+      await this._publishDead(message, retryError, 'retry_publish_failed');
+    }
   }
 }
 

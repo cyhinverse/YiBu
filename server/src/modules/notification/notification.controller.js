@@ -1,10 +1,8 @@
-import { CatchError } from "../../configs/CatchError.js";
-import NotificationService from "./notification.service.js";
-import { sendCreated, sendOk } from "../../helpers/apiResponse.js";
-import { getPaginationParams } from "../../utils/pagination.js";
-import socketService from "../shared/socket/socket.service.js";
-import ApiError from "../../helpers/ApiError.js";
-
+import { CatchError } from '../../configs/CatchError.js';
+import NotificationService from './notification.service.js';
+import { sendCreated, sendOk } from '../../helpers/apiResponse.js';
+import { getPaginationParams } from '../../utils/pagination.js';
+import ApiError from '../../helpers/ApiError.js';
 
 /**
  * Notification Controller
@@ -18,7 +16,6 @@ import ApiError from "../../helpers/ApiError.js";
  * - Notification preferences
  */
 const NotificationController = {
-
   /**
    * Create a new notification
    * @param {Object} req - Express request object
@@ -49,12 +46,10 @@ const NotificationController = {
     const sender = req.body.sender || req.user.id;
 
     if (!recipient || !type) {
-      throw ApiError.badRequest("Recipient and type are required");
+      throw ApiError.badRequest('Recipient and type are required');
     }
 
-
-
-    const notification = await NotificationService.createNotification({
+    const notification = await NotificationService.processCreate({
       recipient,
       sender,
       type,
@@ -65,15 +60,10 @@ const NotificationController = {
       metadata,
     });
 
-    if (notification) {
-      socketService.emitNotification(recipient.toString(), notification);
-    }
-
     return sendCreated(res, {
-      message: "Đã tạo thông báo",
+      message: 'Đã tạo thông báo',
       data: notification,
     });
-
   }),
 
   /**
@@ -100,11 +90,11 @@ const NotificationController = {
       page,
       limit,
       type,
-      unreadOnly: unreadOnly === "true",
+      unreadOnly: unreadOnly === 'true',
     });
 
     return sendOk(res, {
-      message: "Success",
+      message: 'Success',
       data: {
         notifications: result.notifications,
         total: result.total,
@@ -112,7 +102,6 @@ const NotificationController = {
         hasMore: result.hasMore,
       },
     });
-
   }),
 
   /**
@@ -135,15 +124,13 @@ const NotificationController = {
     );
 
     if (!notification) {
-      throw ApiError.notFound("Thông báo không tồn tại");
+      throw ApiError.notFound('Thông báo không tồn tại');
     }
 
- 
-     return sendOk(res, {
-       message: "Success",
-       data: notification,
-     });
-
+    return sendOk(res, {
+      message: 'Success',
+      data: notification,
+    });
   }),
 
   /**
@@ -166,14 +153,13 @@ const NotificationController = {
     );
 
     if (!notification) {
-      throw ApiError.notFound("Thông báo không tồn tại");
+      throw ApiError.notFound('Thông báo không tồn tại');
     }
 
     return sendOk(res, {
-      message: "Đã đánh dấu đã đọc",
+      message: 'Đã đánh dấu đã đọc',
       data: notification,
     });
-
   }),
 
   /**
@@ -192,10 +178,9 @@ const NotificationController = {
 
     const result = await NotificationService.markAllAsRead(userId, type);
     return sendOk(res, {
-      message: "Đã đánh dấu tất cả là đã đọc",
+      message: 'Đã đánh dấu tất cả là đã đọc',
       data: result,
     });
-
   }),
 
   /**
@@ -218,13 +203,12 @@ const NotificationController = {
     );
 
     if (!result.success) {
-      throw ApiError.notFound("Thông báo không tồn tại");
+      throw ApiError.notFound('Thông báo không tồn tại');
     }
 
     return sendOk(res, {
-      message: "Đã xóa thông báo",
+      message: 'Đã xóa thông báo',
     });
-
   }),
 
   /**
@@ -249,7 +233,6 @@ const NotificationController = {
       message: `Đã xóa ${result.deletedCount} thông báo`,
       data: result,
     });
-
   }),
 
   /**
@@ -265,10 +248,9 @@ const NotificationController = {
 
     const unreadCount = await NotificationService.getUnreadCount(userId);
     return sendOk(res, {
-      message: "Success",
+      message: 'Success',
       data: { unreadCount },
     });
-
   }),
 
   /**
@@ -284,10 +266,9 @@ const NotificationController = {
 
     const counts = await NotificationService.getUnreadCountByType(userId);
     return sendOk(res, {
-      message: "Success",
+      message: 'Success',
       data: counts,
     });
-
   }),
 
   /**
@@ -301,14 +282,12 @@ const NotificationController = {
   getNotificationPreferences: CatchError(async (req, res) => {
     const userId = req.user.id;
 
-    const preferences = await NotificationService.getNotificationPreferences(
-      userId
-    );
+    const preferences =
+      await NotificationService.getNotificationPreferences(userId);
     return sendOk(res, {
-      message: "Success",
+      message: 'Success',
       data: preferences,
     });
-
   }),
 
   /**
@@ -329,10 +308,9 @@ const NotificationController = {
       preferences
     );
     return sendOk(res, {
-      message: "Đã cập nhật cài đặt thông báo",
+      message: 'Đã cập nhật cài đặt thông báo',
       data: updated,
     });
-
   }),
 };
 

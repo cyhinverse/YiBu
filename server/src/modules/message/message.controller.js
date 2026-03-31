@@ -400,21 +400,20 @@ const MessageController = {
     const userId = req.user.id;
     const { conversationId, content, messageType = 'text', replyTo } = req.body;
 
-    let attachments = [];
-    if (req.files && req.files.length > 0) {
-      attachments = await MessageService.uploadAttachments(req.files, userId);
-    }
-
-    if (!content && attachments.length === 0) {
+    if (!content && (!req.files || req.files.length === 0)) {
       throw ApiError.badRequest('Message content or attachment is required');
     }
 
-    const message = await MessageService.sendMessage(conversationId, userId, {
-      content,
-      messageType,
-      attachments,
-      replyTo,
-    });
+    const message = await MessageService.sendMessage(
+      conversationId,
+      userId,
+      {
+        content,
+        messageType,
+        replyTo,
+      },
+      req.files || []
+    );
 
     return sendCreated(res, {
       message: 'Message sent',

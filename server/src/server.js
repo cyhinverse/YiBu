@@ -5,6 +5,7 @@ import app from './app.js';
 import ConnectToMongodb from './database/connect.mongodb.js';
 import { initSocket } from './socket/index.js';
 import logger from './configs/logger.js';
+import { closeRabbit, startRabbit } from './configs/rabbitmq.config.js';
 
 let server;
 let io;
@@ -22,6 +23,8 @@ const shutdown = async signal => {
       await new Promise(resolve => server.close(resolve));
       server = null;
     }
+
+    await closeRabbit();
 
     if (mongoose.connection?.readyState === 1) {
       await mongoose.connection.close(false);
@@ -51,6 +54,7 @@ process.on('uncaughtException', err => {
 const startServer = async () => {
   try {
     await ConnectToMongodb(config.mongodb.uri);
+    await startRabbit();
 
     server = http.createServer(app);
 

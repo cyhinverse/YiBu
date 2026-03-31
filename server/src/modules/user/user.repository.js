@@ -1,12 +1,12 @@
 import User from '../../models/User.js';
 import Follow from '../../models/Follow.js';
 import UserSettings from '../../models/UserSettings.js';
-import Notification from '../../models/Notification.js';
 import UserInteraction from '../../models/UserInteraction.js';
 import Like from '../../models/Like.js';
 import Post from '../../models/Post.js';
 import Comment from '../../models/Comment.js';
 import Hashtag from '../../models/Hashtag.js';
+import NotificationService from '../notification/notification.service.js';
 
 const findUserById = id => User.findById(id);
 
@@ -32,7 +32,11 @@ const updateUserSettings = (userId, update) => {
   return UserSettings.findOneAndUpdate({ user: userId }, update, { new: true });
 };
 
-const createNotification = payload => Notification.createNotification(payload);
+const createNotification = payload => {
+  return NotificationService.publishCreate(payload, {
+    source: 'user.repository',
+  });
+};
 
 const createFollow = payload => Follow.create(payload);
 

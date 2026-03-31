@@ -20,7 +20,9 @@ const NotificationSchema = new Schema(
     sender: {
       type: Types.ObjectId,
       ref: 'User',
-      required: true,
+      required() {
+        return !['system', 'announcement'].includes(this.type);
+      },
     },
 
     // Additional senders for grouped notifications
@@ -161,7 +163,7 @@ NotificationSchema.statics.createNotification = async function (data) {
   const comment = data.comment || data.relatedComment;
 
   // Don't notify yourself
-  if (recipient.toString() === sender.toString()) {
+  if (sender && recipient.toString() === sender.toString()) {
     return null;
   }
 
@@ -196,8 +198,9 @@ NotificationSchema.statics.createNotification = async function (data) {
       // Update existing notification
       existing.additionalSenders = existing.additionalSenders || [];
       if (
+        sender &&
         !existing.additionalSenders.includes(sender) &&
-        existing.sender.toString() !== sender.toString()
+        existing.sender?.toString() !== sender.toString()
       ) {
         existing.additionalSenders.push(sender);
         // Cap the array to the last 10 senders to prevent unbounded growth

@@ -1,28 +1,134 @@
+import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
-import Notification from '../../models/Notification.js';
 import UserSettings from '../../models/UserSettings.js';
 import User from '../../models/User.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
+import { getChannel, rabbit } from '../../configs/rabbitmq.config.js';
+import notificationRepository from './notification.repository.js';
 import socketService from '../shared/socket/socket.service.js';
 
+const GROUP_TIME = 24 * 60 * 60 * 1000;
+const EXPIRE_TIME = 30 * 24 * 60 * 60 * 1000;
+const JOB = 'notification';
+const EVENT = 'notification.create';
+const RETRY_LIMIT = 3;
+const SOCKET_POPULATE = [
+  { path: 'sender', select: 'username name avatar verified' },
+  { path: 'post', select: '_id caption media' },
+  { path: 'relatedPost', select: '_id caption media' },
+];
+const typeMap = {
+  like: 'likes',
+  comment: 'comments',
+  reply: 'comments',
+  follow: 'follows',
+  mention: 'mentions',
+  share: 'shares',
+  message: 'messages',
+};
+
 /**
- * Notification Service - Refactored for new model structure
+ * Notification Service
  *
- * Key Changes:
- * 1. Uses groupKey for notification grouping
- * 2. Integrates with UserSettings for notification preferences
- * 3. Better aggregation for grouped notifications
- * 4. TTL support for automatic cleanup
+ * Responsibilities:
+ * 1. Synchronous facade for controller flows
+ * 2. Read/update/delete notification operations
+ * 3. Preference management and batch follower notifications
  */
 class NotificationService {
+  static getRetryLimit() {
+    return RETRY_LIMIT;
+  }
 
-  /**
-   * Create new notification (with grouping support)
-   * @param {Object} data - Notification data {recipient, sender, type, content, relatedPost, relatedComment, groupKey, metadata}
-   * @returns {Promise<Object|null>} Notification object or null if blocked/disabled
-   */
-  static async createNotification(data) {
+  static async publishCreate(data, meta = {}) {
+    if (!data?.recipient || !data?.type) {
+      throw new Error('recipient and type are required');
+    }
+
+    const id = randomUUID();
+    const queue = rabbit.notification;
+    const channel = await getChannel(JOB);
+    const message = {
+      type: EVENT,
+      data,
+      meta: {
+        source: meta.source || 'notification.service',
+        traceId: meta.traceId || id,
+        time: meta.time || new Date().toISOString(),
+      },
+      tries: 0,
+    };
+
+    await channel.publish(queue.exchange, queue.key, message, {
+      persistent: true,
+      messageId: id,
+      timestamp: Date.now(),
+      contentType: 'application/json',
+      type: message.type,
+      headers: {
+        traceId: message.meta.traceId,
+        source: message.meta.source,
+        tries: message.tries,
+      },
+    });
+
+    return { queued: true, id };
+  }
+
+  static async handleMessage(msg, options = {}) {
+    const { emitRealtime = false, logModule = 'notification-worker' } = options;
+    const data = this._readMessage(msg, logModule);
+
+    if (!data) {
+      return { shouldAck: true };
+    }
+
+    if (data.type !== EVENT) {
+      logger.warn('Unsupported notification event skipped', {
+        module: logModule,
+        type: data.type,
+        traceId: data.meta?.traceId,
+        source: data.meta?.source,
+      });
+
+      return { shouldAck: true };
+    }
+
+    if (!data.data?.recipient || !data.data?.type) {
+      await this._publishDead(data, null, 'recipient_or_type_missing');
+
+      logger.warn('Notification moved to DLQ due to malformed payload', {
+        module: logModule,
+        reason: 'recipient_or_type_missing',
+        traceId: data.meta?.traceId,
+        source: data.meta?.source,
+      });
+
+      return { shouldAck: true };
+    }
+
+    try {
+      await this.processCreate(data.data, {
+        emitRealtime,
+      });
+
+      logger.info('Notification processed successfully', {
+        module: logModule,
+        traceId: data.meta?.traceId,
+        source: data.meta?.source,
+        tries: data.tries ?? 0,
+      });
+
+      return { shouldAck: true };
+    } catch (error) {
+      await this._retryOrDead(data, error, logModule);
+      return { shouldAck: true };
+    }
+  }
+
+  static async processCreate(data, options = {}) {
+    const { emitRealtime = true } = options;
     const {
       recipient,
       sender,
@@ -34,7 +140,11 @@ class NotificationService {
       metadata,
     } = data;
 
-    if (recipient.toString() === sender?.toString()) {
+    if (!recipient || !type) {
+      throw new Error('recipient and type are required');
+    }
+
+    if (sender && recipient.toString() === sender.toString()) {
       return null;
     }
 
@@ -43,129 +153,73 @@ class NotificationService {
       .lean();
 
     if (
-      settings?.blockedUsers?.some(id => id.toString() === sender?.toString())
+      sender &&
+      settings?.blockedUsers?.some(id => id.toString() === sender.toString())
     ) {
       return null;
     }
 
     if (
-      settings?.mutedUsers?.some(id => id.toString() === sender?.toString())
+      sender &&
+      settings?.mutedUsers?.some(id => id.toString() === sender.toString())
     ) {
       return null;
     }
 
-    const notificationTypeMap = {
-      like: 'likes',
-      comment: 'comments',
-      reply: 'comments',
-      follow: 'follows',
-      mention: 'mentions',
-      share: 'shares',
-      message: 'messages',
-    };
-
-    const settingKey = notificationTypeMap[type] || type;
+    const settingKey = typeMap[type] || type;
     if (settings?.notifications?.[settingKey] === false) {
       return null;
     }
 
+    let notificationId = null;
+
     if (groupKey) {
-      const existingGroup = await Notification.findOne({
+      const existingGroup = await notificationRepository.findOne({
         recipient,
         groupKey,
         isRead: false,
-        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        createdAt: { $gte: new Date(Date.now() - GROUP_TIME) },
       });
 
       if (existingGroup) {
-        const senderExists = existingGroup.groupedSenders?.some(
-          s => s.user?.toString() === sender?.toString()
-        );
-
-        if (!senderExists && sender) {
-          const senderUser = await User.findById(sender)
-            .select('username avatar')
-            .lean();
-
-          await Notification.findByIdAndUpdate(existingGroup._id, {
-            $push: {
-              groupedSenders: {
-                user: sender,
-                username: senderUser?.username,
-                avatar: senderUser?.avatar,
-              },
-            },
-            $inc: { groupCount: 1 },
-            $set: { updatedAt: new Date() },
-          });
-        }
-
-        return existingGroup;
+        notificationId = await this._addSenderToGroup(existingGroup, sender);
       }
     }
 
-    let senderData;
-    // Optimize: reuse sender info if available or fetch once
-    if (sender) {
-        // If sender info was fetched in group check (but not used because no group found), we might need to fetch it here.
-        // Or if we didn't check group.
-        // Let's just do a clean fetch if not available, but usually caller might pass populated data? No, data is raw.
-        const senderUser = await User.findById(sender)
-            .select('username avatar')
-            .lean();
-        
-        if (senderUser) {
-            senderData = {
-                user: sender,
-                username: senderUser.username,
-                avatar: senderUser.avatar,
-            };
-        }
+    if (!notificationId) {
+      const senderData = await this._loadSenderData(sender);
+      const notification = await notificationRepository.createNotification({
+        recipient,
+        sender,
+        type,
+        content,
+        post: relatedPost,
+        comment: relatedComment,
+        relatedPost,
+        relatedComment,
+        groupKey,
+        groupedSenders: senderData ? [senderData] : [],
+        groupCount: 1,
+        metadata,
+        expiresAt: new Date(Date.now() + EXPIRE_TIME),
+      });
+
+      notificationId = notification._id;
     }
 
-    const notification = await Notification.create({
-      recipient,
-      sender,
-      type,
-      content,
-      relatedPost,
-      relatedComment,
-      groupKey,
-      groupedSenders: senderData ? [senderData] : [],
-      groupCount: 1,
-      metadata,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    });
+    const populatedNotification = await this._getFull(notificationId);
 
-    const populatedNotification = await Notification.findById(notification._id)
-      .populate('sender', 'username name avatar verified')
-      .populate('post', 'caption media')
-      .populate('relatedPost', 'caption media')
-      .lean();
+    if (!populatedNotification) {
+      return null;
+    }
 
-    const postData =
-      populatedNotification.post || populatedNotification.relatedPost;
-
-    try {
-      await socketService.sendNotification(recipient.toString(), {
-        ...populatedNotification,
-        _id: populatedNotification._id.toString(),
-        post: postData,
-      });
-      logger.debug(`Socket notification sent to user ${recipient}`);
-    } catch (socketError) {
-      logger.error('Failed to send socket notification:', socketError);
+    if (emitRealtime) {
+      await this._emitRealtime(populatedNotification);
     }
 
     return populatedNotification;
   }
 
-  /**
-   * Get list of notifications for user
-   * @param {string} userId - User ID
-   * @param {Object} options - Options {page, limit, type, unreadOnly}
-   * @returns {Promise<{notifications: Array, total: number, unreadCount: number, hasMore: boolean}>}
-   */
   static async getNotifications(userId, options = {}) {
     const { page = 1, limit = 20, type, unreadOnly = false } = options;
 
@@ -186,20 +240,26 @@ class NotificationService {
     }
 
     const [notifications, total, unreadCount] = await Promise.all([
-      Notification.find(query)
-        .populate('sender', 'username name avatar verified')
-        .populate('post', '_id caption media')
-        .populate('relatedPost', '_id caption media')
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      Notification.countDocuments(query),
-      Notification.countDocuments({ recipient: userId, isRead: false }),
+      notificationRepository.findNotifications(query, {
+        populate: [
+          { path: 'sender', select: 'username name avatar verified' },
+          { path: 'post', select: '_id caption media' },
+          { path: 'relatedPost', select: '_id caption media' },
+        ],
+        sort: { createdAt: -1 },
+        skip: (page - 1) * limit,
+        limit,
+        lean: true,
+      }),
+      notificationRepository.countNotifications(query),
+      notificationRepository.countNotifications({
+        recipient: userId,
+        isRead: false,
+      }),
     ]);
 
-    const formattedNotifications = notifications.map(notif =>
-      this._formatNotification(notif)
+    const formattedNotifications = notifications.map(notification =>
+      this._formatNotification(notification)
     );
 
     return {
@@ -210,12 +270,6 @@ class NotificationService {
     };
   }
 
-  /**
-   * Format notification for display (handle grouped notifications)
-   * @param {Object} notification - Notification object
-   * @returns {Object} Formatted notification with displayContent
-   * @private
-   */
   static _formatNotification(notification) {
     let displayContent = notification.content;
 
@@ -223,8 +277,9 @@ class NotificationService {
       notification.groupCount > 1 &&
       notification.groupedSenders?.length > 0
     ) {
-      const senders = notification.groupedSenders;
-      const firstSender = senders[0]?.username || notification.sender?.username;
+      const firstSender =
+        notification.groupedSenders[0]?.username ||
+        notification.sender?.username;
       const othersCount = notification.groupCount - 1;
 
       const typeMessages = {
@@ -236,58 +291,231 @@ class NotificationService {
       displayContent = typeMessages[notification.type] || displayContent;
     }
 
-    const postData = notification.post || notification.relatedPost;
-
     return {
       ...notification,
-      post: postData,
+      post: notification.post || notification.relatedPost,
       displayContent,
       isGrouped: notification.groupCount > 1,
     };
   }
 
-  /**
-   * Get notification by ID
-   * @param {string} notificationId - Notification ID
-   * @param {string} userId - User ID (to verify ownership)
-   * @returns {Promise<Object|null>} Formatted notification or null
-   */
-  static async getNotificationById(notificationId, userId) {
-    const notification = await Notification.findOne({
-      _id: notificationId,
-      recipient: userId,
-    })
-      .populate('sender', 'username name avatar verified')
-      .populate('relatedPost', '_id caption media')
+  static async _addSenderToGroup(existingGroup, sender) {
+    if (!sender) {
+      return existingGroup._id;
+    }
+
+    const senderExists = existingGroup.groupedSenders?.some(
+      groupedSender => groupedSender.user?.toString() === sender.toString()
+    );
+
+    if (senderExists) {
+      return existingGroup._id;
+    }
+
+    const senderUser = await User.findById(sender)
+      .select('username avatar')
       .lean();
+
+    await notificationRepository.updateNotificationById(existingGroup._id, {
+      $push: {
+        groupedSenders: {
+          user: sender,
+          username: senderUser?.username,
+          avatar: senderUser?.avatar,
+        },
+      },
+      $inc: { groupCount: 1 },
+      $set: { updatedAt: new Date() },
+    });
+
+    return existingGroup._id;
+  }
+
+  static async _loadSenderData(sender) {
+    if (!sender) {
+      return null;
+    }
+
+    const senderUser = await User.findById(sender)
+      .select('username avatar')
+      .lean();
+
+    if (!senderUser) {
+      return null;
+    }
+
+    return {
+      user: sender,
+      username: senderUser.username,
+      avatar: senderUser.avatar,
+    };
+  }
+
+  static async _getFull(notificationId) {
+    return notificationRepository.findById(notificationId, {
+      populate: SOCKET_POPULATE,
+      lean: true,
+    });
+  }
+
+  static async _emitRealtime(notification) {
+    const postData = notification.post || notification.relatedPost;
+
+    try {
+      await socketService.sendNotification(notification.recipient.toString(), {
+        ...notification,
+        _id: notification._id.toString(),
+        post: postData,
+      });
+
+      logger.debug(
+        `Socket notification sent to user ${notification.recipient}`
+      );
+    } catch (socketError) {
+      logger.error('Failed to send socket notification', {
+        module: 'notification',
+        notificationId: notification._id?.toString(),
+        recipient: notification.recipient?.toString(),
+        message: socketError?.message,
+        stack: socketError?.stack,
+      });
+    }
+  }
+
+  static _readMessage(message, logModule) {
+    try {
+      return JSON.parse(message.content.toString('utf8'));
+    } catch (error) {
+      logger.error('Failed to parse notification message', {
+        module: logModule,
+        messageId: message.properties?.messageId,
+        content: message.content?.toString('utf8'),
+        parseError: error.message,
+      });
+
+      return null;
+    }
+  }
+
+  static _buildOptions(message) {
+    return {
+      persistent: true,
+      contentType: 'application/json',
+      type: message.type,
+      messageId: randomUUID(),
+      timestamp: Date.now(),
+      headers: {
+        traceId: message.meta?.traceId,
+        source: message.meta?.source,
+        tries: message.tries ?? 0,
+      },
+    };
+  }
+
+  static async _publish(exchange, key, message) {
+    const channel = await getChannel(JOB);
+
+    await channel.publish(exchange, key, message, this._buildOptions(message));
+  }
+
+  static async _publishDead(message, error, reason) {
+    const queue = rabbit.notification;
+    const deadMessage = {
+      ...message,
+      meta: {
+        ...message.meta,
+        failedAt: new Date().toISOString(),
+        failureReason: reason,
+        lastError: error?.message,
+      },
+    };
+
+    await this._publish(queue.deadExchange, queue.deadKey, deadMessage);
+  }
+
+  static async _publishRetry(message, error) {
+    const queue = rabbit.notification;
+    const retryMessage = {
+      ...message,
+      tries: (Number(message.tries) || 0) + 1,
+      meta: {
+        ...message.meta,
+        lastRetryAt: new Date().toISOString(),
+        lastError: error?.message,
+      },
+    };
+
+    await this._publish(queue.retryExchange, queue.retryKey, retryMessage);
+  }
+
+  static async _retryOrDead(message, error, logModule) {
+    const tries = Number(message.tries) || 0;
+
+    if (tries >= RETRY_LIMIT) {
+      await this._publishDead(message, error, 'max_retries_exceeded');
+
+      logger.error('Notification moved to DLQ after max retries', {
+        module: logModule,
+        tries,
+        traceId: message.meta?.traceId,
+        source: message.meta?.source,
+        message: error?.message,
+        stack: error?.stack,
+      });
+
+      return;
+    }
+
+    try {
+      await this._publishRetry(message, error);
+
+      logger.warn('Notification republished to retry exchange', {
+        module: logModule,
+        nextTry: tries + 1,
+        traceId: message.meta?.traceId,
+        source: message.meta?.source,
+        message: error?.message,
+      });
+    } catch (retryError) {
+      logger.error('Retry republish failed, sending notification to DLQ', {
+        module: logModule,
+        traceId: message.meta?.traceId,
+        source: message.meta?.source,
+        message: retryError?.message,
+        stack: retryError?.stack,
+      });
+
+      await this._publishDead(message, retryError, 'retry_publish_failed');
+    }
+  }
+
+  static async getNotificationById(notificationId, userId) {
+    const notification = await notificationRepository.findOne(
+      {
+        _id: notificationId,
+        recipient: userId,
+      },
+      {
+        populate: [
+          { path: 'sender', select: 'username name avatar verified' },
+          { path: 'relatedPost', select: '_id caption media' },
+        ],
+        lean: true,
+      }
+    );
 
     return notification ? this._formatNotification(notification) : null;
   }
 
-  /**
-   * Mark notification as read
-   * @param {string} notificationId - Notification ID
-   * @param {string} userId - User ID
-   * @returns {Promise<Object|null>} Updated notification object
-   */
   static async markAsRead(notificationId, userId) {
-    const notification = await retryOperation(() =>
-      Notification.findOneAndUpdate(
+    return retryOperation(() =>
+      notificationRepository.findOneAndUpdate(
         { _id: notificationId, recipient: userId },
-        { isRead: true, readAt: new Date() },
-        { new: true }
+        { isRead: true, readAt: new Date() }
       )
     );
-
-    return notification;
   }
 
-  /**
-   * Mark all notifications as read
-   * @param {string} userId - User ID
-   * @param {string|null} type - Notification type (optional)
-   * @returns {Promise<{updatedCount: number}>} Number of notifications updated
-   */
   static async markAllAsRead(userId, type = null) {
     const query = { recipient: userId, isRead: false };
 
@@ -295,7 +523,7 @@ class NotificationService {
       query.type = type;
     }
 
-    const result = await Notification.updateMany(query, {
+    const result = await notificationRepository.updateNotifications(query, {
       isRead: true,
       readAt: new Date(),
     });
@@ -303,14 +531,8 @@ class NotificationService {
     return { updatedCount: result.modifiedCount };
   }
 
-  /**
-   * Delete notification
-   * @param {string} notificationId - Notification ID
-   * @param {string} userId - User ID
-   * @returns {Promise<{success: boolean, error?: string}>} Delete result
-   */
   static async deleteNotification(notificationId, userId) {
-    const result = await Notification.findOneAndDelete({
+    const result = await notificationRepository.findOneAndDelete({
       _id: notificationId,
       recipient: userId,
     });
@@ -320,12 +542,6 @@ class NotificationService {
       : { success: false, error: 'Notification not found' };
   }
 
-  /**
-   * Delete all notifications for user
-   * @param {string} userId - User ID
-   * @param {string|null} type - Notification type (optional)
-   * @returns {Promise<{deletedCount: number}>} Number of notifications deleted
-   */
   static async deleteAllNotifications(userId, type = null) {
     const query = { recipient: userId };
 
@@ -333,18 +549,13 @@ class NotificationService {
       query.type = type;
     }
 
-    const result = await Notification.deleteMany(query);
+    const result = await notificationRepository.deleteNotifications(query);
 
     return { deletedCount: result.deletedCount };
   }
 
-  /**
-   * Get unread notification count
-   * @param {string} userId - User ID
-   * @returns {Promise<number>} Number of unread notifications
-   */
   static async getUnreadCount(userId) {
-    const count = await Notification.countDocuments({
+    return notificationRepository.countNotifications({
       recipient: userId,
       isRead: false,
       $or: [
@@ -352,17 +563,10 @@ class NotificationService {
         { expiresAt: { $gt: new Date() } },
       ],
     });
-
-    return count;
   }
 
-  /**
-   * Get unread notification count by type
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} Object with type as key and count as value
-   */
   static async getUnreadCountByType(userId) {
-    const counts = await Notification.aggregate([
+    const counts = await notificationRepository.aggregateNotifications([
       {
         $match: {
           recipient: new mongoose.Types.ObjectId(userId),
@@ -389,26 +593,19 @@ class NotificationService {
     return result;
   }
 
-  /**
-   * Send notification to all followers of user (Optimized with Batch Processing)
-   * @param {string} userId - User ID
-   * @param {string} type - Notification type
-   * @param {string} content - Content (can contain {username} placeholder)
-   * @param {string|null} relatedPost - Related post ID
-   * @returns {Promise<{sentCount: number}>} Number of notifications sent
-   */
   static async notifyFollowers(userId, type, content, relatedPost = null) {
     const Follow = (await import('../../models/Follow.js')).default;
-    
-    // Get sender info once
     const sender = await User.findById(userId).select('username avatar').lean();
-    if (!sender) return { sentCount: 0 };
+
+    if (!sender) {
+      return { sentCount: 0 };
+    }
 
     const notificationContent = content.replace('{username}', sender.username);
     const notificationTypeMap = {
       like: 'likes',
       comment: 'comments',
-      reply: 'comments', // usually maps to comments setting
+      reply: 'comments',
       follow: 'follows',
       mention: 'mentions',
       share: 'shares',
@@ -416,43 +613,43 @@ class NotificationService {
     };
     const settingKey = notificationTypeMap[type] || type;
 
-    // Process in batches using cursor to avoid OOM
-    const BATCH_SIZE = 500;
+    const batchSize = 500;
     let sentCount = 0;
-    
-    // Use cursor to stream follower IDs
     const cursor = Follow.find({ following: userId, status: 'active' })
       .select('follower')
       .cursor();
 
     let batchFollowerIds = [];
 
-    for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+    for (
+      let doc = await cursor.next();
+      doc != null;
+      doc = await cursor.next()
+    ) {
       batchFollowerIds.push(doc.follower);
 
-      if (batchFollowerIds.length >= BATCH_SIZE) {
+      if (batchFollowerIds.length >= batchSize) {
         sentCount += await this._processNotificationBatch(
-            batchFollowerIds, 
-            userId, 
-            sender, 
-            type, 
-            settingKey, 
-            notificationContent, 
-            relatedPost
+          batchFollowerIds,
+          userId,
+          sender,
+          type,
+          settingKey,
+          notificationContent,
+          relatedPost
         );
-        batchFollowerIds = []; // Reset batch
+        batchFollowerIds = [];
       }
     }
 
-    // Process remaining
     if (batchFollowerIds.length > 0) {
       sentCount += await this._processNotificationBatch(
-        batchFollowerIds, 
-        userId, 
-        sender, 
-        type, 
-        settingKey, 
-        notificationContent, 
+        batchFollowerIds,
+        userId,
+        sender,
+        type,
+        settingKey,
+        notificationContent,
         relatedPost
       );
     }
@@ -460,78 +657,75 @@ class NotificationService {
     return { sentCount };
   }
 
-  /**
-   * Process a batch of followers for notification (Private helper)
-   */
-  static async _processNotificationBatch(followerIds, senderId, senderUser, type, settingKey, content, relatedPost) {
-    // 1. Bulk fetch UserSettings for this batch
+  static async _processNotificationBatch(
+    followerIds,
+    senderId,
+    senderUser,
+    type,
+    settingKey,
+    content,
+    relatedPost
+  ) {
     const settingsList = await UserSettings.find({ user: { $in: followerIds } })
-        .select('user notifications blockedUsers mutedUsers')
-        .lean();
+      .select('user notifications blockedUsers mutedUsers')
+      .lean();
 
     const settingsMap = new Map();
-    settingsList.forEach(s => settingsMap.set(s.user.toString(), s));
+    settingsList.forEach(settings => {
+      settingsMap.set(settings.user.toString(), settings);
+    });
 
-    // 2. Filter valid recipients
     const validNotifications = [];
     const senderIdStr = senderId.toString();
 
     for (const recipientId of followerIds) {
-        const recipientIdStr = recipientId.toString();
-        const settings = settingsMap.get(recipientIdStr);
+      const recipientIdStr = recipientId.toString();
+      const settings = settingsMap.get(recipientIdStr);
 
-        // Check 1: Blocked Users
-        if (settings?.blockedUsers?.some(id => id.toString() === senderIdStr)) {
-            continue;
-        }
+      if (settings?.blockedUsers?.some(id => id.toString() === senderIdStr)) {
+        continue;
+      }
 
-        // Check 2: Muted Users
-        if (settings?.mutedUsers?.some(id => id.toString() === senderIdStr)) {
-            continue;
-        }
+      if (settings?.mutedUsers?.some(id => id.toString() === senderIdStr)) {
+        continue;
+      }
 
-        // Check 3: Notification Preferences
-        if (settings?.notifications?.[settingKey] === false) {
-            continue;
-        }
+      if (settings?.notifications?.[settingKey] === false) {
+        continue;
+      }
 
-        // Prepare Notification Object
-        validNotifications.push({
-            recipient: recipientId,
-            sender: senderId,
-            type,
-            content,
-            relatedPost,
-            groupKey: relatedPost ? `${type}_${relatedPost}` : null,
-            groupedSenders: [{
-                user: senderId,
-                username: senderUser.username,
-                avatar: senderUser.avatar,
-            }],
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
+      validNotifications.push({
+        recipient: recipientId,
+        sender: senderId,
+        type,
+        content,
+        post: relatedPost,
+        relatedPost,
+        groupKey: relatedPost ? `${type}_${relatedPost}` : null,
+        groupedSenders: [
+          {
+            user: senderId,
+            username: senderUser.username,
+            avatar: senderUser.avatar,
+          },
+        ],
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
     }
 
-    // 3. Bulk Insert
     if (validNotifications.length > 0) {
-        await Notification.insertMany(validNotifications, { ordered: false }).catch(err => 
-            logger.warn('Batch notification insert error:', err.message)
+      await notificationRepository
+        .insertManyNotifications(validNotifications, { ordered: false })
+        .catch(err =>
+          logger.warn('Batch notification insert error', {
+            message: err.message,
+          })
         );
-        
-        // Optional: Fire socket events for this batch? 
-        // For mass notifications, we might skip real-time socket to avoid flooding server,
-        // or just send to online users. For now, we skip socket loop to save CPU in mass broadcast.
     }
 
     return validNotifications.length;
   }
 
-  /**
-   * Update notification preferences settings
-   * @param {string} userId - User ID
-   * @param {Object} preferences - New settings
-   * @returns {Promise<Object>} Updated notification settings
-   */
   static async updateNotificationPreferences(userId, preferences) {
     const settings = await UserSettings.findOneAndUpdate(
       { user: userId },
@@ -542,11 +736,6 @@ class NotificationService {
     return settings.notifications;
   }
 
-  /**
-   * Get notification preferences settings
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} Notification preferences
-   */
   static async getNotificationPreferences(userId) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('notifications')
@@ -564,12 +753,6 @@ class NotificationService {
     );
   }
 
-  /**
-   * Send push notification (TODO: integrate with FCM/APNs)
-   * @param {string} userId - User ID
-   * @param {Object} notification - Notification object
-   * @returns {Promise<{sent: boolean, reason?: string, notification?: Object}>}
-   */
   static async sendPushNotification(userId, notification) {
     const settings = await UserSettings.findOne({ user: userId })
       .select('notifications')
@@ -586,15 +769,9 @@ class NotificationService {
     return { sent: true, notification };
   }
 
-  /**
-   * Clean up old read notifications
-   * @param {number} days - Number of days to keep (default 30)
-   * @returns {Promise<{deletedCount: number}>} Number of notifications deleted
-   */
   static async cleanupOldNotifications(days = 30) {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    const result = await Notification.deleteMany({
+    const result = await notificationRepository.deleteNotifications({
       isRead: true,
       createdAt: { $lt: cutoffDate },
     });
@@ -606,6 +783,3 @@ class NotificationService {
 }
 
 export default NotificationService;
-
-
-

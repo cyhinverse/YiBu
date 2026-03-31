@@ -216,20 +216,15 @@ const PostController = {
     const userId = req.user.id;
     const { caption, visibility = 'public', location, mentions } = req.body;
 
-    let media = [];
-    if (req.files && req.files.length > 0) {
-      media = await PostService.uploadMedia(req.files, userId);
-    }
-
     const post = await PostService.createPost(
       {
         caption,
-        media,
         visibility,
         location,
         mentions,
       },
-      userId
+      userId,
+      req.files || []
     );
 
     return sendCreated(res, {
@@ -258,13 +253,12 @@ const PostController = {
     const { id } = req.params;
     const userId = req.user.id;
 
-    let media = [];
-    if (req.files && req.files.length > 0) {
-      media = await PostService.uploadMedia(req.files, userId);
-      req.body.media = media;
-    }
-
-    const post = await PostService.updatePost(id, userId, req.body);
+    const post = await PostService.updatePost(
+      id,
+      userId,
+      req.body,
+      req.files || []
+    );
     return sendOk(res, {
       message: 'Post updated successfully',
       data: post,

@@ -8,10 +8,11 @@ import SavePost from '../../models/SavePost.js';
 import Hashtag from '../../models/Hashtag.js';
 import UserInteraction from '../../models/UserInteraction.js';
 import Follow from '../../models/Follow.js';
-import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import { retryOperation } from '../../utils/retryOperation.js';
 import ApiError from '../../helpers/ApiError.js';
+import NotificationService from '../notification/notification.service.js';
+import MediaService from '../shared/media/media.service.js';
 
 
 /**
@@ -31,29 +32,37 @@ class PostService {
    * @returns {Promise<Object>} Created post object with user information
    * @throws {Error} If error in transaction
    */
-  static async createPost(postData, userId) {
+  static async createPost(postData, userId, files = []) {
     const session = await mongoose.startSession();
     session.startTransaction();
+    const postId = new mongoose.Types.ObjectId();
+    let upload = null;
 
     try {
+      upload =
+        files && files.length > 0
+          ? await MediaService.makePost(files, userId, postId)
+          : null;
+
       const {
         caption = '',
-        media = [],
+        media = upload?.items || postData.media || [],
         visibility = 'public',
         location,
       } = postData;
 
       const processedHashtags = await this._processHashtags(caption, session);
 
-      const post = await Post.create(
-        [
-          {
-            user: userId,
-            caption,
-            media,
-            visibility,
-            location,
-            hashtags: processedHashtags,
+        const post = await Post.create(
+          [
+            {
+              _id: postId,
+              user: userId,
+              caption,
+              media,
+              visibility,
+              location,
+              hashtags: processedHashtags,
           },
         ],
         { session }
@@ -65,6 +74,20 @@ class PostService {
 
       await session.commitTransaction();
 
+      if (upload?.jobId) {
+        try {
+          await MediaService.send(upload.jobId, {
+            source: 'post.createPost',
+          });
+        } catch (queueError) {
+          await MediaService.fail(upload.jobId, queueError);
+          logger.error('Failed to queue post media job', {
+            message: queueError?.message,
+            stack: queueError?.stack,
+          });
+        }
+      }
+
       const populatedPost = await Post.findById(post[0]._id)
         .populate('user', 'username name avatar verified')
         .lean();
@@ -72,6 +95,9 @@ class PostService {
       return populatedPost;
     } catch (error) {
       await session.abortTransaction();
+      if (upload?.jobId) {
+        await MediaService.drop(upload.jobId);
+      }
       logger.error('Error creating post:', error);
       throw error;
     } finally {
@@ -221,7 +247,7 @@ class PostService {
    * @returns {Promise<Object>} Updated post object
    * @throws {Error} If post not found or unauthorized
    */
-  static async updatePost(postId, userId, updateData) {
+  static async updatePost(postId, userId, updateData, files = []) {
     const post = await Post.findOne({
       _id: postId,
       user: userId,
@@ -236,65 +262,93 @@ class PostService {
     const { caption, visibility, location, mentions, media, existingMedia } =
       updateData;
     const allowedUpdates = {};
+    let upload = null;
 
-    let currentMedia = post.media;
-    if (existingMedia) {
-      try {
-        currentMedia =
-          typeof existingMedia === 'string'
-            ? JSON.parse(existingMedia)
-            : existingMedia;
-      } catch (e) {
-        currentMedia = [];
+    try {
+      upload =
+        files && files.length > 0
+          ? await MediaService.makePost(files, userId, postId)
+          : null;
+
+      let currentMedia = post.media;
+      if (existingMedia) {
+        try {
+          currentMedia =
+            typeof existingMedia === 'string'
+              ? JSON.parse(existingMedia)
+              : existingMedia;
+        } catch (e) {
+          currentMedia = [];
+        }
       }
-    }
 
-    if (media && media.length > 0) {
-      allowedUpdates.media = [...currentMedia, ...media];
-    } else if (existingMedia !== undefined) {
-      allowedUpdates.media = currentMedia;
-    }
+      const nextMedia = upload?.items || media || [];
 
-    if (caption !== undefined) {
-      allowedUpdates.caption = caption;
+      if (nextMedia && nextMedia.length > 0) {
+        allowedUpdates.media = [...currentMedia, ...nextMedia];
+      } else if (existingMedia !== undefined) {
+        allowedUpdates.media = currentMedia;
+      }
 
-      const oldTags = (post.hashtags || []).map(t => String(t).toLowerCase());
-      const newTags = await this._processHashtags(caption, null);
+      if (caption !== undefined) {
+        allowedUpdates.caption = caption;
 
-      const removedTags = oldTags.filter(
-        t => !newTags.includes(t)
-      );
+        const oldTags = (post.hashtags || []).map(t => String(t).toLowerCase());
+        const newTags = await this._processHashtags(caption, null);
 
-      if (removedTags.length > 0) {
-        await Hashtag.updateMany(
-          { name: { $in: removedTags } },
-          {
-            $inc: {
-              totalUsage: -1,
-              'recentUsage.lastHour': -1,
-              'recentUsage.last24Hours': -1,
-              'recentUsage.last7Days': -1,
-            },
-            $set: { 'recentUsage.updatedAt': new Date() },
-          }
+        const removedTags = oldTags.filter(
+          t => !newTags.includes(t)
         );
+
+        if (removedTags.length > 0) {
+          await Hashtag.updateMany(
+            { name: { $in: removedTags } },
+            {
+              $inc: {
+                totalUsage: -1,
+                'recentUsage.lastHour': -1,
+                'recentUsage.last24Hours': -1,
+                'recentUsage.last7Days': -1,
+              },
+              $set: { 'recentUsage.updatedAt': new Date() },
+            }
+          );
+        }
+
+        allowedUpdates.hashtags = newTags;
       }
 
-      // Persist as string[] (Post model stores hashtags as plain strings)
-      allowedUpdates.hashtags = newTags;
+      if (visibility !== undefined) allowedUpdates.visibility = visibility;
+      if (location !== undefined) allowedUpdates.location = location;
+      if (mentions !== undefined) allowedUpdates.mentions = mentions;
+
+      const updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        { $set: allowedUpdates },
+        { new: true }
+      ).populate('user', 'username name avatar verified');
+
+      if (upload?.jobId) {
+        try {
+          await MediaService.send(upload.jobId, {
+            source: 'post.updatePost',
+          });
+        } catch (queueError) {
+          await MediaService.fail(upload.jobId, queueError);
+          logger.error('Failed to queue post update media job', {
+            message: queueError?.message,
+            stack: queueError?.stack,
+          });
+        }
+      }
+
+      return updatedPost;
+    } catch (error) {
+      if (upload?.jobId) {
+        await MediaService.drop(upload.jobId);
+      }
+      throw error;
     }
-
-    if (visibility !== undefined) allowedUpdates.visibility = visibility;
-    if (location !== undefined) allowedUpdates.location = location;
-    if (mentions !== undefined) allowedUpdates.mentions = mentions;
-
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      { $set: allowedUpdates },
-      { new: true }
-    ).populate('user', 'username name avatar verified');
-
-    return updatedPost;
   }
 
   /**
@@ -873,14 +927,14 @@ class PostService {
 
       if (post.user.toString() !== userId) {
         const sender = await User.findById(userId).select('username').lean();
-        await Notification.createNotification({
+        await NotificationService.publishCreate({
           recipient: post.user,
           sender: userId,
           type: 'like',
           relatedPost: postId,
           content: `${sender.username} đã thích bài viết của bạn`,
           groupKey: `like_${postId}`,
-        });
+        }, { source: 'post.likePost' });
       }
 
       await session.commitTransaction();
@@ -1153,7 +1207,7 @@ class PostService {
 
     if (notifyUserId && notifyUserId.toString() !== userId) {
       const sender = await User.findById(userId).select('username').lean();
-      Notification.createNotification({
+      NotificationService.publishCreate({
         recipient: notifyUserId,
         sender: userId,
         type: parentCommentId ? 'reply' : 'comment',
@@ -1163,7 +1217,7 @@ class PostService {
           ? `${sender.username} đã trả lời bình luận của bạn`
           : `${sender.username} đã bình luận bài viết của bạn`,
         groupKey: `comment_${postId}`,
-      }).catch(err =>
+      }, { source: 'post.addComment' }).catch(err =>
         logger.warn(`Failed to create notification: ${err.message}`)
       );
     }
@@ -1428,13 +1482,13 @@ class PostService {
 
     if (post.user.toString() !== userId) {
       const sender = await User.findById(userId).select('username').lean();
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: post.user,
         sender: userId,
         type: 'share',
         relatedPost: postId,
         content: `${sender.username} đã chia sẻ bài viết của bạn`,
-      });
+      }, { source: 'post.sharePost' });
     }
 
     return { success: true };
@@ -1540,43 +1594,6 @@ class PostService {
     });
 
     return report;
-  }
-
-  /**
-   * Upload media files (already processed by multer-storage-cloudinary)
-   * @param {Array|Object} files - Uploaded file(s) from multer memory storage
-   * @param {string} userId - User ID
-   * @returns {Promise<Array>} List of media objects {url, type, publicId}
-   */
-  static async uploadMedia(files, userId) {
-    const { uploadToCloudinary } = await import(
-      '../middlewares/multerUpload.js'
-    );
-    const fileArray = Array.isArray(files) ? files : [files];
-    const uploadedMedia = [];
-
-    for (const file of fileArray) {
-      const resourceType = file.mimetype?.startsWith('video/')
-        ? 'video'
-        : 'image';
-      const publicId = `${userId}_${Date.now()}_${
-        file.originalname.split('.')[0]
-      }`;
-
-      const result = await uploadToCloudinary(file.buffer, {
-        folder: 'posts',
-        resourceType: resourceType,
-        publicId: publicId,
-      });
-
-      uploadedMedia.push({
-        url: result.secure_url,
-        type: resourceType,
-        publicId: result.public_id,
-      });
-    }
-
-    return uploadedMedia;
   }
 
   static async getFollowingPosts(userId, page = 1, limit = 10) {

@@ -8,6 +8,7 @@ import { retryOperation } from '../../utils/retryOperation.js';
 import socketService from '../shared/socket/socket.service.js';
 import Conversation from '../../models/Conversation.js';
 import ApiError from '../../helpers/ApiError.js';
+import MediaService from '../shared/media/media.service.js';
 
 
 /**
@@ -529,7 +530,7 @@ class MessageService {
    * @returns {Promise<Object>} Created message object
    * @throws {Error} If conversation not found or content is empty
    */
-  static async sendMessage(conversationId, senderId, messageData) {
+  static async sendMessage(conversationId, senderId, messageData, files = []) {
     const conversation = await this.findConversation(conversationId, senderId, {
       autoCreate: true,
     });
@@ -539,9 +540,17 @@ class MessageService {
 
     }
 
-    const { content, type = 'text', media = [], replyTo } = messageData;
+    const messageId = new mongoose.Types.ObjectId();
+    const upload =
+      files && files.length > 0
+        ? await MediaService.makeMessage(files, senderId, messageId)
+        : null;
+    const media = upload?.items || messageData.media || messageData.attachments || [];
+    const messageType =
+      messageData.messageType || messageData.type || (media.length > 0 ? 'media' : 'text');
+    const { content, replyTo } = messageData;
 
-    if (type === 'text' && (!content || content.trim().length === 0)) {
+    if (messageType === 'text' && (!content || content.trim().length === 0)) {
       throw ApiError.badRequest('Nội dung tin nhắn không được để trống');
 
     }
@@ -564,92 +573,79 @@ class MessageService {
         .lean();
     }
 
-    const message = await Message.create({
-      sender: senderId,
-      receiver: receiverId || conversation._id,
-      conversationId: conversation._id,
-      content: content?.trim(),
-      type,
-      media,
-      replyTo: replyToMessage
-        ? {
-            messageId: replyToMessage._id,
-            content: replyToMessage.content?.substring(0, 100),
-            sender: replyToMessage.sender,
-          }
-        : undefined,
-      status: 'sent',
-    });
-
-    conversation.lastMessage = message._id;
-    await conversation.save();
-
-    const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'username name avatar')
-      .lean();
-
-    await Message.findByIdAndUpdate(message._id, {
-      $push: { seenBy: { user: senderId, at: new Date() } },
-    });
+    let message;
+    let queued = false;
 
     try {
-      conversation.members.forEach(memberId => {
-        if (memberId.toString() !== senderId.toString()) {
-          socketService.sendMessage(senderId, memberId, {
-            ...populatedMessage,
-            conversationId,
+      message = await Message.create({
+        _id: messageId,
+        sender: senderId,
+        receiver: receiverId || conversation._id,
+        conversationId: conversation._id,
+        content: content?.trim(),
+        messageType,
+        media,
+        replyTo: replyToMessage
+          ? {
+              messageId: replyToMessage._id,
+              content: replyToMessage.content?.substring(0, 100),
+              sender: replyToMessage.sender,
+            }
+          : undefined,
+        status: 'sent',
+      });
+
+      conversation.lastMessage = message._id;
+      await conversation.save();
+
+      if (upload?.jobId) {
+        try {
+          await MediaService.send(upload.jobId, {
+            source: 'message.sendMessage',
+          });
+          queued = true;
+        } catch (queueError) {
+          await MediaService.fail(upload.jobId, queueError);
+          logger.error('Failed to queue message media job', {
+            message: queueError?.message,
+            stack: queueError?.stack,
           });
         }
+      }
+
+      const populatedMessage = await Message.findById(message._id)
+        .populate('sender', 'username name avatar')
+        .lean();
+
+      await Message.findByIdAndUpdate(message._id, {
+        $push: { seenBy: { user: senderId, at: new Date() } },
       });
-      logger.debug(`Socket messages sent for conversation ${conversationId}`);
-    } catch (socketError) {
-      logger.error('Failed to send socket message:', socketError);
+
+      try {
+        conversation.members.forEach(memberId => {
+          if (memberId.toString() !== senderId.toString()) {
+            socketService.sendMessage(senderId, memberId, {
+              ...populatedMessage,
+              conversationId,
+            });
+          }
+        });
+        logger.debug(`Socket messages sent for conversation ${conversationId}`);
+      } catch (socketError) {
+        logger.error('Failed to send socket message:', socketError);
+      }
+
+      return {
+        ...populatedMessage,
+        conversationId,
+        isMine: true,
+      };
+    } catch (error) {
+      if (upload?.jobId && !queued) {
+        await MediaService.drop(upload.jobId);
+      }
+      throw error;
     }
-
-    return {
-      ...populatedMessage,
-      conversationId,
-      isMine: true,
-    };
-  }
-
-  /**
-   * Upload attachments for message
-   * @param {Array|Object} files - File(s) from multer memory storage
-   * @param {string} userId - User ID
-   * @returns {Promise<Array>} List of media objects {url, type, publicId}
-   */
-  static async uploadAttachments(files, userId) {
-    const { uploadToCloudinary } =
-      await import('../../middlewares/multerUpload.js');
-    const uploadedMedia = [];
-    const fileArray = Array.isArray(files) ? files : [files];
-
-    for (const file of fileArray) {
-      const resourceType = file.mimetype?.startsWith('video/')
-        ? 'video'
-        : 'image';
-      const publicId = `msg_${userId}_${Date.now()}_${
-        file.originalname.split('.')[0]
-      }`;
-
-      const result = await uploadToCloudinary(file.buffer, {
-        folder: 'messages',
-        resourceType: resourceType,
-        publicId: publicId,
-        transformation:
-          resourceType === 'image'
-            ? [{ quality: 'auto' }, { width: 1200, crop: 'limit' }]
-            : [{ quality: 'auto' }],
-      });
-
-      uploadedMedia.push({
-        url: result.secure_url,
-        type: resourceType,
-        publicId: result.public_id,
-      });
-    }
-    return uploadedMedia;
   }
 
   /**

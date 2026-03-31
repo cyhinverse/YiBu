@@ -4,11 +4,11 @@ import Comment from '../../models/Comment.js';
 import Report from '../../models/Report.js';
 import RefreshToken from '../../models/RefreshToken.js';
 import AdminLog from '../../models/AdminLog.js';
-import Notification from '../../models/Notification.js';
 import Like from '../../models/Like.js';
 import Follow from '../../models/Follow.js';
 import SavePost from '../../models/SavePost.js';
 import Message from '../../models/Message.js';
+import NotificationService from '../notification/notification.service.js';
 
 const findUserById = id => User.findById(id);
 
@@ -22,7 +22,11 @@ const deleteUserById = id => User.findByIdAndDelete(id);
 
 const createAdminLog = payload => AdminLog.create(payload);
 
-const createNotification = payload => Notification.createNotification(payload);
+const createNotification = payload => {
+  return NotificationService.publishCreate(payload, {
+    source: 'admin.repository',
+  });
+};
 
 const updateManyRefreshTokens = (query, update) => RefreshToken.updateMany(query, update);
 

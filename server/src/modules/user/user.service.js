@@ -11,6 +11,7 @@ import Message from '../../models/Message.js';
 import Notification from '../../models/Notification.js';
 import logger from '../../configs/logger.js';
 import ApiError from '../../helpers/ApiError.js';
+import NotificationService from '../notification/notification.service.js';
 
 
 /**
@@ -226,12 +227,14 @@ class UserService {
       'bio',
       'birthday',
       'gender',
-      'website',
-      'avatar',
-      'cover',
-      'location',
-      'interests',
-    ];
+        'website',
+        'avatar',
+        'avatarStatus',
+        'cover',
+        'coverStatus',
+        'location',
+        'interests',
+      ];
     const updateData = {};
 
     for (const [key, value] of Object.entries(profileData)) {
@@ -444,13 +447,13 @@ class UserService {
         .select('username name avatar')
         .lean();
 
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: targetUserId,
         sender: currentUserId,
         type: 'follow',
         content: `${currentUser.username} đã theo dõi bạn`,
         groupKey: `follow_${targetUserId}`,
-      });
+      }, { source: 'user.followUser' });
     }
 
     return result;
@@ -557,12 +560,12 @@ class UserService {
     const result = await Follow.acceptFollowRequest(userId, followerId);
 
     if (result.success) {
-      await Notification.createNotification({
+      await NotificationService.publishCreate({
         recipient: followerId,
         sender: userId,
         type: 'follow',
         content: 'đã chấp nhận yêu cầu theo dõi của bạn',
-      });
+      }, { source: 'user.acceptFollowRequest' });
     }
 
     return result;
@@ -963,42 +966,6 @@ class UserService {
     if (user) {
       await user.updateEngagementMetrics();
     }
-  }
-
-
-  /**
-   * Upload avatar to Cloudinary and update user
-   * @param {Object} avatar - Avatar file {tempFilePath, size}
-   * @param {string} userId - User ID
-   * @returns {Promise<string>} Uploaded avatar URL
-   * @throws {Error} If file exceeds 10MB
-   */
-  static async uploadAvatarToCloudinary(avatar, userId) {
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-    if (avatar.size > MAX_FILE_SIZE) {
-      const sizeMB = (avatar.size / (1024 * 1024)).toFixed(2);
-      throw ApiError.badRequest(
-        `Kích thước ảnh ${sizeMB}MB vượt quá giới hạn 10MB`
-      );
-
-    }
-
-    const cloudinary = (await import('../../configs/cloudinaryConfig.js')).default;
-
-    const result = await cloudinary.uploader.upload(avatar.tempFilePath, {
-      folder: 'avatars',
-      public_id: `avatar_${userId}_${Date.now()}`,
-      resource_type: 'image',
-      transformation: [
-        { width: 400, height: 400, crop: 'fill' },
-        { quality: 'auto' },
-      ],
-    });
-
-    await User.findByIdAndUpdate(userId, { avatar: result.secure_url });
-
-    return result.secure_url;
   }
 
   /**

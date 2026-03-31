@@ -135,6 +135,29 @@ docker compose logs -f server
 docker compose logs -f client
 ```
 
+## CI/CD (GitHub Actions)
+
+Repo đã có sẵn 1 workflow duy nhất: `CI/CD` (`.github/workflows/cicd.yml`).
+
+- Trigger:
+  - `pull_request` vào `main` (chỉ khi đổi `client/`, `server/`, `docker-compose.yaml`, hoặc workflow)
+  - `push` vào `main` (cùng điều kiện path)
+  - chạy tay qua `workflow_dispatch`
+- Quality checks:
+  - Client: `npm ci` + `npm run lint` + `npm run build`
+  - Server: `npm ci` + `node --check src/server.js` + `node --test` (smoke check)
+- Deploy (publish image):
+  - Chỉ chạy ở `push main` hoặc `workflow_dispatch` (không publish khi PR)
+  - Push image lên GHCR:
+    - `ghcr.io/<owner>/<repo>-client`
+    - `ghcr.io/<owner>/<repo>-server`
+  - Tag: `latest` và `sha-<commit>`
+
+### Cấu hình cần bật trên GitHub
+
+1. `Settings > Actions > General > Workflow permissions`: chọn **Read and write permissions** cho `GITHUB_TOKEN`.
+2. (Tuỳ chọn) Tạo secret `GHCR_TOKEN` nếu bạn muốn push package sang registry/namespace khác; mặc định workflow dùng `GITHUB_TOKEN`.
+
 ## Server Scripts (Local)
 
 Chạy trong `server/`:

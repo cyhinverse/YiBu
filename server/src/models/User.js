@@ -35,6 +35,11 @@ const UserSchema = new Schema(
       default:
         'https://i0.wp.com/sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png?ssl=1',
     },
+    avatarStatus: {
+      type: String,
+      enum: ['ready', 'pending', 'failed'],
+      default: 'ready',
+    },
     bio: { type: String, default: '', maxlength: 500 },
     birthday: { type: Date, default: null },
     gender: {
@@ -45,6 +50,11 @@ const UserSchema = new Schema(
     website: { type: String, default: '' },
     location: { type: String, default: '', trim: true },
     cover: { type: String, default: '' },
+    coverStatus: {
+      type: String,
+      enum: ['ready', 'pending', 'failed'],
+      default: 'ready',
+    },
 
     // Interests for recommendation (stored as array for efficient matching)
     interests: [{ type: String, lowercase: true, trim: true }],
